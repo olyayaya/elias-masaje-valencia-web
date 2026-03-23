@@ -115,7 +115,7 @@ const OrganicHome = () => {
       <CurvedDivider from="bg-organic-dark" to="bg-secondary" />
 
       {/* ═══════════ SERVICES — Circular images + editorial list ═══════════ */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28 overflow-hidden">
         <div className="max-w-6xl mx-auto">
           <div ref={servicesTitle.ref} style={servicesTitle.style} className="mb-16">
             <h2 className="font-display text-3xl md:text-4xl mb-2">{t.services.title}</h2>
