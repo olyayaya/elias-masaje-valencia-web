@@ -1,7 +1,6 @@
-import serviceImage from "@/assets/service-detail.jpg";
+import massageNeck from "@/assets/massage-neck.jpg";
 import massageWrist from "@/assets/massage-wrist.jpg";
 import massageShoulder from "@/assets/massage-shoulder.jpg";
-import aboutPortrait from "@/assets/about-portrait.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImage from "@/components/CircularImage";
