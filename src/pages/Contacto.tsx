@@ -1,20 +1,26 @@
 import { MessageCircle, MapPin, Clock, Instagram } from "lucide-react";
 import MapBlock from "@/components/MapBlock";
 import { useI18n } from "@/i18n/context";
+import { useFadeIn } from "@/hooks/use-fade-in";
 
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
 
 const ContactoPage = () => {
   const { t } = useI18n();
+  const heading = useFadeIn(0);
+  const details = useFadeIn(0.1);
+  const map = useFadeIn(0.2);
 
   return (
     <div>
       <section className="section-padding">
         <div className="container-wide">
-          <h1 className="font-display text-4xl md:text-5xl mb-12">{t.contact.title}</h1>
+          <div ref={heading.ref} style={heading.style}>
+            <h1 className="font-display text-4xl md:text-5xl mb-12">{t.contact.title}</h1>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            <div className="space-y-8">
+            <div ref={details.ref} style={details.style} className="space-y-8">
               <div className="flex items-start gap-4">
                 <MapPin size={20} className="text-primary mt-0.5 shrink-0" />
                 <div>
@@ -66,7 +72,9 @@ const ContactoPage = () => {
               </div>
             </div>
 
-            <MapBlock />
+            <div ref={map.ref} style={map.style}>
+              <MapBlock />
+            </div>
           </div>
         </div>
       </section>
