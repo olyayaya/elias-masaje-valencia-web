@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import heroImageDefault from "@/assets/hero-massage.jpg";
+import heroImageOrganic from "@/assets/hero-organic.jpg";
 import aboutPortrait from "@/assets/about-portrait.jpg";
 import massageWrist from "@/assets/massage-wrist.jpg";
 import massageShoulder from "@/assets/massage-shoulder.jpg";
@@ -33,9 +33,9 @@ const OrganicHome = () => {
         {/* Background image with soft overlay */}
         <div className="absolute inset-0">
           <img
-            src={heroImageDefault}
-            alt="Sala de masaje profesional"
-            className="w-full h-full object-cover"
+            src={heroImageOrganic}
+            alt="Masaje profesional"
+            className="w-full h-full object-cover object-bottom"
             width={1920}
             height={1080}
           />
