@@ -158,28 +158,29 @@ const OrganicHome = () => {
         </div>
       </section>
 
-      <CurvedDivider from="bg-secondary" to="bg-background" flip />
+      <CurvedDivider from="bg-secondary" to="bg-organic-dark" flip />
 
-      {/* ═══════════ STORY — Editorial text + asymmetric image ═══════════ */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+      {/* ═══════════ STORY — Dark editorial section ═══════════ */}
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
             <div className="md:col-span-5 md:col-start-1" ref={storyText.ref} style={storyText.style}>
-              <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
+              <p className="text-xs font-body tracking-[0.3em] uppercase mb-4" style={{ color: "hsl(var(--organic-dark-muted))" }}>
                 {t.about.title}
               </p>
-              <h2 className="font-display text-3xl md:text-4xl mb-6 leading-snug">
+              <h2 className="font-display text-3xl md:text-4xl mb-6 leading-snug" style={{ color: "hsl(var(--organic-dark-foreground))" }}>
                 {t.about.title}
               </h2>
-              <p className="text-base text-muted-foreground font-body leading-[1.8] mb-4">
+              <p className="text-base font-body leading-[1.8] mb-4" style={{ color: "hsl(var(--organic-dark-muted))" }}>
                 {t.about.previewP1}
               </p>
-              <p className="text-base text-muted-foreground font-body leading-[1.8] mb-8">
+              <p className="text-base font-body leading-[1.8] mb-8" style={{ color: "hsl(var(--organic-dark-muted))" }}>
                 {t.about.previewP2}
               </p>
               <Link
                 to="/sobre-mi"
-                className="text-sm font-body text-foreground border-b border-foreground/30 pb-0.5 hover:border-foreground transition-colors"
+                className="text-sm font-body pb-0.5 transition-colors"
+                style={{ color: "hsl(var(--organic-dark-foreground))", borderBottom: "1px solid hsl(var(--organic-dark-foreground) / 0.3)" }}
               >
                 {t.about.learnMore}
               </Link>
@@ -195,13 +196,14 @@ const OrganicHome = () => {
                   width={800}
                   height={1067}
                 />
-                {/* Subtle overlapping accent */}
-                <div className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full bg-secondary border border-border -z-10" />
+                <div className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full border -z-10" style={{ backgroundColor: "hsl(var(--organic-dark-foreground) / 0.05)", borderColor: "hsl(var(--organic-dark-foreground) / 0.1)" }} />
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      <CurvedDivider from="bg-organic-dark" to="bg-secondary" />
 
       {/* ═══════════ PROCESS — Simple steps ═══════════ */}
       <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
