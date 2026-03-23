@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
 import aboutPortrait from "@/assets/about-portrait.jpg";
+import massageNeck from "@/assets/massage-neck.jpg";
 import massageWrist from "@/assets/massage-wrist.jpg";
 import massageShoulder from "@/assets/massage-shoulder.jpg";
 import interiorImage from "@/assets/interior.jpg";
