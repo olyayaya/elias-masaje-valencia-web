@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useFadeIn } from "@/hooks/use-fade-in";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CircularImageCarouselProps {
   images: { src: string; alt: string }[];
@@ -9,30 +8,31 @@ interface CircularImageCarouselProps {
 
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
-  const isMobile = useIsMobile();
   const [activeIndex, setActiveIndex] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 1024 : true
+  );
 
-    const checkMobile = () => window.innerWidth < 1024;
-    const [isMobileView, setIsMobileView] = useState(checkMobile());
+  useEffect(() => {
+    const handler = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
 
-    useEffect(() => {
-      const handler = () => setIsMobileView(checkMobile());
-      window.addEventListener("resize", handler);
-      return () => window.removeEventListener("resize", handler);
-    }, []);
-
-    // Auto-play on mobile/tablet
-    useEffect(() => {
-      if (!isMobileView) return;
-      intervalRef.current = setInterval(() => {
-        setActiveIndex((prev) => (prev + 1) % images.length);
-      }, 3000);
-      return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    }, [isMobileView, images.length]);
+  // Auto-play on mobile/tablet
+  useEffect(() => {
+    if (isDesktop) return;
+    intervalRef.current = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % images.length);
+    }, 3000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isDesktop, images.length]);
 
   // Desktop: static overlapping layout
-  if (!isMobile && typeof window !== "undefined" && window.innerWidth >= 1024) {
+  if (isDesktop) {
     return (
       <div ref={anim.ref} style={anim.style} className={`flex flex-wrap justify-center gap-0 relative ${className}`}>
         {images.map((img, i) => {
@@ -45,8 +45,8 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
               : "z-10 mt-0";
 
           return (
-            <div key={i} className={`${offset} transition-all duration-700`}>
-              <div className={`${size} rounded-full overflow-hidden transition-all duration-700`}>
+            <div key={i} className={`${offset}`}>
+              <div className={`${size} rounded-full overflow-hidden`}>
                 <img src={img.src} alt={img.alt} className="w-full h-full object-cover" loading="lazy" />
               </div>
             </div>
@@ -56,39 +56,37 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
     );
   }
 
-  // Mobile/Tablet: auto-playing carousel with scale effect
+  // Mobile/Tablet: decorative auto-playing carousel
   return (
-    <div ref={anim.ref} style={anim.style} className={`relative overflow-hidden ${className}`}>
-      <div className="flex items-center justify-center gap-4 py-4">
+    <div ref={anim.ref} style={anim.style} className={`relative ${className}`}>
+      <div className="flex items-center justify-center h-52 relative">
         {images.map((img, i) => {
-          const distance = Math.abs(i - activeIndex);
-          // Wrap-around distance
-          const wrappedDistance = Math.min(distance, images.length - distance);
+          const distance = i - activeIndex;
+          const wrappedDistance = ((distance % images.length) + images.length) % images.length;
+          const normalizedDist = wrappedDistance > images.length / 2
+            ? wrappedDistance - images.length
+            : wrappedDistance;
 
-          const isActive = wrappedDistance === 0;
-          const isAdjacent = wrappedDistance === 1;
+          const absDist = Math.abs(normalizedDist);
+          const isActive = absDist === 0;
+          const isAdjacent = absDist === 1;
 
-          const scale = isActive ? 1 : isAdjacent ? 0.7 : 0.5;
-          const opacity = isActive ? 1 : isAdjacent ? 0.6 : 0.3;
+          const size = isActive ? 176 : isAdjacent ? 112 : 80; // px
+          const opacity = isActive ? 1 : isAdjacent ? 0.55 : 0.25;
           const zIndex = isActive ? 10 : isAdjacent ? 5 : 1;
-
-          // Position offset from center
-          const baseOffset = (i - activeIndex) * 120;
-          // Handle wrap-around visually
-          let offset = baseOffset;
-          if (baseOffset > (images.length * 60)) offset -= images.length * 120;
-          if (baseOffset < -(images.length * 60)) offset += images.length * 120;
+          const xOffset = normalizedDist * 110;
 
           return (
             <div
               key={i}
-              className="absolute rounded-full overflow-hidden transition-all duration-[1200ms] ease-in-out"
+              className="absolute rounded-full overflow-hidden"
               style={{
-                width: isActive ? "11rem" : isAdjacent ? "7rem" : "5rem",
-                height: isActive ? "11rem" : isAdjacent ? "7rem" : "5rem",
-                transform: `translateX(${offset}px) scale(${scale})`,
+                width: size,
+                height: size,
+                transform: `translateX(${xOffset}px)`,
                 opacity,
                 zIndex,
+                transition: "all 1.2s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
               <img src={img.src} alt={img.alt} className="w-full h-full object-cover" loading="lazy" />
@@ -96,8 +94,6 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
           );
         })}
       </div>
-      {/* Reserve space */}
-      <div className="h-48" />
     </div>
   );
 };
