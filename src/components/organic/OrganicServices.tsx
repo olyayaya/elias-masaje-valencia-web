@@ -47,13 +47,13 @@ const OrganicServices = () => {
           <img
             src={massageNeck}
             alt="Masaje profesional"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-[center_30%]"
             width={1920}
             height={1080}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
         </div>
-        <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-20">
+        <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-20 pb-[16vh]">
           <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
             <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
               Treatments
@@ -61,6 +61,13 @@ const OrganicServices = () => {
             <h1 className="font-display text-4xl md:text-5xl leading-snug mb-6">{t.services.title}</h1>
             <p className="text-base text-muted-foreground font-body leading-[1.8] max-w-md">{t.services.pageSubtitle}</p>
           </div>
+        </div>
+
+        {/* Half-moon overlap into services section */}
+        <div className="absolute bottom-0 left-0 right-0 z-20">
+          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[10vh] md:h-[12vh] max-h-28 block">
+            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: "hsl(var(--background))" }} />
+          </svg>
         </div>
       </section>
 
@@ -90,23 +97,24 @@ const OrganicServices = () => {
         </div>
       </section>
 
-      <CurvedDivider from="bg-secondary" to="bg-background" flip />
+      <CurvedDivider from="bg-secondary" to="bg-organic-dark" flip />
 
-      {/* Quiet CTA */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-16 md:py-20">
+      {/* Quiet CTA — dark to match half-moon */}
+      <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
         <div className="max-w-2xl mx-auto text-center">
           {(() => {
             const Cta = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-3xl md:text-4xl mb-4">{t.finalCta.title}</h2>
-                  <p className="text-sm text-muted-foreground font-body mb-8">{t.finalCta.description}</p>
+                  <h2 className="font-display text-3xl md:text-4xl mb-4" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.finalCta.title}</h2>
+                  <p className="text-sm font-body mb-8" style={{ color: "hsl(var(--organic-dark-muted))" }}>{t.finalCta.description}</p>
                   <a
                     href={WHATSAPP_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block text-sm font-body bg-foreground text-background px-10 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
+                    className="inline-block text-sm font-body px-10 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
+                    style={{ backgroundColor: "hsl(var(--organic-dark-foreground))", color: "hsl(var(--organic-dark))" }}
                   >
                     {t.finalCta.cta}
                   </a>
