@@ -71,9 +71,8 @@ const OrganicServices = () => {
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-wrap justify-center gap-6 md:gap-0">
             <CircularImage src={massageWrist} alt="Massage technique" size="md" delay={0} className="md:-mr-6" />
-            <CircularImage src={serviceImage} alt="Service detail" size="lg" delay={0.1} className="md:z-10 md:-mt-4" />
+            <CircularImage src={massageNeck} alt="Neck massage" size="lg" delay={0.1} className="md:z-10 md:-mt-4" />
             <CircularImage src={massageShoulder} alt="Shoulder work" size="md" delay={0.2} className="md:-ml-6 md:mt-8" />
-            <CircularImage src={aboutPortrait} alt="Elias" size="sm" delay={0.3} className="md:-ml-4 md:mt-2" />
           </div>
         </div>
       </section>
