@@ -54,6 +54,30 @@ const SobreMiPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Gallery */}
+      <section className="section-padding">
+        <div className="container-wide">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { src: massageWrist, alt: "Masaje de muñeca y mano" },
+              { src: massageShoulder, alt: "Masaje de hombro y espalda" },
+              { src: interiorImage, alt: "Técnica de masaje profundo" },
+              { src: aboutPortrait, alt: "Elias, masajista profesional" },
+            ].map((img, i) => (
+              <img
+                key={i}
+                src={img.src}
+                alt={img.alt}
+                className="rounded aspect-square object-cover w-full"
+                loading="lazy"
+                width={600}
+                height={600}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
