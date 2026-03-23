@@ -12,7 +12,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<ThemeDirection>(() => {
     const saved = localStorage.getItem("theme-direction") as ThemeDirection | null;
-    return saved && ["warm", "clinical", "natural", "editorial"].includes(saved) ? saved : "warm";
+    return saved && ["warm", "clinical", "natural", "editorial", "organic"].includes(saved) ? saved : "warm";
   });
 
   const setTheme = useCallback((t: ThemeDirection) => {
