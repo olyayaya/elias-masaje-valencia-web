@@ -74,7 +74,7 @@ const OrganicHome = () => {
       </section>
 
       {/* ═══════════ BENEFITS — Dark section ═══════════ */}
-      <section className="-mt-6 md:-mt-10 relative z-20 px-6 md:px-12 lg:px-20 pt-8 md:pt-12 pb-20 md:pb-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
+      <section className="-mt-2 relative z-20 px-6 md:px-12 lg:px-20 pt-8 md:pt-12 pb-20 md:pb-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
         <div className="max-w-5xl mx-auto">
           <div ref={benefitsTitle.ref} style={benefitsTitle.style} className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.benefits.title}</h2>
