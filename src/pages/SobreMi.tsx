@@ -1,5 +1,7 @@
 import aboutPortrait from "@/assets/about-portrait.jpg";
 import interiorImage from "@/assets/interior.jpg";
+import massageWrist from "@/assets/massage-wrist.jpg";
+import massageShoulder from "@/assets/massage-shoulder.jpg";
 import { useI18n } from "@/i18n/context";
 
 const SobreMiPage = () => {
