@@ -49,18 +49,18 @@ const OrganicServices = () => {
   return (
     <div>
       {/* Hero — full bleed image */}
-      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-center overflow-hidden">
+      <section className="relative min-h-[45vh] md:min-h-[55vh] flex items-center overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src={massageNeck}
+            src={massageShoulder2}
             alt="Masaje profesional"
-            className="w-full h-full object-cover object-[center_30%]"
+            className="w-full h-full object-cover object-[center_60%]"
             width={1920}
             height={1080}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
         </div>
-        <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-20 pb-[16vh]">
+        <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-16 pb-[10vh]">
           <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
             <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
               Treatments
@@ -72,7 +72,7 @@ const OrganicServices = () => {
 
         {/* Half-moon overlap into services section */}
         <div className="absolute bottom-0 left-0 right-0 z-20">
-          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[10vh] md:h-[12vh] max-h-28 block">
+          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[5vh] md:h-[6vh] max-h-16 block">
             <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: "hsl(var(--background))" }} />
           </svg>
         </div>
