@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/context";
 
 const WHATSAPP_URL = "https://wa.me/34600000000?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
@@ -7,13 +8,35 @@ interface ServiceCardProps {
   description: string;
   duration: string;
   price: string;
+  index?: number;
 }
 
-const ServiceCard = ({ title, description, duration, price }: ServiceCardProps) => {
+const ServiceCard = ({ title, description, duration, price, index = 0 }: ServiceCardProps) => {
   const { t } = useI18n();
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold: 0.2 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div className="bg-card rounded border border-border p-6 md:p-8 flex flex-col justify-between shadow-card">
+    <div
+      ref={ref}
+      className="bg-card rounded border border-border p-6 md:p-8 flex flex-col justify-between shadow-card"
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(20px)",
+        transition: `opacity 0.6s ease ${index * 0.15}s, transform 0.6s ease ${index * 0.15}s`,
+      }}
+    >
       <div>
         <h3 className="font-display text-xl md:text-2xl mb-2">{title}</h3>
         <p className="text-sm text-muted-foreground font-body leading-relaxed mb-4">{description}</p>
