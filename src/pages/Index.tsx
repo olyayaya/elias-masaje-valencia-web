@@ -7,6 +7,7 @@ import TestimonialCard from "@/components/TestimonialCard";
 import GiftCardHighlight from "@/components/GiftCardHighlight";
 import MapBlock from "@/components/MapBlock";
 import { useI18n } from "@/i18n/context";
+import BenefitIcon from "@/components/BenefitIcon";
 
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
 
@@ -49,6 +50,7 @@ const Index = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {t.benefits.items.map((b, i) => (
               <div key={i} className="text-center">
+                <BenefitIcon index={i} />
                 <h3 className="font-display text-xl mb-2">{b.title}</h3>
                 <p className="text-sm text-muted-foreground font-body leading-relaxed">{b.description}</p>
               </div>
