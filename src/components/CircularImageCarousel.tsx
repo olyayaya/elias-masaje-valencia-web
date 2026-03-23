@@ -46,7 +46,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
     ];
 
     return (
-      <div ref={anim.ref} style={anim.style} className={`flex justify-center items-start gap-0 relative ${className}`}>
+      <div ref={anim.ref} style={anim.style} className={`flex justify-center items-start gap-0 relative w-screen left-1/2 -translate-x-1/2 ${className}`}>
         {visible.map((item, i) => (
           <div key={`${activeIndex}-${i}`} className={`${item.offset}`}>
             <div
