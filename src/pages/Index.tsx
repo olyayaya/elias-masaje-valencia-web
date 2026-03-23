@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
-import heroImage from "@/assets/hero-massage.jpg";
+import heroImageDefault from "@/assets/hero-massage.jpg";
+import heroImageNatural from "@/assets/hero-natural.jpg";
+import { useTheme } from "@/contexts/ThemeContext";
 import aboutPortrait from "@/assets/about-portrait.jpg";
 import ServiceCard from "@/components/ServiceCard";
 import FaqAccordion from "@/components/FaqAccordion";
@@ -13,6 +15,8 @@ const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20
 
 const Index = () => {
   const { t } = useI18n();
+  const { theme } = useTheme();
+  const heroImage = theme === "natural" ? heroImageNatural : heroImageDefault;
   const previewServices = t.services.items.slice(0, 3);
 
   return (
