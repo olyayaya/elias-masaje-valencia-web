@@ -30,7 +30,7 @@ const OrganicHome = () => {
   return (
     <div>
       {/* ═══════════ EDITORIAL HERO — Split layout ═══════════ */}
-      <section className="relative min-h-[80vh] md:min-h-[85vh] flex items-center overflow-hidden">
+      <section className="relative min-h-[70vh] md:min-h-[78vh] flex items-center overflow-hidden">
         {/* Background image with soft overlay */}
         <div className="absolute inset-0">
           <img
