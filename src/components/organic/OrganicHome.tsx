@@ -43,7 +43,7 @@ const OrganicHome = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
         </div>
 
-        <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-20">
+        <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 pt-20 pb-[18vh] md:pb-[20vh]">
           <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
             <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-6">
               Valencia · Massage · Wellness
@@ -67,14 +67,14 @@ const OrganicHome = () => {
 
         {/* Half-moon overlap into benefits section */}
         <div className="absolute bottom-0 left-0 right-0 z-20">
-          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-28 md:h-40 block">
+          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[12vh] md:h-[14vh] max-h-32 block">
             <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: "hsl(var(--organic-dark))" }} />
           </svg>
         </div>
       </section>
 
       {/* ═══════════ BENEFITS — Dark section ═══════════ */}
-      <section className="-mt-6 md:-mt-10 relative z-20 px-6 md:px-12 lg:px-20 pt-8 md:pt-12 pb-20 md:pb-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
+      <section className="-mt-2 relative z-20 px-6 md:px-12 lg:px-20 pt-8 md:pt-12 pb-20 md:pb-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
         <div className="max-w-5xl mx-auto">
           <div ref={benefitsTitle.ref} style={benefitsTitle.style} className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.benefits.title}</h2>
