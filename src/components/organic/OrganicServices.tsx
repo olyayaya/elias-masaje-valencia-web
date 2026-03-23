@@ -79,7 +79,7 @@ const OrganicServices = () => {
       </section>
 
       {/* Services list — editorial */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+      <section className="px-6 md:px-12 lg:px-20 py-12 md:py-16">
         <div className="max-w-5xl mx-auto">
           <div className="space-y-0 divide-y divide-border">
             {t.services.items.map((s, i) => (
