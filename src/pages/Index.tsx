@@ -74,7 +74,7 @@ const Index = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {previewServices.map((s, i) => (
-              <ServiceCard key={i} {...s} />
+              <ServiceCard key={i} {...s} index={i} />
             ))}
           </div>
         </div>
