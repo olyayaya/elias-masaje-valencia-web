@@ -15,6 +15,8 @@ const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20
 
 const Index = () => {
   const { t } = useI18n();
+  const { theme } = useTheme();
+  const heroImage = theme === "natural" ? heroImageNatural : heroImageDefault;
   const previewServices = t.services.items.slice(0, 3);
 
   return (
