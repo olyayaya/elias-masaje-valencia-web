@@ -1,3 +1,4 @@
+import massageShoulder2 from "@/assets/massage-shoulder2.jpg";
 import massageNeck from "@/assets/massage-neck.jpg";
 import massageWrist from "@/assets/massage-wrist.jpg";
 import massageShoulder from "@/assets/massage-shoulder.jpg";
