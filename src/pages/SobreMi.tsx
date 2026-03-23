@@ -75,21 +75,9 @@ const SobreMiPage = () => {
       <section className="section-padding">
         <div className="container-wide">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {galleryItems.map((img, i) => {
-              const anim = useFadeIn(i * 0.1);
-              return (
-                <div key={i} ref={anim.ref} style={anim.style}>
-                  <img
-                    src={img.src}
-                    alt={img.alt}
-                    className="rounded aspect-square object-cover w-full"
-                    loading="lazy"
-                    width={600}
-                    height={600}
-                  />
-                </div>
-              );
-            })}
+            {galleryItems.map((img, i) => (
+              <GalleryImage key={i} src={img.src} alt={img.alt} index={i} />
+            ))}
           </div>
         </div>
       </section>
