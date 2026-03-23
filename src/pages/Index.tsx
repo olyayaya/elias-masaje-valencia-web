@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import heroImageDefault from "@/assets/hero-massage.jpg";
 import heroImageNatural from "@/assets/hero-natural.jpg";
+import heroImageClinical from "@/assets/hero-clinical.jpg";
 import { useTheme } from "@/contexts/ThemeContext";
 import aboutPortrait from "@/assets/about-portrait.jpg";
 import ServiceCard from "@/components/ServiceCard";
