@@ -33,9 +33,9 @@ const OrganicHome = () => {
         {/* Background image with soft overlay */}
         <div className="absolute inset-0">
           <img
-            src={heroImageDefault}
-            alt="Sala de masaje profesional"
-            className="w-full h-full object-cover"
+            src={heroImageOrganic}
+            alt="Masaje profesional"
+            className="w-full h-full object-cover object-bottom"
             width={1920}
             height={1080}
           />
