@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
 import aboutPortrait from "@/assets/about-portrait.jpg";
+import massageNeck from "@/assets/massage-neck.jpg";
 import massageWrist from "@/assets/massage-wrist.jpg";
 import massageShoulder from "@/assets/massage-shoulder.jpg";
 import interiorImage from "@/assets/interior.jpg";
@@ -122,7 +123,7 @@ const OrganicHome = () => {
           {/* Circular image cluster — asymmetric */}
           <div className="flex flex-wrap justify-center gap-6 md:gap-0 mb-16 relative">
             <CircularImage src={massageWrist} alt="Massage technique" size="lg" delay={0} className="md:-mr-4 md:mt-8" />
-            <CircularImage src={aboutPortrait} alt="Elias" size="md" delay={0.1} className="md:mt-0 md:z-10" />
+            <CircularImage src={massageNeck} alt="Neck massage" size="md" delay={0.1} className="md:mt-0 md:z-10" />
             <CircularImage src={massageShoulder} alt="Shoulder massage" size="lg" delay={0.2} className="md:-ml-4 md:mt-12" />
           </div>
 
