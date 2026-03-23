@@ -13,18 +13,23 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
   const [activeIndex, setActiveIndex] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-play on mobile/tablet (< 1024px)
-  useEffect(() => {
-    if (!isMobile && window.innerWidth >= 1024) return;
+    const checkMobile = () => window.innerWidth < 1024;
+    const [isMobileView, setIsMobileView] = useState(checkMobile());
 
-    intervalRef.current = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % images.length);
-    }, 3000);
+    useEffect(() => {
+      const handler = () => setIsMobileView(checkMobile());
+      window.addEventListener("resize", handler);
+      return () => window.removeEventListener("resize", handler);
+    }, []);
 
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isMobile, images.length]);
+    // Auto-play on mobile/tablet
+    useEffect(() => {
+      if (!isMobileView) return;
+      intervalRef.current = setInterval(() => {
+        setActiveIndex((prev) => (prev + 1) % images.length);
+      }, 3000);
+      return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    }, [isMobileView, images.length]);
 
   // Desktop: static overlapping layout
   if (!isMobile && typeof window !== "undefined" && window.innerWidth >= 1024) {
