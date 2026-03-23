@@ -240,6 +240,10 @@
 
     --radius: 1.25rem;
 
+    --organic-dark: 30 15% 14%;
+    --organic-dark-foreground: 37 25% 88%;
+    --organic-dark-muted: 30 8% 50%;
+
     --terracotta: 150 18% 50%;
     --terracotta-light: 37 22% 91%;
     --terracotta-dark: 150 18% 38%;

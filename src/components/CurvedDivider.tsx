@@ -15,6 +15,7 @@ const colorVar: Record<string, string> = {
   "bg-muted": "var(--muted)",
   "bg-primary": "var(--primary)",
   "bg-accent": "var(--accent)",
+  "bg-organic-dark": "var(--organic-dark)",
 };
 
 const toHsl = (cls: string) => {
