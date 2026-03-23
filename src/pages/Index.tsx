@@ -106,7 +106,7 @@ const Index = () => {
           <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.testimonials.title}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {t.testimonials.items.map((item, i) => (
-              <TestimonialCard key={i} {...item} />
+              <TestimonialCard key={i} {...item} index={i} />
             ))}
           </div>
         </div>
