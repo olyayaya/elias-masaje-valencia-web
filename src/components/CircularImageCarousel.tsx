@@ -22,7 +22,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
 
   // Auto-play always (slow on desktop, moderate on mobile)
   useEffect(() => {
-    const interval = isDesktop ? 4000 : 3000;
+    const interval = isDesktop ? 5200 : 3900;
     intervalRef.current = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % images.length);
     }, interval);
