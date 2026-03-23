@@ -8,6 +8,7 @@ import interiorImage from "@/assets/interior.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImage from "@/components/CircularImage";
+import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 import FaqAccordion from "@/components/FaqAccordion";
 import MapBlock from "@/components/MapBlock";
