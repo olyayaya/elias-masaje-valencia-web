@@ -8,6 +8,7 @@ import interiorImage from "@/assets/interior.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImage from "@/components/CircularImage";
+import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 import FaqAccordion from "@/components/FaqAccordion";
 import MapBlock from "@/components/MapBlock";
@@ -151,12 +152,14 @@ const OrganicHome = () => {
             </Link>
           </div>
 
-          {/* Circular image cluster — asymmetric */}
-          <div className="flex flex-wrap justify-center gap-6 md:gap-0 relative">
-            <CircularImage src={massageWrist} alt="Massage technique" size="lg" delay={0} className="md:-mr-4 md:mt-8" />
-            <CircularImage src={massageNeck} alt="Neck massage" size="md" delay={0.1} className="md:mt-0 md:z-10" />
-            <CircularImage src={massageShoulder} alt="Shoulder massage" size="lg" delay={0.2} className="md:-ml-4 md:mt-12" />
-          </div>
+          {/* Circular image cluster — carousel on mobile, static on desktop */}
+          <CircularImageCarousel
+            images={[
+              { src: massageWrist, alt: "Massage technique" },
+              { src: massageNeck, alt: "Neck massage" },
+              { src: massageShoulder, alt: "Shoulder massage" },
+            ]}
+          />
         </div>
       </section>
 

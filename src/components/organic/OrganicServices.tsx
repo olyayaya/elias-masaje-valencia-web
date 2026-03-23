@@ -3,7 +3,7 @@ import massageWrist from "@/assets/massage-wrist.jpg";
 import massageShoulder from "@/assets/massage-shoulder.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
-import CircularImage from "@/components/CircularImage";
+import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
@@ -80,11 +80,13 @@ const OrganicServices = () => {
       {/* Circular image cluster */}
       <section className="bg-secondary px-6 md:px-12 lg:px-20 py-16 md:py-20">
         <div className="max-w-5xl mx-auto">
-          <div className="flex flex-wrap justify-center gap-6 md:gap-0">
-            <CircularImage src={massageWrist} alt="Massage technique" size="md" delay={0} className="md:-mr-6" />
-            <CircularImage src={massageNeck} alt="Neck massage" size="lg" delay={0.1} className="md:z-10 md:-mt-4" />
-            <CircularImage src={massageShoulder} alt="Shoulder work" size="md" delay={0.2} className="md:-ml-6 md:mt-8" />
-          </div>
+          <CircularImageCarousel
+            images={[
+              { src: massageWrist, alt: "Massage technique" },
+              { src: massageNeck, alt: "Neck massage" },
+              { src: massageShoulder, alt: "Shoulder work" },
+            ]}
+          />
         </div>
       </section>
 
