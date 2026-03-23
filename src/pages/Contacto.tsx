@@ -55,12 +55,12 @@ const ContactoPage = () => {
                 <div>
                   <h3 className="font-display text-lg mb-1">{t.contact.instagram}</h3>
                   <a
-                    href="https://instagram.com/eliasmasaje"
+                    href="https://instagram.com/elias_masaje"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-primary font-body hover:opacity-80 transition-opacity"
                   >
-                    @eliasmasaje
+                    @elias_masaje
                   </a>
                 </div>
               </div>

@@ -85,7 +85,7 @@ export const ru: Translations = {
   contact: {
     title: "Контакты",
     address: "Адрес",
-    addressValue: "Центр Валенсии, Испания",
+    addressValue: "Calle San Vicente Mártir, 24, 46002 Valencia",
     hours: "Часы работы",
     weekdays: "Понедельник – Пятница: 9:00 – 20:00",
     saturday: "Суббота: 10:00 – 14:00",
