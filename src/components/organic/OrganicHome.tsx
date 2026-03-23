@@ -37,7 +37,7 @@ const OrganicHome = () => {
   return (
     <div>
       {/* ═══════════ EDITORIAL HERO — Split layout ═══════════ */}
-      <section className="relative min-h-[70vh] md:min-h-[78vh] flex items-center overflow-hidden">
+      <section className="relative min-h-[85vh] md:min-h-[92vh] flex items-center overflow-hidden">
         {/* Background image with soft overlay */}
         <div className="absolute inset-0">
           <img
@@ -74,7 +74,7 @@ const OrganicHome = () => {
 
         {/* Half-moon overlap into benefits section */}
         <div className="absolute bottom-0 left-0 right-0 z-20">
-          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[12vh] md:h-[14vh] max-h-32 block">
+          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[6vh] md:h-[8vh] max-h-20 block">
             <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: "hsl(var(--organic-dark))" }} />
           </svg>
         </div>
