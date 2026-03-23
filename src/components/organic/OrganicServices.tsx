@@ -41,27 +41,25 @@ const OrganicServices = () => {
 
   return (
     <div>
-      {/* Hero — editorial split */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
-            <div className="md:col-span-5" ref={heroText.ref} style={heroText.style}>
-              <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
-                Treatments
-              </p>
-              <h1 className="font-display text-4xl md:text-5xl leading-snug mb-6">{t.services.title}</h1>
-              <p className="text-base text-muted-foreground font-body leading-[1.8]">{t.services.pageSubtitle}</p>
-            </div>
-            <div className="md:col-span-6 md:col-start-7" ref={heroImg.ref} style={heroImg.style}>
-              <img
-                src={serviceImage}
-                alt="Detalle de productos de masaje"
-                className="rounded-2xl aspect-[4/3] object-cover w-full"
-                loading="lazy"
-                width={800}
-                height={600}
-              />
-            </div>
+      {/* Hero — full bleed image */}
+      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-center overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src={massageNeck}
+            alt="Masaje profesional"
+            className="w-full h-full object-cover"
+            width={1920}
+            height={1080}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
+        </div>
+        <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-20">
+          <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
+            <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
+              Treatments
+            </p>
+            <h1 className="font-display text-4xl md:text-5xl leading-snug mb-6">{t.services.title}</h1>
+            <p className="text-base text-muted-foreground font-body leading-[1.8] max-w-md">{t.services.pageSubtitle}</p>
           </div>
         </div>
       </section>
