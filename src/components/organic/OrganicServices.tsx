@@ -1,6 +1,12 @@
 import massageNeck from "@/assets/massage-neck.jpg";
 import massageWrist from "@/assets/massage-wrist.jpg";
 import massageShoulder from "@/assets/massage-shoulder.jpg";
+import massageArm from "@/assets/massage-arm.jpg";
+import massageBack from "@/assets/massage-back.jpg";
+import massageFoot from "@/assets/massage-foot.jpg";
+import massageStones from "@/assets/massage-stones.jpg";
+import massageDeep from "@/assets/massage-deep.jpg";
+import massageOil from "@/assets/massage-oil.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
