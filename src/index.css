@@ -5,7 +5,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap');
 
 @layer base {
-  :root {
+  /* Direction A — Warm Minimal (default) */
+  :root,
+  [data-theme="warm"] {
     --background: 30 25% 97%;
     --foreground: 25 10% 15%;
 
@@ -57,6 +59,88 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /* Direction B — Clinical Premium */
+  [data-theme="clinical"] {
+    --background: 220 20% 97%;
+    --foreground: 220 25% 12%;
+
+    --card: 220 15% 95%;
+    --card-foreground: 220 25% 12%;
+
+    --popover: 220 20% 97%;
+    --popover-foreground: 220 25% 12%;
+
+    --primary: 220 55% 35%;
+    --primary-foreground: 220 20% 97%;
+
+    --secondary: 220 12% 90%;
+    --secondary-foreground: 220 20% 22%;
+
+    --muted: 220 10% 92%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 220 55% 35%;
+    --accent-foreground: 220 20% 97%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 15% 86%;
+    --input: 220 15% 86%;
+    --ring: 220 55% 35%;
+
+    --terracotta: 220 55% 35%;
+    --terracotta-light: 220 30% 92%;
+    --terracotta-dark: 220 55% 25%;
+    --warm-cream: 220 20% 96%;
+    --warm-stone: 220 8% 65%;
+    --warm-brown: 220 20% 20%;
+
+    --shadow-soft: 0 2px 15px -3px hsl(220 25% 12% / 0.07);
+    --shadow-card: 0 1px 8px -2px hsl(220 25% 12% / 0.05);
+  }
+
+  /* Direction C — Natural Modern */
+  [data-theme="natural"] {
+    --background: 80 18% 96%;
+    --foreground: 90 12% 14%;
+
+    --card: 80 14% 93%;
+    --card-foreground: 90 12% 14%;
+
+    --popover: 80 18% 96%;
+    --popover-foreground: 90 12% 14%;
+
+    --primary: 90 30% 38%;
+    --primary-foreground: 80 18% 96%;
+
+    --secondary: 80 12% 89%;
+    --secondary-foreground: 90 15% 22%;
+
+    --muted: 80 8% 91%;
+    --muted-foreground: 80 6% 46%;
+
+    --accent: 90 30% 38%;
+    --accent-foreground: 80 18% 96%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 80 12% 86%;
+    --input: 80 12% 86%;
+    --ring: 90 30% 38%;
+
+    --terracotta: 90 30% 38%;
+    --terracotta-light: 80 20% 91%;
+    --terracotta-dark: 90 30% 28%;
+    --warm-cream: 75 22% 95%;
+    --warm-stone: 80 6% 62%;
+    --warm-brown: 90 15% 22%;
+
+    --shadow-soft: 0 2px 15px -3px hsl(90 12% 14% / 0.06);
+    --shadow-card: 0 1px 8px -2px hsl(90 12% 14% / 0.05);
   }
 }
 
