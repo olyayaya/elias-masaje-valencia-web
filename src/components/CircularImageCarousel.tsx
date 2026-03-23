@@ -65,7 +65,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
 
   // Mobile/Tablet: decorative auto-playing carousel with scale
   return (
-    <div ref={anim.ref} style={anim.style} className={`relative w-screen left-1/2 -translate-x-1/2 ${className}`}>
+    <div ref={anim.ref} style={{ ...anim.style, marginLeft: "calc(-50vw + 50%)", marginRight: "calc(-50vw + 50%)" }} className={`relative w-screen ${className}`}>
       <div className="flex items-center justify-center h-52 relative">
         {images.map((img, i) => {
           const distance = i - activeIndex;
