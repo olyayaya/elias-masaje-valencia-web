@@ -4,6 +4,8 @@ import massageWrist from "@/assets/massage-wrist.jpg";
 import massageShoulder from "@/assets/massage-shoulder.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
+import { useTheme } from "@/contexts/ThemeContext";
+import OrganicAbout from "@/components/organic/OrganicAbout";
 
 const GalleryImage = ({ src, alt, index }: { src: string; alt: string; index: number }) => {
   const anim = useFadeIn(index * 0.1);
@@ -16,10 +18,13 @@ const GalleryImage = ({ src, alt, index }: { src: string; alt: string; index: nu
 
 const SobreMiPage = () => {
   const { t } = useI18n();
+  const { theme } = useTheme();
   const portrait = useFadeIn(0);
   const bio = useFadeIn(0.15);
   const spaceText = useFadeIn(0);
   const spaceImg = useFadeIn(0.15);
+
+  if (theme === "organic") return <OrganicAbout />;
 
   const galleryItems = [
     { src: massageWrist, alt: "Masaje de muñeca y mano" },
@@ -80,7 +85,6 @@ const SobreMiPage = () => {
         </div>
       </section>
 
-      {/* Gallery */}
       <section className="section-padding">
         <div className="container-wide">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import ServiceCard from "@/components/ServiceCard";
 import serviceImage from "@/assets/service-detail.jpg";
 import { useI18n } from "@/i18n/context";
+import { useTheme } from "@/contexts/ThemeContext";
+import OrganicServices from "@/components/organic/OrganicServices";
 
 const useFadeIn = (delay = 0) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -26,8 +28,11 @@ const useFadeIn = (delay = 0) => {
 
 const ServiciosPage = () => {
   const { t } = useI18n();
+  const { theme } = useTheme();
   const heading = useFadeIn(0);
   const image = useFadeIn(0.2);
+
+  if (theme === "organic") return <OrganicServices />;
 
   return (
     <div>

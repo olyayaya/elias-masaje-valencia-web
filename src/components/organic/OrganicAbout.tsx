@@ -1,0 +1,121 @@
+import aboutPortrait from "@/assets/about-portrait.jpg";
+import interiorImage from "@/assets/interior.jpg";
+import massageWrist from "@/assets/massage-wrist.jpg";
+import massageShoulder from "@/assets/massage-shoulder.jpg";
+import { useI18n } from "@/i18n/context";
+import { useFadeIn } from "@/hooks/use-fade-in";
+import CircularImage from "@/components/CircularImage";
+import CurvedDivider from "@/components/CurvedDivider";
+
+const OrganicAbout = () => {
+  const { t } = useI18n();
+  const heroLabel = useFadeIn(0);
+  const portrait = useFadeIn(0.1);
+  const bio = useFadeIn(0.2);
+  const spaceText = useFadeIn(0);
+  const spaceImg = useFadeIn(0.15);
+
+  return (
+    <div>
+      {/* Hero — editorial intro with large portrait */}
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-6xl mx-auto">
+          <div ref={heroLabel.ref} style={heroLabel.style} className="mb-12">
+            <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
+              The therapist
+            </p>
+            <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] leading-snug max-w-lg">
+              {t.about.title}
+            </h1>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
+            {/* Portrait — slightly offset */}
+            <div className="md:col-span-5" ref={portrait.ref} style={portrait.style}>
+              <div className="relative">
+                <img
+                  src={aboutPortrait}
+                  alt="Elias, masajista profesional en Valencia"
+                  className="rounded-2xl aspect-[3/4] object-cover w-full"
+                  loading="lazy"
+                  width={800}
+                  height={1067}
+                />
+                <div className="absolute -bottom-6 -right-6 w-20 h-20 rounded-full bg-secondary border border-border -z-10" />
+              </div>
+            </div>
+
+            {/* Bio — editorial long-form */}
+            <div className="md:col-span-6 md:col-start-7 md:pt-8" ref={bio.ref} style={bio.style}>
+              <div className="space-y-5 text-base text-muted-foreground font-body leading-[1.85]">
+                {t.about.paragraphs.map((p, i) => (
+                  <p key={i}>{p}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <CurvedDivider from="bg-background" to="bg-secondary" />
+
+      {/* The space — reversed asymmetric layout */}
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+            <div className="md:col-span-6 md:order-2" ref={spaceImg.ref} style={spaceImg.style}>
+              <img
+                src={interiorImage}
+                alt="Interior de la consulta de masaje"
+                className="rounded-2xl aspect-square object-cover w-full"
+                loading="lazy"
+                width={1200}
+                height={800}
+              />
+            </div>
+            <div className="md:col-span-5 md:col-start-1 md:order-1" ref={spaceText.ref} style={spaceText.style}>
+              <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
+                The space
+              </p>
+              <h2 className="font-display text-3xl md:text-4xl mb-6 leading-snug">{t.about.spaceTitle}</h2>
+              <div className="space-y-4 text-base text-muted-foreground font-body leading-[1.8]">
+                {t.about.spaceParagraphs.map((p, i) => (
+                  <p key={i}>{p}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <CurvedDivider from="bg-secondary" to="bg-background" flip />
+
+      {/* Gallery — circular images, asymmetric cluster */}
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-5xl mx-auto">
+          {(() => {
+            const GalleryTitle = () => {
+              const anim = useFadeIn(0);
+              return (
+                <div ref={anim.ref} style={anim.style} className="text-center mb-16">
+                  <h2 className="font-display text-3xl md:text-4xl mb-3">Gallery</h2>
+                  <div className="w-12 h-px bg-primary mx-auto" />
+                </div>
+              );
+            };
+            return <GalleryTitle />;
+          })()}
+
+          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-0">
+            <CircularImage src={massageWrist} alt="Masaje de muñeca" size="lg" delay={0} className="md:-mr-4" />
+            <CircularImage src={massageShoulder} alt="Masaje de hombro" size="md" delay={0.1} className="md:mt-12 md:z-10" />
+            <CircularImage src={interiorImage} alt="Interior" size="lg" delay={0.2} className="md:-ml-4 md:-mt-4" />
+            <CircularImage src={aboutPortrait} alt="Elias" size="sm" delay={0.3} className="md:-ml-2 md:mt-16" />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default OrganicAbout;

@@ -2,14 +2,19 @@ import { MessageCircle, MapPin, Clock, Instagram } from "lucide-react";
 import MapBlock from "@/components/MapBlock";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
+import { useTheme } from "@/contexts/ThemeContext";
+import OrganicContact from "@/components/organic/OrganicContact";
 
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
 
 const ContactoPage = () => {
   const { t } = useI18n();
+  const { theme } = useTheme();
   const heading = useFadeIn(0);
   const details = useFadeIn(0.1);
   const map = useFadeIn(0.2);
+
+  if (theme === "organic") return <OrganicContact />;
 
   return (
     <div>
