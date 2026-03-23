@@ -27,8 +27,8 @@ const Footer = () => {
               <p>{t.contact.addressValue}</p>
               <p>{t.contact.weekdays}</p>
               <p>{t.contact.saturday}</p>
-              <a href="https://instagram.com/eliasmasaje" target="_blank" rel="noopener noreferrer" className="hover:opacity-100 transition-opacity">
-                @eliasmasaje
+              <a href="https://instagram.com/elias_masaje" target="_blank" rel="noopener noreferrer" className="hover:opacity-100 transition-opacity">
+                @elias_masaje
               </a>
             </div>
           </div>

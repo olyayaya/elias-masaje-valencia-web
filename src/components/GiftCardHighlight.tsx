@@ -1,7 +1,7 @@
 import { Gift } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 
-const WHATSAPP_URL = "https://wa.me/34600000000?text=Hola%2C%20me%20gustaría%20información%20sobre%20tarjetas%20regalo";
+const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20información%20sobre%20tarjetas%20regalo";
 
 const GiftCardHighlight = () => {
   const { t } = useI18n();
