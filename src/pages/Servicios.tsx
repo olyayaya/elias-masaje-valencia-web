@@ -30,7 +30,7 @@ const ServiciosPage = () => {
         <div className="container-wide">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {t.services.items.map((s, i) => (
-              <ServiceCard key={i} {...s} />
+              <ServiceCard key={i} {...s} index={i} />
             ))}
           </div>
         </div>
