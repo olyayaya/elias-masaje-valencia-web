@@ -7,6 +7,7 @@ const themes: { id: ThemeDirection; label: string; color: string }[] = [
   { id: "clinical", label: "Clinical Premium", color: "hsl(38 55% 62%)" },
   { id: "natural", label: "Natural Modern", color: "hsl(90 30% 38%)" },
   { id: "editorial", label: "Aura Editorial", color: "hsl(28 35% 22%)" },
+  { id: "organic", label: "Organic Editorial", color: "hsl(150 18% 50%)" },
 ];
 
 const ThemeSwitcher = () => {

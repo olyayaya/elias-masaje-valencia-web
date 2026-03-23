@@ -11,12 +11,19 @@ import GiftCardHighlight from "@/components/GiftCardHighlight";
 import MapBlock from "@/components/MapBlock";
 import { useI18n } from "@/i18n/context";
 import BenefitIcon from "@/components/BenefitIcon";
+import OrganicHome from "@/components/organic/OrganicHome";
 
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
 
 const Index = () => {
   const { t } = useI18n();
   const { theme } = useTheme();
+
+  // Organic theme gets a completely different layout
+  if (theme === "organic") {
+    return <OrganicHome />;
+  }
+
   const heroImage = theme === "natural" ? heroImageNatural : theme === "clinical" ? heroImageClinical : heroImageDefault;
   const previewServices = t.services.items.slice(0, 3);
 
