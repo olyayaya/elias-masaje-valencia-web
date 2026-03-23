@@ -161,9 +161,15 @@ const OrganicHome = () => {
           {/* Circular image cluster — carousel on mobile, static on desktop */}
           <CircularImageCarousel
             images={[
-              { src: massageWrist, alt: "Massage technique" },
+              { src: massageWrist, alt: "Wrist massage" },
+              { src: massageBack, alt: "Back massage" },
               { src: massageNeck, alt: "Neck massage" },
+              { src: massageStones, alt: "Hot stone therapy" },
               { src: massageShoulder, alt: "Shoulder massage" },
+              { src: massageDeep, alt: "Deep tissue work" },
+              { src: massageOil, alt: "Oil massage" },
+              { src: massageArm, alt: "Arm massage" },
+              { src: massageFoot, alt: "Foot massage" },
             ]}
           />
         </div>

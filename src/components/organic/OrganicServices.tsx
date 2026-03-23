@@ -95,9 +95,15 @@ const OrganicServices = () => {
         <div className="max-w-5xl mx-auto">
           <CircularImageCarousel
             images={[
-              { src: massageWrist, alt: "Massage technique" },
+              { src: massageArm, alt: "Arm massage" },
+              { src: massageDeep, alt: "Deep tissue work" },
               { src: massageNeck, alt: "Neck massage" },
-              { src: massageShoulder, alt: "Shoulder work" },
+              { src: massageOil, alt: "Oil massage" },
+              { src: massageShoulder, alt: "Shoulder massage" },
+              { src: massageStones, alt: "Hot stone therapy" },
+              { src: massageBack, alt: "Back massage" },
+              { src: massageWrist, alt: "Wrist massage" },
+              { src: massageFoot, alt: "Foot massage" },
             ]}
           />
         </div>
