@@ -66,14 +66,14 @@ const OrganicHome = () => {
 
         {/* Half-moon overlap into benefits section */}
         <div className="absolute bottom-0 left-0 right-0 z-20">
-          <svg viewBox="0 0 1440 120" preserveAspectRatio="none" className="w-full h-16 md:h-24 block">
-            <ellipse cx="720" cy="120" rx="900" ry="120" style={{ fill: "hsl(var(--organic-dark))" }} />
+          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-28 md:h-40 block">
+            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: "hsl(var(--organic-dark))" }} />
           </svg>
         </div>
       </section>
 
       {/* ═══════════ BENEFITS — Dark section ═══════════ */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
+      <section className="-mt-10 md:-mt-16 relative z-20 px-6 md:px-12 lg:px-20 py-20 md:py-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
         <div className="max-w-5xl mx-auto">
           <div ref={benefitsTitle.ref} style={benefitsTitle.style} className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.benefits.title}</h2>
