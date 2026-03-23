@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 
-export type ThemeDirection = "warm" | "clinical" | "natural";
+export type ThemeDirection = "warm" | "clinical" | "natural" | "editorial";
 
 interface ThemeContextType {
   theme: ThemeDirection;
