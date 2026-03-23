@@ -110,25 +110,13 @@ const OrganicHome = () => {
       {/* ═══════════ SERVICES — Circular images + editorial list ═══════════ */}
       <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
         <div className="max-w-6xl mx-auto">
-          <div ref={servicesTitle.ref} style={servicesTitle.style} className="flex flex-col md:flex-row md:items-end md:justify-between mb-16">
-            <div>
-              <h2 className="font-display text-3xl md:text-4xl mb-2">{t.services.title}</h2>
-              <p className="text-sm text-muted-foreground font-body max-w-md">{t.services.pageSubtitle}</p>
-            </div>
-            <Link to="/servicios" className="text-sm font-body text-primary hover:opacity-80 transition-opacity mt-4 md:mt-0">
-              {t.services.viewAll}
-            </Link>
-          </div>
-
-          {/* Circular image cluster — asymmetric */}
-          <div className="flex flex-wrap justify-center gap-6 md:gap-0 mb-16 relative">
-            <CircularImage src={massageWrist} alt="Massage technique" size="lg" delay={0} className="md:-mr-4 md:mt-8" />
-            <CircularImage src={massageNeck} alt="Neck massage" size="md" delay={0.1} className="md:mt-0 md:z-10" />
-            <CircularImage src={massageShoulder} alt="Shoulder massage" size="lg" delay={0.2} className="md:-ml-4 md:mt-12" />
+          <div ref={servicesTitle.ref} style={servicesTitle.style} className="mb-16">
+            <h2 className="font-display text-3xl md:text-4xl mb-2">{t.services.title}</h2>
+            <p className="text-sm text-muted-foreground font-body max-w-md">{t.services.pageSubtitle}</p>
           </div>
 
           {/* Service list — editorial layout */}
-          <div className="space-y-0 divide-y divide-border">
+          <div className="space-y-0 divide-y divide-border mb-16">
             {previewServices.map((s, i) => {
               const ServiceRow = () => {
                 const anim = useFadeIn(i * 0.1);
@@ -155,6 +143,19 @@ const OrganicHome = () => {
               };
               return <ServiceRow key={i} />;
             })}
+          </div>
+
+          <div className="text-center mb-16">
+            <Link to="/servicios" className="text-sm font-body text-primary hover:opacity-80 transition-opacity">
+              {t.services.viewAll}
+            </Link>
+          </div>
+
+          {/* Circular image cluster — asymmetric */}
+          <div className="flex flex-wrap justify-center gap-6 md:gap-0 relative">
+            <CircularImage src={massageWrist} alt="Massage technique" size="lg" delay={0} className="md:-mr-4 md:mt-8" />
+            <CircularImage src={massageNeck} alt="Neck massage" size="md" delay={0.1} className="md:mt-0 md:z-10" />
+            <CircularImage src={massageShoulder} alt="Shoulder massage" size="lg" delay={0.2} className="md:-ml-4 md:mt-12" />
           </div>
         </div>
       </section>

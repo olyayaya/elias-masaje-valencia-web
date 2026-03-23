@@ -64,6 +64,17 @@ const OrganicServices = () => {
         </div>
       </section>
 
+      {/* Services list — editorial */}
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-5xl mx-auto">
+          <div className="space-y-0 divide-y divide-border">
+            {t.services.items.map((s, i) => (
+              <ServiceRow key={i} {...s} bookLabel={t.services.bookBtn} index={i} />
+            ))}
+          </div>
+        </div>
+      </section>
+
       <CurvedDivider from="bg-background" to="bg-secondary" />
 
       {/* Circular image cluster */}
@@ -78,17 +89,6 @@ const OrganicServices = () => {
       </section>
 
       <CurvedDivider from="bg-secondary" to="bg-background" flip />
-
-      {/* Services list — editorial */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
-        <div className="max-w-5xl mx-auto">
-          <div className="space-y-0 divide-y divide-border">
-            {t.services.items.map((s, i) => (
-              <ServiceRow key={i} {...s} bookLabel={t.services.bookBtn} index={i} />
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Quiet CTA */}
       <section className="bg-secondary px-6 md:px-12 lg:px-20 py-16 md:py-20">
