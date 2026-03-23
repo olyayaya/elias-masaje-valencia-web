@@ -1,0 +1,355 @@
+import { Link } from "react-router-dom";
+import heroImageDefault from "@/assets/hero-massage.jpg";
+import aboutPortrait from "@/assets/about-portrait.jpg";
+import massageWrist from "@/assets/massage-wrist.jpg";
+import massageShoulder from "@/assets/massage-shoulder.jpg";
+import interiorImage from "@/assets/interior.jpg";
+import { useI18n } from "@/i18n/context";
+import { useFadeIn } from "@/hooks/use-fade-in";
+import CircularImage from "@/components/CircularImage";
+import CurvedDivider from "@/components/CurvedDivider";
+import FaqAccordion from "@/components/FaqAccordion";
+import MapBlock from "@/components/MapBlock";
+
+const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
+
+const OrganicHome = () => {
+  const { t } = useI18n();
+
+  const heroText = useFadeIn(0.2);
+  const benefitsTitle = useFadeIn(0);
+  const servicesTitle = useFadeIn(0);
+  const storyText = useFadeIn(0);
+  const storyImg = useFadeIn(0.15);
+  const testimonialsTitle = useFadeIn(0);
+  const ctaBlock = useFadeIn(0);
+
+  const previewServices = t.services.items.slice(0, 3);
+
+  return (
+    <div>
+      {/* ═══════════ EDITORIAL HERO — Split layout ═══════════ */}
+      <section className="relative min-h-[80vh] md:min-h-[85vh] flex items-center overflow-hidden">
+        {/* Background image with soft overlay */}
+        <div className="absolute inset-0">
+          <img
+            src={heroImageDefault}
+            alt="Sala de masaje profesional"
+            className="w-full h-full object-cover"
+            width={1920}
+            height={1080}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
+        </div>
+
+        <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-20">
+          <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
+            <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-6">
+              Valencia · Massage · Wellness
+            </p>
+            <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] leading-[1.15] mb-6">
+              {t.hero.headline}
+            </h1>
+            <p className="text-base md:text-lg text-muted-foreground font-body leading-relaxed mb-10 max-w-md">
+              {t.hero.subheadline}
+            </p>
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-sm font-body bg-foreground text-background px-8 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
+            >
+              {t.hero.cta}
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════ BENEFITS — Calm statements ═══════════ */}
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-5xl mx-auto">
+          <div ref={benefitsTitle.ref} style={benefitsTitle.style} className="text-center mb-16">
+            <h2 className="font-display text-3xl md:text-4xl mb-3">{t.benefits.title}</h2>
+            <div className="w-12 h-px bg-primary mx-auto" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
+            {t.benefits.items.map((b, i) => {
+              const BenefitItem = () => {
+                const anim = useFadeIn(i * 0.1);
+                return (
+                  <div ref={anim.ref} style={anim.style} className="flex gap-5">
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
+                      <span className="text-sm font-body font-medium text-primary">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="font-display text-xl mb-1.5">{b.title}</h3>
+                      <p className="text-sm text-muted-foreground font-body leading-relaxed">{b.description}</p>
+                    </div>
+                  </div>
+                );
+              };
+              return <BenefitItem key={i} />;
+            })}
+          </div>
+        </div>
+      </section>
+
+      <CurvedDivider from="bg-background" to="bg-secondary" />
+
+      {/* ═══════════ SERVICES — Circular images + editorial list ═══════════ */}
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-6xl mx-auto">
+          <div ref={servicesTitle.ref} style={servicesTitle.style} className="flex flex-col md:flex-row md:items-end md:justify-between mb-16">
+            <div>
+              <h2 className="font-display text-3xl md:text-4xl mb-2">{t.services.title}</h2>
+              <p className="text-sm text-muted-foreground font-body max-w-md">{t.services.pageSubtitle}</p>
+            </div>
+            <Link to="/servicios" className="text-sm font-body text-primary hover:opacity-80 transition-opacity mt-4 md:mt-0">
+              {t.services.viewAll}
+            </Link>
+          </div>
+
+          {/* Circular image cluster — asymmetric */}
+          <div className="flex flex-wrap justify-center gap-6 md:gap-0 mb-16 relative">
+            <CircularImage src={massageWrist} alt="Massage technique" size="lg" delay={0} className="md:-mr-4 md:mt-8" />
+            <CircularImage src={aboutPortrait} alt="Elias" size="md" delay={0.1} className="md:mt-0 md:z-10" />
+            <CircularImage src={massageShoulder} alt="Shoulder massage" size="lg" delay={0.2} className="md:-ml-4 md:mt-12" />
+          </div>
+
+          {/* Service list — editorial layout */}
+          <div className="space-y-0 divide-y divide-border">
+            {previewServices.map((s, i) => {
+              const ServiceRow = () => {
+                const anim = useFadeIn(i * 0.1);
+                return (
+                  <div ref={anim.ref} style={anim.style} className="flex flex-col md:flex-row md:items-center justify-between py-8 gap-4">
+                    <div className="flex-1">
+                      <h3 className="font-display text-xl md:text-2xl mb-1">{s.title}</h3>
+                      <p className="text-sm text-muted-foreground font-body leading-relaxed max-w-lg">{s.description}</p>
+                    </div>
+                    <div className="flex items-center gap-6 shrink-0">
+                      <span className="text-sm font-body text-muted-foreground">{s.duration}</span>
+                      <span className="text-sm font-body font-medium">{s.price}</span>
+                      <a
+                        href={WHATSAPP_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-body border border-foreground/20 text-foreground px-5 py-2 rounded-full transition-all hover:bg-foreground hover:text-background"
+                      >
+                        {t.services.bookBtn}
+                      </a>
+                    </div>
+                  </div>
+                );
+              };
+              return <ServiceRow key={i} />;
+            })}
+          </div>
+        </div>
+      </section>
+
+      <CurvedDivider from="bg-secondary" to="bg-background" flip />
+
+      {/* ═══════════ STORY — Editorial text + asymmetric image ═══════════ */}
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+            <div className="md:col-span-5 md:col-start-1" ref={storyText.ref} style={storyText.style}>
+              <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
+                {t.about.title}
+              </p>
+              <h2 className="font-display text-3xl md:text-4xl mb-6 leading-snug">
+                {t.about.title}
+              </h2>
+              <p className="text-base text-muted-foreground font-body leading-[1.8] mb-4">
+                {t.about.previewP1}
+              </p>
+              <p className="text-base text-muted-foreground font-body leading-[1.8] mb-8">
+                {t.about.previewP2}
+              </p>
+              <Link
+                to="/sobre-mi"
+                className="text-sm font-body text-foreground border-b border-foreground/30 pb-0.5 hover:border-foreground transition-colors"
+              >
+                {t.about.learnMore}
+              </Link>
+            </div>
+
+            <div className="md:col-span-6 md:col-start-7" ref={storyImg.ref} style={storyImg.style}>
+              <div className="relative">
+                <img
+                  src={aboutPortrait}
+                  alt="Elias, masajista profesional"
+                  className="rounded-2xl aspect-[3/4] object-cover w-full max-w-md ml-auto"
+                  loading="lazy"
+                  width={800}
+                  height={1067}
+                />
+                {/* Subtle overlapping accent */}
+                <div className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full bg-secondary border border-border -z-10" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════ PROCESS — Simple steps ═══════════ */}
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-3xl mx-auto text-center">
+          {(() => {
+            const ProcessSection = () => {
+              const anim = useFadeIn(0);
+              const steps = [
+                { num: "01", text: t.services.items[0] ? "Book" : "Book" },
+                { num: "02", text: "Assess" },
+                { num: "03", text: "Treat" },
+              ];
+              return (
+                <div ref={anim.ref} style={anim.style}>
+                  <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">How it works</p>
+                  <h2 className="font-display text-3xl md:text-4xl mb-12">Simple process</h2>
+                  <div className="flex items-center justify-center gap-8 md:gap-16">
+                    {steps.map((step, i) => (
+                      <div key={i} className="flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 rounded-full border border-border flex items-center justify-center">
+                          <span className="text-sm font-body text-muted-foreground">{step.num}</span>
+                        </div>
+                        <span className="text-sm font-body text-muted-foreground">{step.text}</span>
+                        {i < steps.length - 1 && (
+                          <div className="hidden md:block absolute" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            };
+            return <ProcessSection />;
+          })()}
+        </div>
+      </section>
+
+      {/* ═══════════ TESTIMONIALS — Staggered cards ═══════════ */}
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-5xl mx-auto">
+          <div ref={testimonialsTitle.ref} style={testimonialsTitle.style} className="text-center mb-16">
+            <h2 className="font-display text-3xl md:text-4xl mb-3">{t.testimonials.title}</h2>
+            <div className="w-12 h-px bg-primary mx-auto" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {t.testimonials.items.map((item, i) => {
+              const TestimonialOrganic = () => {
+                const anim = useFadeIn(i * 0.12);
+                return (
+                  <div
+                    ref={anim.ref}
+                    style={anim.style}
+                    className={`bg-card rounded-2xl border border-border p-8 ${
+                      i === 1 ? "md:-translate-y-4" : ""
+                    }`}
+                  >
+                    <p className="text-base text-muted-foreground font-body leading-relaxed italic mb-6">
+                      "{item.quote}"
+                    </p>
+                    <p className="text-sm font-body font-medium">— {item.name}</p>
+                  </div>
+                );
+              };
+              return <TestimonialOrganic key={i} />;
+            })}
+          </div>
+        </div>
+      </section>
+
+      <CurvedDivider from="bg-background" to="bg-secondary" />
+
+      {/* ═══════════ LOCATION ═══════════ */}
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-5xl mx-auto">
+          {(() => {
+            const Loc = () => {
+              const anim = useFadeIn(0);
+              return (
+                <div ref={anim.ref} style={anim.style}>
+                  <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.location.title}</h2>
+                  <div className="rounded-2xl overflow-hidden border border-border">
+                    <MapBlock />
+                  </div>
+                </div>
+              );
+            };
+            return <Loc />;
+          })()}
+        </div>
+      </section>
+
+      <CurvedDivider from="bg-secondary" to="bg-background" flip />
+
+      {/* ═══════════ FAQ ═══════════ */}
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+        <div className="max-w-2xl mx-auto">
+          {(() => {
+            const Faq = () => {
+              const anim = useFadeIn(0);
+              return (
+                <div ref={anim.ref} style={anim.style}>
+                  <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.faq.title}</h2>
+                  <FaqAccordion items={t.faq.items} />
+                </div>
+              );
+            };
+            return <Faq />;
+          })()}
+        </div>
+      </section>
+
+      {/* ═══════════ GIFT CARD — Minimal ═══════════ */}
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-16 md:py-20">
+        <div className="max-w-3xl mx-auto text-center">
+          {(() => {
+            const GiftSection = () => {
+              const anim = useFadeIn(0);
+              return (
+                <div ref={anim.ref} style={anim.style}>
+                  <h2 className="font-display text-2xl md:text-3xl mb-3">{t.giftCard.title}</h2>
+                  <p className="text-sm text-muted-foreground font-body mb-6">{t.giftCard.description}</p>
+                  <a
+                    href={WHATSAPP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-sm font-body border border-foreground/20 text-foreground px-6 py-2.5 rounded-full transition-all hover:bg-foreground hover:text-background"
+                  >
+                    {t.giftCard.cta}
+                  </a>
+                </div>
+              );
+            };
+            return <GiftSection />;
+          })()}
+        </div>
+      </section>
+
+      {/* ═══════════ FINAL CTA — Quiet confidence ═══════════ */}
+      <section className="px-6 md:px-12 lg:px-20 py-24 md:py-32">
+        <div className="max-w-2xl mx-auto text-center" ref={ctaBlock.ref} style={ctaBlock.style}>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl mb-5 leading-snug">{t.finalCta.title}</h2>
+          <p className="text-base text-muted-foreground font-body leading-relaxed mb-10">{t.finalCta.description}</p>
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-sm font-body bg-foreground text-background px-10 py-4 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
+          >
+            {t.finalCta.cta}
+          </a>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default OrganicHome;
