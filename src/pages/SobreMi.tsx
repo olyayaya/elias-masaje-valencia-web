@@ -5,6 +5,15 @@ import massageShoulder from "@/assets/massage-shoulder.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 
+const GalleryImage = ({ src, alt, index }: { src: string; alt: string; index: number }) => {
+  const anim = useFadeIn(index * 0.1);
+  return (
+    <div ref={anim.ref} style={anim.style}>
+      <img src={src} alt={alt} className="rounded aspect-square object-cover w-full" loading="lazy" width={600} height={600} />
+    </div>
+  );
+};
+
 const SobreMiPage = () => {
   const { t } = useI18n();
   const portrait = useFadeIn(0);
