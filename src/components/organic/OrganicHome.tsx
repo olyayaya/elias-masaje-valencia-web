@@ -30,7 +30,7 @@ const OrganicHome = () => {
   return (
     <div>
       {/* ═══════════ EDITORIAL HERO — Split layout ═══════════ */}
-      <section className="relative min-h-[80vh] md:min-h-[85vh] flex items-center overflow-hidden">
+      <section className="relative min-h-[70vh] md:min-h-[78vh] flex items-center overflow-hidden">
         {/* Background image with soft overlay */}
         <div className="absolute inset-0">
           <img
@@ -74,7 +74,7 @@ const OrganicHome = () => {
       </section>
 
       {/* ═══════════ BENEFITS — Dark section ═══════════ */}
-      <section className="-mt-10 md:-mt-16 relative z-20 px-6 md:px-12 lg:px-20 py-20 md:py-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
+      <section className="-mt-6 md:-mt-10 relative z-20 px-6 md:px-12 lg:px-20 pt-8 md:pt-12 pb-20 md:pb-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
         <div className="max-w-5xl mx-auto">
           <div ref={benefitsTitle.ref} style={benefitsTitle.style} className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.benefits.title}</h2>
