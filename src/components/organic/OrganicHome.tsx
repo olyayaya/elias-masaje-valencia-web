@@ -4,6 +4,12 @@ import aboutPortrait from "@/assets/about-portrait.jpg";
 import massageNeck from "@/assets/massage-neck.jpg";
 import massageWrist from "@/assets/massage-wrist.jpg";
 import massageShoulder from "@/assets/massage-shoulder.jpg";
+import massageArm from "@/assets/massage-arm.jpg";
+import massageBack from "@/assets/massage-back.jpg";
+import massageFoot from "@/assets/massage-foot.jpg";
+import massageStones from "@/assets/massage-stones.jpg";
+import massageDeep from "@/assets/massage-deep.jpg";
+import massageOil from "@/assets/massage-oil.jpg";
 import interiorImage from "@/assets/interior.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
@@ -155,9 +161,15 @@ const OrganicHome = () => {
           {/* Circular image cluster — carousel on mobile, static on desktop */}
           <CircularImageCarousel
             images={[
-              { src: massageWrist, alt: "Massage technique" },
+              { src: massageWrist, alt: "Wrist massage" },
+              { src: massageBack, alt: "Back massage" },
               { src: massageNeck, alt: "Neck massage" },
+              { src: massageStones, alt: "Hot stone therapy" },
               { src: massageShoulder, alt: "Shoulder massage" },
+              { src: massageDeep, alt: "Deep tissue work" },
+              { src: massageOil, alt: "Oil massage" },
+              { src: massageArm, alt: "Arm massage" },
+              { src: massageFoot, alt: "Foot massage" },
             ]}
           />
         </div>
