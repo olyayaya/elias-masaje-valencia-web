@@ -63,14 +63,21 @@ const OrganicHome = () => {
             </a>
           </div>
         </div>
+
+        {/* Half-moon overlap into benefits section */}
+        <div className="absolute bottom-0 left-0 right-0 z-20">
+          <svg viewBox="0 0 1440 120" preserveAspectRatio="none" className="w-full h-16 md:h-24 block">
+            <ellipse cx="720" cy="120" rx="900" ry="120" style={{ fill: "hsl(var(--organic-dark))" }} />
+          </svg>
+        </div>
       </section>
 
-      {/* ═══════════ BENEFITS — Calm statements ═══════════ */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+      {/* ═══════════ BENEFITS — Dark section ═══════════ */}
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
         <div className="max-w-5xl mx-auto">
           <div ref={benefitsTitle.ref} style={benefitsTitle.style} className="text-center mb-16">
-            <h2 className="font-display text-3xl md:text-4xl mb-3">{t.benefits.title}</h2>
-            <div className="w-12 h-px bg-primary mx-auto" />
+            <h2 className="font-display text-3xl md:text-4xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.benefits.title}</h2>
+            <div className="w-12 h-px mx-auto" style={{ backgroundColor: "hsl(var(--primary))" }} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
@@ -79,14 +86,14 @@ const OrganicHome = () => {
                 const anim = useFadeIn(i * 0.1);
                 return (
                   <div ref={anim.ref} style={anim.style} className="flex gap-5">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
-                      <span className="text-sm font-body font-medium text-primary">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-1" style={{ backgroundColor: "hsl(var(--organic-dark-foreground) / 0.1)" }}>
+                      <span className="text-sm font-body font-medium" style={{ color: "hsl(var(--primary))" }}>
                         {String(i + 1).padStart(2, "0")}
                       </span>
                     </div>
                     <div>
-                      <h3 className="font-display text-xl mb-1.5">{b.title}</h3>
-                      <p className="text-sm text-muted-foreground font-body leading-relaxed">{b.description}</p>
+                      <h3 className="font-display text-xl mb-1.5" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{b.title}</h3>
+                      <p className="text-sm font-body leading-relaxed" style={{ color: "hsl(var(--organic-dark-muted))" }}>{b.description}</p>
                     </div>
                   </div>
                 );
@@ -97,7 +104,7 @@ const OrganicHome = () => {
         </div>
       </section>
 
-      <CurvedDivider from="bg-background" to="bg-secondary" />
+      <CurvedDivider from="bg-organic-dark" to="bg-secondary" />
 
       {/* ═══════════ SERVICES — Circular images + editorial list ═══════════ */}
       <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
