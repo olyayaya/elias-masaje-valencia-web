@@ -4,9 +4,13 @@ import massageArm from "@/assets/massage-arm.jpg";
 import massageBack from "@/assets/massage-back.jpg";
 import massageStones from "@/assets/massage-stones.jpg";
 import massageOil from "@/assets/massage-oil.jpg";
+import massageNeck from "@/assets/massage-neck.jpg";
+import massageWrist from "@/assets/massage-wrist.jpg";
+import massageFoot from "@/assets/massage-foot.jpg";
+import massageDeep from "@/assets/massage-deep.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
-import CircularImage from "@/components/CircularImage";
+import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 
 const OrganicAbout = () => {
