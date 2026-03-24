@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
 import aboutPortrait from "@/assets/about-portrait.jpg";
