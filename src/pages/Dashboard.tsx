@@ -37,6 +37,7 @@ const Dashboard = () => {
 
   const renderSection = () => {
     switch (active) {
+      case "overview": return <DashboardOverview onNavigate={navigateTo} />;
       case "services": return <DashboardServices />;
       case "content": return <DashboardSiteContent />;
       case "blog": return <DashboardBlog />;
@@ -45,7 +46,7 @@ const Dashboard = () => {
       case "faq": return <DashboardFAQ />;
       case "testimonials": return <DashboardTestimonials />;
       case "history": return <DashboardHistory />;
-      default: return <DashboardServices />;
+      default: return <DashboardOverview onNavigate={navigateTo} />;
     }
   };
 
