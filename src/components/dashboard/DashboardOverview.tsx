@@ -19,7 +19,7 @@ interface Counts {
 
 const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => void }) => {
   const [counts, setCounts] = useState<Counts>({
-    services: 0, blog: 0, blogDraft: 0, faqs: 0, testimonials: 0, media: 0, siteContent: 0,
+    services: 0, blog: 0, blogDraft: 0, faqs: 0, testimonials: 0, media: 0, siteContent: 0, promotions: 0,
   });
 
   useEffect(() => {
