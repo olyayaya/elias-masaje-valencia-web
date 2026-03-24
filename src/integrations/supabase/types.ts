@@ -65,6 +65,33 @@ export type Database = {
         }
         Relationships: []
       }
+      content_history: {
+        Row: {
+          action: string
+          changed_at: string
+          id: string
+          record_id: string
+          snapshot: Json
+          table_name: string
+        }
+        Insert: {
+          action?: string
+          changed_at?: string
+          id?: string
+          record_id: string
+          snapshot: Json
+          table_name: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          id?: string
+          record_id?: string
+          snapshot?: Json
+          table_name?: string
+        }
+        Relationships: []
+      }
       faqs: {
         Row: {
           answer: string

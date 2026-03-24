@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft
+  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History
 } from "lucide-react";
 
 import DashboardServices from "@/components/dashboard/DashboardServices";
@@ -10,6 +10,7 @@ import DashboardSEO from "@/components/dashboard/DashboardSEO";
 import DashboardMedia from "@/components/dashboard/DashboardMedia";
 import DashboardFAQ from "@/components/dashboard/DashboardFAQ";
 import DashboardTestimonials from "@/components/dashboard/DashboardTestimonials";
+import DashboardHistory from "@/components/dashboard/DashboardHistory";
 
 const sections = [
   { id: "services", label: "Services", icon: LayoutDashboard },
@@ -18,6 +19,7 @@ const sections = [
   { id: "media", label: "Media", icon: Image },
   { id: "faq", label: "FAQ", icon: HelpCircle },
   { id: "testimonials", label: "Testimonials", icon: MessageSquare },
+  { id: "history", label: "History", icon: History },
 ];
 
 const Dashboard = () => {
@@ -32,6 +34,7 @@ const Dashboard = () => {
       case "media": return <DashboardMedia />;
       case "faq": return <DashboardFAQ />;
       case "testimonials": return <DashboardTestimonials />;
+      case "history": return <DashboardHistory />;
       default: return <DashboardServices />;
     }
   };
