@@ -11,6 +11,7 @@ import ServiciosPage from "./pages/Servicios";
 import SobreMiPage from "./pages/SobreMi";
 import ContactoPage from "./pages/Contacto";
 import NotFound from "./pages/NotFound";
+import Dashboard from "./pages/Dashboard";
 import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/sobre-mi" element={<SobreMiPage />} />
               <Route path="/contacto" element={<ContactoPage />} />
             </Route>
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
