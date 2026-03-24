@@ -13,6 +13,7 @@ import DashboardFAQ from "@/components/dashboard/DashboardFAQ";
 import DashboardTestimonials from "@/components/dashboard/DashboardTestimonials";
 import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
+import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
 
 const sections = [
   { id: "overview", label: "Overview", icon: Home },
