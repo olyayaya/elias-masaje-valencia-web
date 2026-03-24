@@ -1,42 +1,67 @@
-import { useState, useRef } from "react";
-import { Upload, Trash2, Image as ImageIcon, FileImage } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Upload, Trash2, FileImage, Loader2, Copy, Check } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 
 interface MediaFile {
-  id: string;
   name: string;
-  size: string;
+  size: number;
   url: string;
-  compressed: boolean;
+  created_at: string;
 }
 
 const DashboardMedia = () => {
-  const [files, setFiles] = useState<MediaFile[]>([
-    { id: "1", name: "hero-organic.jpg", size: "245 KB", url: "", compressed: true },
-    { id: "2", name: "about-portrait.jpg", size: "180 KB", url: "", compressed: true },
-    { id: "3", name: "massage-neck.jpg", size: "312 KB", url: "", compressed: true },
-  ]);
-  const [dragging, setDragging] = useState(false);
+  const [files, setFiles] = useState<MediaFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
 
-  const handleFiles = (fileList: FileList) => {
-    const newFiles: MediaFile[] = Array.from(fileList).map((f) => ({
-      id: Date.now().toString() + f.name,
-      name: f.name,
-      size: formatSize(f.size),
-      url: URL.createObjectURL(f),
-      compressed: false,
-    }));
-    setFiles([...newFiles, ...files]);
+  const fetchFiles = async () => {
+    const { data } = await supabase.storage.from("media").list("", {
+      limit: 100,
+      sortBy: { column: "created_at", order: "desc" },
+    });
+    if (data) {
+      const mapped = data
+        .filter((f) => f.name !== ".emptyFolderPlaceholder")
+        .map((f) => ({
+          name: f.name,
+          size: f.metadata?.size || 0,
+          url: supabase.storage.from("media").getPublicUrl(f.name).data.publicUrl,
+          created_at: f.created_at || "",
+        }));
+      setFiles(mapped);
+    }
+    setLoading(false);
+  };
 
-    // Simulate compression
-    setTimeout(() => {
-      setFiles((prev) =>
-        prev.map((pf) =>
-          newFiles.find((nf) => nf.id === pf.id) ? { ...pf, compressed: true } : pf
-        )
-      );
-    }, 1500);
+  useEffect(() => { fetchFiles(); }, []);
+
+  const handleUpload = async (fileList: FileList) => {
+    setUploading(true);
+    for (const file of Array.from(fileList)) {
+      const ext = file.name.split(".").pop();
+      const name = `${Date.now()}-${file.name}`;
+      await supabase.storage.from("media").upload(name, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+    }
+    setUploading(false);
+    fetchFiles();
+  };
+
+  const remove = async (name: string) => {
+    await supabase.storage.from("media").remove([name]);
+    fetchFiles();
+  };
+
+  const copyUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopied(url);
+    setTimeout(() => setCopied(null), 2000);
   };
 
   const formatSize = (bytes: number) => {
@@ -45,13 +70,10 @@ const DashboardMedia = () => {
     return `${(bytes / 1048576).toFixed(1)} MB`;
   };
 
-  const remove = (id: string) => {
-    setFiles(files.filter((f) => f.id !== id));
-  };
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" size={24} /></div>;
 
   return (
     <div className="space-y-6">
-      {/* Upload zone */}
       <DashboardCard>
         <div
           className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors cursor-pointer ${
@@ -62,50 +84,45 @@ const DashboardMedia = () => {
           onDrop={(e) => {
             e.preventDefault();
             setDragging(false);
-            if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+            if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files);
           }}
           onClick={() => inputRef.current?.click()}
         >
-          <Upload size={24} className="mx-auto text-gray-300 mb-3" />
+          {uploading ? (
+            <Loader2 size={24} className="mx-auto text-gray-400 mb-3 animate-spin" />
+          ) : (
+            <Upload size={24} className="mx-auto text-gray-300 mb-3" />
+          )}
           <p className="text-sm text-gray-500">
-            Drop images here or <span className="text-gray-700 underline">browse</span>
+            {uploading ? "Uploading..." : <>Drop images here or <span className="text-gray-700 underline">browse</span></>}
           </p>
-          <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP — auto-compressed on upload</p>
+          <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP</p>
           <input
             ref={inputRef}
             type="file"
             accept="image/*"
             multiple
             className="hidden"
-            onChange={(e) => e.target.files && handleFiles(e.target.files)}
+            onChange={(e) => e.target.files && handleUpload(e.target.files)}
           />
         </div>
       </DashboardCard>
 
-      {/* File list */}
       <DashboardCard title="Library" description={`${files.length} files`}>
         <div className="divide-y divide-gray-50">
           {files.map((f) => (
-            <div key={f.id} className="flex items-center gap-4 py-3">
-              <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center">
-                {f.url ? (
-                  <img src={f.url} alt={f.name} className="w-10 h-10 rounded-lg object-cover" />
-                ) : (
-                  <FileImage size={16} className="text-gray-400" />
-                )}
+            <div key={f.name} className="flex items-center gap-4 py-3">
+              <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden">
+                <img src={f.url} alt={f.name} className="w-10 h-10 rounded-lg object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-700 truncate">{f.name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-gray-400">{f.size}</span>
-                  {f.compressed ? (
-                    <span className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded">Compressed</span>
-                  ) : (
-                    <span className="text-[10px] px-1.5 py-0.5 bg-yellow-50 text-yellow-600 rounded animate-pulse">Compressing…</span>
-                  )}
-                </div>
+                <span className="text-xs text-gray-400">{formatSize(f.size)}</span>
               </div>
-              <button onClick={() => remove(f.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50">
+              <button onClick={() => copyUrl(f.url)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50" title="Copy URL">
+                {copied === f.url ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+              </button>
+              <button onClick={() => remove(f.name)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50">
                 <Trash2 size={14} />
               </button>
             </div>

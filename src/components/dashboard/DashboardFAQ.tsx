@@ -1,25 +1,33 @@
-import { useState } from "react";
-import { Plus, GripVertical, Pencil, Trash2, Save, X, ChevronUp, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Pencil, Trash2, Save, X, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 
 interface FAQItem {
   id: string;
   question: string;
   answer: string;
+  sort_order: number;
 }
 
-const initialFaqs: FAQItem[] = [
-  { id: "1", question: "¿Necesito traer algo a la sesión?", answer: "No, solo necesitas venir con ropa cómoda. Todo lo demás lo proporciono yo." },
-  { id: "2", question: "¿Cuánto dura una sesión?", answer: "Las sesiones duran entre 45 y 90 minutos dependiendo del tratamiento." },
-  { id: "3", question: "¿Se puede cancelar o reprogramar?", answer: "Sí, con al menos 24 horas de antelación sin coste." },
-  { id: "4", question: "¿Qué métodos de pago aceptáis?", answer: "Aceptamos efectivo, tarjeta y Bizum." },
-];
-
 const DashboardFAQ = () => {
-  const [faqs, setFaqs] = useState<FAQItem[]>(initialFaqs);
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState<FAQItem>({ id: "", question: "", answer: "" });
+  const [draft, setDraft] = useState<Partial<FAQItem>>({});
   const [isNew, setIsNew] = useState(false);
+
+  const fetchFaqs = async () => {
+    const { data } = await supabase
+      .from("faqs")
+      .select("*")
+      .order("sort_order", { ascending: true });
+    if (data) setFaqs(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchFaqs(); }, []);
 
   const startEdit = (f: FAQItem) => {
     setEditing(f.id);
@@ -28,20 +36,29 @@ const DashboardFAQ = () => {
   };
 
   const startNew = () => {
-    const nf = { id: Date.now().toString(), question: "", answer: "" };
-    setDraft(nf);
-    setEditing(nf.id);
+    setDraft({ question: "", answer: "", sort_order: faqs.length });
+    setEditing("new");
     setIsNew(true);
   };
 
-  const save = () => {
+  const save = async () => {
+    setSaving(true);
     if (isNew) {
-      setFaqs([...faqs, draft]);
-    } else {
-      setFaqs(faqs.map((f) => (f.id === draft.id ? draft : f)));
+      await supabase.from("faqs").insert({
+        question: draft.question || "",
+        answer: draft.answer || "",
+        sort_order: draft.sort_order ?? faqs.length,
+      });
+    } else if (editing) {
+      await supabase.from("faqs").update({
+        question: draft.question,
+        answer: draft.answer,
+      }).eq("id", editing);
     }
     setEditing(null);
     setIsNew(false);
+    setSaving(false);
+    fetchFaqs();
   };
 
   const cancel = () => {
@@ -49,23 +66,35 @@ const DashboardFAQ = () => {
     setIsNew(false);
   };
 
-  const remove = (id: string) => {
-    setFaqs(faqs.filter((f) => f.id !== id));
+  const remove = async (id: string) => {
+    await supabase.from("faqs").delete().eq("id", id);
+    fetchFaqs();
   };
 
-  const moveUp = (index: number) => {
+  const moveUp = async (index: number) => {
     if (index === 0) return;
     const arr = [...faqs];
     [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
-    setFaqs(arr);
+    // Update sort_order for both
+    await Promise.all([
+      supabase.from("faqs").update({ sort_order: index - 1 }).eq("id", arr[index - 1].id),
+      supabase.from("faqs").update({ sort_order: index }).eq("id", arr[index].id),
+    ]);
+    fetchFaqs();
   };
 
-  const moveDown = (index: number) => {
+  const moveDown = async (index: number) => {
     if (index === faqs.length - 1) return;
     const arr = [...faqs];
     [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
-    setFaqs(arr);
+    await Promise.all([
+      supabase.from("faqs").update({ sort_order: index }).eq("id", arr[index].id),
+      supabase.from("faqs").update({ sort_order: index + 1 }).eq("id", arr[index + 1].id),
+    ]);
+    fetchFaqs();
   };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" size={24} /></div>;
 
   return (
     <div className="space-y-4">
@@ -81,29 +110,21 @@ const DashboardFAQ = () => {
 
       {isNew && editing && (
         <DashboardCard>
-          <FAQForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} />
+          <FAQForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} saving={saving} />
         </DashboardCard>
       )}
 
       {faqs.map((f, i) => (
         <DashboardCard key={f.id}>
           {editing === f.id && !isNew ? (
-            <FAQForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} />
+            <FAQForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} saving={saving} />
           ) : (
             <div className="flex items-start gap-3">
               <div className="flex flex-col gap-0.5 shrink-0 pt-0.5">
-                <button
-                  onClick={() => moveUp(i)}
-                  className="p-1 text-gray-300 hover:text-gray-500 disabled:opacity-30"
-                  disabled={i === 0}
-                >
+                <button onClick={() => moveUp(i)} className="p-1 text-gray-300 hover:text-gray-500 disabled:opacity-30" disabled={i === 0}>
                   <ChevronUp size={12} />
                 </button>
-                <button
-                  onClick={() => moveDown(i)}
-                  className="p-1 text-gray-300 hover:text-gray-500 disabled:opacity-30"
-                  disabled={i === faqs.length - 1}
-                >
+                <button onClick={() => moveDown(i)} className="p-1 text-gray-300 hover:text-gray-500 disabled:opacity-30" disabled={i === faqs.length - 1}>
                   <ChevronDown size={12} />
                 </button>
               </div>
@@ -128,18 +149,19 @@ const DashboardFAQ = () => {
 };
 
 const FAQForm = ({
-  draft, setDraft, onSave, onCancel,
+  draft, setDraft, onSave, onCancel, saving,
 }: {
-  draft: FAQItem;
-  setDraft: (d: FAQItem) => void;
+  draft: Partial<FAQItem>;
+  setDraft: (d: Partial<FAQItem>) => void;
   onSave: () => void;
   onCancel: () => void;
+  saving: boolean;
 }) => (
   <div className="space-y-4">
     <div>
       <label className="text-xs font-medium text-gray-500 mb-1 block">Question</label>
       <input
-        value={draft.question}
+        value={draft.question || ""}
         onChange={(e) => setDraft({ ...draft, question: e.target.value })}
         className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10"
         placeholder="Enter question..."
@@ -148,7 +170,7 @@ const FAQForm = ({
     <div>
       <label className="text-xs font-medium text-gray-500 mb-1 block">Answer</label>
       <textarea
-        value={draft.answer}
+        value={draft.answer || ""}
         onChange={(e) => setDraft({ ...draft, answer: e.target.value })}
         rows={3}
         className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 resize-none"
@@ -159,8 +181,8 @@ const FAQForm = ({
       <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50">
         Cancel
       </button>
-      <button onClick={onSave} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800">
-        <Save size={14} /> Save
+      <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50">
+        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
       </button>
     </div>
   </div>
