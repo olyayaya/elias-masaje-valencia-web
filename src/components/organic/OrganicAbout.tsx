@@ -130,14 +130,17 @@ const OrganicAbout = () => {
               { src: massageDeep, alt: "Deep tissue work" },
             ]}
           />
-          {/* Overlapping half-moon on mobile */}
-          <div className="md:hidden absolute bottom-0 left-0 right-0 translate-y-1/2 z-10 pointer-events-none">
-            <CurvedDivider from="bg-transparent" to="bg-organic-dark" />
+
+          {/* Bottom half-moon overlaying gallery image on mobile */}
+          <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none md:hidden">
+            <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="w-full h-16 block">
+              <path d="M0,96 L1440,96 L1440,0 C960,96 480,96 0,0 Z" style={{ fill: "hsl(var(--organic-dark))" }} />
+            </svg>
           </div>
         </div>
       </section>
 
-      {/* Final CTA — Ready to feel better? */}
+      {/* Desktop curved divider */}
       <div className="hidden md:block">
         <CurvedDivider from="bg-background" to="bg-organic-dark" />
       </div>
