@@ -140,17 +140,20 @@ const OrganicServices = () => {
       </section>
 
       {/* Circular image cluster — full bleed on mobile with overlapping dividers */}
-      <section className="bg-secondary relative">
-        {/* Top curved divider overlapping into gallery */}
-        <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none">
-          <div className="relative h-16 md:h-24 overflow-hidden" aria-hidden="true">
-            <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-              <path d="M0,0 C480,96 960,96 1440,0 L1440,96 L0,96 Z" style={{ fill: "hsl(var(--secondary))" }} />
-            </svg>
-          </div>
+      <section className="relative">
+        {/* Top curved divider — sits on top of image, filled with services-list bg */}
+        <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none md:hidden">
+          <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="w-full h-16 block">
+            <path d="M0,0 L1440,0 L1440,96 C960,0 480,0 0,96 Z" style={{ fill: "hsl(var(--background))" }} />
+          </svg>
         </div>
 
-        <div className="px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden">
+        {/* Desktop top divider */}
+        <div className="hidden md:block">
+          <CurvedDivider from="bg-background" to="bg-secondary" />
+        </div>
+
+        <div className="bg-transparent md:bg-secondary px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden">
           <div className="max-w-5xl mx-auto">
             <CircularImageCarousel
               images={[
@@ -168,9 +171,16 @@ const OrganicServices = () => {
           </div>
         </div>
 
-        {/* Bottom curved divider overlapping into gallery */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none">
-          <div className="relative h-16 md:h-24 overflow-hidden" style={{ backgroundColor: "hsl(var(--organic-dark))" }} aria-hidden="true">
+        {/* Bottom curved divider — sits on bottom of image, filled with CTA bg */}
+        <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none md:hidden">
+          <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="w-full h-16 block">
+            <path d="M0,96 L1440,96 L1440,0 C960,96 480,96 0,0 Z" style={{ fill: "hsl(var(--organic-dark))" }} />
+          </svg>
+        </div>
+
+        {/* Desktop bottom divider */}
+        <div className="hidden md:block">
+          <div className="relative h-24 overflow-hidden" style={{ backgroundColor: "hsl(var(--organic-dark))" }} aria-hidden="true">
             <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
               <path d="M0,96 C480,0 960,0 1440,96 L1440,0 L0,0 Z" style={{ fill: "hsl(var(--secondary))" }} />
             </svg>

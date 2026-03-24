@@ -152,7 +152,7 @@ const OrganicHome = () => {
       <CurvedDivider from="bg-organic-dark" to="bg-secondary" />
 
       {/* ═══════════ SERVICES — Circular images + editorial list ═══════════ */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28 overflow-hidden relative">
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28 overflow-hidden relative pb-0 md:pb-28">
         <OrganicShape shape="blob" size="w-40 h-40" position="top-4 right-4" animation="float" color="hsl(var(--primary) / 0.04)" delay={500} />
         <OrganicShape shape="arc" size="w-24 h-12" position="bottom-32 left-4" animation="drift" borderColor="hsl(var(--primary) / 0.1)" delay={2000} />
         <div className="max-w-6xl mx-auto">
@@ -212,9 +212,19 @@ const OrganicHome = () => {
             ]}
           />
         </div>
+
+        {/* Mobile: curved divider overlays bottom of gallery image */}
+        <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none md:hidden">
+          <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="w-full h-16 block">
+            <path d="M0,96 L1440,96 L1440,0 C960,96 480,96 0,0 Z" style={{ fill: "hsl(var(--organic-dark))" }} />
+          </svg>
+        </div>
       </section>
 
-      <CurvedDivider from="bg-secondary" to="bg-organic-dark" flip />
+      {/* Desktop: standard curved divider */}
+      <div className="hidden md:block">
+        <CurvedDivider from="bg-secondary" to="bg-organic-dark" flip />
+      </div>
 
       {/* ═══════════ STORY — Dark editorial section ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
