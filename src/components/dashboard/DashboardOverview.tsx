@@ -127,7 +127,7 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
     <div className="space-y-8">
       {/* Welcome header */}
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Welcome back</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Welcome back, {nameByLang[locale] ?? "Elias"}</h1>
         <p className="text-sm text-gray-500">Here's an overview of your site. Click any section to manage it.</p>
       </div>
 
