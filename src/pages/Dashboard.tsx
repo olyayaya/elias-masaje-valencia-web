@@ -146,21 +146,6 @@ const Dashboard = () => {
             <Menu size={20} />
           </button>
           <h2 className="text-lg font-semibold text-gray-900 flex-1">{dt.sections[active as keyof typeof dt.sections] ?? active}</h2>
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
-            {(Object.keys(langLabels) as Locale[]).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLocale(l)}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                  l === locale
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-400 hover:text-gray-600"
-                }`}
-              >
-                {langLabels[l]}
-              </button>
-            ))}
-          </div>
         </header>
 
         <div className="p-6 lg:p-8 max-w-5xl">
