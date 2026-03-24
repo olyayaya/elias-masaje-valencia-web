@@ -82,7 +82,7 @@ const Dashboard = () => {
             return (
               <button
                 key={s.id}
-                onClick={() => { setActive(s.id); setSidebarOpen(false); }}
+                onClick={() => navigateTo(s.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   isActive
                     ? "bg-gray-900 text-white"
