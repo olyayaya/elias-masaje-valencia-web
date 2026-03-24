@@ -139,28 +139,44 @@ const OrganicServices = () => {
         </div>
       </section>
 
-      <CurvedDivider from="bg-background" to="bg-secondary" />
+      {/* Circular image cluster — full bleed on mobile with overlapping dividers */}
+      <section className="bg-secondary relative">
+        {/* Top curved divider overlapping into gallery */}
+        <div className="absolute top-0 left-0 right-0 z-10" style={{ transform: "translateY(-99%)" }}>
+          <div className="relative h-16 md:h-24 overflow-hidden" aria-hidden="true">
+            <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+              <path d="M0,0 C480,96 960,96 1440,0 L1440,96 L0,96 Z" style={{ fill: "hsl(var(--secondary))" }} />
+            </svg>
+          </div>
+        </div>
 
-      {/* Circular image cluster */}
-      <section className="bg-secondary px-0 md:px-12 lg:px-20 py-8 md:py-20 overflow-hidden">
-        <div className="max-w-5xl mx-auto">
-          <CircularImageCarousel
-            images={[
-              { src: massageArm, alt: "Arm massage" },
-              { src: massageDeep, alt: "Deep tissue work" },
-              { src: massageNeck, alt: "Neck massage" },
-              { src: massageOil, alt: "Oil massage" },
-              { src: massageShoulder, alt: "Shoulder massage" },
-              { src: massageStones, alt: "Hot stone therapy" },
-              { src: massageBack, alt: "Back massage" },
-              { src: massageWrist, alt: "Wrist massage" },
-              { src: massageFoot, alt: "Foot massage" },
-            ]}
-          />
+        <div className="px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden">
+          <div className="max-w-5xl mx-auto">
+            <CircularImageCarousel
+              images={[
+                { src: massageArm, alt: "Arm massage" },
+                { src: massageDeep, alt: "Deep tissue work" },
+                { src: massageNeck, alt: "Neck massage" },
+                { src: massageOil, alt: "Oil massage" },
+                { src: massageShoulder, alt: "Shoulder massage" },
+                { src: massageStones, alt: "Hot stone therapy" },
+                { src: massageBack, alt: "Back massage" },
+                { src: massageWrist, alt: "Wrist massage" },
+                { src: massageFoot, alt: "Foot massage" },
+              ]}
+            />
+          </div>
+        </div>
+
+        {/* Bottom curved divider overlapping into gallery */}
+        <div className="absolute bottom-0 left-0 right-0 z-10" style={{ transform: "translateY(99%)" }}>
+          <div className="relative h-16 md:h-24 overflow-hidden" style={{ backgroundColor: "hsl(var(--organic-dark))" }} aria-hidden="true">
+            <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+              <path d="M0,96 C480,0 960,0 1440,96 L1440,0 L0,0 Z" style={{ fill: "hsl(var(--secondary))" }} />
+            </svg>
+          </div>
         </div>
       </section>
-
-      <CurvedDivider from="bg-secondary" to="bg-organic-dark" flip />
 
       {/* Quiet CTA — dark to match half-moon */}
       <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
