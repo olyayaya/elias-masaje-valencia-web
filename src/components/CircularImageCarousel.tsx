@@ -56,69 +56,75 @@ function buildSequence(images: { src: string; alt: string }[], slots: number, le
 
 const BreathingCell = ({
   images,
-  cycleDuration,
   delay,
 }: {
   images: { src: string; alt: string }[];
-  cycleDuration: number;
   delay: number;
 }) => {
-  const [index, setIndex] = useState(0);
-  const [phase, setPhase] = useState<"waiting" | "in" | "hold" | "out">("waiting");
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
-
-  const fadeIn = cycleDuration * 0.3;
-  const hold = cycleDuration * 0.4;
-  const fadeOut = cycleDuration * 0.3;
+  const [current, setCurrent] = useState(0);
+  const [next, setNext] = useState(1);
+  const [fading, setFading] = useState(false);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    const delayTimer = setTimeout(() => {
-      setPhase("in");
-    }, delay);
-    return () => clearTimeout(delayTimer);
+    const t = setTimeout(() => setStarted(true), delay);
+    return () => clearTimeout(t);
   }, [delay]);
 
   useEffect(() => {
-    if (phase === "waiting") return;
+    if (!started) return;
 
-    if (phase === "in") {
-      timerRef.current = setTimeout(() => setPhase("hold"), fadeIn);
-    } else if (phase === "hold") {
-      timerRef.current = setTimeout(() => setPhase("out"), hold);
-    } else if (phase === "out") {
-      timerRef.current = setTimeout(() => {
-        setIndex((prev) => (prev + 1) % images.length);
-        setPhase("in");
-      }, fadeOut);
-    }
+    // Hold current image, then start crossfade
+    const holdTimer = setTimeout(() => {
+      setFading(true);
+    }, CYCLE_DURATION - FADE_TIME);
 
-    return () => clearTimeout(timerRef.current);
-  }, [phase, fadeIn, hold, fadeOut, images.length]);
+    return () => clearTimeout(holdTimer);
+  }, [current, started]);
 
-  const opacity = phase === "waiting" || phase === "out" ? 0 : 1;
+  useEffect(() => {
+    if (!fading) return;
 
-  const scale = phase === "waiting" || phase === "out" ? 0.97 : 1.02;
+    // After crossfade completes, swap
+    const fadeTimer = setTimeout(() => {
+      setCurrent(next);
+      setNext((next + 1) % images.length);
+      setFading(false);
+    }, FADE_TIME);
 
-  const transitionDuration =
-    phase === "in" ? fadeIn : phase === "out" ? fadeOut : hold;
+    return () => clearTimeout(fadeTimer);
+  }, [fading, next, images.length]);
 
-  const img = images[index];
+  const currentImg = images[current];
+  const nextImg = images[next];
 
   return (
-    <div
-      className="rounded-2xl overflow-hidden w-full aspect-[3/2]"
-      style={{
-        opacity,
-        transform: `scale(${scale})`,
-        transition: `opacity ${transitionDuration}ms ease-in-out, transform ${transitionDuration}ms ease-in-out`,
-      }}
-    >
+    <div className="rounded-2xl overflow-hidden w-full aspect-[3/2] relative">
+      {/* Current image — fades out */}
       <img
-        src={img.src}
-        alt={img.alt}
-        className="w-full h-full object-cover"
+        src={currentImg.src}
+        alt={currentImg.alt}
+        className="absolute inset-0 w-full h-full object-cover"
         loading="lazy"
         draggable={false}
+        style={{
+          opacity: !started ? 0 : fading ? 0 : 1,
+          transform: !started ? "scale(0.97)" : fading ? "scale(0.97)" : "scale(1.02)",
+          transition: `opacity ${fading ? FADE_TIME : 800}ms ease-in-out, transform ${fading ? FADE_TIME : 800}ms ease-in-out`,
+        }}
+      />
+      {/* Next image — fades in during crossfade */}
+      <img
+        src={nextImg.src}
+        alt={nextImg.alt}
+        className="absolute inset-0 w-full h-full object-cover"
+        loading="lazy"
+        draggable={false}
+        style={{
+          opacity: fading ? 1 : 0,
+          transform: fading ? "scale(1.02)" : "scale(0.97)",
+          transition: `opacity ${FADE_TIME}ms ease-in-out, transform ${FADE_TIME}ms ease-in-out`,
+        }}
       />
     </div>
   );
@@ -127,10 +133,8 @@ const BreathingCell = ({
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
 
-  // Desktop 3 cols, tablet 2, mobile 1
   const maxCols = 3;
 
-  // Build sequences for each cell — enough to last a long time
   const sequences = useMemo(() => {
     return Array.from({ length: maxCols }, () =>
       buildSequence(images, maxCols, images.length * 10)
@@ -147,7 +151,6 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
           >
             <BreathingCell
               images={seq}
-              cycleDuration={CYCLE_BASE + col * 400}
               delay={COL_OFFSETS[col]}
             />
           </div>
