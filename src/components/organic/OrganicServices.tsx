@@ -45,6 +45,7 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index }: {
 };
 
 const OrganicServices = () => {
+  const { theme } = useTheme();
   const { t } = useI18n();
   const heroText = useFadeIn(0.1);
   const heroImg = useFadeIn(0.25);
