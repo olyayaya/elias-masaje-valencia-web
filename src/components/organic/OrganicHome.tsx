@@ -99,7 +99,7 @@ const OrganicHome = () => {
                 const anim = useFadeIn(i * 0.1);
                 return (
                    <div ref={anim.ref} style={anim.style} className="flex gap-5">
-                    <div className="shrink-0 mt-1" style={{ color: "hsl(var(--primary))" }}>
+                    <div className="shrink-0 mt-1 animate-organic-breathe" style={{ color: "hsl(var(--primary))" }}>
                       <BenefitIcon index={i} />
                     </div>
                     <div>
