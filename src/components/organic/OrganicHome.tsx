@@ -252,7 +252,7 @@ const OrganicHome = () => {
                   width={800}
                   height={1067}
                 />
-                <OrganicShape shape="circle" size="w-24 h-24" position="-bottom-4 -left-4" animation="breathe" color="hsl(var(--organic-dark-foreground) / 0.05)" borderColor="hsl(var(--organic-dark-foreground) / 0.1)" className="border" delay={0} />
+                <OrganicShape shape="circle" size="w-24 h-24" position="bottom-2 left-2" animation="breathe" color="hsl(var(--organic-dark-foreground) / 0.05)" borderColor="hsl(var(--organic-dark-foreground) / 0.1)" className="border" delay={0} />
               </div>
             </div>
           </div>
