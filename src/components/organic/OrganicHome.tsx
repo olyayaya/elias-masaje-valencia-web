@@ -12,6 +12,7 @@ import massageStones from "@/assets/massage-stones.jpg";
 import massageDeep from "@/assets/massage-deep.jpg";
 import massageOil from "@/assets/massage-oil.jpg";
 import interiorImage from "@/assets/interior.jpg";
+import locationBg from "@/assets/location-bg.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImage from "@/components/CircularImage";
