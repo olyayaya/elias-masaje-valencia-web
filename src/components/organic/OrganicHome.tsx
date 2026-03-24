@@ -435,7 +435,7 @@ const OrganicHome = () => {
               return (
                 <div ref={anim.ref} style={anim.style}>
                   <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.faq.title}</h2>
-                  <FaqAccordion items={t.faq.items} />
+                  <FaqAccordion items={faqItems} />
                 </div>
               );
             };
