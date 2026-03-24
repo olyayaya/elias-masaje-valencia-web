@@ -69,7 +69,7 @@ const OrganicContact = () => {
 
               <ContactItem icon={MessageCircle} title={t.contact.whatsapp} index={2}>
                 <a
-                  href={WHATSAPP_URL}
+                  href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block mt-2 text-sm font-body bg-foreground text-background px-6 py-2.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
