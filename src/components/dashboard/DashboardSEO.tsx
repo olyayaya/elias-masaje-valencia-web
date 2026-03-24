@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, Circle, ExternalLink, Search, MapPin, Star } from "lucide-react";
+import { CheckCircle2, Circle, ExternalLink, Search, MapPin, Star, TrendingUp, Eye, MousePointerClick, Globe } from "lucide-react";
 import DashboardCard from "./DashboardCard";
 
 const keywordSuggestions = [
