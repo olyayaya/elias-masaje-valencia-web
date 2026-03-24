@@ -88,20 +88,22 @@ const Dashboard = () => {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {sections.map((s) => {
-            const isActive = active === s.id;
+          {sectionIds.map((id) => {
+            const isActive = active === id;
+            const Icon = sectionIcons[id];
+            const label = dt.sections[id as keyof typeof dt.sections];
             return (
               <button
-                key={s.id}
-                onClick={() => navigateTo(s.id)}
+                key={id}
+                onClick={() => navigateTo(id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   isActive
                     ? "bg-gray-900 text-white"
                     : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                 }`}
               >
-                <s.icon size={16} />
-                {s.label}
+                <Icon size={16} />
+                {label}
               </button>
             );
           })}
