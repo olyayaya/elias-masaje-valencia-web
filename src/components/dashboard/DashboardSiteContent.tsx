@@ -5,7 +5,8 @@ import LanguageTabs, { type Lang } from "./LanguageTabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Save, Loader2, Sparkles } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Save, Loader2, Sparkles, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface SiteContentRow {
