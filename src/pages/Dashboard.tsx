@@ -31,6 +31,7 @@ const Dashboard = () => {
   const renderSection = () => {
     switch (active) {
       case "services": return <DashboardServices />;
+      case "content": return <DashboardSiteContent />;
       case "blog": return <DashboardBlog />;
       case "seo": return <DashboardSEO />;
       case "media": return <DashboardMedia />;
