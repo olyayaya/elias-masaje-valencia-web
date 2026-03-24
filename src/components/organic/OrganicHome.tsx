@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
 
@@ -14,6 +15,7 @@ import massageDeep from "@/assets/massage-deep.jpg";
 import massageOil from "@/assets/massage-oil.jpg";
 import interiorImage from "@/assets/interior.jpg";
 import locationBg from "@/assets/location-bg.jpg";
+import locationStones from "@/assets/location-stones.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImage from "@/components/CircularImage";
@@ -28,6 +30,8 @@ const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20
 
 const OrganicHome = () => {
   const { t } = useI18n();
+  const { theme } = useTheme();
+  const useAltLocationBg = theme === "organic" || theme === "natural";
   const heroText = useFadeIn(0.2);
   const benefitsTitle = useFadeIn(0);
   const servicesTitle = useFadeIn(0);
@@ -359,7 +363,7 @@ const OrganicHome = () => {
         {/* Background image */}
         <div className="absolute inset-0">
           <img
-            src={locationBg}
+            src={useAltLocationBg ? locationStones : locationBg}
             alt=""
             className="w-full h-full object-cover"
             loading="lazy"
