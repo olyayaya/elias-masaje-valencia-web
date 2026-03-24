@@ -27,8 +27,13 @@ const sections = [
 ];
 
 const Dashboard = () => {
-  const [active, setActive] = useState("services");
+  const [active, setActive] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const navigateTo = (section: string) => {
+    setActive(section);
+    setSidebarOpen(false);
+  };
 
   const renderSection = () => {
     switch (active) {
