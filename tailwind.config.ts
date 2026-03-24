@@ -94,6 +94,16 @@ export default {
           "0%, 100%": { opacity: "0.85" },
           "50%": { opacity: "0.55" },
         },
+        "hero-text-breathe": {
+          "0%, 100%": {
+            "text-shadow": "none",
+            filter: "none",
+          },
+          "50%": {
+            "text-shadow": "0 1px 12px hsl(var(--background) / 0.6)",
+            filter: "contrast(1.1)",
+          },
+        },
         "hero-zoom": {
           "0%": { transform: "scale(1.08)" },
           "100%": { transform: "scale(1)" },
