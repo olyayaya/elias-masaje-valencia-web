@@ -64,11 +64,11 @@ const OrganicServices = () => {
         </div>
         <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-16 pb-[10vh]">
           <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
-            <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/70 mb-4">
+            <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/80 mb-4">
               Treatments
             </p>
             <h1 className="font-display text-4xl md:text-5xl leading-snug mb-6">{t.services.title}</h1>
-            <p className="text-base text-foreground/60 font-body leading-[1.8] max-w-md">{t.services.pageSubtitle}</p>
+            <p className="text-base text-foreground/50 font-body leading-[1.8] max-w-md">{t.services.pageSubtitle}</p>
           </div>
         </div>
 
