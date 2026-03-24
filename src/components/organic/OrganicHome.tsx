@@ -119,7 +119,9 @@ const OrganicHome = () => {
       <CurvedDivider from="bg-organic-dark" to="bg-secondary" />
 
       {/* ═══════════ SERVICES — Circular images + editorial list ═══════════ */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28 overflow-hidden">
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28 overflow-hidden relative">
+        <OrganicShape shape="blob" size="w-40 h-40" position="-top-10 -right-16" animation="float" color="hsl(var(--primary) / 0.04)" delay={500} />
+        <OrganicShape shape="arc" size="w-24 h-12" position="bottom-32 left-4" animation="drift" borderColor="hsl(var(--primary) / 0.1)" delay={2000} />
         <div className="max-w-6xl mx-auto">
           <div ref={servicesTitle.ref} style={servicesTitle.style} className="mb-16">
             <h2 className="font-display text-3xl md:text-4xl mb-2">{t.services.title}</h2>
