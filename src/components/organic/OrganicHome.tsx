@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
-import { useParallax } from "@/hooks/use-parallax";
+
 import aboutPortrait from "@/assets/about-portrait.jpg";
 import massageNeck from "@/assets/massage-neck.jpg";
 import massageWrist from "@/assets/massage-wrist.jpg";
