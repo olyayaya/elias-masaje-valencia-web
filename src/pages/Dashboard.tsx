@@ -116,7 +116,7 @@ const Dashboard = () => {
             className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-400 hover:text-gray-600 transition-colors"
           >
             <ChevronLeft size={16} />
-            Back to site
+            {dt.backToSite}
           </Link>
         </div>
       </aside>
