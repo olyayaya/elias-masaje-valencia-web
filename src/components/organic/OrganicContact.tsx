@@ -29,6 +29,7 @@ const ContactItem = ({ icon: Icon, title, children, index }: {
 const OrganicContact = () => {
   const { t } = useI18n();
   const { content: sc } = useSiteContent();
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const heading = useFadeIn(0);
   const mapAnim = useFadeIn(0.15);
 
