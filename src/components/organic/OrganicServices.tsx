@@ -13,6 +13,7 @@ import { useFadeIn } from "@/hooks/use-fade-in";
 
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
+import OrganicShape from "@/components/organic/OrganicShape";
 
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
 
