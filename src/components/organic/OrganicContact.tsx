@@ -3,6 +3,7 @@ import MapBlock from "@/components/MapBlock";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import CurvedDivider from "@/components/CurvedDivider";
+import OrganicShape from "@/components/organic/OrganicShape";
 
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
 
@@ -31,7 +32,8 @@ const OrganicContact = () => {
   return (
     <div>
       {/* Hero heading */}
-      <section className="px-6 md:px-12 lg:px-20 pt-20 pb-12 md:pt-28 md:pb-16">
+      <section className="px-6 md:px-12 lg:px-20 pt-20 pb-12 md:pt-28 md:pb-16 relative overflow-hidden">
+        <OrganicShape shape="ring" size="w-32 h-32" position="top-8 -right-10" animation="drift" borderColor="hsl(var(--primary) / 0.08)" delay={500} />
         <div className="max-w-6xl mx-auto" ref={heading.ref} style={heading.style}>
           <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
             Get in touch
@@ -96,7 +98,9 @@ const OrganicContact = () => {
       <CurvedDivider from="bg-background" to="bg-secondary" />
 
       {/* Quiet CTA */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-16 md:py-20">
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-16 md:py-20 relative overflow-hidden">
+        <OrganicShape shape="blob" size="w-40 h-40" position="-bottom-16 -right-16" animation="breathe" color="hsl(var(--primary) / 0.04)" delay={2000} />
+        <OrganicShape shape="arc" size="w-20 h-10" position="top-10 left-12" animation="float" borderColor="hsl(var(--primary) / 0.1)" delay={0} />
         <div className="max-w-2xl mx-auto text-center">
           {(() => {
             const Cta = () => {

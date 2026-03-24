@@ -12,6 +12,7 @@ import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
+import OrganicShape from "@/components/organic/OrganicShape";
 
 const OrganicAbout = () => {
   const { t } = useI18n();
@@ -24,7 +25,8 @@ const OrganicAbout = () => {
   return (
     <div>
       {/* Hero — editorial intro with large portrait */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
+        <OrganicShape shape="blob" size="w-48 h-48" position="-top-20 -right-20" animation="drift" color="hsl(var(--primary) / 0.03)" delay={0} />
         <div className="max-w-6xl mx-auto">
           <div ref={heroLabel.ref} style={heroLabel.style} className="mb-12">
             <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
@@ -47,7 +49,7 @@ const OrganicAbout = () => {
                   width={800}
                   height={1067}
                 />
-                <div className="absolute -bottom-6 -right-6 w-20 h-20 rounded-full bg-secondary border border-border -z-10" />
+                <OrganicShape shape="circle" size="w-20 h-20" position="-bottom-6 -right-6" animation="breathe" color="hsl(var(--secondary))" className="border border-border" delay={0} />
               </div>
             </div>
 
@@ -66,7 +68,9 @@ const OrganicAbout = () => {
       <CurvedDivider from="bg-background" to="bg-secondary" />
 
       {/* The space — reversed asymmetric layout */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
+        <OrganicShape shape="ring" size="w-36 h-36" position="top-16 -left-12" animation="float" borderColor="hsl(var(--primary) / 0.08)" delay={1000} />
+        <OrganicShape shape="arc" size="w-28 h-14" position="bottom-20 right-8" animation="drift" borderColor="hsl(var(--primary) / 0.1)" delay={3000} />
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
             <div className="md:col-span-6 md:order-2" ref={spaceImg.ref} style={spaceImg.style}>
