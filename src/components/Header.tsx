@@ -61,28 +61,35 @@ const Header = () => {
       </div>
 
       {open && (
-        <nav className="md:hidden bg-background border-b border-border px-5 pb-6 pt-2">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => setOpen(false)}
-              className={`block py-3 text-sm font-body tracking-wide transition-colors ${
-                location.pathname === item.path ? "text-primary" : "text-muted-foreground"
-              }`}
+        <>
+          {/* Backdrop overlay */}
+          <div
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+            onClick={() => setOpen(false)}
+          />
+          <nav className="relative z-50 md:hidden bg-background border-b border-border px-5 pb-6 pt-2">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setOpen(false)}
+                className={`block py-3 text-sm font-body tracking-wide transition-colors ${
+                  location.pathname === item.path ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block mt-3 text-center text-sm font-body bg-primary text-primary-foreground px-5 py-2.5 rounded"
             >
-              {item.label}
-            </Link>
-          ))}
-          <a
-            href={WHATSAPP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block mt-3 text-center text-sm font-body bg-primary text-primary-foreground px-5 py-2.5 rounded"
-          >
-            {t.nav.bookWhatsApp}
-          </a>
-        </nav>
+              {t.nav.bookWhatsApp}
+            </a>
+          </nav>
+        </>
       )}
     </header>
   );
