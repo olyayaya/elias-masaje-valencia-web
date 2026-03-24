@@ -19,6 +19,7 @@ const sections = [
   { id: "overview", label: "Overview", icon: Home },
   { id: "services", label: "Services", icon: LayoutDashboard },
   { id: "content", label: "Site Content", icon: PenLine },
+  { id: "promotions", label: "Promotions", icon: Tag },
   { id: "blog", label: "Blog", icon: FileText },
   { id: "seo", label: "SEO", icon: Search },
   { id: "media", label: "Media", icon: Image },
