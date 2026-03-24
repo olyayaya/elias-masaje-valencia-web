@@ -228,10 +228,10 @@ const OrganicHome = () => {
                 {t.about.title}
               </h2>
               <p className="text-base font-body leading-[1.8] mb-4" style={{ color: "hsl(var(--organic-dark-muted))" }}>
-                {t.about.previewP1}
+                {sc.about_preview_p1 || t.about.previewP1}
               </p>
               <p className="text-base font-body leading-[1.8] mb-8" style={{ color: "hsl(var(--organic-dark-muted))" }}>
-                {t.about.previewP2}
+                {sc.about_preview_p2 || t.about.previewP2}
               </p>
               <Link
                 to="/sobre-mi"
