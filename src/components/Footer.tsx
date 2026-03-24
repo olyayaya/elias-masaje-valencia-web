@@ -12,7 +12,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
             <h3 className="font-display text-2xl mb-4">Elias Masaje</h3>
-            <p className="text-sm opacity-70 leading-relaxed font-body">{t.footer.tagline}</p>
+            <p className="text-sm opacity-70 leading-relaxed font-body">{sc.footer_tagline || t.footer.tagline}</p>
           </div>
           <div>
             <h4 className="font-display text-lg mb-4">{t.footer.navigation}</h4>
