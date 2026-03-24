@@ -457,8 +457,8 @@ const OrganicHome = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-2xl md:text-3xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.giftCard.title}</h2>
-                  <p className="text-sm font-body mb-6" style={{ color: "hsl(var(--organic-dark-muted))" }}>{t.giftCard.description}</p>
+                   <h2 className="font-display text-2xl md:text-3xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{sc.gift_card_title || t.giftCard.title}</h2>
+                   <p className="text-sm font-body mb-6" style={{ color: "hsl(var(--organic-dark-muted))" }}>{sc.gift_card_description || t.giftCard.description}</p>
                   <a
                     href={WHATSAPP_URL}
                     target="_blank"
