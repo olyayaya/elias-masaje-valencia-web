@@ -136,8 +136,15 @@ const BreathingCell = ({
 
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
-
   const maxCols = 3;
+  const [focalCol, setFocalCol] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFocalCol((prev) => (prev + 1) % maxCols);
+    }, FOCUS_DURATION);
+    return () => clearInterval(interval);
+  }, []);
 
   const sequences = useMemo(() => {
     return Array.from({ length: maxCols }, () =>
@@ -156,6 +163,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
             <BreathingCell
               images={seq}
               delay={COL_OFFSETS[col]}
+              focused={col === focalCol}
             />
           </div>
         ))}
