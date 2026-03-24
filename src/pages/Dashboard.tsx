@@ -42,6 +42,7 @@ const Dashboard = () => {
       case "overview": return <DashboardOverview onNavigate={navigateTo} />;
       case "services": return <DashboardServices />;
       case "content": return <DashboardSiteContent />;
+      case "promotions": return <DashboardPromotions />;
       case "blog": return <DashboardBlog />;
       case "seo": return <DashboardSEO />;
       case "media": return <DashboardMedia />;
