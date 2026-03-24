@@ -45,19 +45,21 @@ const OrganicHome = () => {
   const dbFaqs = useDbFaqs();
   const dbTestimonials = useDbTestimonials();
 
+  const { locale } = useI18n();
+
   const services = useMemo(() =>
-    dbServices?.map(s => ({ title: s.title, description: s.description, duration: s.duration, price: s.price })) ?? t.services.items,
-    [dbServices, t.services.items]
+    dbServices?.map(s => ({ title: resolveField(s, "title", locale), description: resolveField(s, "description", locale), duration: s.duration, price: s.price })) ?? t.services.items,
+    [dbServices, t.services.items, locale]
   );
 
   const faqItems = useMemo(() =>
-    dbFaqs?.map(f => ({ question: f.question, answer: f.answer })) ?? t.faq.items,
-    [dbFaqs, t.faq.items]
+    dbFaqs?.map(f => ({ question: resolveField(f, "question", locale), answer: resolveField(f, "answer", locale) })) ?? t.faq.items,
+    [dbFaqs, t.faq.items, locale]
   );
 
   const testimonialItems = useMemo(() =>
-    dbTestimonials?.map(tt => ({ quote: tt.quote, name: tt.name, source: tt.source })) ?? t.testimonials.items,
-    [dbTestimonials, t.testimonials.items]
+    dbTestimonials?.map(tt => ({ quote: resolveField(tt, "quote", locale), name: tt.name, source: tt.source })) ?? t.testimonials.items,
+    [dbTestimonials, t.testimonials.items, locale]
   );
 
   const previewServices = services.slice(0, 3);
