@@ -58,6 +58,9 @@ const OrganicHome = () => {
           {theme === "clinical" && (
             <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-primary/30 via-primary/10 to-transparent" />
           )}
+          {theme === "organic" && (
+            <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-primary/25 via-primary/10 to-transparent" />
+          )}
         </div>
 
         <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 pt-20 pb-[18vh] md:pb-[20vh]">
