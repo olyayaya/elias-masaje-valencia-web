@@ -34,6 +34,7 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
       ]);
 
       const blogData = blog.data || [];
+      const activePromos = (promos.data || []).filter((p: any) => new Date(p.ends_at) > new Date());
       setCounts({
         services: services.count || 0,
         blog: blogData.length,
@@ -42,6 +43,7 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
         testimonials: testimonials.count || 0,
         media: 0,
         siteContent: siteContent.count || 0,
+        promotions: activePromos.length,
       });
 
       // Count media files
