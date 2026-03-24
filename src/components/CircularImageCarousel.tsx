@@ -15,8 +15,8 @@ const FOCUS_DURATION = 10000;
 const SIZE_MIN = 0.82;
 const SIZE_MAX = 1.18;
 // Portrait images: dramatic — start horizontal, grow to near-full height
-const PORTRAIT_SIZE_MIN = 0.55; // starts very cropped (horizontal-looking)
-const PORTRAIT_SIZE_MAX = 1.35; // grows tall to reveal portrait
+const PORTRAIT_SIZE_MIN = 0.72; // starts slightly cropped
+const PORTRAIT_SIZE_MAX = 1.22; // grows moderately taller
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
