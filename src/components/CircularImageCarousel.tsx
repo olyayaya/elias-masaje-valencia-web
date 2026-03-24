@@ -65,18 +65,15 @@ const BreathingCell = ({
   delay: number;
 }) => {
   const [index, setIndex] = useState(0);
-  const [phase, setPhase] = useState<"in" | "hold" | "out">("in");
+  const [phase, setPhase] = useState<"waiting" | "in" | "hold" | "out">("waiting");
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
-  const startedRef = useRef(false);
 
   const fadeIn = cycleDuration * 0.3;
   const hold = cycleDuration * 0.4;
   const fadeOut = cycleDuration * 0.3;
 
   useEffect(() => {
-    // Initial delay for stagger
     const delayTimer = setTimeout(() => {
-      startedRef.current = true;
       setPhase("in");
     }, delay);
     return () => clearTimeout(delayTimer);
