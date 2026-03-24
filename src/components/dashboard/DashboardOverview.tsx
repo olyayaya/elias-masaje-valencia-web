@@ -24,12 +24,13 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
 
   useEffect(() => {
     const load = async () => {
-      const [services, blog, faqs, testimonials, siteContent] = await Promise.all([
+      const [services, blog, faqs, testimonials, siteContent, promos] = await Promise.all([
         supabase.from("services").select("id", { count: "exact", head: true }),
         supabase.from("blog_posts").select("id, status"),
         supabase.from("faqs").select("id", { count: "exact", head: true }),
         supabase.from("testimonials").select("id", { count: "exact", head: true }),
         supabase.from("site_content").select("id", { count: "exact", head: true }),
+        supabase.from("promotions").select("id, active, ends_at").eq("active", true),
       ]);
 
       const blogData = blog.data || [];
