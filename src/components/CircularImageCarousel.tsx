@@ -80,7 +80,7 @@ const BreathingCell = ({
   }, [delay]);
 
   useEffect(() => {
-    if (!startedRef.current) return;
+    if (phase === "waiting") return;
 
     if (phase === "in") {
       timerRef.current = setTimeout(() => setPhase("hold"), fadeIn);
