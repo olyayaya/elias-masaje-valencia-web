@@ -483,8 +483,8 @@ const OrganicHome = () => {
         <OrganicShape shape="ring" size="w-40 h-40" position="-bottom-16 -right-16" animation="breathe" borderColor="hsl(var(--foreground) / 0.06)" delay={2000} />
         <OrganicShape shape="arc" size="w-20 h-10" position="top-16 left-8" animation="float" borderColor="hsl(var(--primary) / 0.1)" delay={500} />
         <div className="max-w-2xl mx-auto text-center" ref={ctaBlock.ref} style={ctaBlock.style}>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl mb-5 leading-snug">{t.finalCta.title}</h2>
-          <p className="text-base text-muted-foreground font-body leading-relaxed mb-10">{t.finalCta.description}</p>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl mb-5 leading-snug">{sc.final_cta_title || t.finalCta.title}</h2>
+          <p className="text-base text-muted-foreground font-body leading-relaxed mb-10">{sc.final_cta_description || t.finalCta.description}</p>
           <a
             href={WHATSAPP_URL}
             target="_blank"
