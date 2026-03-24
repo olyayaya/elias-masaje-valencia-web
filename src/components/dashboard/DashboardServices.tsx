@@ -106,9 +106,12 @@ const DashboardServices = () => {
           {editing === s.id && !isNew ? (
             <ServiceForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} saving={saving} lang={lang} />
           ) : (
-            <div className="flex items-start justify-between gap-4">
+            <div className={`flex items-start justify-between gap-4 ${s.hidden ? "opacity-50" : ""}`}>
               <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-900">{langVal(s, "title", lang) || s.title}</h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-medium text-gray-900">{langVal(s, "title", lang) || s.title}</h4>
+                  {s.hidden && <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-400 rounded-full">Hidden</span>}
+                </div>
                 <p className="text-xs text-gray-400 mt-1">{langVal(s, "description", lang) || s.description}</p>
                 <div className="flex gap-4 mt-2">
                   <span className="text-xs text-gray-500">{s.duration}</span>
@@ -116,6 +119,9 @@ const DashboardServices = () => {
                 </div>
               </div>
               <div className="flex gap-1">
+                <button onClick={async () => { await supabase.from("services").update({ hidden: !s.hidden }).eq("id", s.id); fetchServices(); }} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50" title={s.hidden ? "Show on site" : "Hide from site"}>
+                  {s.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
                 <button onClick={() => startEdit(s)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50"><Pencil size={14} /></button>
                 <button onClick={() => remove(s.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50"><Trash2 size={14} /></button>
               </div>
