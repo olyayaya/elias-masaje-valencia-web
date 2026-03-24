@@ -6,9 +6,10 @@ interface CircularImageCarouselProps {
   className?: string;
 }
 
-const CYCLE_DURATION = 12000; // same rate for all columns
-const FADE_TIME = 5000; // crossfade duration
-const COL_OFFSETS = [0, 4000, 2200]; // stagger offsets
+const CYCLE_DURATION = 12000;
+const FADE_TIME = 5000;
+const COL_OFFSETS = [0, 4000, 2200];
+const FOCUS_DURATION = 6000; // how long each column stays in focus
 
 /**
  * Shuffles array using Fisher-Yates, returns new array.
@@ -57,9 +58,11 @@ function buildSequence(images: { src: string; alt: string }[], slots: number, le
 const BreathingCell = ({
   images,
   delay,
+  focused,
 }: {
   images: { src: string; alt: string }[];
   delay: number;
+  focused: boolean;
 }) => {
   const [current, setCurrent] = useState(0);
   const [next, setNext] = useState(1);
@@ -73,25 +76,19 @@ const BreathingCell = ({
 
   useEffect(() => {
     if (!started) return;
-
-    // Hold current image, then start crossfade
     const holdTimer = setTimeout(() => {
       setFading(true);
     }, CYCLE_DURATION - FADE_TIME);
-
     return () => clearTimeout(holdTimer);
   }, [current, started]);
 
   useEffect(() => {
     if (!fading) return;
-
-    // After crossfade completes, swap
     const fadeTimer = setTimeout(() => {
       setCurrent(next);
       setNext((next + 1) % images.length);
       setFading(false);
     }, FADE_TIME);
-
     return () => clearTimeout(fadeTimer);
   }, [fading, next, images.length]);
 
@@ -100,7 +97,6 @@ const BreathingCell = ({
 
   return (
     <div className="rounded-2xl overflow-hidden w-full aspect-[3/2] relative">
-      {/* Current image — fades out */}
       <img
         src={currentImg.src}
         alt={currentImg.alt}
@@ -113,7 +109,6 @@ const BreathingCell = ({
           transition: `opacity ${fading ? FADE_TIME : 800}ms ease-in-out, transform ${fading ? FADE_TIME : 800}ms ease-in-out`,
         }}
       />
-      {/* Next image — fades in during crossfade */}
       <img
         src={nextImg.src}
         alt={nextImg.alt}
@@ -126,14 +121,30 @@ const BreathingCell = ({
           transition: `opacity ${FADE_TIME}ms ease-in-out, transform ${FADE_TIME}ms ease-in-out`,
         }}
       />
+      {/* Soft overlay for non-focal columns */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundColor: "hsl(var(--secondary))",
+          opacity: focused ? 0 : 0.45,
+          transition: "opacity 2000ms ease-in-out",
+        }}
+      />
     </div>
   );
 };
 
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
-
   const maxCols = 3;
+  const [focalCol, setFocalCol] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFocalCol((prev) => (prev + 1) % maxCols);
+    }, FOCUS_DURATION);
+    return () => clearInterval(interval);
+  }, []);
 
   const sequences = useMemo(() => {
     return Array.from({ length: maxCols }, () =>
@@ -152,6 +163,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
             <BreathingCell
               images={seq}
               delay={COL_OFFSETS[col]}
+              focused={col === focalCol}
             />
           </div>
         ))}
