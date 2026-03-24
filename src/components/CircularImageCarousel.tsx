@@ -43,11 +43,11 @@ function getBreathScale(sizeValue: number, src: string) {
 
   if (isPortrait) {
     const t = normalize(sizeValue, PORTRAIT_SIZE_MIN, PORTRAIT_SIZE_MAX);
-    return 1.06 + t * 0.18; // 1.06 → 1.24 (stronger for portrait)
+    return 1.08 + t * 0.25; // 1.08 → 1.33 (strong reveal for portrait)
   }
 
   const t = normalize(sizeValue, SIZE_MIN, SIZE_MAX);
-  return 1.03 + t * 0.1; // 1.03 → 1.13 (subtle for landscape)
+  return 1.02 + t * 0.08; // 1.02 → 1.10 (gentle for landscape)
 }
 
 /** Cache of image aspect ratios (width/height). >1 = landscape, <1 = portrait */
