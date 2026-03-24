@@ -197,20 +197,22 @@ const OrganicHome = () => {
             </Link>
           </div>
 
-          {/* Circular image cluster — carousel on mobile, static on desktop */}
-          <CircularImageCarousel
-            images={[
-              { src: massageWrist, alt: "Wrist massage" },
-              { src: massageBack, alt: "Back massage" },
-              { src: massageNeck, alt: "Neck massage" },
-              { src: massageStones, alt: "Hot stone therapy" },
-              { src: massageShoulder, alt: "Shoulder massage" },
-              { src: massageDeep, alt: "Deep tissue work" },
-              { src: massageOil, alt: "Oil massage" },
-              { src: massageArm, alt: "Arm massage" },
-              { src: massageFoot, alt: "Foot massage" },
-            ]}
-          />
+          {/* Circular image cluster — full bleed on mobile, padded on desktop */}
+          <div className="-mx-6 md:mx-0">
+            <CircularImageCarousel
+              images={[
+                { src: massageWrist, alt: "Wrist massage" },
+                { src: massageBack, alt: "Back massage" },
+                { src: massageNeck, alt: "Neck massage" },
+                { src: massageStones, alt: "Hot stone therapy" },
+                { src: massageShoulder, alt: "Shoulder massage" },
+                { src: massageDeep, alt: "Deep tissue work" },
+                { src: massageOil, alt: "Oil massage" },
+                { src: massageArm, alt: "Arm massage" },
+                { src: massageFoot, alt: "Foot massage" },
+              ]}
+            />
+          </div>
         </div>
 
         {/* Mobile: curved divider overlays bottom of gallery image */}
