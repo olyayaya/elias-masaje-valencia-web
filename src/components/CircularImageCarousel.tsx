@@ -79,8 +79,8 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
   return (
     <div
       ref={anim.ref}
-      style={anim.style}
-      className={`relative w-full ${className}`}
+      style={{ ...anim.style, width: "100vw", position: "relative", left: "50%", transform: "translateX(-50%)" }}
+      className={`overflow-hidden ${className}`}
     >
       <div className="flex items-center justify-center h-52 relative">
         {images.map((img, i) => {
