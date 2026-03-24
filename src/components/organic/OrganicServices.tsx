@@ -67,12 +67,25 @@ const OrganicServices = () => {
   const { t, locale } = useI18n();
   const { content: sc } = useSiteContent();
   const dbServices = useDbServices();
-  const services = dbServices?.map(s => ({
-    title: resolveField(s, "title", locale),
-    description: resolveField(s, "description", locale),
-    duration: s.duration,
-    price: s.price,
-  })) ?? t.services.items;
+  const dbPromotions = useDbPromotions();
+
+  const langBadge = (p: { badge_text: string; badge_text_en: string; badge_text_ru: string }) => {
+    if (locale === "en" && p.badge_text_en?.trim()) return p.badge_text_en;
+    if (locale === "ru" && p.badge_text_ru?.trim()) return p.badge_text_ru;
+    return p.badge_text;
+  };
+
+  const services = dbServices?.map(s => {
+    const promo = dbPromotions?.find(p => p.service_id === s.id);
+    return {
+      title: resolveField(s, "title", locale),
+      description: resolveField(s, "description", locale),
+      duration: s.duration,
+      price: s.price,
+      badge: promo ? langBadge(promo) : undefined,
+      badgeColor: promo?.badge_color,
+    };
+  }) ?? t.services.items;
   const heroText = useFadeIn(0.1);
 
   return (
