@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Save, Loader2, Sparkles, ChevronRight } from "lucide-react";
+import { Save, Loader2, Sparkles, ChevronRight, Search, Languages } from "lucide-react";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SiteContentRow {
   id: string;
@@ -41,7 +42,7 @@ const DashboardSiteContent = () => {
   const [saving, setSaving] = useState<string | null>(null);
   const [lang, setLang] = useState<Lang>("es");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [translating, setTranslating] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
 
   const fetchContent = async () => {
     setLoading(true);
@@ -84,11 +85,8 @@ const DashboardSiteContent = () => {
   };
 
   const translateField = async (item: SiteContentRow) => {
-    if (lang === "es") {
-      toast.info("Select EN or RU to translate from Spanish");
-      return;
-    }
-    setTranslating(item.id);
+    if (lang === "es") return;
+    setAiLoading(`translate-${item.id}`);
     try {
       const targetLang = lang === "en" ? "English" : "Russian";
       const { data, error } = await supabase.functions.invoke("ai-content-helper", {
@@ -102,7 +100,29 @@ const DashboardSiteContent = () => {
     } catch {
       toast.error("Translation failed");
     }
-    setTranslating(null);
+    setAiLoading(null);
+  };
+
+  const seoOptimize = async (item: SiteContentRow) => {
+    const currentText = drafts[item.id] ?? "";
+    if (!currentText.trim()) {
+      toast.info("Enter some text first");
+      return;
+    }
+    setAiLoading(`seo-${item.id}`);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-content-helper", {
+        body: { text: currentText, action: "seo_optimize" },
+      });
+      if (error) throw error;
+      if (data?.result) {
+        setDrafts((prev) => ({ ...prev, [item.id]: data.result }));
+        toast.success("SEO improvement ready — review and save");
+      }
+    } catch {
+      toast.error("SEO optimization failed");
+    }
+    setAiLoading(null);
   };
 
   const hasChanged = (item: SiteContentRow) => drafts[item.id] !== item[langKey(lang)];
@@ -158,21 +178,46 @@ const DashboardSiteContent = () => {
                         )}
                       </div>
                       <div className="flex gap-1.5 shrink-0">
-                        {lang !== "es" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => translateField(item)}
-                            disabled={translating === item.id}
-                            className="h-10"
-                          >
-                            {translating === item.id ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <Sparkles size={14} />
-                            )}
-                          </Button>
-                        )}
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => seoOptimize(item)}
+                                disabled={aiLoading === `seo-${item.id}`}
+                                className="h-10"
+                              >
+                                {aiLoading === `seo-${item.id}` ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <Search size={14} />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Improve for SEO</TooltipContent>
+                          </Tooltip>
+                          {lang !== "es" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => translateField(item)}
+                                  disabled={aiLoading === `translate-${item.id}`}
+                                  className="h-10"
+                                >
+                                  {aiLoading === `translate-${item.id}` ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                  ) : (
+                                    <Languages size={14} />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Translate from Spanish</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </TooltipProvider>
                         <Button
                           size="sm"
                           onClick={() => saveItem(item)}
