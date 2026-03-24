@@ -11,7 +11,6 @@ const FADE_TIME = 5000;
 const COL_OFFSETS = [0, 4000, 2200];
 const FOCUS_DURATION = 10000;
 
-// Size variations: each cell picks a random scale from this range
 const SIZE_MIN = 0.82;
 const SIZE_MAX = 1.18;
 
@@ -28,6 +27,32 @@ function randomSize() {
   return SIZE_MIN + Math.random() * (SIZE_MAX - SIZE_MIN);
 }
 
+/**
+ * Build `cols` sequences of length `len` from `images`,
+ * guaranteeing that no two columns share the same image at the same index.
+ */
+function buildSyncedSequences(
+  images: { src: string; alt: string }[],
+  cols: number,
+  len: number
+) {
+  const seqs: { src: string; alt: string }[][] = Array.from({ length: cols }, () => []);
+
+  for (let i = 0; i < len; i++) {
+    const usedAtThisIndex = new Set<string>();
+    for (let c = 0; c < cols; c++) {
+      const candidates = images.filter((img) => !usedAtThisIndex.has(img.src));
+      const pick = candidates.length > 0
+        ? candidates[Math.floor(Math.random() * candidates.length)]
+        : images[Math.floor(Math.random() * images.length)];
+      seqs[c].push(pick);
+      usedAtThisIndex.add(pick.src);
+    }
+  }
+
+  return seqs;
+}
+
 const BreathingCell = ({
   images,
   delay,
@@ -40,7 +65,7 @@ const BreathingCell = ({
   delay: number;
   focused: boolean;
   colIndex: number;
-  onImageChange: (col: number, src: string) => void;
+  onImageChange: (col: number, srcs: string[]) => void;
   getActiveImages: (excludeCol: number) => Set<string>;
 }) => {
   const [current, setCurrent] = useState(0);
@@ -51,19 +76,16 @@ const BreathingCell = ({
 
   // Report initial image
   useEffect(() => {
-    onImageChange(colIndex, images[0]?.src ?? "");
+    onImageChange(colIndex, [images[0]?.src ?? ""]);
   }, []);
 
-  // Pick a non-duplicate next image
   const pickNext = useCallback(
     (afterIndex: number) => {
       const active = getActiveImages(colIndex);
-      // Try to find one not currently shown in other columns
       for (let offset = 1; offset <= images.length; offset++) {
         const idx = (afterIndex + offset) % images.length;
         if (!active.has(images[idx].src)) return idx;
       }
-      // Fallback: just use the next one
       return (afterIndex + 1) % images.length;
     },
     [images, colIndex, getActiveImages]
@@ -72,7 +94,7 @@ const BreathingCell = ({
   useEffect(() => {
     const t = setTimeout(() => {
       setStarted(true);
-      onImageChange(colIndex, images[current].src);
+      onImageChange(colIndex, [images[current].src]);
     }, delay);
     return () => clearTimeout(t);
   }, [delay]);
@@ -80,9 +102,10 @@ const BreathingCell = ({
   useEffect(() => {
     if (!started) return;
     const holdTimer = setTimeout(() => {
-      // Pick next image that's not a duplicate
       const nextIdx = pickNext(current);
       setNext(nextIdx);
+      // During crossfade both images are visible — report both
+      onImageChange(colIndex, [images[current].src, images[nextIdx].src]);
       setFading(true);
     }, CYCLE_DURATION - FADE_TIME);
     return () => clearTimeout(holdTimer);
@@ -92,7 +115,8 @@ const BreathingCell = ({
     if (!fading) return;
     const fadeTimer = setTimeout(() => {
       setCurrent(next);
-      onImageChange(colIndex, images[next].src);
+      // Crossfade done — only the new image is visible
+      onImageChange(colIndex, [images[next].src]);
       setSizeScale(randomSize());
       setFading(false);
     }, FADE_TIME);
@@ -102,8 +126,7 @@ const BreathingCell = ({
   const currentImg = images[current];
   const nextImg = images[next];
 
-  // Aspect ratio varies by sizeScale (base 3/2 = 1.5)
-  const aspectHeight = 2 / 3 / sizeScale; // inverted for padding-bottom trick
+  const aspectHeight = 2 / 3 / sizeScale;
   const paddingBottom = `${aspectHeight * 100}%`;
 
   return (
@@ -138,7 +161,6 @@ const BreathingCell = ({
           transition: `opacity ${FADE_TIME}ms ease-in-out, transform ${FADE_TIME}ms ease-in-out`,
         }}
       />
-      {/* Soft overlay for non-focal columns */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -154,19 +176,19 @@ const BreathingCell = ({
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
   const maxCols = 3;
-  const [mutedCol, setMutedCol] = useState(2); // which column is dimmed
+  const [mutedCol, setMutedCol] = useState(2);
 
-  // Track which image src each column is currently showing
-  const activeImagesRef = useRef<Map<number, string>>(new Map());
+  // Track which image srcs each column is currently showing (includes both during crossfade)
+  const activeImagesRef = useRef<Map<number, string[]>>(new Map());
 
-  const handleImageChange = useCallback((col: number, src: string) => {
-    activeImagesRef.current.set(col, src);
+  const handleImageChange = useCallback((col: number, srcs: string[]) => {
+    activeImagesRef.current.set(col, srcs);
   }, []);
 
   const getActiveImages = useCallback((excludeCol: number): Set<string> => {
     const set = new Set<string>();
-    activeImagesRef.current.forEach((src, col) => {
-      if (col !== excludeCol) set.add(src);
+    activeImagesRef.current.forEach((srcs, col) => {
+      if (col !== excludeCol) srcs.forEach((s) => set.add(s));
     });
     return set;
   }, []);
@@ -178,15 +200,9 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
     return () => clearInterval(interval);
   }, []);
 
-  // Build shuffled sequences per column (long enough to cycle through)
+  // Build sequences guaranteeing no duplicate at same position across columns
   const sequences = useMemo(() => {
-    return Array.from({ length: maxCols }, () => {
-      const seq: { src: string; alt: string }[] = [];
-      for (let round = 0; round < 10; round++) {
-        seq.push(...shuffle(images));
-      }
-      return seq;
-    });
+    return buildSyncedSequences(images, maxCols, images.length * 10);
   }, [images]);
 
   return (
