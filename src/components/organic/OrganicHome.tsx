@@ -45,7 +45,7 @@ const OrganicHome = () => {
   const dbFaqs = useDbFaqs();
   const dbTestimonials = useDbTestimonials();
 
-  const { locale } = useI18n();
+  
 
   const services = useMemo(() =>
     dbServices?.map(s => ({ title: resolveField(s, "title", locale), description: resolveField(s, "description", locale), duration: s.duration, price: s.price })) ?? t.services.items,
