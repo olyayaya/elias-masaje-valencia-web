@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
 
