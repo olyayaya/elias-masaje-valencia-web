@@ -53,14 +53,14 @@ const OrganicHome = () => {
         </div>
 
         <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 pt-20 pb-[18vh] md:pb-[20vh]">
-          <div className="max-w-xl animate-hero-text-breathe" ref={heroText.ref} style={heroText.style}>
-            <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-6">
+            <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
+            <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/70 mb-6">
               Valencia · Massage · Wellness
             </p>
             <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] leading-[1.15] mb-6">
               {t.hero.headline}
             </h1>
-            <p className="text-base md:text-lg text-muted-foreground font-body leading-relaxed mb-10 max-w-md">
+            <p className="text-base md:text-lg text-foreground/60 font-body leading-relaxed mb-10 max-w-md">
               {t.hero.subheadline}
             </p>
             <a
