@@ -150,7 +150,7 @@ const OrganicServices = () => {
           </div>
         </div>
 
-        <div className="px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden -mt-16 md:-mt-24 -mb-16 md:-mb-24 relative z-0">
+        <div className="px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden">
           <div className="max-w-5xl mx-auto">
             <CircularImageCarousel
               images={[
