@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useI18n } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, PenLine,
@@ -17,7 +18,10 @@ interface Counts {
   promotions: number;
 }
 
+const nameByLang: Record<string, string> = { es: "Elias", en: "Elias", ru: "Илья" };
+
 const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => void }) => {
+  const { locale } = useI18n();
   const [counts, setCounts] = useState<Counts>({
     services: 0, blog: 0, blogDraft: 0, faqs: 0, testimonials: 0, media: 0, siteContent: 0, promotions: 0,
   });
@@ -123,7 +127,7 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
     <div className="space-y-8">
       {/* Welcome header */}
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Welcome back</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Welcome back, {nameByLang[locale] ?? "Elias"}</h1>
         <p className="text-sm text-gray-500">Here's an overview of your site. Click any section to manage it.</p>
       </div>
 
