@@ -48,14 +48,18 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
     return (
       <div ref={anim.ref} style={{ ...anim.style, marginLeft: "calc(-50vw + 50%)", marginRight: "calc(-50vw + 50%)" }} className={`flex justify-center items-start gap-0 relative w-screen ${className}`}>
         {visible.map((item, i) => (
-          <div key={`${activeIndex}-${i}`} className={`${item.offset}`}>
+          <div key={i} className={`${item.offset}`}>
             <div
               className={`${item.size} rounded-full overflow-hidden`}
-              style={{
-                animation: "fade-in 0.8s ease-out both",
-              }}
+              style={{ transition: "opacity 1s ease-in-out" }}
             >
-              <img src={item.img.src} alt={item.img.alt} className="w-full h-full object-cover" loading="lazy" />
+              <img
+                key={`${activeIndex}-${i}`}
+                src={item.img.src}
+                alt={item.img.alt}
+                className="w-full h-full object-cover animate-fade-in"
+                loading="lazy"
+              />
             </div>
           </div>
         ))}
