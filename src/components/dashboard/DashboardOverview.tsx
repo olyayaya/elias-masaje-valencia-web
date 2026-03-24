@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useI18n } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, PenLine,
