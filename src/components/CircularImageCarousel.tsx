@@ -11,12 +11,12 @@ const FADE_TIME = 5000;
 const COL_OFFSETS = [0, 4000, 2200];
 const FOCUS_DURATION = 10000;
 
-// Landscape images: subtle size variation
+// Landscape images: subtle zoom variation
 const SIZE_MIN = 0.82;
 const SIZE_MAX = 1.18;
-// Portrait images: dramatic — start horizontal, grow to near-full height
-const PORTRAIT_SIZE_MIN = 0.72; // starts slightly cropped
-const PORTRAIT_SIZE_MAX = 1.22; // grows moderately taller
+// Portrait images: stronger zoom range
+const PORTRAIT_SIZE_MIN = 0.72;
+const PORTRAIT_SIZE_MAX = 1.22;
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -31,6 +31,23 @@ function randomSize(isPortrait: boolean) {
   const min = isPortrait ? PORTRAIT_SIZE_MIN : SIZE_MIN;
   const max = isPortrait ? PORTRAIT_SIZE_MAX : SIZE_MAX;
   return min + Math.random() * (max - min);
+}
+
+function normalize(value: number, min: number, max: number) {
+  if (max <= min) return 0;
+  return Math.min(1, Math.max(0, (value - min) / (max - min)));
+}
+
+function getBreathScale(sizeValue: number, src: string) {
+  const isPortrait = getIsPortrait(src);
+
+  if (isPortrait) {
+    const t = normalize(sizeValue, PORTRAIT_SIZE_MIN, PORTRAIT_SIZE_MAX);
+    return 1.06 + t * 0.18; // 1.06 → 1.24 (stronger for portrait)
+  }
+
+  const t = normalize(sizeValue, SIZE_MIN, SIZE_MAX);
+  return 1.03 + t * 0.1; // 1.03 → 1.13 (subtle for landscape)
 }
 
 /** Cache of image aspect ratios (width/height). >1 = landscape, <1 = portrait */
@@ -65,9 +82,10 @@ function buildSyncedSequences(
     const usedAtThisIndex = new Set<string>();
     for (let c = 0; c < cols; c++) {
       const candidates = images.filter((img) => !usedAtThisIndex.has(img.src));
-      const pick = candidates.length > 0
-        ? candidates[Math.floor(Math.random() * candidates.length)]
-        : images[Math.floor(Math.random() * images.length)];
+      const pick =
+        candidates.length > 0
+          ? candidates[Math.floor(Math.random() * candidates.length)]
+          : images[Math.floor(Math.random() * images.length)];
       seqs[c].push(pick);
       usedAtThisIndex.add(pick.src);
     }
@@ -97,10 +115,9 @@ const BreathingCell = ({
   const [started, setStarted] = useState(false);
   const [sizeScale, setSizeScale] = useState(() => randomSize(getIsPortrait(images[0]?.src ?? "")));
 
-  // Report initial image
   useEffect(() => {
     onImageChange(colIndex, [images[0]?.src ?? ""]);
-  }, []);
+  }, [colIndex, images, onImageChange]);
 
   const pickNext = useCallback(
     (afterIndex: number) => {
@@ -120,25 +137,23 @@ const BreathingCell = ({
       onImageChange(colIndex, [images[current].src]);
     }, delay);
     return () => clearTimeout(t);
-  }, [delay]);
+  }, [delay, colIndex, current, images, onImageChange]);
 
   useEffect(() => {
     if (!started) return;
     const holdTimer = setTimeout(() => {
       const nextIdx = pickNext(current);
       setNext(nextIdx);
-      // During crossfade both images are visible — report both
       onImageChange(colIndex, [images[current].src, images[nextIdx].src]);
       setFading(true);
     }, CYCLE_DURATION - FADE_TIME);
     return () => clearTimeout(holdTimer);
-  }, [current, started, pickNext]);
+  }, [current, started, pickNext, colIndex, images, onImageChange]);
 
   useEffect(() => {
     if (!fading) return;
     const fadeTimer = setTimeout(() => {
       setCurrent(next);
-      // Crossfade done — only the new image is visible
       onImageChange(colIndex, [images[next].src]);
       setSizeScale(randomSize(getIsPortrait(images[next].src)));
       setFading(false);
@@ -149,17 +164,14 @@ const BreathingCell = ({
   const currentImg = images[current];
   const nextImg = images[next];
 
-  const aspectHeight = 2 / 3 / sizeScale;
-  const paddingBottom = `${aspectHeight * 100}%`;
+  const currentBreathScale = getBreathScale(sizeScale, currentImg.src);
+  const nextBreathScale = getBreathScale(sizeScale, nextImg.src);
+
+  const currentRestScale = Math.max(1, currentBreathScale - 0.06).toFixed(3);
+  const nextRestScale = Math.max(1, nextBreathScale - 0.06).toFixed(3);
 
   return (
-    <div
-      className="rounded-2xl overflow-hidden w-full relative"
-      style={{
-        paddingBottom,
-        transition: "padding-bottom 3000ms ease-in-out",
-      }}
-    >
+    <div className="rounded-2xl overflow-hidden w-full aspect-[3/2] relative">
       <img
         src={currentImg.src}
         alt={currentImg.alt}
@@ -168,8 +180,12 @@ const BreathingCell = ({
         draggable={false}
         style={{
           opacity: !started ? 0 : fading ? 0 : 1,
-          transform: !started ? "scale(0.97)" : fading ? "scale(0.97)" : "scale(1.02)",
-          transition: `opacity ${fading ? FADE_TIME : 800}ms ease-in-out, transform ${fading ? FADE_TIME : 800}ms ease-in-out`,
+          transform: !started
+            ? `scale(${currentRestScale})`
+            : fading
+              ? `scale(${currentRestScale})`
+              : `scale(${currentBreathScale.toFixed(3)})`,
+          transition: `opacity ${fading ? FADE_TIME : 1000}ms ease-in-out, transform ${fading ? FADE_TIME : 3000}ms ease-in-out`,
         }}
       />
       <img
@@ -180,7 +196,9 @@ const BreathingCell = ({
         draggable={false}
         style={{
           opacity: fading ? 1 : 0,
-          transform: fading ? "scale(1.02)" : "scale(0.97)",
+          transform: fading
+            ? `scale(${nextBreathScale.toFixed(3)})`
+            : `scale(${nextRestScale})`,
           transition: `opacity ${FADE_TIME}ms ease-in-out, transform ${FADE_TIME}ms ease-in-out`,
         }}
       />
@@ -201,7 +219,6 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
   const maxCols = 3;
   const [mutedCol, setMutedCol] = useState(2);
 
-  // Preload all images to detect portrait vs landscape
   useEffect(() => {
     images.forEach((img) => preloadAndCacheAspect(img.src));
   }, [images]);
@@ -226,16 +243,15 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
       setMutedCol((prev) => (prev + 1) % maxCols);
     }, FOCUS_DURATION);
     return () => clearInterval(interval);
-  }, []);
+  }, [maxCols]);
 
-  // Build sequences guaranteeing no duplicate at same position across columns
   const sequences = useMemo(() => {
     return buildSyncedSequences(images, maxCols, images.length * 10);
   }, [images]);
 
   return (
     <div ref={anim.ref} style={anim.style} className={className}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto items-start overflow-hidden" style={{ maxHeight: "45vw", minHeight: "200px" }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto items-start">
         {sequences.map((seq, col) => (
           <div
             key={col}
