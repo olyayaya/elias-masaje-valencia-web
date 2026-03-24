@@ -15,6 +15,7 @@ interface Service {
   title_ru: string;
   description_en: string;
   description_ru: string;
+  hidden: boolean;
 }
 
 const DashboardServices = () => {
