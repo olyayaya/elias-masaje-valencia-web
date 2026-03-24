@@ -126,62 +126,72 @@ const DashboardSiteContent = () => {
         const catItems = items.filter((i) => i.category === cat.id);
         if (!catItems.length) return null;
         return (
-          <DashboardCard key={cat.id} title={cat.label} description={`Edit ${cat.label.toLowerCase()} text`}>
-            <div className="space-y-4">
-              {catItems.map((item) => (
-                <div key={item.id} className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-500">{item.label}</label>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      {isLongField(item.content_key) ? (
-                        <Textarea
-                          value={drafts[item.id] ?? ""}
-                          onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
-                          rows={3}
-                          className="text-sm"
-                        />
-                      ) : (
-                        <Input
-                          value={drafts[item.id] ?? ""}
-                          onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
-                          className="text-sm"
-                        />
-                      )}
-                    </div>
-                    <div className="flex gap-1.5 shrink-0">
-                      {lang !== "es" && (
+          <Collapsible key={cat.id}>
+            <CollapsibleTrigger className="w-full text-left">
+              <DashboardCard title={cat.label} description={`Edit ${cat.label.toLowerCase()} text`}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                  <ChevronRight size={14} className="transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                  <span>{catItems.length} fields — click to expand</span>
+                </div>
+              </DashboardCard>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="border border-t-0 border-border rounded-b-lg bg-card px-5 pb-5 pt-3 space-y-4">
+                {catItems.map((item) => (
+                  <div key={item.id} className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">{item.label}</label>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        {isLongField(item.content_key) ? (
+                          <Textarea
+                            value={drafts[item.id] ?? ""}
+                            onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
+                            rows={3}
+                            className="text-sm"
+                          />
+                        ) : (
+                          <Input
+                            value={drafts[item.id] ?? ""}
+                            onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
+                            className="text-sm"
+                          />
+                        )}
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                        {lang !== "es" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => translateField(item)}
+                            disabled={translating === item.id}
+                            className="h-10"
+                          >
+                            {translating === item.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Sparkles size={14} />
+                            )}
+                          </Button>
+                        )}
                         <Button
                           size="sm"
-                          variant="outline"
-                          onClick={() => translateField(item)}
-                          disabled={translating === item.id}
+                          onClick={() => saveItem(item)}
+                          disabled={saving === item.id || !hasChanged(item)}
                           className="h-10"
                         >
-                          {translating === item.id ? (
+                          {saving === item.id ? (
                             <Loader2 size={14} className="animate-spin" />
                           ) : (
-                            <Sparkles size={14} />
+                            <Save size={14} />
                           )}
                         </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        onClick={() => saveItem(item)}
-                        disabled={saving === item.id || !hasChanged(item)}
-                        className="h-10"
-                      >
-                        {saving === item.id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Save size={14} />
-                        )}
-                      </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </DashboardCard>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         );
       })}
     </div>
