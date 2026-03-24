@@ -140,7 +140,7 @@ const BreathingCell = ({
       setCurrent(next);
       // Crossfade done — only the new image is visible
       onImageChange(colIndex, [images[next].src]);
-      setSizeScale(randomSize());
+      setSizeScale(randomSize(getIsPortrait(images[next].src)));
       setFading(false);
     }, FADE_TIME);
     return () => clearTimeout(fadeTimer);
