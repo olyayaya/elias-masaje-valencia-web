@@ -408,7 +408,7 @@ const OrganicHome = () => {
                 const anim = useFadeIn(0);
                 return (
                   <div ref={anim.ref} style={anim.style}>
-                    <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.location.title}</h2>
+                    <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{sc.location_title || t.location.title}</h2>
                     <div className="rounded-2xl overflow-hidden border border-border">
                       <MapBlock />
                     </div>
