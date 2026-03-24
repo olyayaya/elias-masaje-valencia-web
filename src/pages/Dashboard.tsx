@@ -110,7 +110,22 @@ const Dashboard = () => {
           })}
         </nav>
 
-        <div className="px-3 pb-4">
+        <div className="px-3 pb-4 space-y-2">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 mx-3">
+            {(Object.keys(langLabels) as Locale[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLocale(l)}
+                className={`flex-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  l === locale
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                {langLabels[l]}
+              </button>
+            ))}
+          </div>
           <Link
             to="/"
             className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-400 hover:text-gray-600 transition-colors"
