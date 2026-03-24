@@ -178,21 +178,46 @@ const DashboardSiteContent = () => {
                         )}
                       </div>
                       <div className="flex gap-1.5 shrink-0">
-                        {lang !== "es" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => translateField(item)}
-                            disabled={translating === item.id}
-                            className="h-10"
-                          >
-                            {translating === item.id ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <Sparkles size={14} />
-                            )}
-                          </Button>
-                        )}
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => seoOptimize(item)}
+                                disabled={aiLoading === `seo-${item.id}`}
+                                className="h-10"
+                              >
+                                {aiLoading === `seo-${item.id}` ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <Search size={14} />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Improve for SEO</TooltipContent>
+                          </Tooltip>
+                          {lang !== "es" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => translateField(item)}
+                                  disabled={aiLoading === `translate-${item.id}`}
+                                  className="h-10"
+                                >
+                                  {aiLoading === `translate-${item.id}` ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                  ) : (
+                                    <Languages size={14} />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Translate from Spanish</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </TooltipProvider>
                         <Button
                           size="sm"
                           onClick={() => saveItem(item)}
