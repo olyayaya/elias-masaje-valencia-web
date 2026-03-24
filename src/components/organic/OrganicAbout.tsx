@@ -87,7 +87,7 @@ const OrganicAbout = () => {
               <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
                 The space
               </p>
-              <h2 className="font-display text-3xl md:text-4xl mb-6 leading-snug">{t.about.spaceTitle}</h2>
+              <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl mb-6 leading-snug">{t.about.spaceTitle}</h2>
               <div className="space-y-4 text-base text-muted-foreground font-body leading-[1.8]">
                 {t.about.spaceParagraphs.map((p, i) => (
                   <p key={i}>{p}</p>
@@ -108,7 +108,7 @@ const OrganicAbout = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style} className="text-center mb-16">
-                  <h2 className="font-display text-3xl md:text-4xl mb-3">Gallery</h2>
+                  <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl mb-3">Gallery</h2>
                   <div className="w-12 h-px bg-primary mx-auto" />
                 </div>
               );
