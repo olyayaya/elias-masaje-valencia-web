@@ -137,6 +137,8 @@ const OrganicContact = () => {
           })()}
         </div>
       </section>
+
+      {showMapPicker && <MapPickerOverlay onClose={() => setShowMapPicker(false)} />}
     </div>
   );
 };
