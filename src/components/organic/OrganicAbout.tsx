@@ -101,7 +101,7 @@ const OrganicAbout = () => {
       <CurvedDivider from="bg-secondary" to="bg-background" flip />
 
       {/* Gallery — auto-sliding horizontal carousel */}
-      <section className="py-20 md:py-28">
+      <section className="pt-20 md:pt-28 pb-0">
         <div className="max-w-5xl mx-auto px-6 md:px-12 lg:px-20">
           {(() => {
             const GalleryTitle = () => {
@@ -117,18 +117,24 @@ const OrganicAbout = () => {
           })()}
         </div>
 
-        <CircularImageCarousel
-          images={[
-            { src: massageArm, alt: "Arm massage" },
-            { src: massageStones, alt: "Hot stone therapy" },
-            { src: massageBack, alt: "Back massage" },
-            { src: massageOil, alt: "Oil massage" },
-            { src: massageNeck, alt: "Neck massage" },
-            { src: massageWrist, alt: "Wrist massage" },
-            { src: massageFoot, alt: "Foot massage" },
-            { src: massageDeep, alt: "Deep tissue work" },
-          ]}
-        />
+        <div className="relative">
+          <CircularImageCarousel
+            images={[
+              { src: massageArm, alt: "Arm massage" },
+              { src: massageStones, alt: "Hot stone therapy" },
+              { src: massageBack, alt: "Back massage" },
+              { src: massageOil, alt: "Oil massage" },
+              { src: massageNeck, alt: "Neck massage" },
+              { src: massageWrist, alt: "Wrist massage" },
+              { src: massageFoot, alt: "Foot massage" },
+              { src: massageDeep, alt: "Deep tissue work" },
+            ]}
+          />
+          {/* Overlapping half-moon on mobile */}
+          <div className="md:hidden absolute bottom-0 left-0 right-0 translate-y-1/2 z-10 pointer-events-none">
+            <CurvedDivider from="bg-transparent" to="bg-organic-dark" />
+          </div>
+        </div>
       </section>
 
       {/* Final CTA — Ready to feel better? */}
