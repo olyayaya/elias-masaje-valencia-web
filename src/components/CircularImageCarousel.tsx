@@ -6,9 +6,10 @@ interface CircularImageCarouselProps {
   className?: string;
 }
 
-const CYCLE_DURATION = 12000; // same rate for all columns
-const FADE_TIME = 5000; // crossfade duration
-const COL_OFFSETS = [0, 4000, 2200]; // stagger offsets
+const CYCLE_DURATION = 12000;
+const FADE_TIME = 5000;
+const COL_OFFSETS = [0, 4000, 2200];
+const FOCUS_DURATION = 6000; // how long each column stays in focus
 
 /**
  * Shuffles array using Fisher-Yates, returns new array.
