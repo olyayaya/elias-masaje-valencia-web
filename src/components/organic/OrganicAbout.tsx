@@ -144,7 +144,7 @@ const OrganicAbout = () => {
       <div className="hidden md:block">
         <CurvedDivider from="bg-background" to="bg-organic-dark" />
       </div>
-      <section className="bg-organic-dark px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
         <OrganicShape shape="ring" size="w-32 h-32" position="top-8 right-8" animation="breathe" borderColor="hsl(var(--organic-dark-muted) / 0.15)" delay={0} />
         <OrganicShape shape="arc" size="w-20 h-10" position="bottom-12 left-8" animation="float" borderColor="hsl(var(--organic-dark-muted) / 0.1)" delay={500} />
         {(() => {
