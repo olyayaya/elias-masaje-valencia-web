@@ -56,14 +56,14 @@ const OrganicContact = () => {
             {/* Details */}
             <div className="md:col-span-5 space-y-8">
               <ContactItem icon={MapPin} title={t.contact.address} index={0}>
-                <p className="text-sm text-muted-foreground font-body">{t.contact.addressValue}</p>
+                <p className="text-sm text-muted-foreground font-body">{sc.contact_address || t.contact.addressValue}</p>
               </ContactItem>
 
               <ContactItem icon={Clock} title={t.contact.hours} index={1}>
                 <div className="text-sm text-muted-foreground font-body space-y-1">
-                  <p>{t.contact.weekdays}</p>
-                  <p>{t.contact.saturday}</p>
-                  <p>{t.contact.sunday}</p>
+                  <p>{sc.contact_weekdays || t.contact.weekdays}</p>
+                  <p>{sc.contact_saturday || t.contact.saturday}</p>
+                  <p>{sc.contact_sunday || t.contact.sunday}</p>
                 </div>
               </ContactItem>
 
