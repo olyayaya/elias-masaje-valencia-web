@@ -384,22 +384,24 @@ const OrganicHome = () => {
           })()}
         </div>
       </section>
+      <CurvedDivider from="bg-background" to="bg-organic-dark" />
 
-      {/* ═══════════ GIFT CARD — Minimal ═══════════ */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-16 md:py-20">
+      {/* ═══════════ GIFT CARD — Dark section ═══════════ */}
+      <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
         <div className="max-w-3xl mx-auto text-center">
           {(() => {
             const GiftSection = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-2xl md:text-3xl mb-3">{t.giftCard.title}</h2>
-                  <p className="text-sm text-muted-foreground font-body mb-6">{t.giftCard.description}</p>
+                  <h2 className="font-display text-2xl md:text-3xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.giftCard.title}</h2>
+                  <p className="text-sm font-body mb-6" style={{ color: "hsl(var(--organic-dark-muted))" }}>{t.giftCard.description}</p>
                   <a
                     href={WHATSAPP_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block text-sm font-body border border-foreground/20 text-foreground px-6 py-2.5 rounded-full transition-all hover:bg-foreground hover:text-background"
+                    className="inline-block text-sm font-body px-6 py-2.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
+                    style={{ backgroundColor: "hsl(var(--organic-dark-foreground))", color: "hsl(var(--organic-dark))" }}
                   >
                     {t.giftCard.cta}
                   </a>
@@ -410,6 +412,8 @@ const OrganicHome = () => {
           })()}
         </div>
       </section>
+
+      <CurvedDivider from="bg-organic-dark" to="bg-background" flip />
 
       {/* ═══════════ FINAL CTA — Quiet confidence ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-24 md:py-32">
