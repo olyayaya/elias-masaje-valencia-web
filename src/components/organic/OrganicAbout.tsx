@@ -12,6 +12,7 @@ import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
+import OrganicShape from "@/components/organic/OrganicShape";
 
 const OrganicAbout = () => {
   const { t } = useI18n();
