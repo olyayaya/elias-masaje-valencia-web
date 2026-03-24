@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
+import { useParallax } from "@/hooks/use-parallax";
 import aboutPortrait from "@/assets/about-portrait.jpg";
 import massageNeck from "@/assets/massage-neck.jpg";
 import massageWrist from "@/assets/massage-wrist.jpg";
@@ -25,6 +26,7 @@ const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20
 
 const OrganicHome = () => {
   const { t } = useI18n();
+  const parallax = useParallax(0.3);
 
   const heroText = useFadeIn(0.2);
   const benefitsTitle = useFadeIn(0);
@@ -39,13 +41,14 @@ const OrganicHome = () => {
   return (
     <div>
       {/* ═══════════ EDITORIAL HERO — Split layout ═══════════ */}
-      <section className="relative min-h-[85vh] md:min-h-[92vh] flex items-center overflow-hidden">
-        {/* Background image with soft overlay */}
-        <div className="absolute inset-0">
+      <section ref={parallax.ref as React.RefObject<HTMLElement>} className="relative min-h-[85vh] md:min-h-[92vh] flex items-center overflow-hidden">
+        {/* Background image with soft overlay + parallax */}
+        <div className="absolute inset-0" style={{ transform: `translateY(-${parallax.y}px)`, willChange: "transform" }}>
           <img
             src={heroImageOrganic}
             alt="Masaje profesional"
             className="w-full h-full object-cover object-bottom"
+            style={{ minHeight: "120%" }}
             width={1920}
             height={1080}
           />
