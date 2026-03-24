@@ -152,6 +152,10 @@
     --input: 80 12% 86%;
     --ring: 90 30% 38%;
 
+    --organic-dark: 90 15% 12%;
+    --organic-dark-foreground: 80 18% 88%;
+    --organic-dark-muted: 80 6% 46%;
+
     --terracotta: 90 30% 38%;
     --terracotta-light: 80 20% 91%;
     --terracotta-dark: 90 30% 28%;
