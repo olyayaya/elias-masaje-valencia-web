@@ -34,6 +34,7 @@ const Dashboard = () => {
       case "media": return <DashboardMedia />;
       case "faq": return <DashboardFAQ />;
       case "testimonials": return <DashboardTestimonials />;
+      case "history": return <DashboardHistory />;
       default: return <DashboardServices />;
     }
   };
