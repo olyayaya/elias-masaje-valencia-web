@@ -36,7 +36,7 @@ export interface Translations {
   };
   testimonials: {
     title: string;
-    items: { quote: string; name: string }[];
+    items: { quote: string; name: string; source?: string }[];
   };
   location: {
     title: string;
