@@ -200,7 +200,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
             <BreathingCell
               images={seq}
               delay={COL_OFFSETS[col]}
-              focused={col === focalCol}
+              focused={col !== mutedCol}
               colIndex={col}
               onImageChange={handleImageChange}
               getActiveImages={getActiveImages}
