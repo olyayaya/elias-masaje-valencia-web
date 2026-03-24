@@ -54,7 +54,7 @@ const OrganicServices = () => {
           <img
             src={massageShoulder2}
             alt="Masaje profesional"
-            className="w-full h-full object-cover object-[center_50%] md:object-[center_55%]"
+            className="w-full h-full object-cover object-[70%_40%] md:object-[60%_45%]"
             width={1920}
             height={1080}
           />
