@@ -49,7 +49,7 @@ const OrganicAbout = () => {
                   width={800}
                   height={1067}
                 />
-                <div className="absolute -bottom-6 -right-6 w-20 h-20 rounded-full bg-secondary border border-border -z-10" />
+                <OrganicShape shape="circle" size="w-20 h-20" position="-bottom-6 -right-6" animation="breathe" color="hsl(var(--secondary))" className="border border-border" delay={0} />
               </div>
             </div>
 
