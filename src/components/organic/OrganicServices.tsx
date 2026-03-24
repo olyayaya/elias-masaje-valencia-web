@@ -10,7 +10,7 @@ import massageDeep from "@/assets/massage-deep.jpg";
 import massageOil from "@/assets/massage-oil.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
-import { useParallax } from "@/hooks/use-parallax";
+
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 
@@ -44,20 +44,18 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index }: {
 
 const OrganicServices = () => {
   const { t } = useI18n();
-  const parallax = useParallax(0.3);
   const heroText = useFadeIn(0.1);
   const heroImg = useFadeIn(0.25);
 
   return (
     <div>
       {/* Hero — full bleed image */}
-      <section ref={parallax.ref as React.RefObject<HTMLElement>} className="relative min-h-[45vh] md:min-h-[55vh] flex items-center overflow-hidden">
-        <div className="absolute inset-0" style={{ transform: `translateY(-${parallax.y}px)`, willChange: "transform" }}>
+      <section className="relative min-h-[45vh] md:min-h-[55vh] flex items-center overflow-hidden">
+        <div className="absolute inset-0">
           <img
             src={massageShoulder2}
             alt="Masaje profesional"
             className="w-full h-full object-cover object-[55%_55%]"
-            style={{ minHeight: "120%" }}
             width={1920}
             height={1080}
           />
