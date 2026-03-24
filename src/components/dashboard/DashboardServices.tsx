@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Save, X, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, Loader2, Sparkles, Languages, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
