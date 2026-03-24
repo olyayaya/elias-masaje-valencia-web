@@ -48,8 +48,14 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index }: {
 const OrganicServices = () => {
   const { theme } = useTheme();
   const { t } = useI18n();
+  const { locale } = useI18n();
   const dbServices = useDbServices();
-  const services = dbServices?.map(s => ({ title: s.title, description: s.description, duration: s.duration, price: s.price })) ?? t.services.items;
+  const services = dbServices?.map(s => ({
+    title: resolveField(s, "title", locale),
+    description: resolveField(s, "description", locale),
+    duration: s.duration,
+    price: s.price,
+  })) ?? t.services.items;
   const heroText = useFadeIn(0.1);
 
   return (
