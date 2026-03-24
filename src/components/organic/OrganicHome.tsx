@@ -353,7 +353,7 @@ const OrganicHome = () => {
         {/* Top half-moon */}
         <div className="relative z-10">
           <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[5vh] md:h-[6vh] max-h-16 block" style={{ marginBottom: "-1px" }}>
-            <ellipse cx="720" cy="0" rx="900" ry="180" style={{ fill: "hsl(var(--secondary))" }} />
+            <ellipse cx="720" cy="0" rx="900" ry="180" style={{ fill: "hsl(var(--background))" }} />
           </svg>
         </div>
 
