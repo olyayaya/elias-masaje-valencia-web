@@ -134,6 +134,53 @@ export type Database = {
         }
         Relationships: []
       }
+      promotions: {
+        Row: {
+          active: boolean
+          badge_color: string
+          badge_text: string
+          badge_text_en: string
+          badge_text_ru: string
+          created_at: string
+          ends_at: string
+          id: string
+          service_id: string
+          starts_at: string
+        }
+        Insert: {
+          active?: boolean
+          badge_color?: string
+          badge_text?: string
+          badge_text_en?: string
+          badge_text_ru?: string
+          created_at?: string
+          ends_at: string
+          id?: string
+          service_id: string
+          starts_at?: string
+        }
+        Update: {
+          active?: boolean
+          badge_color?: string
+          badge_text?: string
+          badge_text_en?: string
+          badge_text_ru?: string
+          created_at?: string
+          ends_at?: string
+          id?: string
+          service_id?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           created_at: string

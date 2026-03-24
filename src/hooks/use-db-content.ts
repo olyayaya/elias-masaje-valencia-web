@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isBefore, isAfter } from "date-fns";
 
 export interface DbService {
   id: string;
@@ -89,4 +90,38 @@ export function useDbTestimonials() {
   }, []);
 
   return testimonials;
+}
+
+export interface DbPromotion {
+  id: string;
+  service_id: string;
+  badge_text: string;
+  badge_text_en: string;
+  badge_text_ru: string;
+  badge_color: string;
+  starts_at: string;
+  ends_at: string;
+  active: boolean;
+}
+
+export function useDbPromotions() {
+  const [promotions, setPromotions] = useState<DbPromotion[] | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from("promotions")
+      .select("*")
+      .eq("active", true)
+      .then(({ data }) => {
+        if (data) {
+          const now = new Date();
+          const active = (data as DbPromotion[]).filter(
+            (p) => isBefore(new Date(p.starts_at), now) && isAfter(new Date(p.ends_at), now)
+          );
+          setPromotions(active);
+        }
+      });
+  }, []);
+
+  return promotions;
 }

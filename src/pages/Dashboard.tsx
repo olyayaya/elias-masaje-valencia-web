@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home
+  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag
 } from "lucide-react";
 
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
@@ -13,11 +13,13 @@ import DashboardFAQ from "@/components/dashboard/DashboardFAQ";
 import DashboardTestimonials from "@/components/dashboard/DashboardTestimonials";
 import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
+import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
 
 const sections = [
   { id: "overview", label: "Overview", icon: Home },
   { id: "services", label: "Services", icon: LayoutDashboard },
   { id: "content", label: "Site Content", icon: PenLine },
+  { id: "promotions", label: "Promotions", icon: Tag },
   { id: "blog", label: "Blog", icon: FileText },
   { id: "seo", label: "SEO", icon: Search },
   { id: "media", label: "Media", icon: Image },
@@ -40,6 +42,7 @@ const Dashboard = () => {
       case "overview": return <DashboardOverview onNavigate={navigateTo} />;
       case "services": return <DashboardServices />;
       case "content": return <DashboardSiteContent />;
+      case "promotions": return <DashboardPromotions />;
       case "blog": return <DashboardBlog />;
       case "seo": return <DashboardSEO />;
       case "media": return <DashboardMedia />;

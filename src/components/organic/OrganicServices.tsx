@@ -12,7 +12,7 @@ import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useDbServices, resolveField } from "@/hooks/use-db-content";
+import { useDbServices, useDbPromotions, resolveField } from "@/hooks/use-db-content";
 
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
@@ -20,14 +20,30 @@ import OrganicShape from "@/components/organic/OrganicShape";
 
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
 
-const ServiceRow = ({ title, description, duration, price, bookLabel, index }: {
+const PROMO_COLORS: Record<string, string> = {
+  amber: "bg-amber-100 text-amber-800 border-amber-200",
+  rose: "bg-rose-100 text-rose-800 border-rose-200",
+  emerald: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  blue: "bg-blue-100 text-blue-800 border-blue-200",
+  purple: "bg-purple-100 text-purple-800 border-purple-200",
+};
+
+const ServiceRow = ({ title, description, duration, price, bookLabel, index, badge, badgeColor }: {
   title: string; description: string; duration: string; price: string; bookLabel: string; index: number;
+  badge?: string; badgeColor?: string;
 }) => {
   const anim = useFadeIn(index * 0.08);
   return (
     <div ref={anim.ref} style={anim.style} className="flex flex-col md:flex-row md:items-center justify-between py-8 gap-4">
       <div className="flex-1">
-        <h3 className="font-display text-xl md:text-2xl mb-1.5">{title}</h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="font-display text-xl md:text-2xl mb-1.5">{title}</h3>
+          {badge && (
+            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${PROMO_COLORS[badgeColor || "amber"] ?? PROMO_COLORS.amber}`}>
+              {badge}
+            </span>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground font-body leading-relaxed max-w-xl">{description}</p>
       </div>
       <div className="flex items-center gap-6 shrink-0">
@@ -51,12 +67,25 @@ const OrganicServices = () => {
   const { t, locale } = useI18n();
   const { content: sc } = useSiteContent();
   const dbServices = useDbServices();
-  const services = dbServices?.map(s => ({
-    title: resolveField(s, "title", locale),
-    description: resolveField(s, "description", locale),
-    duration: s.duration,
-    price: s.price,
-  })) ?? t.services.items;
+  const dbPromotions = useDbPromotions();
+
+  const langBadge = (p: { badge_text: string; badge_text_en: string; badge_text_ru: string }) => {
+    if (locale === "en" && p.badge_text_en?.trim()) return p.badge_text_en;
+    if (locale === "ru" && p.badge_text_ru?.trim()) return p.badge_text_ru;
+    return p.badge_text;
+  };
+
+  const services = dbServices?.map(s => {
+    const promo = dbPromotions?.find(p => p.service_id === s.id);
+    return {
+      title: resolveField(s, "title", locale),
+      description: resolveField(s, "description", locale),
+      duration: s.duration,
+      price: s.price,
+      badge: promo ? langBadge(promo) : undefined,
+      badgeColor: promo?.badge_color,
+    };
+  }) ?? t.services.items;
   const heroText = useFadeIn(0.1);
 
   return (

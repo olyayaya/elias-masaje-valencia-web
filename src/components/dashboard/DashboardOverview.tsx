@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, PenLine,
-  TrendingUp, Eye, Globe, Star, ArrowUpRight
+  TrendingUp, Eye, Globe, Star, ArrowUpRight, Tag
 } from "lucide-react";
 import DashboardCard from "./DashboardCard";
 
@@ -14,24 +14,27 @@ interface Counts {
   testimonials: number;
   media: number;
   siteContent: number;
+  promotions: number;
 }
 
 const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => void }) => {
   const [counts, setCounts] = useState<Counts>({
-    services: 0, blog: 0, blogDraft: 0, faqs: 0, testimonials: 0, media: 0, siteContent: 0,
+    services: 0, blog: 0, blogDraft: 0, faqs: 0, testimonials: 0, media: 0, siteContent: 0, promotions: 0,
   });
 
   useEffect(() => {
     const load = async () => {
-      const [services, blog, faqs, testimonials, siteContent] = await Promise.all([
+      const [services, blog, faqs, testimonials, siteContent, promos] = await Promise.all([
         supabase.from("services").select("id", { count: "exact", head: true }),
         supabase.from("blog_posts").select("id, status"),
         supabase.from("faqs").select("id", { count: "exact", head: true }),
         supabase.from("testimonials").select("id", { count: "exact", head: true }),
         supabase.from("site_content").select("id", { count: "exact", head: true }),
+        supabase.from("promotions").select("id, active, ends_at").eq("active", true),
       ]);
 
       const blogData = blog.data || [];
+      const activePromos = (promos.data || []).filter((p: any) => new Date(p.ends_at) > new Date());
       setCounts({
         services: services.count || 0,
         blog: blogData.length,
@@ -40,6 +43,7 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
         testimonials: testimonials.count || 0,
         media: 0,
         siteContent: siteContent.count || 0,
+        promotions: activePromos.length,
       });
 
       // Count media files
@@ -56,6 +60,13 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
       icon: LayoutDashboard,
       stat: `${counts.services} active`,
       description: "Manage your massage offerings, prices, and descriptions",
+    },
+    {
+      id: "promotions",
+      label: "Promotions",
+      icon: Tag,
+      stat: `${counts.promotions} active`,
+      description: "Add badges like \"Most popular\" or time-limited offers to services",
     },
     {
       id: "content",

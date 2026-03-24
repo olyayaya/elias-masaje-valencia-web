@@ -24,6 +24,9 @@ Deno.serve(async (req) => {
       prompt = `Translate the following massage/wellness service description from ${langNames[sourceLang] || sourceLang} to ${langNames[targetLang] || targetLang}. Keep the same tone — professional, warm, concise. Return ONLY the translated text, nothing else.\n\nText: "${text}"`;
     } else if (action === "seo_optimize") {
       prompt = `Improve this massage/wellness service description for SEO performance. It should be compelling, include relevant keywords for "massage Valencia" searches, and stay under 200 characters. Keep the same language as the original. Return ONLY the improved text, nothing else.\n\nOriginal: "${text}"`;
+    } else if (action === "suggest_badges") {
+      const serviceNames = text; // comma-separated service names
+      prompt = `You are a marketing expert for a massage therapy business in Valencia, Spain called "Elias Masaje". Suggest 6 short promotional badge texts for their services. Mix seasonal offers, discounts, and popularity badges. Each badge should be 2-5 words max in Spanish. Consider the current month and season. Services: ${serviceNames}. Return ONLY a JSON array of objects with "text" (Spanish badge), "text_en" (English), "text_ru" (Russian), and "suggested_days" (number 7-30 for how long the promo should run). Example: [{"text":"Más popular","text_en":"Most popular","text_ru":"Самый популярный","suggested_days":30}]`;
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400 });
     }
