@@ -46,6 +46,50 @@ const DashboardSEO = () => {
 
   return (
     <div className="space-y-6">
+      {/* Overview Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Monthly Visits", value: "1,240", change: "+12%", icon: Eye, up: true },
+          { label: "Google Position", value: "#8", change: "↑ 3 spots", icon: TrendingUp, up: true },
+          { label: "Click-through Rate", value: "3.2%", change: "+0.4%", icon: MousePointerClick, up: true },
+          { label: "Google Reviews", value: "47", change: "+5 this month", icon: Star, up: true },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center">
+                <stat.icon size={14} className="text-gray-400" />
+              </div>
+            </div>
+            <p className="text-xl font-semibold text-gray-900">{stat.value}</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">{stat.label}</p>
+            <p className="text-[11px] text-green-500 mt-1">{stat.change}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Top Search Queries */}
+      <DashboardCard title="Top Search Queries" description="How people find you on Google">
+        <div className="space-y-3">
+          {[
+            { query: "masaje valencia", impressions: 820, clicks: 28, position: 7.2 },
+            { query: "masajista valencia centro", impressions: 340, clicks: 18, position: 4.1 },
+            { query: "masaje descontracturante valencia", impressions: 210, clicks: 12, position: 5.8 },
+            { query: "masaje relajante valencia", impressions: 180, clicks: 8, position: 9.3 },
+            { query: "mejor masajista valencia", impressions: 150, clicks: 6, position: 11.4 },
+          ].map((q) => (
+            <div key={q.query} className="flex items-center justify-between py-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-700 truncate">{q.query}</p>
+                <p className="text-[11px] text-gray-400">{q.impressions} impressions · {q.clicks} clicks</p>
+              </div>
+              <span className="text-xs font-medium text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full shrink-0 ml-3">
+                #{q.position.toFixed(0)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </DashboardCard>
+
       {/* Keyword Suggestions */}
       <DashboardCard title="Keyword Suggestions" description="Valencia massage searches to target">
         <div className="overflow-x-auto">
