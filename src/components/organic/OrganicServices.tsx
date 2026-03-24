@@ -12,7 +12,7 @@ import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useDbServices, resolveField } from "@/hooks/use-db-content";
+import { useDbServices, useDbPromotions, resolveField } from "@/hooks/use-db-content";
 
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
