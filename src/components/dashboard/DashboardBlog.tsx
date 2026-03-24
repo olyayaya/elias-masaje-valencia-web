@@ -4,7 +4,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import ImageExt from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Plus, Bold, Italic, Heading2, List, LinkIcon, Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb } from "lucide-react";
+import { Plus, Bold, Italic, Heading2, List, LinkIcon, Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
