@@ -48,8 +48,8 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index }: {
 
 const OrganicServices = () => {
   const { theme } = useTheme();
-  const { t } = useI18n();
-  const { locale } = useI18n();
+  const { t, locale } = useI18n();
+  const { content: sc } = useSiteContent();
   const dbServices = useDbServices();
   const services = dbServices?.map(s => ({
     title: resolveField(s, "title", locale),
