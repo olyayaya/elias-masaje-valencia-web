@@ -11,8 +11,12 @@ const FADE_TIME = 5000;
 const COL_OFFSETS = [0, 4000, 2200];
 const FOCUS_DURATION = 10000;
 
+// Landscape images: subtle size variation
 const SIZE_MIN = 0.82;
 const SIZE_MAX = 1.18;
+// Portrait images: dramatic — start horizontal, grow to near-full height
+const PORTRAIT_SIZE_MIN = 0.55; // starts very cropped (horizontal-looking)
+const PORTRAIT_SIZE_MAX = 1.35; // grows tall to reveal portrait
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -23,8 +27,27 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function randomSize() {
-  return SIZE_MIN + Math.random() * (SIZE_MAX - SIZE_MIN);
+function randomSize(isPortrait: boolean) {
+  const min = isPortrait ? PORTRAIT_SIZE_MIN : SIZE_MIN;
+  const max = isPortrait ? PORTRAIT_SIZE_MAX : SIZE_MAX;
+  return min + Math.random() * (max - min);
+}
+
+/** Cache of image aspect ratios (width/height). >1 = landscape, <1 = portrait */
+const aspectCache = new Map<string, number>();
+
+function getIsPortrait(src: string): boolean {
+  const ratio = aspectCache.get(src);
+  return ratio !== undefined && ratio < 1;
+}
+
+function preloadAndCacheAspect(src: string) {
+  if (aspectCache.has(src)) return;
+  const img = new Image();
+  img.onload = () => {
+    aspectCache.set(src, img.naturalWidth / img.naturalHeight);
+  };
+  img.src = src;
 }
 
 /**
