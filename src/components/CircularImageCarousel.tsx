@@ -171,7 +171,7 @@ const BreathingCell = ({
   const nextRestScale = Math.max(1, nextBreathScale - 0.06).toFixed(3);
 
   return (
-    <div className="rounded-2xl overflow-hidden w-full aspect-[3/2] relative">
+    <div className="rounded-none md:rounded-2xl overflow-hidden w-full aspect-[3/2] relative">
       <img
         src={currentImg.src}
         alt={currentImg.alt}
@@ -251,7 +251,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
 
   return (
     <div ref={anim.ref} style={anim.style} className={className}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 md:gap-6 max-w-5xl mx-auto items-start">
         {sequences.map((seq, col) => (
           <div
             key={col}
