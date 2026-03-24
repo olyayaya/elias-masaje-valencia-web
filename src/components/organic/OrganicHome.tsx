@@ -48,7 +48,7 @@ const OrganicHome = () => {
             width={1920}
             height={1080}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
+          <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
         </div>
 
         <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 pt-20 pb-[18vh] md:pb-[20vh]">
