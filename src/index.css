@@ -230,22 +230,22 @@
   /* Direction E — Organic Editorial Wellness */
   [data-theme="organic"] {
     --background: 140 20% 95%;
-    --foreground: 150 10% 10%;
+    --foreground: 150 15% 18%;
 
     --card: 140 18% 92%;
-    --card-foreground: 150 10% 10%;
+    --card-foreground: 150 15% 18%;
 
     --popover: 140 20% 95%;
-    --popover-foreground: 150 10% 10%;
+    --popover-foreground: 150 15% 18%;
 
-    --primary: 150 25% 42%;
-    --primary-foreground: 140 20% 97%;
+    --primary: 150 20% 55%;
+    --primary-foreground: 150 15% 12%;
 
     --secondary: 145 15% 88%;
-    --secondary-foreground: 150 10% 15%;
+    --secondary-foreground: 150 15% 18%;
 
     --muted: 142 12% 90%;
-    --muted-foreground: 150 6% 40%;
+    --muted-foreground: 150 8% 45%;
 
     --accent: 25 35% 50%;
     --accent-foreground: 37 30% 97%;
@@ -255,20 +255,20 @@
 
     --border: 145 12% 82%;
     --input: 145 12% 82%;
-    --ring: 150 25% 42%;
+    --ring: 150 20% 55%;
 
     --radius: 1.25rem;
 
-    --organic-dark: 150 20% 10%;
-    --organic-dark-foreground: 140 18% 88%;
-    --organic-dark-muted: 145 8% 46%;
+    --organic-dark: 145 18% 85%;
+    --organic-dark-foreground: 150 15% 18%;
+    --organic-dark-muted: 150 8% 42%;
 
     --terracotta: 25 35% 50%;
     --terracotta-light: 30 20% 88%;
     --terracotta-dark: 25 35% 38%;
     --warm-cream: 140 20% 96%;
     --warm-stone: 145 8% 68%;
-    --warm-brown: 25 30% 25%;
+    --warm-brown: 150 15% 22%;
 
     --font-display: 'Lora', serif;
     --font-body: 'Manrope', sans-serif;
@@ -277,13 +277,13 @@
     --shadow-card: 0 2px 12px -4px hsl(150 10% 30% / 0.06);
 
     --sidebar-background: 140 20% 94%;
-    --sidebar-foreground: 150 10% 10%;
-    --sidebar-primary: 150 25% 42%;
-    --sidebar-primary-foreground: 140 20% 97%;
+    --sidebar-foreground: 150 15% 18%;
+    --sidebar-primary: 150 20% 55%;
+    --sidebar-primary-foreground: 150 15% 12%;
     --sidebar-accent: 30 20% 88%;
     --sidebar-accent-foreground: 25 30% 20%;
     --sidebar-border: 145 12% 80%;
-    --sidebar-ring: 150 25% 42%;
+    --sidebar-ring: 150 20% 55%;
   }
 }
 
