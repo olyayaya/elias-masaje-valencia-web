@@ -99,8 +99,12 @@ const DashboardPromotions = () => {
         body: { text: serviceNames, action: "suggest_badges" },
       });
       if (error) throw error;
-      // Parse the result — it should be a JSON array string
-      const parsed = typeof data?.result === "string" ? JSON.parse(data.result) : data?.result;
+      // Parse the result — strip markdown code fences if present
+      let raw = data?.result;
+      if (typeof raw === "string") {
+        raw = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+      }
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (Array.isArray(parsed)) {
         setSuggestions(parsed);
         toast.success("Badge ideas ready — pick one or write your own");
