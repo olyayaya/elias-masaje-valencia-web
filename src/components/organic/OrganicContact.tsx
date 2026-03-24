@@ -80,12 +80,12 @@ const OrganicContact = () => {
 
               <ContactItem icon={Instagram} title={t.contact.instagram} index={3}>
                 <a
-                  href="https://instagram.com/elias_masaje"
+                  href={`https://instagram.com/${(sc.contact_instagram || "@elias_masaje").replace("@", "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-primary font-body hover:opacity-80 transition-opacity border-b border-primary/30 pb-0.5"
                 >
-                  @elias_masaje
+                  {sc.contact_instagram || "@elias_masaje"}
                 </a>
               </ContactItem>
             </div>
