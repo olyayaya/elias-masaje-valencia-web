@@ -93,10 +93,10 @@ const OrganicHome = () => {
               Valencia · Massage · Wellness
             </p>
             <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] leading-[1.15] mb-6 whitespace-pre-line">
-              {t.hero.headline}
+              {sc.hero_headline || t.hero.headline}
             </h1>
             <p className="text-base md:text-lg text-foreground/60 font-body leading-relaxed mb-10 max-w-md">
-              {t.hero.subheadline}
+              {sc.hero_subheadline || t.hero.subheadline}
             </p>
             <a
               href={WHATSAPP_URL}
@@ -104,7 +104,7 @@ const OrganicHome = () => {
               rel="noopener noreferrer"
               className="inline-block text-sm font-body bg-foreground text-background px-8 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
             >
-              {t.hero.cta}
+              {sc.hero_cta || t.hero.cta}
             </a>
           </div>
         </div>
