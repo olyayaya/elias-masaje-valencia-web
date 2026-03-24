@@ -279,7 +279,7 @@ const OrganicHome = () => {
             const velocity = useRef(0);
             const [, setTick] = useState(0);
 
-            const items = t.testimonials.items;
+            const items = testimonialItems;
             const dupeCount = 4;
             const allItems = Array.from({ length: dupeCount }, () => items).flat();
             const CARD_WIDTH = 320;
