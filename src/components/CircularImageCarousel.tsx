@@ -173,7 +173,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setFocalCol((prev) => (prev + 1) % maxCols);
+      setMutedCol((prev) => (prev + 1) % maxCols);
     }, FOCUS_DURATION);
     return () => clearInterval(interval);
   }, []);
