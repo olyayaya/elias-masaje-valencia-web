@@ -80,7 +80,7 @@ const Dashboard = () => {
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h1 className="text-base font-semibold text-gray-900 tracking-tight">Elias Masaje</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Site Manager</p>
+            <p className="text-xs text-gray-400 mt-0.5">{dt.siteManager}</p>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-gray-400 hover:text-gray-600">
             <X size={18} />
