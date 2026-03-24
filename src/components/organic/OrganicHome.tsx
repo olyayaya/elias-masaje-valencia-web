@@ -466,7 +466,7 @@ const OrganicHome = () => {
                     className="inline-block text-sm font-body px-6 py-2.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
                     style={{ backgroundColor: "hsl(var(--organic-dark-foreground))", color: "hsl(var(--organic-dark))" }}
                   >
-                    {t.giftCard.cta}
+                    {sc.gift_card_cta || t.giftCard.cta}
                   </a>
                 </div>
               );
