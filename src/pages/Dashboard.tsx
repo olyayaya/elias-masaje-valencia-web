@@ -10,6 +10,7 @@ import DashboardSEO from "@/components/dashboard/DashboardSEO";
 import DashboardMedia from "@/components/dashboard/DashboardMedia";
 import DashboardFAQ from "@/components/dashboard/DashboardFAQ";
 import DashboardTestimonials from "@/components/dashboard/DashboardTestimonials";
+import DashboardHistory from "@/components/dashboard/DashboardHistory";
 
 const sections = [
   { id: "services", label: "Services", icon: LayoutDashboard },
@@ -18,6 +19,7 @@ const sections = [
   { id: "media", label: "Media", icon: Image },
   { id: "faq", label: "FAQ", icon: HelpCircle },
   { id: "testimonials", label: "Testimonials", icon: MessageSquare },
+  { id: "history", label: "History", icon: History },
 ];
 
 const Dashboard = () => {
