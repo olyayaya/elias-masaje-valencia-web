@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useDbServices, useDbFaqs, useDbTestimonials } from "@/hooks/use-db-content";
+import { useDbServices, useDbFaqs, useDbTestimonials, resolveField } from "@/hooks/use-db-content";
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
 
@@ -30,7 +30,7 @@ import BenefitIcon from "@/components/BenefitIcon";
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
 
 const OrganicHome = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { theme } = useTheme();
   const useAltLocationBg = theme === "organic" || theme === "natural";
   const heroText = useFadeIn(0.2);
@@ -45,19 +45,21 @@ const OrganicHome = () => {
   const dbFaqs = useDbFaqs();
   const dbTestimonials = useDbTestimonials();
 
+  
+
   const services = useMemo(() =>
-    dbServices?.map(s => ({ title: s.title, description: s.description, duration: s.duration, price: s.price })) ?? t.services.items,
-    [dbServices, t.services.items]
+    dbServices?.map(s => ({ title: resolveField(s, "title", locale), description: resolveField(s, "description", locale), duration: s.duration, price: s.price })) ?? t.services.items,
+    [dbServices, t.services.items, locale]
   );
 
   const faqItems = useMemo(() =>
-    dbFaqs?.map(f => ({ question: f.question, answer: f.answer })) ?? t.faq.items,
-    [dbFaqs, t.faq.items]
+    dbFaqs?.map(f => ({ question: resolveField(f, "question", locale), answer: resolveField(f, "answer", locale) })) ?? t.faq.items,
+    [dbFaqs, t.faq.items, locale]
   );
 
   const testimonialItems = useMemo(() =>
-    dbTestimonials?.map(tt => ({ quote: tt.quote, name: tt.name, source: tt.source })) ?? t.testimonials.items,
-    [dbTestimonials, t.testimonials.items]
+    dbTestimonials?.map(tt => ({ quote: resolveField(tt, "quote", locale), name: tt.name, source: tt.source })) ?? t.testimonials.items,
+    [dbTestimonials, t.testimonials.items, locale]
   );
 
   const previewServices = services.slice(0, 3);

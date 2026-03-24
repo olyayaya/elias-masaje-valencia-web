@@ -17,32 +17,50 @@ export type Database = {
       blog_posts: {
         Row: {
           content: string
+          content_en: string
+          content_ru: string
           created_at: string
           id: string
           meta_description: string
+          meta_description_en: string
+          meta_description_ru: string
           seo_keywords: string[]
           status: string
           title: string
+          title_en: string
+          title_ru: string
           updated_at: string
         }
         Insert: {
           content?: string
+          content_en?: string
+          content_ru?: string
           created_at?: string
           id?: string
           meta_description?: string
+          meta_description_en?: string
+          meta_description_ru?: string
           seo_keywords?: string[]
           status?: string
           title?: string
+          title_en?: string
+          title_ru?: string
           updated_at?: string
         }
         Update: {
           content?: string
+          content_en?: string
+          content_ru?: string
           created_at?: string
           id?: string
           meta_description?: string
+          meta_description_en?: string
+          meta_description_ru?: string
           seo_keywords?: string[]
           status?: string
           title?: string
+          title_en?: string
+          title_ru?: string
           updated_at?: string
         }
         Relationships: []
@@ -50,25 +68,37 @@ export type Database = {
       faqs: {
         Row: {
           answer: string
+          answer_en: string
+          answer_ru: string
           created_at: string
           id: string
           question: string
+          question_en: string
+          question_ru: string
           sort_order: number
           updated_at: string
         }
         Insert: {
           answer: string
+          answer_en?: string
+          answer_ru?: string
           created_at?: string
           id?: string
           question: string
+          question_en?: string
+          question_ru?: string
           sort_order?: number
           updated_at?: string
         }
         Update: {
           answer?: string
+          answer_en?: string
+          answer_ru?: string
           created_at?: string
           id?: string
           question?: string
+          question_en?: string
+          question_ru?: string
           sort_order?: number
           updated_at?: string
         }
@@ -78,31 +108,43 @@ export type Database = {
         Row: {
           created_at: string
           description: string
+          description_en: string
+          description_ru: string
           duration: string
           id: string
           price: string
           sort_order: number
           title: string
+          title_en: string
+          title_ru: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           description?: string
+          description_en?: string
+          description_ru?: string
           duration: string
           id?: string
           price: string
           sort_order?: number
           title: string
+          title_en?: string
+          title_ru?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           description?: string
+          description_en?: string
+          description_ru?: string
           duration?: string
           id?: string
           price?: string
           sort_order?: number
           title?: string
+          title_en?: string
+          title_ru?: string
           updated_at?: string
         }
         Relationships: []
@@ -113,6 +155,8 @@ export type Database = {
           id: string
           name: string
           quote: string
+          quote_en: string
+          quote_ru: string
           rating: number
           source: string
           updated_at: string
@@ -122,6 +166,8 @@ export type Database = {
           id?: string
           name: string
           quote: string
+          quote_en?: string
+          quote_ru?: string
           rating?: number
           source?: string
           updated_at?: string
@@ -131,6 +177,8 @@ export type Database = {
           id?: string
           name?: string
           quote?: string
+          quote_en?: string
+          quote_ru?: string
           rating?: number
           source?: string
           updated_at?: string
