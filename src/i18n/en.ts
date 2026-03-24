@@ -10,7 +10,7 @@ export const en: Translations = {
     bookWhatsApp: "Book via WhatsApp",
   },
   hero: {
-    headline: "Professional massage in the heart of Valencia",
+    headline: "Professional massage\nin the heart of Valencia",
     subheadline: "A space to slow down, release tension, and reconnect with your body.",
     cta: "Book via WhatsApp",
   },

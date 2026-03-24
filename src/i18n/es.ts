@@ -10,7 +10,7 @@ export const es: Translations = {
     bookWhatsApp: "Reservar por WhatsApp",
   },
   hero: {
-    headline: "Masaje profesional en el centro de Valencia",
+    headline: "Masaje profesional\nen el centro de Valencia",
     subheadline: "Un espacio para bajar el ritmo, liberar tensión y reconectar con tu cuerpo.",
     cta: "Reservar por WhatsApp",
   },
