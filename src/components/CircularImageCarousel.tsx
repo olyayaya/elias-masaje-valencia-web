@@ -154,7 +154,7 @@ const BreathingCell = ({
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
   const maxCols = 3;
-  const [focalCol, setFocalCol] = useState(0);
+  const [mutedCol, setMutedCol] = useState(2); // which column is dimmed
 
   // Track which image src each column is currently showing
   const activeImagesRef = useRef<Map<number, string>>(new Map());
