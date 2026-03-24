@@ -237,7 +237,7 @@ const DashboardBlog = () => {
       id: "", title: "", content: "", seo_keywords: result.keywords || [], meta_description: "",
       status: "draft", created_at: new Date().toISOString(),
       title_en: "", title_ru: "", content_en: "", content_ru: "",
-      meta_description_en: "", meta_description_ru: "",
+      meta_description_en: "", meta_description_ru: "", hidden: false,
       [titleKey]: result.title,
       [contentKey]: result.content,
       [metaKey]: result.meta_description,
