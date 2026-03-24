@@ -491,7 +491,7 @@ const OrganicHome = () => {
             rel="noopener noreferrer"
             className="inline-block text-sm font-body bg-foreground text-background px-10 py-4 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
           >
-            {t.finalCta.cta}
+            {sc.final_cta_button || t.finalCta.cta}
           </a>
         </div>
       </section>
