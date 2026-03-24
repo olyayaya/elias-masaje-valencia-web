@@ -85,11 +85,8 @@ const DashboardSiteContent = () => {
   };
 
   const translateField = async (item: SiteContentRow) => {
-    if (lang === "es") {
-      toast.info("Select EN or RU to translate from Spanish");
-      return;
-    }
-    setTranslating(item.id);
+    if (lang === "es") return;
+    setAiLoading(`translate-${item.id}`);
     try {
       const targetLang = lang === "en" ? "English" : "Russian";
       const { data, error } = await supabase.functions.invoke("ai-content-helper", {
@@ -103,7 +100,29 @@ const DashboardSiteContent = () => {
     } catch {
       toast.error("Translation failed");
     }
-    setTranslating(null);
+    setAiLoading(null);
+  };
+
+  const seoOptimize = async (item: SiteContentRow) => {
+    const currentText = drafts[item.id] ?? "";
+    if (!currentText.trim()) {
+      toast.info("Enter some text first");
+      return;
+    }
+    setAiLoading(`seo-${item.id}`);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-content-helper", {
+        body: { text: currentText, action: "seo_optimize" },
+      });
+      if (error) throw error;
+      if (data?.result) {
+        setDrafts((prev) => ({ ...prev, [item.id]: data.result }));
+        toast.success("SEO improvement ready — review and save");
+      }
+    } catch {
+      toast.error("SEO optimization failed");
+    }
+    setAiLoading(null);
   };
 
   const hasChanged = (item: SiteContentRow) => drafts[item.id] !== item[langKey(lang)];
