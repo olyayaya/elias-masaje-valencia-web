@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Plus, Pencil, Trash2, Save, Star } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Pencil, Trash2, Save, Star, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 
 interface Testimonial {
@@ -10,22 +11,28 @@ interface Testimonial {
   rating: number;
 }
 
-const initialTestimonials: Testimonial[] = [
-  { id: "1", name: "María López", quote: "Elías es un masajista increíble. Fui a él por un fuerte dolor de cuello.", source: "Google", rating: 5 },
-  { id: "2", name: "Carlos Ruiz", quote: "Experiencia para repetir más de una vez. El espacio, el trato, su profesionalidad.", source: "TripAdvisor", rating: 5 },
-  { id: "3", name: "Ana García", quote: "Gran profesional. Variedad de tratamientos adecuados para cada necesidad.", source: "Google", rating: 5 },
-];
-
 const DashboardTestimonials = () => {
-  const [items, setItems] = useState<Testimonial[]>(initialTestimonials);
+  const [items, setItems] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Testimonial>({ id: "", name: "", quote: "", source: "Google", rating: 5 });
+  const [draft, setDraft] = useState<Partial<Testimonial>>({});
   const [isNew, setIsNew] = useState(false);
 
+  const fetchTestimonials = async () => {
+    const { data } = await supabase
+      .from("testimonials")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setItems(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchTestimonials(); }, []);
+
   const startNew = () => {
-    const nt: Testimonial = { id: Date.now().toString(), name: "", quote: "", source: "Google", rating: 5 };
-    setDraft(nt);
-    setEditing(nt.id);
+    setDraft({ name: "", quote: "", source: "Google", rating: 5 });
+    setEditing("new");
     setIsNew(true);
   };
 
@@ -35,14 +42,27 @@ const DashboardTestimonials = () => {
     setIsNew(false);
   };
 
-  const save = () => {
+  const save = async () => {
+    setSaving(true);
     if (isNew) {
-      setItems([...items, draft]);
-    } else {
-      setItems(items.map((t) => (t.id === draft.id ? draft : t)));
+      await supabase.from("testimonials").insert({
+        name: draft.name || "",
+        quote: draft.quote || "",
+        source: draft.source || "Google",
+        rating: draft.rating ?? 5,
+      });
+    } else if (editing) {
+      await supabase.from("testimonials").update({
+        name: draft.name,
+        quote: draft.quote,
+        source: draft.source,
+        rating: draft.rating,
+      }).eq("id", editing);
     }
     setEditing(null);
     setIsNew(false);
+    setSaving(false);
+    fetchTestimonials();
   };
 
   const cancel = () => {
@@ -50,9 +70,12 @@ const DashboardTestimonials = () => {
     setIsNew(false);
   };
 
-  const remove = (id: string) => {
-    setItems(items.filter((t) => t.id !== id));
+  const remove = async (id: string) => {
+    await supabase.from("testimonials").delete().eq("id", id);
+    fetchTestimonials();
   };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" size={24} /></div>;
 
   return (
     <div className="space-y-4">
@@ -68,14 +91,14 @@ const DashboardTestimonials = () => {
 
       {isNew && editing && (
         <DashboardCard>
-          <TestimonialForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} />
+          <TestimonialForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} saving={saving} />
         </DashboardCard>
       )}
 
       {items.map((t) => (
         <DashboardCard key={t.id}>
           {editing === t.id && !isNew ? (
-            <TestimonialForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} />
+            <TestimonialForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} saving={saving} />
           ) : (
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
@@ -107,19 +130,20 @@ const DashboardTestimonials = () => {
 };
 
 const TestimonialForm = ({
-  draft, setDraft, onSave, onCancel,
+  draft, setDraft, onSave, onCancel, saving,
 }: {
-  draft: Testimonial;
-  setDraft: (d: Testimonial) => void;
+  draft: Partial<Testimonial>;
+  setDraft: (d: Partial<Testimonial>) => void;
   onSave: () => void;
   onCancel: () => void;
+  saving: boolean;
 }) => (
   <div className="space-y-4">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label className="text-xs font-medium text-gray-500 mb-1 block">Client name</label>
         <input
-          value={draft.name}
+          value={draft.name || ""}
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10"
           placeholder="Name"
@@ -128,7 +152,7 @@ const TestimonialForm = ({
       <div>
         <label className="text-xs font-medium text-gray-500 mb-1 block">Source</label>
         <select
-          value={draft.source}
+          value={draft.source || "Google"}
           onChange={(e) => setDraft({ ...draft, source: e.target.value })}
           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none"
         >
@@ -139,39 +163,32 @@ const TestimonialForm = ({
         </select>
       </div>
     </div>
-
     <div>
       <label className="text-xs font-medium text-gray-500 mb-1 block">Rating</label>
       <div className="flex gap-1">
         {Array.from({ length: 5 }).map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setDraft({ ...draft, rating: i + 1 })}
-            className="p-0.5"
-          >
-            <Star size={18} className={i < draft.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200"} />
+          <button key={i} onClick={() => setDraft({ ...draft, rating: i + 1 })} className="p-0.5">
+            <Star size={18} className={i < (draft.rating ?? 5) ? "text-yellow-400 fill-yellow-400" : "text-gray-200"} />
           </button>
         ))}
       </div>
     </div>
-
     <div>
       <label className="text-xs font-medium text-gray-500 mb-1 block">Quote</label>
       <textarea
-        value={draft.quote}
+        value={draft.quote || ""}
         onChange={(e) => setDraft({ ...draft, quote: e.target.value })}
         rows={3}
         className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 resize-none"
         placeholder="Client's feedback..."
       />
     </div>
-
     <div className="flex gap-2 justify-end">
       <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50">
         Cancel
       </button>
-      <button onClick={onSave} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800">
-        <Save size={14} /> Save
+      <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50">
+        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
       </button>
     </div>
   </div>

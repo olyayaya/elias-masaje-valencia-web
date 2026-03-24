@@ -1,20 +1,21 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import ImageExt from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Plus, Bold, Italic, Heading2, List, LinkIcon, Save, Trash2, Pencil, Sparkles, X } from "lucide-react";
+import { Plus, Bold, Italic, Heading2, List, LinkIcon, Save, Trash2, Pencil, Sparkles, X, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 
 interface BlogPost {
   id: string;
   title: string;
   content: string;
-  seoKeywords: string[];
-  metaDescription: string;
-  status: "draft" | "published";
-  createdAt: string;
+  seo_keywords: string[];
+  meta_description: string;
+  status: string;
+  created_at: string;
 }
 
 const suggestedKeywords = [
@@ -24,33 +25,35 @@ const suggestedKeywords = [
 ];
 
 const DashboardBlog = () => {
-  const [posts, setPosts] = useState<BlogPost[]>([
-    {
-      id: "1",
-      title: "Los beneficios del masaje regular",
-      content: "<p>El masaje regular puede transformar tu bienestar...</p>",
-      seoKeywords: ["masaje Valencia", "bienestar"],
-      metaDescription: "Descubre cómo el masaje regular puede mejorar tu salud y bienestar en Valencia.",
-      status: "published",
-      createdAt: "2026-03-20",
-    },
-  ]);
-
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<BlogPost | null>(null);
 
+  const fetchPosts = async () => {
+    const { data } = await supabase
+      .from("blog_posts")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setPosts(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchPosts(); }, []);
+
   const startNew = () => {
     const newPost: BlogPost = {
-      id: Date.now().toString(),
+      id: "",
       title: "",
       content: "",
-      seoKeywords: [],
-      metaDescription: "",
+      seo_keywords: [],
+      meta_description: "",
       status: "draft",
-      createdAt: new Date().toISOString().split("T")[0],
+      created_at: new Date().toISOString(),
     };
     setDraft(newPost);
-    setEditing(newPost.id);
+    setEditing("new");
   };
 
   const startEdit = (p: BlogPost) => {
@@ -58,20 +61,35 @@ const DashboardBlog = () => {
     setEditing(p.id);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!draft) return;
-    const exists = posts.find((p) => p.id === draft.id);
-    if (exists) {
-      setPosts(posts.map((p) => (p.id === draft.id ? draft : p)));
-    } else {
-      setPosts([draft, ...posts]);
+    setSaving(true);
+    if (editing === "new") {
+      await supabase.from("blog_posts").insert({
+        title: draft.title,
+        content: draft.content,
+        seo_keywords: draft.seo_keywords,
+        meta_description: draft.meta_description,
+        status: draft.status,
+      });
+    } else if (editing) {
+      await supabase.from("blog_posts").update({
+        title: draft.title,
+        content: draft.content,
+        seo_keywords: draft.seo_keywords,
+        meta_description: draft.meta_description,
+        status: draft.status,
+      }).eq("id", editing);
     }
     setEditing(null);
     setDraft(null);
+    setSaving(false);
+    fetchPosts();
   };
 
-  const remove = (id: string) => {
-    setPosts(posts.filter((p) => p.id !== id));
+  const remove = async (id: string) => {
+    await supabase.from("blog_posts").delete().eq("id", id);
+    fetchPosts();
   };
 
   const generateMeta = () => {
@@ -79,18 +97,20 @@ const DashboardBlog = () => {
     const title = draft.title || "masaje profesional";
     setDraft({
       ...draft,
-      metaDescription: `${title} en el centro de Valencia. Reserva tu sesión y descubre los beneficios del masaje terapéutico personalizado.`.slice(0, 160),
+      meta_description: `${title} en el centro de Valencia. Reserva tu sesión y descubre los beneficios del masaje terapéutico personalizado.`.slice(0, 160),
     });
   };
 
   const toggleKeyword = (kw: string) => {
     if (!draft) return;
-    const has = draft.seoKeywords.includes(kw);
+    const has = draft.seo_keywords.includes(kw);
     setDraft({
       ...draft,
-      seoKeywords: has ? draft.seoKeywords.filter((k) => k !== kw) : [...draft.seoKeywords, kw],
+      seo_keywords: has ? draft.seo_keywords.filter((k) => k !== kw) : [...draft.seo_keywords, kw],
     });
   };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" size={24} /></div>;
 
   if (editing && draft) {
     return <BlogEditor
@@ -101,6 +121,7 @@ const DashboardBlog = () => {
       onGenerateMeta={generateMeta}
       suggestedKeywords={suggestedKeywords}
       onToggleKeyword={toggleKeyword}
+      saving={saving}
     />;
   }
 
@@ -128,9 +149,9 @@ const DashboardBlog = () => {
                   {p.status}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 mt-1">{p.metaDescription}</p>
+              <p className="text-xs text-gray-400 mt-1">{p.meta_description}</p>
               <div className="flex gap-1.5 mt-2 flex-wrap">
-                {p.seoKeywords.map((kw) => (
+                {p.seo_keywords.map((kw) => (
                   <span key={kw} className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded">{kw}</span>
                 ))}
               </div>
@@ -151,7 +172,7 @@ const DashboardBlog = () => {
 };
 
 const BlogEditor = ({
-  draft, setDraft, onSave, onCancel, onGenerateMeta, suggestedKeywords, onToggleKeyword,
+  draft, setDraft, onSave, onCancel, onGenerateMeta, suggestedKeywords, onToggleKeyword, saving,
 }: {
   draft: BlogPost;
   setDraft: (d: BlogPost) => void;
@@ -160,6 +181,7 @@ const BlogEditor = ({
   onGenerateMeta: () => void;
   suggestedKeywords: string[];
   onToggleKeyword: (kw: string) => void;
+  saving: boolean;
 }) => {
   const editor = useEditor({
     extensions: [
@@ -197,39 +219,11 @@ const BlogEditor = ({
               <label className="text-xs font-medium text-gray-500 mb-1 block">Content</label>
               <div className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="flex gap-0.5 p-2 border-b border-gray-100 bg-gray-50">
-                  <button
-                    onClick={() => editor.chain().focus().toggleBold().run()}
-                    className={`p-1.5 rounded ${editor.isActive("bold") ? "bg-gray-200" : "hover:bg-gray-100"}`}
-                  >
-                    <Bold size={14} />
-                  </button>
-                  <button
-                    onClick={() => editor.chain().focus().toggleItalic().run()}
-                    className={`p-1.5 rounded ${editor.isActive("italic") ? "bg-gray-200" : "hover:bg-gray-100"}`}
-                  >
-                    <Italic size={14} />
-                  </button>
-                  <button
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                    className={`p-1.5 rounded ${editor.isActive("heading") ? "bg-gray-200" : "hover:bg-gray-100"}`}
-                  >
-                    <Heading2 size={14} />
-                  </button>
-                  <button
-                    onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    className={`p-1.5 rounded ${editor.isActive("bulletList") ? "bg-gray-200" : "hover:bg-gray-100"}`}
-                  >
-                    <List size={14} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      const url = window.prompt("URL:");
-                      if (url) editor.chain().focus().setLink({ href: url }).run();
-                    }}
-                    className={`p-1.5 rounded ${editor.isActive("link") ? "bg-gray-200" : "hover:bg-gray-100"}`}
-                  >
-                    <LinkIcon size={14} />
-                  </button>
+                  <button onClick={() => editor.chain().focus().toggleBold().run()} className={`p-1.5 rounded ${editor.isActive("bold") ? "bg-gray-200" : "hover:bg-gray-100"}`}><Bold size={14} /></button>
+                  <button onClick={() => editor.chain().focus().toggleItalic().run()} className={`p-1.5 rounded ${editor.isActive("italic") ? "bg-gray-200" : "hover:bg-gray-100"}`}><Italic size={14} /></button>
+                  <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`p-1.5 rounded ${editor.isActive("heading") ? "bg-gray-200" : "hover:bg-gray-100"}`}><Heading2 size={14} /></button>
+                  <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`p-1.5 rounded ${editor.isActive("bulletList") ? "bg-gray-200" : "hover:bg-gray-100"}`}><List size={14} /></button>
+                  <button onClick={() => { const url = window.prompt("URL:"); if (url) editor.chain().focus().setLink({ href: url }).run(); }} className={`p-1.5 rounded ${editor.isActive("link") ? "bg-gray-200" : "hover:bg-gray-100"}`}><LinkIcon size={14} /></button>
                 </div>
                 <EditorContent editor={editor} className="prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[180px]" />
               </div>
@@ -239,7 +233,7 @@ const BlogEditor = ({
           <div className="flex gap-2">
             <select
               value={draft.status}
-              onChange={(e) => setDraft({ ...draft, status: e.target.value as "draft" | "published" })}
+              onChange={(e) => setDraft({ ...draft, status: e.target.value })}
               className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none"
             >
               <option value="draft">Draft</option>
@@ -256,7 +250,7 @@ const BlogEditor = ({
               key={kw}
               onClick={() => onToggleKeyword(kw)}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                draft.seoKeywords.includes(kw)
+                draft.seo_keywords.includes(kw)
                   ? "bg-gray-900 text-white border-gray-900"
                   : "border-gray-200 text-gray-500 hover:border-gray-300"
               }`}
@@ -270,15 +264,15 @@ const BlogEditor = ({
       <DashboardCard title="Meta Description" description="Auto-generated or manually edit">
         <div className="space-y-3">
           <textarea
-            value={draft.metaDescription}
-            onChange={(e) => setDraft({ ...draft, metaDescription: e.target.value })}
+            value={draft.meta_description}
+            onChange={(e) => setDraft({ ...draft, meta_description: e.target.value })}
             rows={2}
             maxLength={160}
             className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 resize-none"
             placeholder="Meta description for search engines..."
           />
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">{draft.metaDescription.length}/160</span>
+            <span className="text-xs text-gray-400">{draft.meta_description.length}/160</span>
             <button
               onClick={onGenerateMeta}
               className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-50"
@@ -293,8 +287,8 @@ const BlogEditor = ({
         <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50">
           Cancel
         </button>
-        <button onClick={onSave} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800">
-          <Save size={14} /> Save post
+        <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50">
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save post
         </button>
       </div>
     </div>

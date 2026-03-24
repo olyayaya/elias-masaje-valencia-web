@@ -1,5 +1,6 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useDbServices, useDbFaqs, useDbTestimonials } from "@/hooks/use-db-content";
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
 
@@ -40,7 +41,26 @@ const OrganicHome = () => {
   const testimonialsTitle = useFadeIn(0);
   const ctaBlock = useFadeIn(0);
 
-  const previewServices = t.services.items.slice(0, 3);
+  const dbServices = useDbServices();
+  const dbFaqs = useDbFaqs();
+  const dbTestimonials = useDbTestimonials();
+
+  const services = useMemo(() =>
+    dbServices?.map(s => ({ title: s.title, description: s.description, duration: s.duration, price: s.price })) ?? t.services.items,
+    [dbServices, t.services.items]
+  );
+
+  const faqItems = useMemo(() =>
+    dbFaqs?.map(f => ({ question: f.question, answer: f.answer })) ?? t.faq.items,
+    [dbFaqs, t.faq.items]
+  );
+
+  const testimonialItems = useMemo(() =>
+    dbTestimonials?.map(tt => ({ quote: tt.quote, name: tt.name, source: tt.source })) ?? t.testimonials.items,
+    [dbTestimonials, t.testimonials.items]
+  );
+
+  const previewServices = services.slice(0, 3);
 
   return (
     <div>
@@ -259,7 +279,7 @@ const OrganicHome = () => {
             const velocity = useRef(0);
             const [, setTick] = useState(0);
 
-            const items = t.testimonials.items;
+            const items = testimonialItems;
             const dupeCount = 4;
             const allItems = Array.from({ length: dupeCount }, () => items).flat();
             const CARD_WIDTH = 320;
@@ -415,7 +435,7 @@ const OrganicHome = () => {
               return (
                 <div ref={anim.ref} style={anim.style}>
                   <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.faq.title}</h2>
-                  <FaqAccordion items={t.faq.items} />
+                  <FaqAccordion items={faqItems} />
                 </div>
               );
             };

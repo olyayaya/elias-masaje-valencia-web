@@ -11,6 +11,7 @@ import massageOil from "@/assets/massage-oil.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useDbServices } from "@/hooks/use-db-content";
 
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
@@ -47,8 +48,9 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index }: {
 const OrganicServices = () => {
   const { theme } = useTheme();
   const { t } = useI18n();
+  const dbServices = useDbServices();
+  const services = dbServices?.map(s => ({ title: s.title, description: s.description, duration: s.duration, price: s.price })) ?? t.services.items;
   const heroText = useFadeIn(0.1);
-  const heroImg = useFadeIn(0.25);
 
   return (
     <div>
@@ -94,7 +96,7 @@ const OrganicServices = () => {
         <OrganicShape shape="circle" size="w-14 h-14" position="bottom-16 left-4" animation="breathe" color="hsl(var(--primary) / 0.05)" delay={2500} />
         <div className="max-w-5xl mx-auto">
           <div className="space-y-0 divide-y divide-border">
-            {t.services.items.map((s, i) => (
+            {services.map((s, i) => (
               <ServiceRow key={i} {...s} bookLabel={t.services.bookBtn} index={i} />
             ))}
           </div>
