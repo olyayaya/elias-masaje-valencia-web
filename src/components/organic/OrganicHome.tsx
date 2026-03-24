@@ -363,7 +363,7 @@ const OrganicHome = () => {
         {/* Background image */}
         <div className="absolute inset-0">
           <img
-            src={locationBg}
+            src={useAltLocationBg ? locationStones : locationBg}
             alt=""
             className="w-full h-full object-cover"
             loading="lazy"
