@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Save, X, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, Loader2, Sparkles, Languages, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
@@ -138,6 +138,34 @@ const ServiceForm = ({
 }) => {
   const titleKey = langKey("title", lang) as keyof Service;
   const descKey = langKey("description", lang) as keyof Service;
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
+
+  const callAi = async (action: "translate" | "seo_optimize") => {
+    const currentDesc = (draft[descKey] as string) || "";
+    // For translate, use ES description as source if editing EN/RU
+    const sourceText = action === "translate" ? (draft.description || "") : currentDesc;
+    if (!sourceText.trim()) return;
+
+    setAiLoading(action);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-content-helper", {
+        body: {
+          text: sourceText,
+          action,
+          targetLang: lang,
+          sourceLang: "es",
+        },
+      });
+      if (error) throw error;
+      if (data?.result) {
+        setDraft({ ...draft, [descKey]: data.result });
+      }
+    } catch (err) {
+      console.error("AI helper error:", err);
+    } finally {
+      setAiLoading(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -173,7 +201,31 @@ const ServiceForm = ({
         </div>
       </div>
       <div>
-        <label className="text-xs font-medium text-gray-500 mb-1 block">Description ({lang.toUpperCase()})</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs font-medium text-gray-500">Description ({lang.toUpperCase()})</label>
+          <div className="flex items-center gap-1">
+            {lang !== "es" && (
+              <button
+                onClick={() => callAi("translate")}
+                disabled={!!aiLoading}
+                className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 px-2 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                title="Translate from Spanish"
+              >
+                {aiLoading === "translate" ? <Loader2 size={12} className="animate-spin" /> : <Languages size={12} />}
+                Translate from ES
+              </button>
+            )}
+            <button
+              onClick={() => callAi("seo_optimize")}
+              disabled={!!aiLoading}
+              className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 px-2 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              title="Optimize for SEO"
+            >
+              {aiLoading === "seo_optimize" ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+              SEO optimize
+            </button>
+          </div>
+        </div>
         <textarea
           value={(draft[descKey] as string) || ""}
           onChange={(e) => setDraft({ ...draft, [descKey]: e.target.value })}
