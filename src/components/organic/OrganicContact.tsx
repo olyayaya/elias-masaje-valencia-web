@@ -112,15 +112,15 @@ const OrganicContact = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-3xl md:text-4xl mb-4">{t.finalCta.title}</h2>
-                  <p className="text-sm text-muted-foreground font-body mb-8">{t.finalCta.description}</p>
+                  <h2 className="font-display text-3xl md:text-4xl mb-4">{sc.final_cta_title || t.finalCta.title}</h2>
+                  <p className="text-sm text-muted-foreground font-body mb-8">{sc.final_cta_description || t.finalCta.description}</p>
                   <a
-                    href={WHATSAPP_URL}
+                    href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-block text-sm font-body bg-foreground text-background px-10 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
                   >
-                    {t.finalCta.cta}
+                    {sc.final_cta_button || t.finalCta.cta}
                   </a>
                 </div>
               );

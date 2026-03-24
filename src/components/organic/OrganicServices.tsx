@@ -141,8 +141,8 @@ const OrganicServices = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-3xl md:text-4xl mb-4" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.finalCta.title}</h2>
-                  <p className="text-sm font-body mb-8" style={{ color: "hsl(var(--organic-dark-muted))" }}>{t.finalCta.description}</p>
+                  <h2 className="font-display text-3xl md:text-4xl mb-4" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{sc.final_cta_title || t.finalCta.title}</h2>
+                  <p className="text-sm font-body mb-8" style={{ color: "hsl(var(--organic-dark-muted))" }}>{sc.final_cta_description || t.finalCta.description}</p>
                   <a
                     href={WHATSAPP_URL}
                     target="_blank"
@@ -150,7 +150,7 @@ const OrganicServices = () => {
                     className="inline-block text-sm font-body px-10 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
                     style={{ backgroundColor: "hsl(var(--organic-dark-foreground))", color: "hsl(var(--organic-dark))" }}
                   >
-                    {t.finalCta.cta}
+                    {sc.final_cta_button || t.finalCta.cta}
                   </a>
                 </div>
               );

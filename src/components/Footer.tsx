@@ -26,11 +26,12 @@ const Footer = () => {
           <div>
             <h4 className="font-display text-lg mb-4">{t.footer.contact}</h4>
             <div className="flex flex-col gap-2 text-sm opacity-70 font-body">
-              <p>{t.contact.addressValue}</p>
-              <p>{t.contact.weekdays}</p>
-              <p>{t.contact.saturday}</p>
-              <a href="https://instagram.com/elias_masaje" target="_blank" rel="noopener noreferrer" className="hover:opacity-100 transition-opacity">
-                @elias_masaje
+              <p>{sc.contact_address || t.contact.addressValue}</p>
+              <p>{sc.contact_weekdays || t.contact.weekdays}</p>
+              <p>{sc.contact_saturday || t.contact.saturday}</p>
+              <a href={`https://instagram.com/${(sc.contact_instagram || "@elias_masaje").replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-100 transition-opacity">
+                {sc.contact_instagram || "@elias_masaje"}
+              </a>
               </a>
             </div>
           </div>
