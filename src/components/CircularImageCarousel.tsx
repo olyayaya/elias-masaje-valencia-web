@@ -73,7 +73,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
         ref={trackRef}
         className="flex items-center"
         style={{
-          height: ITEM_HEIGHT + 32,
+          height: ITEM_HEIGHT * SCALE_MAX + 32,
           transform: `translateX(${offsetRef.current}px)`,
           willChange: "transform",
         }}
