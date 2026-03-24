@@ -96,12 +96,14 @@ export default {
         },
         "hero-text-breathe": {
           "0%, 100%": {
-            "text-shadow": "none",
-            filter: "none",
+            "text-shadow": "0 0 0 transparent",
+            filter: "contrast(1) brightness(1)",
+            transform: "scale(1)",
           },
           "50%": {
-            "text-shadow": "0 1px 12px hsl(var(--background) / 0.6)",
-            filter: "contrast(1.1)",
+            "text-shadow": "0 2px 24px hsl(var(--background) / 0.8), 0 0 40px hsl(var(--background) / 0.3)",
+            filter: "contrast(1.2) brightness(1.08)",
+            transform: "scale(1.008)",
           },
         },
         "hero-zoom": {
