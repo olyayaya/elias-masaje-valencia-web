@@ -142,7 +142,7 @@ const OrganicServices = () => {
       <CurvedDivider from="bg-background" to="bg-secondary" />
 
       {/* Circular image cluster */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-16 md:py-20 overflow-hidden">
+      <section className="bg-secondary px-0 md:px-12 lg:px-20 py-8 md:py-20 overflow-hidden">
         <div className="max-w-5xl mx-auto">
           <CircularImageCarousel
             images={[
