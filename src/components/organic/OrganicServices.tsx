@@ -44,7 +44,6 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index }: {
 
 const OrganicServices = () => {
   const { t } = useI18n();
-  const parallax = useParallax(0.3);
   const heroText = useFadeIn(0.1);
   const heroImg = useFadeIn(0.25);
 
