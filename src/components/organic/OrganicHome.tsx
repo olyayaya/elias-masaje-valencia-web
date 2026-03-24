@@ -89,7 +89,7 @@ const OrganicHome = () => {
         <OrganicShape shape="circle" size="w-16 h-16" position="bottom-20 left-8" animation="breathe" color="hsl(var(--primary) / 0.06)" delay={3000} />
         <div className="max-w-5xl mx-auto">
           <div ref={benefitsTitle.ref} style={benefitsTitle.style} className="text-center mb-16">
-            <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.benefits.title}</h2>
+            <h2 className="font-display text-3xl md:text-4xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.benefits.title}</h2>
             <div className="w-12 h-px mx-auto" style={{ backgroundColor: "hsl(var(--primary))" }} />
           </div>
 
