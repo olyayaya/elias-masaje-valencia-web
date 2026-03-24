@@ -42,7 +42,7 @@ const DashboardSiteContent = () => {
   const [saving, setSaving] = useState<string | null>(null);
   const [lang, setLang] = useState<Lang>("es");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [translating, setTranslating] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
 
   const fetchContent = async () => {
     setLoading(true);
