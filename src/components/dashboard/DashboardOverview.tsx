@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import { useDashboardT } from "@/i18n/dashboard";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, PenLine,
@@ -22,6 +23,7 @@ const nameByLang: Record<string, string> = { es: "Elias", en: "Elias", ru: "Ил
 
 const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => void }) => {
   const { locale } = useI18n();
+  const dt = useDashboardT(locale);
   const [counts, setCounts] = useState<Counts>({
     services: 0, blog: 0, blogDraft: 0, faqs: 0, testimonials: 0, media: 0, siteContent: 0, promotions: 0,
   });
@@ -50,88 +52,87 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
         promotions: activePromos.length,
       });
 
-      // Count media files
       const { data: mediaFiles } = await supabase.storage.from("media").list();
       if (mediaFiles) setCounts(c => ({ ...c, media: mediaFiles.length }));
     };
     load();
   }, []);
 
+  const o = dt.overview;
+
   const quickLinks = [
     {
       id: "services",
-      label: "Services",
+      label: dt.sections.services,
       icon: LayoutDashboard,
-      stat: `${counts.services} active`,
-      description: "Manage your massage offerings, prices, and descriptions",
+      stat: `${counts.services} ${o.servicesActive}`,
+      description: o.servicesDesc,
     },
     {
       id: "promotions",
-      label: "Promotions",
+      label: dt.sections.promotions,
       icon: Tag,
-      stat: `${counts.promotions} active`,
-      description: "Add badges like \"Most popular\" or time-limited offers to services",
+      stat: `${counts.promotions} ${o.promotionsActive}`,
+      description: o.promotionsDesc,
     },
     {
       id: "content",
-      label: "Site Content",
+      label: dt.sections.content,
       icon: PenLine,
-      stat: `${counts.siteContent} fields`,
-      description: "Edit hero text, CTAs, contact info, and section copy",
+      stat: `${counts.siteContent} ${o.siteContentFields}`,
+      description: o.contentDesc,
     },
     {
       id: "blog",
-      label: "Blog",
+      label: dt.sections.blog,
       icon: FileText,
-      stat: counts.blogDraft > 0 ? `${counts.blog} posts · ${counts.blogDraft} draft` : `${counts.blog} posts`,
-      description: "Write and manage SEO-optimized blog posts with AI",
+      stat: counts.blogDraft > 0 ? `${counts.blog} ${o.blogPosts} · ${counts.blogDraft} ${o.blogDraft}` : `${counts.blog} ${o.blogPosts}`,
+      description: o.blogDesc,
     },
     {
       id: "faq",
-      label: "FAQ",
+      label: dt.sections.faq,
       icon: HelpCircle,
-      stat: `${counts.faqs} questions`,
-      description: "Update frequently asked questions shown on the site",
+      stat: `${counts.faqs} ${o.faqQuestions}`,
+      description: o.faqDesc,
     },
     {
       id: "testimonials",
-      label: "Testimonials",
+      label: dt.sections.testimonials,
       icon: MessageSquare,
-      stat: `${counts.testimonials} reviews`,
-      description: "Manage client testimonials and ratings",
+      stat: `${counts.testimonials} ${o.testimonialsReviews}`,
+      description: o.testimonialsDesc,
     },
     {
       id: "media",
-      label: "Media",
+      label: dt.sections.media,
       icon: Image,
-      stat: `${counts.media} files`,
-      description: "Upload and organize images for your site",
+      stat: `${counts.media} ${o.mediaFiles}`,
+      description: o.mediaDesc,
     },
     {
       id: "seo",
-      label: "SEO",
+      label: dt.sections.seo,
       icon: Search,
-      stat: "Overview",
-      description: "Check search performance, keywords, and local SEO tips",
+      stat: o.seoOverview,
+      description: o.seoDesc,
     },
   ];
 
   const mockStats = [
-    { label: "Monthly views", value: "1,240", icon: Eye, trend: "+12%" },
-    { label: "Google ranking", value: "Top 5", icon: TrendingUp, trend: "masaje Valencia" },
-    { label: "Reviews", value: "66+", icon: Star, trend: "5.0 avg" },
-    { label: "Languages", value: "3", icon: Globe, trend: "ES · EN · RU" },
+    { label: o.monthlyViews, value: "1,240", icon: Eye, trend: "+12%" },
+    { label: o.googleRanking, value: "Top 5", icon: TrendingUp, trend: "masaje Valencia" },
+    { label: o.reviews, value: "66+", icon: Star, trend: "5.0 avg" },
+    { label: o.languages, value: "3", icon: Globe, trend: "ES · EN · RU" },
   ];
 
   return (
     <div className="space-y-8">
-      {/* Welcome header */}
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Welcome back, {nameByLang[locale] ?? "Elias"}</h1>
-        <p className="text-sm text-gray-500">Here's an overview of your site. Click any section to manage it.</p>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-1">{dt.welcome}, {nameByLang[locale] ?? "Elias"}</h1>
+        <p className="text-sm text-gray-500">{dt.siteOverview}</p>
       </div>
 
-      {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {mockStats.map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4">
@@ -145,9 +146,8 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
         ))}
       </div>
 
-      {/* Quick-access grid */}
       <div>
-        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Manage your site</h2>
+        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">{dt.manageYourSite}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {quickLinks.map((link) => (
             <button
@@ -173,12 +173,9 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
         </div>
       </div>
 
-      {/* Recent activity hint */}
       <div className="bg-gray-50 rounded-xl border border-gray-100 p-5">
-        <h3 className="text-sm font-medium text-gray-700 mb-1">💡 Tip</h3>
-        <p className="text-xs text-gray-500 leading-relaxed">
-          Use the <strong>Blog</strong> section to generate SEO-optimized posts with AI — it writes in your brand voice and targets Valencia search terms automatically.
-        </p>
+        <h3 className="text-sm font-medium text-gray-700 mb-1">{dt.tip}</h3>
+        <p className="text-xs text-gray-500 leading-relaxed">{dt.tipText}</p>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { Locale } from "@/i18n/types";
+import { useDashboardT } from "@/i18n/dashboard";
 
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import DashboardServices from "@/components/dashboard/DashboardServices";
@@ -17,18 +18,20 @@ import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
 import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
 
-const sections = [
-  { id: "overview", label: "Overview", icon: Home },
-  { id: "services", label: "Services", icon: LayoutDashboard },
-  { id: "content", label: "Site Content", icon: PenLine },
-  { id: "promotions", label: "Promotions", icon: Tag },
-  { id: "blog", label: "Blog", icon: FileText },
-  { id: "seo", label: "SEO", icon: Search },
-  { id: "media", label: "Media", icon: Image },
-  { id: "faq", label: "FAQ", icon: HelpCircle },
-  { id: "testimonials", label: "Testimonials", icon: MessageSquare },
-  { id: "history", label: "History", icon: History },
-];
+const sectionIcons = {
+  overview: Home,
+  services: LayoutDashboard,
+  content: PenLine,
+  promotions: Tag,
+  blog: FileText,
+  seo: Search,
+  media: Image,
+  faq: HelpCircle,
+  testimonials: MessageSquare,
+  history: History,
+} as const;
+
+const sectionIds = Object.keys(sectionIcons) as (keyof typeof sectionIcons)[];
 
 const langLabels: Record<Locale, string> = { es: "ES", en: "EN", ru: "RU" };
 
@@ -36,6 +39,7 @@ const Dashboard = () => {
   const [active, setActive] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { locale, setLocale } = useI18n();
+  const dt = useDashboardT(locale);
 
   const navigateTo = (section: string) => {
     setActive(section);
@@ -77,7 +81,7 @@ const Dashboard = () => {
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h1 className="text-base font-semibold text-gray-900 tracking-tight">Elias Masaje</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Site Manager</p>
+            <p className="text-xs text-gray-400 mt-0.5">{dt.siteManager}</p>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-gray-400 hover:text-gray-600">
             <X size={18} />
@@ -85,20 +89,22 @@ const Dashboard = () => {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {sections.map((s) => {
-            const isActive = active === s.id;
+          {sectionIds.map((id) => {
+            const isActive = active === id;
+            const Icon = sectionIcons[id];
+            const label = dt.sections[id as keyof typeof dt.sections];
             return (
               <button
-                key={s.id}
-                onClick={() => navigateTo(s.id)}
+                key={id}
+                onClick={() => navigateTo(id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   isActive
                     ? "bg-gray-900 text-white"
                     : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                 }`}
               >
-                <s.icon size={16} />
-                {s.label}
+                <Icon size={16} />
+                {label}
               </button>
             );
           })}
@@ -124,7 +130,7 @@ const Dashboard = () => {
           >
             <Menu size={20} />
           </button>
-          <h2 className="text-lg font-semibold text-gray-900 capitalize flex-1">{active}</h2>
+          <h2 className="text-lg font-semibold text-gray-900 flex-1">{dt.sections[active as keyof typeof dt.sections] ?? active}</h2>
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
             {(Object.keys(langLabels) as Locale[]).map((l) => (
               <button
