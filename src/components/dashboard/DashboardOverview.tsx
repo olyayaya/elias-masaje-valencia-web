@@ -14,6 +14,7 @@ interface Counts {
   testimonials: number;
   media: number;
   siteContent: number;
+  promotions: number;
 }
 
 const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => void }) => {
