@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine
+  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home
 } from "lucide-react";
 
+import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import DashboardServices from "@/components/dashboard/DashboardServices";
 import DashboardBlog from "@/components/dashboard/DashboardBlog";
 import DashboardSEO from "@/components/dashboard/DashboardSEO";
@@ -14,6 +15,7 @@ import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
 
 const sections = [
+  { id: "overview", label: "Overview", icon: Home },
   { id: "services", label: "Services", icon: LayoutDashboard },
   { id: "content", label: "Site Content", icon: PenLine },
   { id: "blog", label: "Blog", icon: FileText },
@@ -25,11 +27,17 @@ const sections = [
 ];
 
 const Dashboard = () => {
-  const [active, setActive] = useState("services");
+  const [active, setActive] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const navigateTo = (section: string) => {
+    setActive(section);
+    setSidebarOpen(false);
+  };
 
   const renderSection = () => {
     switch (active) {
+      case "overview": return <DashboardOverview onNavigate={navigateTo} />;
       case "services": return <DashboardServices />;
       case "content": return <DashboardSiteContent />;
       case "blog": return <DashboardBlog />;
@@ -38,7 +46,7 @@ const Dashboard = () => {
       case "faq": return <DashboardFAQ />;
       case "testimonials": return <DashboardTestimonials />;
       case "history": return <DashboardHistory />;
-      default: return <DashboardServices />;
+      default: return <DashboardOverview onNavigate={navigateTo} />;
     }
   };
 
@@ -74,7 +82,7 @@ const Dashboard = () => {
             return (
               <button
                 key={s.id}
-                onClick={() => { setActive(s.id); setSidebarOpen(false); }}
+                onClick={() => navigateTo(s.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   isActive
                     ? "bg-gray-900 text-white"
