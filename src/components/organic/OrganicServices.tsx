@@ -50,13 +50,12 @@ const OrganicServices = () => {
   return (
     <div>
       {/* Hero — full bleed image */}
-      <section ref={parallax.ref as React.RefObject<HTMLElement>} className="relative min-h-[45vh] md:min-h-[55vh] flex items-center overflow-hidden">
-        <div className="absolute inset-0" style={{ transform: `translateY(-${parallax.y}px)`, willChange: "transform" }}>
+      <section className="relative min-h-[45vh] md:min-h-[55vh] flex items-center overflow-hidden">
+        <div className="absolute inset-0">
           <img
             src={massageShoulder2}
             alt="Masaje profesional"
             className="w-full h-full object-cover object-[55%_55%]"
-            style={{ minHeight: "120%" }}
             width={1920}
             height={1080}
           />
