@@ -118,7 +118,7 @@ const DashboardSiteContent = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">{items.length} editable fields</p>
-        <LanguageTabs value={lang} onChange={setLang} />
+        <LanguageTabs active={lang} onChange={setLang} />
       </div>
 
       {CATEGORIES.map((cat) => {
