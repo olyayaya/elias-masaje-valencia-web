@@ -10,6 +10,7 @@ import massageDeep from "@/assets/massage-deep.jpg";
 import massageOil from "@/assets/massage-oil.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
+import { useTheme } from "@/contexts/ThemeContext";
 
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
@@ -44,6 +45,7 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index }: {
 };
 
 const OrganicServices = () => {
+  const { theme } = useTheme();
   const { t } = useI18n();
   const heroText = useFadeIn(0.1);
   const heroImg = useFadeIn(0.25);
@@ -61,6 +63,9 @@ const OrganicServices = () => {
             height={1080}
           />
           <div className="absolute inset-0 animate-hero-breathe bg-background/60 md:bg-transparent md:bg-gradient-to-r md:from-background/80 md:via-background/50 md:to-transparent" />
+          {theme === "clinical" && (
+            <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-primary/30 via-primary/10 to-transparent" />
+          )}
         </div>
         <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-16 pb-[10vh]">
           <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
