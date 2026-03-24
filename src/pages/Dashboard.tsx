@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { Locale } from "@/i18n/types";
+import { useDashboardT } from "@/i18n/dashboard";
 
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import DashboardServices from "@/components/dashboard/DashboardServices";
