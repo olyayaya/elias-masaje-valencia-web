@@ -62,6 +62,13 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
       description: "Manage your massage offerings, prices, and descriptions",
     },
     {
+      id: "promotions",
+      label: "Promotions",
+      icon: Tag,
+      stat: `${counts.promotions} active`,
+      description: "Add badges like \"Most popular\" or time-limited offers to services",
+    },
+    {
       id: "content",
       label: "Site Content",
       icon: PenLine,
