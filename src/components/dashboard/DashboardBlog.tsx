@@ -4,10 +4,11 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import ImageExt from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Plus, Bold, Italic, Heading2, List, LinkIcon, Save, Trash2, Pencil, Sparkles, X, Loader2 } from "lucide-react";
+import { Plus, Bold, Italic, Heading2, List, LinkIcon, Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
+import { toast } from "sonner";
 
 interface BlogPost {
   id: string;
@@ -31,6 +32,173 @@ const suggestedKeywords = [
   "masaje deportivo Valencia", "bienestar Valencia", "masaje cerca de mí",
 ];
 
+/* ─── AI Generation Panel ─── */
+interface TopicSuggestion { title: string; reason: string; }
+
+const AIGeneratePanel = ({ onGenerated, lang }: {
+  onGenerated: (post: { title: string; content: string; meta_description: string; keywords: string[] }) => void;
+  lang: Lang;
+}) => {
+  const [step, setStep] = useState<"idle" | "suggesting" | "topics" | "custom" | "generating">("idle");
+  const [topics, setTopics] = useState<TopicSuggestion[]>([]);
+  const [customTopic, setCustomTopic] = useState("");
+
+  const suggestTopics = async () => {
+    setStep("suggesting");
+    try {
+      const { data, error } = await supabase.functions.invoke("blog-generator", {
+        body: { action: "suggest_topics", language: lang },
+      });
+      if (error) throw error;
+      const result = data?.result;
+      if (Array.isArray(result)) {
+        setTopics(result);
+        setStep("topics");
+      } else {
+        throw new Error("Unexpected response format");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to get topic suggestions");
+      setStep("idle");
+    }
+  };
+
+  const generatePost = async (topic: string) => {
+    setStep("generating");
+    try {
+      const { data, error } = await supabase.functions.invoke("blog-generator", {
+        body: { action: "generate_post", topic, language: lang },
+      });
+      if (error) throw error;
+      const result = data?.result;
+      if (result && typeof result === "object" && result.title) {
+        onGenerated(result);
+        toast.success("Post generated — review and edit before saving");
+        setStep("idle");
+      } else {
+        throw new Error("Unexpected response format");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to generate post");
+      setStep("idle");
+    }
+  };
+
+  if (step === "idle") {
+    return (
+      <DashboardCard>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex-1">
+            <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Wand2 size={14} className="text-primary" /> Generate with AI
+            </h4>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Get SEO-optimized topic suggestions or enter your own theme
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={suggestTopics}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded-lg hover:bg-muted transition-colors"
+            >
+              <Lightbulb size={12} /> Suggest topics
+            </button>
+            <button
+              onClick={() => setStep("custom")}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs bg-foreground text-background rounded-lg hover:opacity-90 transition-colors"
+            >
+              <Sparkles size={12} /> Write about…
+            </button>
+          </div>
+        </div>
+      </DashboardCard>
+    );
+  }
+
+  if (step === "suggesting" || step === "generating") {
+    return (
+      <DashboardCard>
+        <div className="flex items-center justify-center gap-3 py-8">
+          <Loader2 size={18} className="animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            {step === "suggesting" ? "Finding trending topics…" : "Writing your post…"}
+          </p>
+        </div>
+      </DashboardCard>
+    );
+  }
+
+  if (step === "topics") {
+    return (
+      <DashboardCard title="Topic Suggestions" description="Click a topic to generate a full post, or enter your own">
+        <div className="space-y-2">
+          {topics.map((t, i) => (
+            <button
+              key={i}
+              onClick={() => generatePost(t.title)}
+              className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted transition-colors group"
+            >
+              <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{t.title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t.reason}</p>
+            </button>
+          ))}
+          <div className="flex gap-2 mt-3 pt-3 border-t border-border">
+            <input
+              value={customTopic}
+              onChange={(e) => setCustomTopic(e.target.value)}
+              placeholder="Or type your own topic…"
+              className="flex-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+              onKeyDown={(e) => { if (e.key === "Enter" && customTopic.trim()) generatePost(customTopic); }}
+            />
+            <button
+              onClick={() => customTopic.trim() && generatePost(customTopic)}
+              disabled={!customTopic.trim()}
+              className="px-4 py-2 text-sm bg-foreground text-background rounded-lg hover:opacity-90 disabled:opacity-50"
+            >
+              Generate
+            </button>
+          </div>
+          <button onClick={() => setStep("idle")} className="text-xs text-muted-foreground hover:text-foreground mt-1">
+            ← Back
+          </button>
+        </div>
+      </DashboardCard>
+    );
+  }
+
+  if (step === "custom") {
+    return (
+      <DashboardCard title="Write about…" description="Enter a topic or theme for your blog post">
+        <div className="space-y-3">
+          <input
+            value={customTopic}
+            onChange={(e) => setCustomTopic(e.target.value)}
+            placeholder="e.g. Benefits of deep tissue massage for office workers"
+            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === "Enter" && customTopic.trim()) generatePost(customTopic); }}
+          />
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => { setStep("idle"); setCustomTopic(""); }} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">
+              Cancel
+            </button>
+            <button
+              onClick={() => customTopic.trim() && generatePost(customTopic)}
+              disabled={!customTopic.trim()}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-foreground text-background rounded-lg hover:opacity-90 disabled:opacity-50"
+            >
+              <Sparkles size={12} /> Generate post
+            </button>
+          </div>
+        </div>
+      </DashboardCard>
+    );
+  }
+
+  return null;
+};
+
+/* ─── Main Component ─── */
 const DashboardBlog = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +226,24 @@ const DashboardBlog = () => {
   };
 
   const startEdit = (p: BlogPost) => { setDraft({ ...p }); setEditing(p.id); };
+
+  const handleAIGenerated = (result: { title: string; content: string; meta_description: string; keywords: string[] }) => {
+    const titleKey = langKey("title", lang) as keyof BlogPost;
+    const contentKey = langKey("content", lang) as keyof BlogPost;
+    const metaKey = langKey("meta_description", lang) as keyof BlogPost;
+
+    const newPost: BlogPost = {
+      id: "", title: "", content: "", seo_keywords: result.keywords || [], meta_description: "",
+      status: "draft", created_at: new Date().toISOString(),
+      title_en: "", title_ru: "", content_en: "", content_ru: "",
+      meta_description_en: "", meta_description_ru: "",
+      [titleKey]: result.title,
+      [contentKey]: result.content,
+      [metaKey]: result.meta_description,
+    };
+    setDraft(newPost);
+    setEditing("new");
+  };
 
   const save = async () => {
     if (!draft) return;
@@ -99,7 +285,7 @@ const DashboardBlog = () => {
     setDraft({ ...draft, seo_keywords: has ? draft.seo_keywords.filter((k) => k !== kw) : [...draft.seo_keywords, kw] });
   };
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" size={24} /></div>;
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   if (editing && draft) {
     return <BlogEditor
@@ -115,32 +301,34 @@ const DashboardBlog = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
-          <p className="text-sm text-gray-500">{posts.length} posts</p>
+          <p className="text-sm text-muted-foreground">{posts.length} posts</p>
           <LanguageTabs active={lang} onChange={setLang} />
         </div>
-        <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors">
+        <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 transition-colors">
           <Plus size={14} /> New post
         </button>
       </div>
+
+      <AIGeneratePanel onGenerated={handleAIGenerated} lang={lang} />
 
       {posts.map((p) => (
         <DashboardCard key={p.id}>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h4 className="text-sm font-medium text-gray-900">{langVal(p, "title", lang) || p.title}</h4>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.status === "published" ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-500"}`}>{p.status}</span>
+                <h4 className="text-sm font-medium text-foreground">{langVal(p, "title", lang) || p.title}</h4>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.status === "published" ? "bg-green-50 text-green-600" : "bg-muted text-muted-foreground"}`}>{p.status}</span>
               </div>
-              <p className="text-xs text-gray-400 mt-1">{langVal(p, "meta_description", lang) || p.meta_description}</p>
+              <p className="text-xs text-muted-foreground mt-1">{langVal(p, "meta_description", lang) || p.meta_description}</p>
               <div className="flex gap-1.5 mt-2 flex-wrap">
                 {p.seo_keywords.map((kw) => (
-                  <span key={kw} className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded">{kw}</span>
+                  <span key={kw} className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded">{kw}</span>
                 ))}
               </div>
             </div>
             <div className="flex gap-1">
-              <button onClick={() => startEdit(p)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50"><Pencil size={14} /></button>
-              <button onClick={() => remove(p.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50"><Trash2 size={14} /></button>
+              <button onClick={() => startEdit(p)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted"><Pencil size={14} /></button>
+              <button onClick={() => remove(p.id)} className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-muted"><Trash2 size={14} /></button>
             </div>
           </div>
         </DashboardCard>
@@ -149,6 +337,7 @@ const DashboardBlog = () => {
   );
 };
 
+/* ─── Blog Editor ─── */
 const BlogEditor = ({
   draft, setDraft, onSave, onCancel, onGenerateMeta, suggestedKeywords, onToggleKeyword, saving, lang, setLang,
 }: {
@@ -183,32 +372,32 @@ const BlogEditor = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={onCancel} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600"><X size={14} /> Back to posts</button>
+        <button onClick={onCancel} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><X size={14} /> Back to posts</button>
         <LanguageTabs active={lang} onChange={setLang} />
       </div>
 
       <DashboardCard title={`Post content (${lang.toUpperCase()})`}>
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Title ({lang.toUpperCase()})</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Title ({lang.toUpperCase()})</label>
             <input
               value={(draft[titleKey] as string) || ""}
               onChange={(e) => setDraft({ ...draft, [titleKey]: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="Post title"
             />
           </div>
 
           {editor && (
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Content ({lang.toUpperCase()})</label>
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="flex gap-0.5 p-2 border-b border-gray-100 bg-gray-50">
-                  <button onClick={() => editor.chain().focus().toggleBold().run()} className={`p-1.5 rounded ${editor.isActive("bold") ? "bg-gray-200" : "hover:bg-gray-100"}`}><Bold size={14} /></button>
-                  <button onClick={() => editor.chain().focus().toggleItalic().run()} className={`p-1.5 rounded ${editor.isActive("italic") ? "bg-gray-200" : "hover:bg-gray-100"}`}><Italic size={14} /></button>
-                  <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`p-1.5 rounded ${editor.isActive("heading") ? "bg-gray-200" : "hover:bg-gray-100"}`}><Heading2 size={14} /></button>
-                  <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`p-1.5 rounded ${editor.isActive("bulletList") ? "bg-gray-200" : "hover:bg-gray-100"}`}><List size={14} /></button>
-                  <button onClick={() => { const url = window.prompt("URL:"); if (url) editor.chain().focus().setLink({ href: url }).run(); }} className={`p-1.5 rounded ${editor.isActive("link") ? "bg-gray-200" : "hover:bg-gray-100"}`}><LinkIcon size={14} /></button>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Content ({lang.toUpperCase()})</label>
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="flex gap-0.5 p-2 border-b border-border bg-muted">
+                  <button onClick={() => editor.chain().focus().toggleBold().run()} className={`p-1.5 rounded ${editor.isActive("bold") ? "bg-background shadow-sm" : "hover:bg-background/50"}`}><Bold size={14} /></button>
+                  <button onClick={() => editor.chain().focus().toggleItalic().run()} className={`p-1.5 rounded ${editor.isActive("italic") ? "bg-background shadow-sm" : "hover:bg-background/50"}`}><Italic size={14} /></button>
+                  <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`p-1.5 rounded ${editor.isActive("heading") ? "bg-background shadow-sm" : "hover:bg-background/50"}`}><Heading2 size={14} /></button>
+                  <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`p-1.5 rounded ${editor.isActive("bulletList") ? "bg-background shadow-sm" : "hover:bg-background/50"}`}><List size={14} /></button>
+                  <button onClick={() => { const url = window.prompt("URL:"); if (url) editor.chain().focus().setLink({ href: url }).run(); }} className={`p-1.5 rounded ${editor.isActive("link") ? "bg-background shadow-sm" : "hover:bg-background/50"}`}><LinkIcon size={14} /></button>
                 </div>
                 <EditorContent editor={editor} className="prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[180px]" />
               </div>
@@ -216,7 +405,7 @@ const BlogEditor = ({
           )}
 
           <div className="flex gap-2">
-            <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none">
+            <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none">
               <option value="draft">Draft</option>
               <option value="published">Published</option>
             </select>
@@ -227,7 +416,7 @@ const BlogEditor = ({
       <DashboardCard title="SEO Keywords" description="Click to add keywords to this post">
         <div className="flex flex-wrap gap-2">
           {suggestedKeywords.map((kw) => (
-            <button key={kw} onClick={() => onToggleKeyword(kw)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${draft.seo_keywords.includes(kw) ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+            <button key={kw} onClick={() => onToggleKeyword(kw)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${draft.seo_keywords.includes(kw) ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:border-foreground/30"}`}>
               {kw}
             </button>
           ))}
@@ -240,13 +429,13 @@ const BlogEditor = ({
             value={(draft[metaKey] as string) || ""}
             onChange={(e) => setDraft({ ...draft, [metaKey]: e.target.value })}
             rows={2} maxLength={160}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 resize-none"
+            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             placeholder="Meta description for search engines..."
           />
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">{((draft[metaKey] as string) || "").length}/160</span>
+            <span className="text-xs text-muted-foreground">{((draft[metaKey] as string) || "").length}/160</span>
             {lang === "es" && (
-              <button onClick={onGenerateMeta} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-50">
+              <button onClick={onGenerateMeta} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted">
                 <Sparkles size={12} /> Auto-generate
               </button>
             )}
@@ -255,8 +444,8 @@ const BlogEditor = ({
       </DashboardCard>
 
       <div className="flex gap-2 justify-end">
-        <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
-        <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50">
+        <button onClick={onCancel} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted">Cancel</button>
+        <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 disabled:opacity-50">
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save post
         </button>
       </div>
