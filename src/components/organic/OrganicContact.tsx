@@ -58,7 +58,12 @@ const OrganicContact = () => {
             {/* Details */}
             <div className="md:col-span-5 space-y-8">
               <ContactItem icon={MapPin} title={t.contact.address} index={0}>
-                <p className="text-sm text-muted-foreground font-body">{sc.contact_address || t.contact.addressValue}</p>
+                <button
+                  onClick={() => setShowMapPicker(true)}
+                  className="text-sm text-muted-foreground font-body text-left hover:text-primary transition-colors border-b border-transparent hover:border-primary/30 cursor-pointer"
+                >
+                  {sc.contact_address || t.contact.addressValue}
+                </button>
               </ContactItem>
 
               <ContactItem icon={Clock} title={t.contact.hours} index={1}>
