@@ -68,7 +68,9 @@ const OrganicAbout = () => {
       <CurvedDivider from="bg-background" to="bg-secondary" />
 
       {/* The space — reversed asymmetric layout */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
+      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
+        <OrganicShape shape="ring" size="w-36 h-36" position="top-16 -left-12" animation="float" borderColor="hsl(var(--primary) / 0.08)" delay={1000} />
+        <OrganicShape shape="arc" size="w-28 h-14" position="bottom-20 right-8" animation="drift" borderColor="hsl(var(--primary) / 0.1)" delay={3000} />
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
             <div className="md:col-span-6 md:order-2" ref={spaceImg.ref} style={spaceImg.style}>
