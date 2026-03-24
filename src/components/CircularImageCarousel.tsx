@@ -96,21 +96,9 @@ const BreathingCell = ({
     return () => clearTimeout(timerRef.current);
   }, [phase, fadeIn, hold, fadeOut, images.length]);
 
-  const opacity = !startedRef.current
-    ? 0
-    : phase === "in"
-    ? 1
-    : phase === "hold"
-    ? 1
-    : 0;
+  const opacity = phase === "waiting" || phase === "out" ? 0 : 1;
 
-  const scale = !startedRef.current
-    ? 0.97
-    : phase === "in"
-    ? 1.02
-    : phase === "hold"
-    ? 1.02
-    : 0.97;
+  const scale = phase === "waiting" || phase === "out" ? 0.97 : 1.02;
 
   const transitionDuration =
     phase === "in" ? fadeIn : phase === "out" ? fadeOut : hold;
