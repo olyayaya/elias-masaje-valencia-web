@@ -97,10 +97,12 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
           const scale = 1 + (SCALE_MAX - 1) * proximity * proximity;
           const opacity = 0.4 + 0.6 * proximity;
 
+          const overlayOpacity = 1 - proximity; // 0 at center, 1 at edges
+
           return (
             <div
               key={i}
-              className="shrink-0 rounded-2xl overflow-hidden"
+              className="shrink-0 rounded-2xl overflow-hidden relative"
               style={{
                 width: w,
                 height: ITEM_HEIGHT,
@@ -117,6 +119,10 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
                 loading="lazy"
                 draggable={false}
                 onLoad={i < images.length ? (e) => handleImageLoad(i, e) : undefined}
+              />
+              <div
+                className="absolute inset-0 bg-background/60 pointer-events-none transition-opacity duration-150"
+                style={{ opacity: overlayOpacity * 0.7 }}
               />
             </div>
           );
