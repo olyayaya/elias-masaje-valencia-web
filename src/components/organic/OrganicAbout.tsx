@@ -130,6 +130,35 @@ const OrganicAbout = () => {
           ]}
         />
       </section>
+
+      {/* Final CTA — Ready to feel better? */}
+      <CurvedDivider from="bg-background" to="bg-organic-dark" />
+      <section className="bg-organic-dark px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
+        <OrganicShape shape="ring" size="w-32 h-32" position="top-8 right-8" animation="breathe" borderColor="hsl(var(--organic-dark-muted) / 0.15)" delay={0} />
+        <OrganicShape shape="arc" size="w-20 h-10" position="bottom-12 left-8" animation="float" borderColor="hsl(var(--organic-dark-muted) / 0.1)" delay={500} />
+        {(() => {
+          const anim = useFadeIn(0);
+          return (
+            <div className="max-w-2xl mx-auto text-center" ref={anim.ref} style={anim.style}>
+              <h2 className="font-display text-3xl md:text-4xl lg:text-5xl mb-5 leading-snug text-organic-dark-foreground">
+                {t.finalCta.title}
+              </h2>
+              <p className="text-base font-body leading-relaxed mb-10 text-organic-dark-muted">
+                {t.finalCta.description}
+              </p>
+              <a
+                href="https://wa.me/34698968007?text=Hola%20Elias%2C%20me%20gustaría%20reservar%20una%20sesión"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-primary text-primary-foreground font-body text-sm tracking-wide hover:opacity-90 transition-opacity"
+              >
+                {t.finalCta.cta}
+              </a>
+            </div>
+          );
+        })()}
+      </section>
+      <CurvedDivider from="bg-organic-dark" to="bg-background" flip />
     </div>
   );
 };
