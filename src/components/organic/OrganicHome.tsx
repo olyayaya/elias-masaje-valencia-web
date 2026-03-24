@@ -45,6 +45,7 @@ const OrganicHome = () => {
   const dbServices = useDbServices();
   const dbFaqs = useDbFaqs();
   const dbTestimonials = useDbTestimonials();
+  const { content: sc } = useSiteContent();
 
   
 
