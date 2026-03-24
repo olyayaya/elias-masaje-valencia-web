@@ -201,6 +201,11 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
   const maxCols = 3;
   const [mutedCol, setMutedCol] = useState(2);
 
+  // Preload all images to detect portrait vs landscape
+  useEffect(() => {
+    images.forEach((img) => preloadAndCacheAspect(img.src));
+  }, [images]);
+
   // Track which image srcs each column is currently showing (includes both during crossfade)
   const activeImagesRef = useRef<Map<number, string[]>>(new Map());
 
