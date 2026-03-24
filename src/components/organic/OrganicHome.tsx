@@ -119,7 +119,7 @@ const OrganicHome = () => {
 
       {/* ═══════════ BENEFITS — Dark section ═══════════ */}
       <section className="-mt-2 relative z-20 px-6 md:px-12 lg:px-20 pt-8 md:pt-12 pb-20 md:pb-28 overflow-hidden" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
-        <OrganicShape shape="ring" size="w-32 h-32" position="top-12 -right-10" animation="drift" color="transparent" borderColor="hsl(var(--organic-dark-foreground) / 0.08)" delay={1000} />
+        <OrganicShape shape="ring" size="w-32 h-32" position="top-12 right-4" animation="drift" color="transparent" borderColor="hsl(var(--organic-dark-foreground) / 0.08)" delay={1000} />
         <OrganicShape shape="circle" size="w-16 h-16" position="bottom-20 left-8" animation="breathe" color="hsl(var(--primary) / 0.06)" delay={3000} />
         <div className="max-w-5xl mx-auto">
           <div ref={benefitsTitle.ref} style={benefitsTitle.style} className="text-center mb-16">
@@ -153,7 +153,7 @@ const OrganicHome = () => {
 
       {/* ═══════════ SERVICES — Circular images + editorial list ═══════════ */}
       <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28 overflow-hidden relative">
-        <OrganicShape shape="blob" size="w-40 h-40" position="-top-10 -right-16" animation="float" color="hsl(var(--primary) / 0.04)" delay={500} />
+        <OrganicShape shape="blob" size="w-40 h-40" position="top-4 right-4" animation="float" color="hsl(var(--primary) / 0.04)" delay={500} />
         <OrganicShape shape="arc" size="w-24 h-12" position="bottom-32 left-4" animation="drift" borderColor="hsl(var(--primary) / 0.1)" delay={2000} />
         <div className="max-w-6xl mx-auto">
           <div ref={servicesTitle.ref} style={servicesTitle.style} className="mb-16">
@@ -252,7 +252,7 @@ const OrganicHome = () => {
                   width={800}
                   height={1067}
                 />
-                <OrganicShape shape="circle" size="w-24 h-24" position="-bottom-4 -left-4" animation="breathe" color="hsl(var(--organic-dark-foreground) / 0.05)" borderColor="hsl(var(--organic-dark-foreground) / 0.1)" className="border" delay={0} />
+                <OrganicShape shape="circle" size="w-24 h-24" position="bottom-2 left-2" animation="breathe" color="hsl(var(--organic-dark-foreground) / 0.05)" borderColor="hsl(var(--organic-dark-foreground) / 0.1)" className="border" delay={0} />
               </div>
             </div>
           </div>
@@ -430,8 +430,8 @@ const OrganicHome = () => {
 
       {/* ═══════════ FAQ ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
-        <OrganicShape shape="ring" size="w-28 h-28" position="-top-8 right-12" animation="float" borderColor="hsl(var(--primary) / 0.08)" delay={1500} />
-        <OrganicShape shape="blob" size="w-36 h-36" position="bottom-10 -left-12" animation="drift" color="hsl(var(--primary) / 0.03)" delay={4000} />
+        <OrganicShape shape="ring" size="w-28 h-28" position="top-4 right-12" animation="float" borderColor="hsl(var(--primary) / 0.08)" delay={1500} />
+        <OrganicShape shape="blob" size="w-36 h-36" position="bottom-10 left-4" animation="drift" color="hsl(var(--primary) / 0.03)" delay={4000} />
         <div className="max-w-2xl mx-auto">
           {(() => {
             const Faq = () => {
@@ -480,7 +480,7 @@ const OrganicHome = () => {
 
       {/* ═══════════ FINAL CTA — Quiet confidence ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-24 md:py-32 relative overflow-hidden">
-        <OrganicShape shape="ring" size="w-40 h-40" position="-bottom-16 -right-16" animation="breathe" borderColor="hsl(var(--foreground) / 0.06)" delay={2000} />
+        <OrganicShape shape="ring" size="w-40 h-40" position="bottom-4 right-4" animation="breathe" borderColor="hsl(var(--foreground) / 0.06)" delay={2000} />
         <OrganicShape shape="arc" size="w-20 h-10" position="top-16 left-8" animation="float" borderColor="hsl(var(--primary) / 0.1)" delay={500} />
         <div className="max-w-2xl mx-auto text-center" ref={ctaBlock.ref} style={ctaBlock.style}>
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl mb-5 leading-snug">{sc.final_cta_title || t.finalCta.title}</h2>
