@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag
+  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe
 } from "lucide-react";
+import { useI18n } from "@/i18n/context";
+import { Locale } from "@/i18n/types";
 
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import DashboardServices from "@/components/dashboard/DashboardServices";
@@ -28,9 +30,12 @@ const sections = [
   { id: "history", label: "History", icon: History },
 ];
 
+const langLabels: Record<Locale, string> = { es: "ES", en: "EN", ru: "RU" };
+
 const Dashboard = () => {
   const [active, setActive] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { locale, setLocale } = useI18n();
 
   const navigateTo = (section: string) => {
     setActive(section);
@@ -119,7 +124,22 @@ const Dashboard = () => {
           >
             <Menu size={20} />
           </button>
-          <h2 className="text-lg font-semibold text-gray-900 capitalize">{active}</h2>
+          <h2 className="text-lg font-semibold text-gray-900 capitalize flex-1">{active}</h2>
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+            {(Object.keys(langLabels) as Locale[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLocale(l)}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                  l === locale
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                {langLabels[l]}
+              </button>
+            ))}
+          </div>
         </header>
 
         <div className="p-6 lg:p-8 max-w-5xl">
