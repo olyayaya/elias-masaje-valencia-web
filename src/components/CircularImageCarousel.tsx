@@ -9,6 +9,7 @@ interface CircularImageCarouselProps {
 const ITEM_GAP = 14;
 const ITEM_HEIGHT = 200;
 const SPEED = 0.6;
+const SCALE_MAX = 1.18;
 
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
