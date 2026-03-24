@@ -222,16 +222,18 @@ const OrganicHome = () => {
 
       <CurvedDivider from="bg-organic-dark" to="bg-background" />
 
-      {/* ═══════════ TESTIMONIALS — Staggered cards ═══════════ */}
+      {/* ═══════════ TESTIMONIALS — Swipable on mobile, grid on desktop ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
         <div className="max-w-5xl mx-auto">
-          <div ref={testimonialsTitle.ref} style={testimonialsTitle.style} className="text-center mb-16">
-            <h2 className="font-display text-3xl md:text-4xl mb-3">{t.testimonials.title}</h2>
-            <div className="w-12 h-px bg-primary mx-auto" />
+          <div ref={testimonialsTitle.ref} style={testimonialsTitle.style} className="text-center mb-4">
+            <h2 className="font-display text-3xl md:text-4xl mb-2">{t.testimonials.title}</h2>
+            <p className="text-sm text-muted-foreground font-body mb-1">5.0 ★ — 66+ Google & TripAdvisor reviews</p>
+            <div className="w-12 h-px bg-primary mx-auto mt-3" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {t.testimonials.items.map((item, i) => {
+          {/* Desktop: grid */}
+          <div className="hidden md:grid md:grid-cols-3 gap-6 mt-12">
+            {t.testimonials.items.slice(0, 6).map((item, i) => {
               const TestimonialOrganic = () => {
                 const anim = useFadeIn(i * 0.12);
                 return (
@@ -239,18 +241,58 @@ const OrganicHome = () => {
                     ref={anim.ref}
                     style={anim.style}
                     className={`bg-card rounded-2xl border border-border p-8 ${
-                      i === 1 ? "md:-translate-y-4" : ""
+                      i === 1 ? "md:-translate-y-4" : i === 4 ? "md:-translate-y-4" : ""
                     }`}
                   >
                     <p className="text-base text-muted-foreground font-body leading-relaxed italic mb-6">
                       "{item.quote}"
                     </p>
-                    <p className="text-sm font-body font-medium">— {item.name}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-body font-medium">— {item.name}</p>
+                      {item.source && (
+                        <span className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider">{item.source}</span>
+                      )}
+                    </div>
                   </div>
                 );
               };
               return <TestimonialOrganic key={i} />;
             })}
+          </div>
+
+          {/* Mobile: swipable carousel */}
+          <div className="md:hidden mt-10">
+            {(() => {
+              const MobileTestimonials = () => {
+                const scrollRef = useRef<HTMLDivElement>(null);
+                return (
+                  <div
+                    ref={scrollRef}
+                    className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6"
+                    style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+                  >
+                    {t.testimonials.items.map((item, i) => (
+                      <div
+                        key={i}
+                        className="bg-card rounded-2xl border border-border p-6 snap-center shrink-0"
+                        style={{ width: "85vw", maxWidth: "340px" }}
+                      >
+                        <p className="text-sm text-muted-foreground font-body leading-relaxed italic mb-4">
+                          "{item.quote}"
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-body font-medium">— {item.name}</p>
+                          {item.source && (
+                            <span className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider">{item.source}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              };
+              return <MobileTestimonials />;
+            })()}
           </div>
         </div>
       </section>
