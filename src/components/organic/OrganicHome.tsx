@@ -223,7 +223,7 @@ const OrganicHome = () => {
 
       <CurvedDivider from="bg-organic-dark" to="bg-background" />
 
-      {/* ═══════════ TESTIMONIALS — Swipable on mobile, grid on desktop ═══════════ */}
+      {/* ═══════════ TESTIMONIALS — Auto-sliding single row ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
         <div className="max-w-5xl mx-auto">
           <div ref={testimonialsTitle.ref} style={testimonialsTitle.style} className="text-center mb-4">
@@ -231,71 +231,116 @@ const OrganicHome = () => {
             <p className="text-sm text-muted-foreground font-body mb-1">5.0 ★ — 66+ Google & TripAdvisor reviews</p>
             <div className="w-12 h-px bg-primary mx-auto mt-3" />
           </div>
-
-          {/* Desktop: grid */}
-          <div className="hidden md:grid md:grid-cols-3 gap-6 mt-12">
-            {t.testimonials.items.slice(0, 6).map((item, i) => {
-              const TestimonialOrganic = () => {
-                const anim = useFadeIn(i * 0.12);
-                return (
-                  <div
-                    ref={anim.ref}
-                    style={anim.style}
-                    className={`bg-card rounded-2xl border border-border p-8 ${
-                      i === 1 ? "md:-translate-y-4" : i === 4 ? "md:-translate-y-4" : ""
-                    }`}
-                  >
-                    <p className="text-base text-muted-foreground font-body leading-relaxed italic mb-6">
-                      "{item.quote}"
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-body font-medium">— {item.name}</p>
-                      {item.source && (
-                        <span className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider">{item.source}</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              };
-              return <TestimonialOrganic key={i} />;
-            })}
-          </div>
-
-          {/* Mobile: swipable carousel */}
-          <div className="md:hidden mt-10">
-            {(() => {
-              const MobileTestimonials = () => {
-                const scrollRef = useRef<HTMLDivElement>(null);
-                return (
-                  <div
-                    ref={scrollRef}
-                    className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6"
-                    style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
-                  >
-                    {t.testimonials.items.map((item, i) => (
-                      <div
-                        key={i}
-                        className="bg-card rounded-2xl border border-border p-6 snap-center shrink-0"
-                        style={{ width: "85vw", maxWidth: "340px" }}
-                      >
-                        <p className="text-sm text-muted-foreground font-body leading-relaxed italic mb-4">
-                          "{item.quote}"
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-body font-medium">— {item.name}</p>
-                          {item.source && (
-                            <span className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider">{item.source}</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              };
-              return <MobileTestimonials />;
-            })()}
-          </div>
         </div>
+
+        {/* Full-width auto-sliding marquee */}
+        {(() => {
+          const TestimonialsMarquee = () => {
+            const trackRef = useRef<HTMLDivElement>(null);
+            const offsetRef = useRef(0);
+            const rafRef = useRef<number>(0);
+            const isDragging = useRef(false);
+            const dragStartX = useRef(0);
+            const dragOffset = useRef(0);
+            const velocity = useRef(0);
+            const [, setTick] = useState(0);
+
+            const items = t.testimonials.items;
+            const dupeCount = 4;
+            const allItems = Array.from({ length: dupeCount }, () => items).flat();
+            const CARD_WIDTH = 320;
+            const GAP = 20;
+            const itemWidth = CARD_WIDTH + GAP;
+            const totalWidth = items.length * itemWidth;
+            const SPEED = 0.35;
+
+            const animate = useCallback(() => {
+              if (!isDragging.current) {
+                // Apply any remaining drag velocity
+                if (Math.abs(velocity.current) > 0.1) {
+                  offsetRef.current += velocity.current;
+                  velocity.current *= 0.95;
+                } else {
+                  velocity.current = 0;
+                  offsetRef.current -= SPEED;
+                }
+              }
+              // Loop
+              if (Math.abs(offsetRef.current) >= totalWidth) {
+                offsetRef.current += totalWidth;
+              }
+              if (offsetRef.current > 0) {
+                offsetRef.current -= totalWidth;
+              }
+              setTick((t) => t + 1);
+              rafRef.current = requestAnimationFrame(animate);
+            }, [totalWidth]);
+
+            useEffect(() => {
+              rafRef.current = requestAnimationFrame(animate);
+              return () => cancelAnimationFrame(rafRef.current);
+            }, [animate]);
+
+            const handlePointerDown = (e: React.PointerEvent) => {
+              isDragging.current = true;
+              dragStartX.current = e.clientX;
+              dragOffset.current = offsetRef.current;
+              velocity.current = 0;
+              (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+            };
+
+            const handlePointerMove = (e: React.PointerEvent) => {
+              if (!isDragging.current) return;
+              const dx = e.clientX - dragStartX.current;
+              offsetRef.current = dragOffset.current + dx;
+              velocity.current = dx * 0.05;
+            };
+
+            const handlePointerUp = () => {
+              isDragging.current = false;
+            };
+
+            return (
+              <div
+                className="mt-10 overflow-hidden cursor-grab active:cursor-grabbing select-none"
+                style={{ width: "100vw", position: "relative", left: "50%", transform: "translateX(-50%)" }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerUp}
+              >
+                <div
+                  ref={trackRef}
+                  className="flex"
+                  style={{
+                    transform: `translateX(${offsetRef.current}px)`,
+                    gap: GAP,
+                    willChange: "transform",
+                  }}
+                >
+                  {allItems.map((item, i) => (
+                    <div
+                      key={i}
+                      className="bg-card rounded-2xl border border-border p-6 shrink-0"
+                      style={{ width: CARD_WIDTH }}
+                    >
+                      <p className="text-sm text-muted-foreground font-body leading-relaxed italic mb-4">
+                        "{item.quote}"
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-body font-medium">— {item.name}</p>
+                        {item.source && (
+                          <span className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider">{item.source}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          };
+          return <TestimonialsMarquee />;
+        })()}
       </section>
 
       <CurvedDivider from="bg-background" to="bg-secondary" />
