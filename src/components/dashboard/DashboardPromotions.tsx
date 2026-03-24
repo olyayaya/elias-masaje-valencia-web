@@ -283,18 +283,49 @@ const DashboardPromotions = () => {
               </div>
             </div>
 
-            {/* Preview */}
+            {/* Live preview */}
             {badgeText && (
               <div className="pt-2">
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">Preview</label>
-                <div className="inline-flex items-center gap-1.5">
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${colorClasses(badgeColor)}`}>
-                    {badgeText}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    on {selectedService ? getServiceName(selectedService) : "…"} for {duration} days
-                  </span>
+                <label className="text-xs font-medium text-muted-foreground mb-3 block">Preview — how it looks on the site</label>
+                <div className="border border-border rounded-lg p-5 bg-background">
+                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                    <span className="font-semibold text-sm text-foreground">
+                      {selectedService ? getServiceName(selectedService) : "Service Name"}
+                    </span>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${colorClasses(badgeColor)}`}>
+                      {badgeText}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">Service description text will appear here…</p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span>60 min</span>
+                    <span className="w-px h-3 bg-border" />
+                    <span className="font-medium text-foreground">50 €</span>
+                  </div>
+                  {(badgeTextEn || badgeTextRu) && (
+                    <div className="mt-3 pt-3 border-t border-border flex gap-3 flex-wrap">
+                      {badgeTextEn && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground">EN:</span>
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${colorClasses(badgeColor)}`}>
+                            {badgeTextEn}
+                          </span>
+                        </div>
+                      )}
+                      {badgeTextRu && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground">RU:</span>
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${colorClasses(badgeColor)}`}>
+                            {badgeTextRu}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  Active for {duration} days from today
+                </p>
               </div>
             )}
 
