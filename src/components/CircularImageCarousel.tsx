@@ -6,10 +6,10 @@ interface CircularImageCarouselProps {
   className?: string;
 }
 
-const ITEM_WIDTH = 240;
-const ITEM_HEIGHT = 160;
-const ITEM_GAP = 20;
-const SCALE_MAX = 1.3;
+const ITEM_WIDTH = 360;
+const ITEM_HEIGHT = 180;
+const ITEM_GAP = 16;
+const SCALE_MAX = 1.2;
 const SPEED = 0.6; // px per frame
 
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
