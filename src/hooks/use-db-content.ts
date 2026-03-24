@@ -83,6 +83,7 @@ export function useDbTestimonials() {
     supabase
       .from("testimonials")
       .select("*")
+      .eq("hidden", false)
       .order("created_at", { ascending: false })
       .then(({ data }) => { if (data?.length) setTestimonials(data as DbTestimonial[]); });
   }, []);
