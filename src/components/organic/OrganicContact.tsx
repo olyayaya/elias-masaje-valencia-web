@@ -129,7 +129,7 @@ const OrganicContact = () => {
                   >
                     {sc.final_cta_button || t.finalCta.cta}
                   </a>
-      {showMapPicker && <MapPickerOverlay onClose={() => setShowMapPicker(false)} />}
+      
     </div>
   );
 };
