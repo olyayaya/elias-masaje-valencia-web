@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { MapPin, Clock, MessageCircle, Instagram } from "lucide-react";
-import MapBlock from "@/components/MapBlock";
+import MapBlock, { MapPickerOverlay } from "@/components/MapBlock";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
