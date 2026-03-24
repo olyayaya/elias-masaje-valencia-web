@@ -39,13 +39,14 @@ const OrganicHome = () => {
   return (
     <div>
       {/* ═══════════ EDITORIAL HERO — Split layout ═══════════ */}
-      <section className="relative min-h-[85vh] md:min-h-[92vh] flex items-center overflow-hidden">
-        {/* Background image with soft overlay */}
-        <div className="absolute inset-0">
+      <section ref={parallax.ref as React.RefObject<HTMLElement>} className="relative min-h-[85vh] md:min-h-[92vh] flex items-center overflow-hidden">
+        {/* Background image with soft overlay + parallax */}
+        <div className="absolute inset-0" style={{ transform: `translateY(-${parallax.y}px)`, willChange: "transform" }}>
           <img
             src={heroImageOrganic}
             alt="Masaje profesional"
             className="w-full h-full object-cover object-bottom"
+            style={{ minHeight: "120%" }}
             width={1920}
             height={1080}
           />
