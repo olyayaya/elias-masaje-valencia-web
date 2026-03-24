@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, PenLine,
-  TrendingUp, Eye, Globe, Star, ArrowUpRight
+  TrendingUp, Eye, Globe, Star, ArrowUpRight, Tag
 } from "lucide-react";
 import DashboardCard from "./DashboardCard";
 
