@@ -9,6 +9,7 @@ interface CircularImageCarouselProps {
 const ITEM_GAP = 14;
 const ITEM_HEIGHT = 200;
 const SPEED = 0.6;
+const SCALE_MAX = 1.18;
 
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
@@ -72,13 +73,30 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
         ref={trackRef}
         className="flex items-center"
         style={{
-          height: ITEM_HEIGHT + 32,
+          height: ITEM_HEIGHT * SCALE_MAX + 32,
           transform: `translateX(${offsetRef.current}px)`,
           willChange: "transform",
         }}
       >
         {allImages.map((img, i) => {
           const w = allItemWidths[i];
+
+          // Compute center of this item in viewport coords
+          let itemX = offsetRef.current;
+          for (let j = 0; j < i; j++) itemX += allItemWidths[j] + ITEM_GAP;
+          const itemCenterX = itemX + w / 2;
+
+          const containerRect = containerRef.current?.getBoundingClientRect();
+          const viewportCenter = containerRect
+            ? containerRect.left + containerRect.width / 2
+            : typeof window !== "undefined" ? window.innerWidth / 2 : 500;
+
+          const dist = Math.abs(itemCenterX - viewportCenter);
+          const maxDist = 500;
+          const proximity = Math.max(0, 1 - dist / maxDist);
+          const scale = 1 + (SCALE_MAX - 1) * proximity * proximity;
+          const opacity = 0.4 + 0.6 * proximity;
+
           return (
             <div
               key={i}
@@ -87,6 +105,9 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
                 width: w,
                 height: ITEM_HEIGHT,
                 marginRight: ITEM_GAP,
+                transform: `scale(${scale})`,
+                opacity,
+                transition: "transform 0.15s ease-out, opacity 0.15s ease-out",
               }}
             >
               <img
