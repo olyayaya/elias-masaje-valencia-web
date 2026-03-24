@@ -21,6 +21,7 @@ import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 import FaqAccordion from "@/components/FaqAccordion";
 import MapBlock from "@/components/MapBlock";
+import OrganicShape from "@/components/organic/OrganicShape";
 
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
 
