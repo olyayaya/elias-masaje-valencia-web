@@ -32,7 +32,6 @@ const Footer = () => {
               <a href={`https://instagram.com/${(sc.contact_instagram || "@elias_masaje").replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-100 transition-opacity">
                 {sc.contact_instagram || "@elias_masaje"}
               </a>
-              </a>
             </div>
           </div>
         </div>
