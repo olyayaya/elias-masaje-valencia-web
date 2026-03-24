@@ -128,8 +128,8 @@ const OrganicServices = () => {
 
       {/* Services list — editorial */}
       <section className="px-6 md:px-12 lg:px-20 py-12 md:py-16 relative overflow-hidden">
-        <OrganicShape shape="ring" size="w-28 h-28" position="top-8 -right-8" animation="float" borderColor="hsl(var(--primary) / 0.08)" delay={500} />
-        <OrganicShape shape="circle" size="w-14 h-14" position="bottom-16 left-4" animation="breathe" color="hsl(var(--primary) / 0.05)" delay={2500} />
+        <OrganicShape shape="ring" size="w-28 h-28" position="top-8 right-4" animation="float" borderColor="hsl(var(--primary) / 0.08)" delay={500} />
+        <OrganicShape shape="circle" size="w-14 h-14" position="bottom-16 left-6" animation="breathe" color="hsl(var(--primary) / 0.05)" delay={2500} />
         <div className="max-w-5xl mx-auto">
           <div className="space-y-0 divide-y divide-border">
             {services.map((s, i) => (
