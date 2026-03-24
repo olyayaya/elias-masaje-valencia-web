@@ -27,8 +27,12 @@ const ContactItem = ({ icon: Icon, title, children, index }: {
 
 const OrganicContact = () => {
   const { t } = useI18n();
+  const { content: sc } = useSiteContent();
   const heading = useFadeIn(0);
   const mapAnim = useFadeIn(0.15);
+
+  const whatsappNum = sc.contact_whatsapp || "34698968007";
+  const whatsappUrl = `https://wa.me/${whatsappNum}?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita`;
 
   return (
     <div>
