@@ -95,7 +95,7 @@ const BreathingCell = ({
   const [next, setNext] = useState(1);
   const [fading, setFading] = useState(false);
   const [started, setStarted] = useState(false);
-  const [sizeScale, setSizeScale] = useState(() => randomSize());
+  const [sizeScale, setSizeScale] = useState(() => randomSize(getIsPortrait(images[0]?.src ?? "")));
 
   // Report initial image
   useEffect(() => {
