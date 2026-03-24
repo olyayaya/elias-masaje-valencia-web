@@ -41,7 +41,26 @@ const OrganicHome = () => {
   const testimonialsTitle = useFadeIn(0);
   const ctaBlock = useFadeIn(0);
 
-  const previewServices = t.services.items.slice(0, 3);
+  const dbServices = useDbServices();
+  const dbFaqs = useDbFaqs();
+  const dbTestimonials = useDbTestimonials();
+
+  const services = useMemo(() =>
+    dbServices?.map(s => ({ title: s.title, description: s.description, duration: s.duration, price: s.price })) ?? t.services.items,
+    [dbServices, t.services.items]
+  );
+
+  const faqItems = useMemo(() =>
+    dbFaqs?.map(f => ({ question: f.question, answer: f.answer })) ?? t.faq.items,
+    [dbFaqs, t.faq.items]
+  );
+
+  const testimonialItems = useMemo(() =>
+    dbTestimonials?.map(tt => ({ quote: tt.quote, name: tt.name, source: tt.source })) ?? t.testimonials.items,
+    [dbTestimonials, t.testimonials.items]
+  );
+
+  const previewServices = services.slice(0, 3);
 
   return (
     <div>
