@@ -314,11 +314,12 @@ const DashboardBlog = () => {
 
       {posts.map((p) => (
         <DashboardCard key={p.id}>
-          <div className="flex items-start justify-between gap-4">
+          <div className={`flex items-start justify-between gap-4 ${p.hidden ? "opacity-50" : ""}`}>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-medium text-foreground">{langVal(p, "title", lang) || p.title}</h4>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.status === "published" ? "bg-green-50 text-green-600" : "bg-muted text-muted-foreground"}`}>{p.status}</span>
+                {p.hidden && <span className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded-full">Hidden</span>}
               </div>
               <p className="text-xs text-muted-foreground mt-1">{langVal(p, "meta_description", lang) || p.meta_description}</p>
               <div className="flex gap-1.5 mt-2 flex-wrap">
@@ -328,6 +329,9 @@ const DashboardBlog = () => {
               </div>
             </div>
             <div className="flex gap-1">
+              <button onClick={async () => { await supabase.from("blog_posts").update({ hidden: !p.hidden }).eq("id", p.id); fetchPosts(); }} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted" title={p.hidden ? "Show on site" : "Hide from site"}>
+                {p.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
               <button onClick={() => startEdit(p)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted"><Pencil size={14} /></button>
               <button onClick={() => remove(p.id)} className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-muted"><Trash2 size={14} /></button>
             </div>
