@@ -9,6 +9,7 @@ interface CircularImageCarouselProps {
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [fade, setFade] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth >= 1024 : true
@@ -20,18 +21,21 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
     return () => window.removeEventListener("resize", handler);
   }, []);
 
-  // Auto-play always (slow on desktop, moderate on mobile)
+  // Auto-play with crossfade
   useEffect(() => {
     const interval = isDesktop ? 5200 : 3900;
     intervalRef.current = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % images.length);
+      setFade(false);
+      setTimeout(() => {
+        setActiveIndex((prev) => (prev + 1) % images.length);
+        setFade(true);
+      }, 600);
     }, interval);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [isDesktop, images.length]);
 
-  // Helper: get image at wrapped index
   const getImage = (offset: number) => {
     const idx = ((activeIndex + offset) % images.length + images.length) % images.length;
     return images[idx];
@@ -46,16 +50,24 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
     ];
 
     return (
-      <div ref={anim.ref} style={{ ...anim.style, marginLeft: "calc(-50vw + 50%)", marginRight: "calc(-50vw + 50%)" }} className={`flex justify-center items-start gap-0 relative w-screen ${className}`}>
+      <div
+        ref={anim.ref}
+        style={{ ...anim.style, marginLeft: "calc(-50vw + 50%)", marginRight: "calc(-50vw + 50%)" }}
+        className={`flex justify-center items-start gap-0 relative w-screen overflow-hidden ${className}`}
+      >
         {visible.map((item, i) => (
-          <div key={`${activeIndex}-${i}`} className={`${item.offset}`}>
-            <div
-              className={`${item.size} rounded-full overflow-hidden`}
-              style={{
-                animation: "fade-in 0.8s ease-out both",
-              }}
-            >
-              <img src={item.img.src} alt={item.img.alt} className="w-full h-full object-cover" loading="lazy" />
+          <div key={i} className={`${item.offset}`}>
+            <div className={`${item.size} rounded-full overflow-hidden`}>
+              <img
+                src={item.img.src}
+                alt={item.img.alt}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                style={{
+                  opacity: fade ? 1 : 0,
+                  transition: "opacity 0.6s ease-in-out",
+                }}
+              />
             </div>
           </div>
         ))}
@@ -65,7 +77,11 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
 
   // Mobile/Tablet: decorative auto-playing carousel with scale
   return (
-    <div ref={anim.ref} style={{ ...anim.style, marginLeft: "calc(-50vw + 50%)", marginRight: "calc(-50vw + 50%)" }} className={`relative w-screen ${className}`}>
+    <div
+      ref={anim.ref}
+      style={{ ...anim.style, marginLeft: "calc(-50vw + 50%)", marginRight: "calc(-50vw + 50%)" }}
+      className={`relative w-screen overflow-hidden ${className}`}
+    >
       <div className="flex items-center justify-center h-52 relative">
         {images.map((img, i) => {
           const distance = i - activeIndex;
