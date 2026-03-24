@@ -58,7 +58,7 @@ const OrganicServices = () => {
             width={1920}
             height={1080}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
+          <div className="absolute inset-0 animate-[hero-breathe_6s_ease-in-out_infinite] bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
         </div>
         <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-16 pb-[10vh]">
           <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
