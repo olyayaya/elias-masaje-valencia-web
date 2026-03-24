@@ -344,29 +344,52 @@ const OrganicHome = () => {
         })()}
       </section>
 
-      <CurvedDivider from="bg-background" to="bg-secondary" />
-
       {/* ═══════════ LOCATION ═══════════ */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
-        <div className="max-w-5xl mx-auto">
-          {(() => {
-            const Loc = () => {
-              const anim = useFadeIn(0);
-              return (
-                <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.location.title}</h2>
-                  <div className="rounded-2xl overflow-hidden border border-border">
-                    <MapBlock />
+      <section className="relative overflow-hidden">
+        {/* Top half-moon */}
+        <div className="relative z-10">
+          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[5vh] md:h-[6vh] max-h-16 block" style={{ marginBottom: "-1px" }}>
+            <ellipse cx="720" cy="0" rx="900" ry="180" style={{ fill: "hsl(var(--secondary))" }} />
+          </svg>
+        </div>
+
+        {/* Background image */}
+        <div className="absolute inset-0">
+          <img
+            src={locationBg}
+            alt=""
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-background/70" />
+        </div>
+
+        <div className="relative z-10 px-6 md:px-12 lg:px-20 py-20 md:py-28">
+          <div className="max-w-5xl mx-auto">
+            {(() => {
+              const Loc = () => {
+                const anim = useFadeIn(0);
+                return (
+                  <div ref={anim.ref} style={anim.style}>
+                    <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.location.title}</h2>
+                    <div className="rounded-2xl overflow-hidden border border-border">
+                      <MapBlock />
+                    </div>
                   </div>
-                </div>
-              );
-            };
-            return <Loc />;
-          })()}
+                );
+              };
+              return <Loc />;
+            })()}
+          </div>
+        </div>
+
+        {/* Bottom half-moon */}
+        <div className="relative z-10">
+          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[5vh] md:h-[6vh] max-h-16 block" style={{ marginTop: "-1px" }}>
+            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: "hsl(var(--background))" }} />
+          </svg>
         </div>
       </section>
-
-      <CurvedDivider from="bg-secondary" to="bg-background" flip />
 
       {/* ═══════════ FAQ ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
