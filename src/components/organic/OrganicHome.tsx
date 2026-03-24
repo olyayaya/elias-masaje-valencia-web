@@ -25,6 +25,7 @@ const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20
 
 const OrganicHome = () => {
   const { t } = useI18n();
+  const parallax = useParallax(0.3);
 
   const heroText = useFadeIn(0.2);
   const benefitsTitle = useFadeIn(0);
