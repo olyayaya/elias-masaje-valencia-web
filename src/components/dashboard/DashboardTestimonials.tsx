@@ -12,6 +12,7 @@ interface Testimonial {
   rating: number;
   quote_en: string;
   quote_ru: string;
+  hidden: boolean;
 }
 
 const DashboardTestimonials = () => {
