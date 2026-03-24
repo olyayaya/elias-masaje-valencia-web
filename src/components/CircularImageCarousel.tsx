@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useFadeIn } from "@/hooks/use-fade-in";
 
 interface CircularImageCarouselProps {
@@ -6,116 +6,108 @@ interface CircularImageCarouselProps {
   className?: string;
 }
 
+const ITEM_BASE_SIZE = 140;
+const ITEM_GAP = 24;
+const SCALE_MAX = 1.45;
+const SPEED = 0.6; // px per frame
+
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [fade, setFade] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth >= 1024 : true
-  );
+  const trackRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef(0);
+  const rafRef = useRef<number>(0);
+  const [, setTick] = useState(0);
+
+  // Duplicate images enough to fill viewport + extra
+  const dupeCount = 3;
+  const allImages = Array.from({ length: dupeCount }, () => images).flat();
+  const itemWidth = ITEM_BASE_SIZE + ITEM_GAP;
+  const totalWidth = images.length * itemWidth;
+
+  const animate = useCallback(() => {
+    offsetRef.current -= SPEED;
+    // Loop seamlessly
+    if (Math.abs(offsetRef.current) >= totalWidth) {
+      offsetRef.current += totalWidth;
+    }
+    setTick((t) => t + 1);
+    rafRef.current = requestAnimationFrame(animate);
+  }, [totalWidth]);
 
   useEffect(() => {
-    const handler = () => setIsDesktop(window.innerWidth >= 1024);
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [animate]);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerCenter, setContainerCenter] = useState(0);
+
+  useEffect(() => {
+    const updateCenter = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerCenter(rect.left + rect.width / 2);
+      }
+    };
+    updateCenter();
+    window.addEventListener("resize", updateCenter);
+    return () => window.removeEventListener("resize", updateCenter);
   }, []);
 
-  // Auto-play with crossfade
-  useEffect(() => {
-    const interval = isDesktop ? 5200 : 3900;
-    intervalRef.current = setInterval(() => {
-      setFade(false);
-      setTimeout(() => {
-        setActiveIndex((prev) => (prev + 1) % images.length);
-        setFade(true);
-      }, 600);
-    }, interval);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isDesktop, images.length]);
-
-  const getImage = (offset: number) => {
-    const idx = ((activeIndex + offset) % images.length + images.length) % images.length;
-    return images[idx];
-  };
-
-  // Desktop: 3 visible circles, center largest, auto-rotating
-  if (isDesktop) {
-    const visible = [
-      { img: getImage(0), size: "w-52 h-52", offset: "-mr-4 mt-8" },
-      { img: getImage(1), size: "w-72 h-72", offset: "z-10 mt-0" },
-      { img: getImage(2), size: "w-52 h-52", offset: "-ml-4 mt-12" },
-    ];
-
-    return (
-      <div
-        ref={anim.ref}
-        style={{ ...anim.style, width: "100vw", position: "relative", left: "50%", transform: "translateX(-50%)" }}
-        className={`flex justify-center items-start gap-0 overflow-hidden ${className}`}
-      >
-        {visible.map((item, i) => (
-          <div key={i} className={`${item.offset}`}>
-            <div className={`${item.size} rounded-full overflow-hidden`}>
-              <img
-                src={item.img.src}
-                alt={item.img.alt}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                style={{
-                  opacity: fade ? 1 : 0,
-                  transition: "opacity 0.6s ease-in-out",
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  // Mobile/Tablet: decorative auto-playing carousel with scale
   return (
     <div
-      ref={anim.ref}
+      ref={(node) => {
+        // Merge refs
+        (containerRef as any).current = node;
+        if (typeof anim.ref === "function") (anim.ref as any)(node);
+        else if (anim.ref) (anim.ref as any).current = node;
+      }}
       style={{ ...anim.style, width: "100vw", position: "relative", left: "50%", transform: "translateX(-50%)" }}
       className={`overflow-hidden ${className}`}
     >
-      <div className="flex items-center justify-center h-52 relative">
-        {images.map((img, i) => {
-          const distance = i - activeIndex;
-          const wrappedDistance = ((distance % images.length) + images.length) % images.length;
-          const normalizedDist = wrappedDistance > images.length / 2
-            ? wrappedDistance - images.length
-            : wrappedDistance;
+      <div
+        ref={trackRef}
+        className="flex items-center"
+        style={{
+          height: ITEM_BASE_SIZE * SCALE_MAX + 24,
+          transform: `translateX(${offsetRef.current}px)`,
+          willChange: "transform",
+        }}
+      >
+        {allImages.map((img, i) => {
+          // Calculate this item's center x relative to viewport
+          const itemCenterX = offsetRef.current + i * itemWidth + ITEM_BASE_SIZE / 2;
+          const containerRect = containerRef.current?.getBoundingClientRect();
+          const viewportCenter = containerRect
+            ? containerRect.left + containerRect.width / 2
+            : typeof window !== "undefined" ? window.innerWidth / 2 : 500;
 
-          const absDist = Math.abs(normalizedDist);
-          const isActive = absDist === 0;
-          const isAdjacent = absDist === 1;
-          const isVisible = absDist <= 2;
-
-          if (!isVisible) return null;
-
-          const size = isActive ? 176 : isAdjacent ? 112 : 72;
-          const opacity = isActive ? 1 : isAdjacent ? 0.55 : 0.25;
-          const zIndex = isActive ? 10 : isAdjacent ? 5 : 1;
-          const xOffset = normalizedDist * 100;
+          const dist = Math.abs(itemCenterX - viewportCenter);
+          const maxDist = 400;
+          const proximity = Math.max(0, 1 - dist / maxDist);
+          const scale = 1 + (SCALE_MAX - 1) * proximity * proximity;
+          const opacity = 0.45 + 0.55 * proximity;
 
           return (
             <div
               key={i}
-              className="absolute rounded-full overflow-hidden"
+              className="shrink-0 rounded-full overflow-hidden"
               style={{
-                width: size,
-                height: size,
-                transform: `translateX(${xOffset}px)`,
+                width: ITEM_BASE_SIZE,
+                height: ITEM_BASE_SIZE,
+                marginRight: ITEM_GAP,
+                transform: `scale(${scale})`,
                 opacity,
-                zIndex,
-                transition: "all 1.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                transition: "transform 0.15s ease-out, opacity 0.15s ease-out",
               }}
             >
-              <img src={img.src} alt={img.alt} className="w-full h-full object-cover" loading="lazy" />
+              <img
+                src={img.src}
+                alt={img.alt}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                draggable={false}
+              />
             </div>
           );
         })}
