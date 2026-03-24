@@ -219,7 +219,7 @@ const OrganicHome = () => {
                   width={800}
                   height={1067}
                 />
-                <div className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full border -z-10" style={{ backgroundColor: "hsl(var(--organic-dark-foreground) / 0.05)", borderColor: "hsl(var(--organic-dark-foreground) / 0.1)" }} />
+                <OrganicShape shape="circle" size="w-24 h-24" position="-bottom-4 -left-4" animation="breathe" color="hsl(var(--organic-dark-foreground) / 0.05)" borderColor="hsl(var(--organic-dark-foreground) / 0.1)" className="border" delay={0} />
               </div>
             </div>
           </div>
