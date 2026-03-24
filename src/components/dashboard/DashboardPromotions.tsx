@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Loader2, Sparkles, Clock, Tag, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format, addDays, isAfter, isBefore, differenceInDays } from "date-fns";
+import { useI18n } from "@/i18n/context";
+import { useDashboardT } from "@/i18n/dashboard";
 
 interface Service {
   id: string;
@@ -34,28 +36,42 @@ interface AiSuggestion {
   suggested_days: number;
 }
 
-const BADGE_COLORS = [
-  { id: "amber", label: "Gold", classes: "bg-amber-100 text-amber-800 border-amber-200" },
-  { id: "rose", label: "Rose", classes: "bg-rose-100 text-rose-800 border-rose-200" },
-  { id: "emerald", label: "Green", classes: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { id: "blue", label: "Blue", classes: "bg-blue-100 text-blue-800 border-blue-200" },
-  { id: "purple", label: "Purple", classes: "bg-purple-100 text-purple-800 border-purple-200" },
-];
+const BADGE_COLORS_IDS = ["amber", "rose", "emerald", "blue", "purple"] as const;
 
-const colorClasses = (colorId: string) =>
-  BADGE_COLORS.find((c) => c.id === colorId)?.classes ?? BADGE_COLORS[0].classes;
-
-const DURATION_OPTIONS = [
-  { value: "7", label: "7 days" },
-  { value: "10", label: "10 days" },
-  { value: "14", label: "2 weeks" },
-  { value: "21", label: "3 weeks" },
-  { value: "30", label: "1 month" },
-  { value: "60", label: "2 months" },
-  { value: "90", label: "3 months" },
-];
+const colorClasses = (colorId: string) => {
+  const map: Record<string, string> = {
+    amber: "bg-amber-100 text-amber-800 border-amber-200",
+    rose: "bg-rose-100 text-rose-800 border-rose-200",
+    emerald: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    blue: "bg-blue-100 text-blue-800 border-blue-200",
+    purple: "bg-purple-100 text-purple-800 border-purple-200",
+  };
+  return map[colorId] ?? map.amber;
+};
 
 const DashboardPromotions = () => {
+  const { locale } = useI18n();
+  const dt = useDashboardT(locale);
+  const pt = dt.promotions;
+
+  const BADGE_COLORS = [
+    { id: "amber", label: pt.gold, classes: "bg-amber-100 text-amber-800 border-amber-200" },
+    { id: "rose", label: pt.rose, classes: "bg-rose-100 text-rose-800 border-rose-200" },
+    { id: "emerald", label: pt.green, classes: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+    { id: "blue", label: pt.blue, classes: "bg-blue-100 text-blue-800 border-blue-200" },
+    { id: "purple", label: pt.purple, classes: "bg-purple-100 text-purple-800 border-purple-200" },
+  ];
+
+  const DURATION_OPTIONS = [
+    { value: "7", label: pt.days7 },
+    { value: "10", label: pt.days10 },
+    { value: "14", label: pt.weeks2 },
+    { value: "21", label: pt.weeks3 },
+    { value: "30", label: pt.month1 },
+    { value: "60", label: pt.months2 },
+    { value: "90", label: pt.months3 },
+  ];
+
   const [services, setServices] = useState<Service[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,10 +124,10 @@ const DashboardPromotions = () => {
       const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (Array.isArray(parsed)) {
         setSuggestions(parsed);
-        toast.success("Badge ideas ready — pick one or write your own");
+        toast.success(pt.badgeIdeasReady);
       }
     } catch {
-      toast.error("Failed to get suggestions");
+      toast.error(pt.failedSuggestions);
     }
     setSuggestLoading(false);
   };
@@ -122,7 +138,7 @@ const DashboardPromotions = () => {
     setBadgeTextRu(s.text_ru);
     setDuration(String(s.suggested_days));
     setSuggestions([]);
-    toast.info("Applied — adjust and save");
+    toast.info(pt.applied);
   };
 
   const startEdit = (p: Promotion) => {
@@ -133,7 +149,6 @@ const DashboardPromotions = () => {
     setBadgeTextRu(p.badge_text_ru);
     setBadgeColor(p.badge_color);
     const daysLeft = Math.max(1, differenceInDays(new Date(p.ends_at), new Date()));
-    // Find closest duration option
     const closest = DURATION_OPTIONS.reduce((prev, curr) =>
       Math.abs(parseInt(curr.value) - daysLeft) < Math.abs(parseInt(prev.value) - daysLeft) ? curr : prev
     );
@@ -144,13 +159,12 @@ const DashboardPromotions = () => {
 
   const savePromotion = async () => {
     if (!selectedService || !badgeText.trim()) {
-      toast.error("Pick a service and enter badge text");
+      toast.error(pt.pickServiceError);
       return;
     }
     setSaving(true);
 
     if (editingId) {
-      // Update existing
       const { error } = await supabase.from("promotions").update({
         service_id: selectedService,
         badge_text: badgeText.trim(),
@@ -160,14 +174,13 @@ const DashboardPromotions = () => {
         ends_at: addDays(new Date(), parseInt(duration)).toISOString(),
       }).eq("id", editingId);
       if (error) {
-        toast.error("Failed to update promotion");
+        toast.error(pt.failedUpdate);
       } else {
-        toast.success("Promotion updated!");
+        toast.success(pt.promotionUpdated);
         resetForm();
         fetchAll();
       }
     } else {
-      // Create new
       const { error } = await supabase.from("promotions").insert({
         service_id: selectedService,
         badge_text: badgeText.trim(),
@@ -178,9 +191,9 @@ const DashboardPromotions = () => {
         ends_at: addDays(new Date(), parseInt(duration)).toISOString(),
       });
       if (error) {
-        toast.error("Failed to save promotion");
+        toast.error(pt.failedSave);
       } else {
-        toast.success("Promotion created!");
+        toast.success(pt.promotionCreated);
         resetForm();
         fetchAll();
       }
@@ -190,7 +203,7 @@ const DashboardPromotions = () => {
 
   const deletePromo = async (id: string) => {
     await supabase.from("promotions").delete().eq("id", id);
-    toast.success("Promotion removed");
+    toast.success(pt.promotionRemoved);
     fetchAll();
   };
 
@@ -226,18 +239,18 @@ const DashboardPromotions = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <p className="text-sm text-muted-foreground">
-          {activePromos.length} active promotion{activePromos.length !== 1 ? "s" : ""}
+          {activePromos.length} {pt.activeCount}{activePromos.length !== 1 ? "s" : ""}
         </p>
         <Button onClick={() => { resetForm(); setShowForm(true); }} className="gap-2 w-full sm:w-auto" disabled={showForm}>
-          <Plus size={14} /> Add promotion
+          <Plus size={14} /> {pt.addPromotion}
         </Button>
       </div>
 
       {/* Create / Edit form */}
       {showForm && (
         <DashboardCard
-          title={editingId ? "Edit Promotion" : "New Promotion"}
-          description={editingId ? "Update badge text, color, or duration" : "Add a badge to a service"}
+          title={editingId ? pt.editPromotion : pt.newPromotion}
+          description={editingId ? pt.updateDesc : pt.addDesc}
         >
           <div className="space-y-4">
             {/* AI Suggestions — only for new */}
@@ -245,7 +258,7 @@ const DashboardPromotions = () => {
               <div className="flex items-center gap-2 flex-wrap">
                 <Button variant="outline" size="sm" onClick={suggestBadges} disabled={suggestLoading} className="gap-2">
                   {suggestLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  Suggest badge ideas with AI
+                  {pt.suggestWithAi}
                 </Button>
               </div>
             )}
@@ -263,7 +276,7 @@ const DashboardPromotions = () => {
                       EN: {s.text_en} · RU: {s.text_ru}
                     </span>
                     <span className="block text-xs text-muted-foreground mt-0.5">
-                      Suggested: {s.suggested_days} days
+                      {pt.suggested.replace("{days}", String(s.suggested_days))}
                     </span>
                   </button>
                 ))}
@@ -272,10 +285,10 @@ const DashboardPromotions = () => {
 
             {/* Service picker */}
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Service</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">{pt.service}</label>
               <Select value={selectedService} onValueChange={setSelectedService}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pick a service" />
+                  <SelectValue placeholder={pt.pickService} />
                 </SelectTrigger>
                 <SelectContent>
                   {services.map((s) => (
@@ -288,15 +301,15 @@ const DashboardPromotions = () => {
             {/* Badge text */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Badge (ES)</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">{pt.badgeEs}</label>
                 <Input value={badgeText} onChange={(e) => setBadgeText(e.target.value)} placeholder="Más popular" />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Badge (EN)</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">{pt.badgeEn}</label>
                 <Input value={badgeTextEn} onChange={(e) => setBadgeTextEn(e.target.value)} placeholder="Most popular" />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Badge (RU)</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">{pt.badgeRu}</label>
                 <Input value={badgeTextRu} onChange={(e) => setBadgeTextRu(e.target.value)} placeholder="Самый популярный" />
               </div>
             </div>
@@ -304,7 +317,7 @@ const DashboardPromotions = () => {
             {/* Color + Duration */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">Badge color</label>
+                <label className="text-xs font-medium text-muted-foreground mb-2 block">{pt.badgeColor}</label>
                 <div className="flex gap-2">
                   {BADGE_COLORS.map((c) => (
                     <button
@@ -318,7 +331,7 @@ const DashboardPromotions = () => {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">Duration</label>
+                <label className="text-xs font-medium text-muted-foreground mb-2 block">{pt.duration}</label>
                 <Select value={duration} onValueChange={setDuration}>
                   <SelectTrigger>
                     <SelectValue />
@@ -335,17 +348,17 @@ const DashboardPromotions = () => {
             {/* Live preview */}
             {badgeText && (
               <div className="pt-2">
-                <label className="text-xs font-medium text-muted-foreground mb-3 block">Preview — how it looks on the site</label>
+                <label className="text-xs font-medium text-muted-foreground mb-3 block">{pt.preview} — {pt.previewDesc}</label>
                 <div className="border border-border rounded-lg p-5 bg-background">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
                     <span className="font-semibold text-sm text-foreground">
-                      {selectedService ? getServiceName(selectedService) : "Service Name"}
+                      {selectedService ? getServiceName(selectedService) : pt.serviceNamePlaceholder}
                     </span>
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${colorClasses(badgeColor)}`}>
                       {badgeText}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2">Service description text will appear here…</p>
+                  <p className="text-xs text-muted-foreground mb-2">{pt.descriptionPlaceholder}</p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>60 min</span>
                     <span className="w-px h-3 bg-border" />
@@ -373,17 +386,19 @@ const DashboardPromotions = () => {
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-2">
-                  {editingId ? `Extends ${duration} days from today` : `Active for ${duration} days from today`}
+                  {editingId
+                    ? pt.extendsFromToday.replace("{days}", duration)
+                    : pt.activeForDays.replace("{days}", duration)}
                 </p>
               </div>
             )}
 
             {/* Actions */}
             <div className="flex gap-2 justify-end pt-2">
-              <Button variant="ghost" size="sm" onClick={resetForm}>Cancel</Button>
+              <Button variant="ghost" size="sm" onClick={resetForm}>{pt.cancel}</Button>
               <Button size="sm" onClick={savePromotion} disabled={saving} className="gap-2">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Tag size={14} />}
-                {editingId ? "Save changes" : "Create promotion"}
+                {editingId ? pt.saveChanges : pt.createPromotion}
               </Button>
             </div>
           </div>
@@ -392,10 +407,10 @@ const DashboardPromotions = () => {
 
       {/* Active promotions */}
       {activePromos.length > 0 && (
-        <DashboardCard title="Active" description="Currently showing on the site">
+        <DashboardCard title={pt.active} description={pt.activeDesc}>
           <div className="space-y-3">
             {activePromos.map((p) => (
-              <PromoRow key={p.id} promo={p} serviceName={getServiceName(p.service_id)} onDelete={deletePromo} onToggle={toggleActive} onEdit={startEdit} />
+              <PromoRow key={p.id} promo={p} serviceName={getServiceName(p.service_id)} onDelete={deletePromo} onToggle={toggleActive} onEdit={startEdit} pt={pt} />
             ))}
           </div>
         </DashboardCard>
@@ -403,10 +418,10 @@ const DashboardPromotions = () => {
 
       {/* Expired / inactive */}
       {expiredPromos.length > 0 && (
-        <DashboardCard title="Expired / Inactive" description="Past or paused promotions">
+        <DashboardCard title={pt.expiredInactive} description={pt.expiredDesc}>
           <div className="space-y-3">
             {expiredPromos.map((p) => (
-              <PromoRow key={p.id} promo={p} serviceName={getServiceName(p.service_id)} onDelete={deletePromo} onToggle={toggleActive} onEdit={startEdit} expired />
+              <PromoRow key={p.id} promo={p} serviceName={getServiceName(p.service_id)} onDelete={deletePromo} onToggle={toggleActive} onEdit={startEdit} expired pt={pt} />
             ))}
           </div>
         </DashboardCard>
@@ -416,8 +431,8 @@ const DashboardPromotions = () => {
         <DashboardCard>
           <div className="text-center py-8">
             <Tag size={24} className="mx-auto text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground mb-1">No promotions yet</p>
-            <p className="text-xs text-muted-foreground">Add a badge like "Most popular" or "10% off this week" to highlight services</p>
+            <p className="text-sm text-muted-foreground mb-1">{pt.noPromotions}</p>
+            <p className="text-xs text-muted-foreground">{pt.noPromotionsHint}</p>
           </div>
         </DashboardCard>
       )}
@@ -425,13 +440,14 @@ const DashboardPromotions = () => {
   );
 };
 
-const PromoRow = ({ promo, serviceName, onDelete, onToggle, onEdit, expired }: {
+const PromoRow = ({ promo, serviceName, onDelete, onToggle, onEdit, expired, pt }: {
   promo: Promotion;
   serviceName: string;
   onDelete: (id: string) => void;
   onToggle: (p: Promotion) => void;
   onEdit: (p: Promotion) => void;
   expired?: boolean;
+  pt: DashboardTranslations["promotions"];
 }) => {
   const endsAt = new Date(promo.ends_at);
   const daysLeft = Math.max(0, Math.ceil((endsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
@@ -447,8 +463,8 @@ const PromoRow = ({ promo, serviceName, onDelete, onToggle, onEdit, expired }: {
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             <Clock size={10} />
             {expired
-              ? `Ended ${format(endsAt, "MMM d")}`
-              : `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left · ends ${format(endsAt, "MMM d")}`}
+              ? pt.ended.replace("{date}", format(endsAt, "MMM d"))
+              : `${daysLeft} ${daysLeft !== 1 ? "days" : "day"} · ${format(endsAt, "MMM d")}`}
           </p>
         </div>
       </div>
@@ -457,7 +473,7 @@ const PromoRow = ({ promo, serviceName, onDelete, onToggle, onEdit, expired }: {
           <Pencil size={14} />
         </Button>
         <Button variant="ghost" size="sm" onClick={() => onToggle(promo)} className="text-xs h-8">
-          {promo.active ? "Pause" : "Resume"}
+          {promo.active ? pt.pause : pt.resume}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => onDelete(promo.id)} className="text-destructive hover:text-destructive h-8">
           <Trash2 size={14} />
@@ -466,5 +482,8 @@ const PromoRow = ({ promo, serviceName, onDelete, onToggle, onEdit, expired }: {
     </div>
   );
 };
+
+// Need to import the type for PromoRow
+import type { DashboardTranslations } from "@/i18n/dashboard";
 
 export default DashboardPromotions;
