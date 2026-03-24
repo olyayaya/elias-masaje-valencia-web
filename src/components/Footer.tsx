@@ -4,6 +4,7 @@ import { useSiteContent } from "@/hooks/use-site-content";
 
 const Footer = () => {
   const { t } = useI18n();
+  const { content: sc } = useSiteContent();
 
   return (
     <footer className="bg-foreground text-primary-foreground section-padding">
