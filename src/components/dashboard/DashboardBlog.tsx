@@ -305,7 +305,7 @@ const DashboardBlog = () => {
           <LanguageTabs active={lang} onChange={setLang} />
         </div>
         <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 transition-colors">
-          <Plus size={14} /> New post
+          <Plus size={14} /> Write a custom post
         </button>
       </div>
 
