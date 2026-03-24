@@ -169,7 +169,7 @@ const OrganicServices = () => {
         </div>
 
         {/* Bottom curved divider overlapping into gallery */}
-        <div className="absolute bottom-0 left-0 right-0 z-10" style={{ transform: "translateY(99%)" }}>
+        <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none">
           <div className="relative h-16 md:h-24 overflow-hidden" style={{ backgroundColor: "hsl(var(--organic-dark))" }} aria-hidden="true">
             <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
               <path d="M0,96 C480,0 960,0 1440,96 L1440,0 L0,0 Z" style={{ fill: "hsl(var(--secondary))" }} />
