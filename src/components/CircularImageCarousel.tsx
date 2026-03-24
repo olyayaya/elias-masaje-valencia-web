@@ -52,8 +52,8 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
     return (
       <div
         ref={anim.ref}
-        style={{ ...anim.style, marginLeft: "calc(-50vw + 50%)", marginRight: "calc(-50vw + 50%)" }}
-        className={`flex justify-center items-start gap-0 relative w-screen overflow-hidden ${className}`}
+        style={{ ...anim.style, width: "100vw", position: "relative", left: "50%", transform: "translateX(-50%)" }}
+        className={`flex justify-center items-start gap-0 overflow-hidden ${className}`}
       >
         {visible.map((item, i) => (
           <div key={i} className={`${item.offset}`}>
@@ -79,8 +79,8 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
   return (
     <div
       ref={anim.ref}
-      style={{ ...anim.style, marginLeft: "calc(-50vw + 50%)", marginRight: "calc(-50vw + 50%)" }}
-      className={`relative w-screen overflow-hidden ${className}`}
+      style={{ ...anim.style, width: "100vw", position: "relative", left: "50%", transform: "translateX(-50%)" }}
+      className={`overflow-hidden ${className}`}
     >
       <div className="flex items-center justify-center h-52 relative">
         {images.map((img, i) => {
