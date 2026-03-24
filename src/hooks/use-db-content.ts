@@ -54,6 +54,7 @@ export function useDbServices() {
     supabase
       .from("services")
       .select("*")
+      .eq("hidden", false)
       .order("sort_order", { ascending: true })
       .then(({ data }) => { if (data?.length) setServices(data as DbService[]); });
   }, []);
