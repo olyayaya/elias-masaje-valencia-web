@@ -64,7 +64,7 @@ const Header = () => {
         <>
           {/* Backdrop overlay */}
           <div
-            className="fixed inset-x-0 top-16 bottom-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+            className="fixed inset-x-0 top-16 bottom-0 z-40 bg-black/40 backdrop-blur-md md:hidden"
             onClick={() => setOpen(false)}
           />
           <nav className="relative z-50 md:hidden bg-background border-b border-border px-5 pb-6 pt-2">
