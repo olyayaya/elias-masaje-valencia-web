@@ -220,43 +220,7 @@ const OrganicHome = () => {
         </div>
       </section>
 
-      <CurvedDivider from="bg-organic-dark" to="bg-secondary" />
-
-      {/* ═══════════ PROCESS — Simple steps ═══════════ */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28">
-        <div className="max-w-3xl mx-auto text-center">
-          {(() => {
-            const ProcessSection = () => {
-              const anim = useFadeIn(0);
-              const steps = [
-                { num: "01", text: t.services.items[0] ? "Book" : "Book" },
-                { num: "02", text: "Assess" },
-                { num: "03", text: "Treat" },
-              ];
-              return (
-                <div ref={anim.ref} style={anim.style}>
-                  <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">How it works</p>
-                  <h2 className="font-display text-3xl md:text-4xl mb-12">Simple process</h2>
-                  <div className="flex items-center justify-center gap-8 md:gap-16">
-                    {steps.map((step, i) => (
-                      <div key={i} className="flex flex-col items-center gap-3">
-                        <div className="w-16 h-16 rounded-full border border-border flex items-center justify-center">
-                          <span className="text-sm font-body text-muted-foreground">{step.num}</span>
-                        </div>
-                        <span className="text-sm font-body text-muted-foreground">{step.text}</span>
-                        {i < steps.length - 1 && (
-                          <div className="hidden md:block absolute" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            };
-            return <ProcessSection />;
-          })()}
-        </div>
-      </section>
+      <CurvedDivider from="bg-organic-dark" to="bg-background" />
 
       {/* ═══════════ TESTIMONIALS — Staggered cards ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
