@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine
+  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home
 } from "lucide-react";
 
+import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import DashboardServices from "@/components/dashboard/DashboardServices";
 import DashboardBlog from "@/components/dashboard/DashboardBlog";
 import DashboardSEO from "@/components/dashboard/DashboardSEO";
@@ -14,6 +15,7 @@ import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
 
 const sections = [
+  { id: "overview", label: "Overview", icon: Home },
   { id: "services", label: "Services", icon: LayoutDashboard },
   { id: "content", label: "Site Content", icon: PenLine },
   { id: "blog", label: "Blog", icon: FileText },
