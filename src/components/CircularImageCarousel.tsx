@@ -171,7 +171,7 @@ const BreathingCell = ({
   const nextRestScale = Math.max(1, nextBreathScale - 0.06).toFixed(3);
 
   return (
-    <div className="rounded-none md:rounded-2xl overflow-hidden w-full aspect-[3/2] relative">
+    <div className="rounded-none md:rounded-2xl overflow-hidden w-full aspect-[9/8] md:aspect-[3/2] relative">
       <img
         src={currentImg.src}
         alt={currentImg.alt}
