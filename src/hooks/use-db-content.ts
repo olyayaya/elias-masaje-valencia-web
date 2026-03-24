@@ -8,6 +8,10 @@ export interface DbService {
   price: string;
   description: string;
   sort_order: number;
+  title_en: string;
+  title_ru: string;
+  description_en: string;
+  description_ru: string;
 }
 
 export interface DbFaq {
@@ -15,6 +19,10 @@ export interface DbFaq {
   question: string;
   answer: string;
   sort_order: number;
+  question_en: string;
+  question_ru: string;
+  answer_en: string;
+  answer_ru: string;
 }
 
 export interface DbTestimonial {
@@ -23,7 +31,21 @@ export interface DbTestimonial {
   quote: string;
   source: string;
   rating: number;
+  quote_en: string;
+  quote_ru: string;
 }
+
+type SiteLang = "es" | "en" | "ru";
+
+const langField = (base: string, lang: SiteLang): string =>
+  lang === "es" ? base : `${base}_${lang}`;
+
+/** Resolve a translated field, falling back to ES (base) */
+export const resolveField = (record: Record<string, any>, base: string, lang: SiteLang): string => {
+  if (lang === "es") return record[base] ?? "";
+  const val = record[langField(base, lang)];
+  return val && val.trim() ? val : record[base] ?? "";
+};
 
 export function useDbServices() {
   const [services, setServices] = useState<DbService[] | null>(null);
@@ -33,7 +55,7 @@ export function useDbServices() {
       .from("services")
       .select("*")
       .order("sort_order", { ascending: true })
-      .then(({ data }) => { if (data?.length) setServices(data); });
+      .then(({ data }) => { if (data?.length) setServices(data as DbService[]); });
   }, []);
 
   return services;
@@ -47,7 +69,7 @@ export function useDbFaqs() {
       .from("faqs")
       .select("*")
       .order("sort_order", { ascending: true })
-      .then(({ data }) => { if (data?.length) setFaqs(data); });
+      .then(({ data }) => { if (data?.length) setFaqs(data as DbFaq[]); });
   }, []);
 
   return faqs;
@@ -61,7 +83,7 @@ export function useDbTestimonials() {
       .from("testimonials")
       .select("*")
       .order("created_at", { ascending: false })
-      .then(({ data }) => { if (data?.length) setTestimonials(data); });
+      .then(({ data }) => { if (data?.length) setTestimonials(data as DbTestimonial[]); });
   }, []);
 
   return testimonials;
