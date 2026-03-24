@@ -430,8 +430,8 @@ const OrganicHome = () => {
 
       {/* ═══════════ FAQ ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
-        <OrganicShape shape="ring" size="w-28 h-28" position="-top-8 right-12" animation="float" borderColor="hsl(var(--primary) / 0.08)" delay={1500} />
-        <OrganicShape shape="blob" size="w-36 h-36" position="bottom-10 -left-12" animation="drift" color="hsl(var(--primary) / 0.03)" delay={4000} />
+        <OrganicShape shape="ring" size="w-28 h-28" position="top-4 right-12" animation="float" borderColor="hsl(var(--primary) / 0.08)" delay={1500} />
+        <OrganicShape shape="blob" size="w-36 h-36" position="bottom-10 left-4" animation="drift" color="hsl(var(--primary) / 0.03)" delay={4000} />
         <div className="max-w-2xl mx-auto">
           {(() => {
             const Faq = () => {
