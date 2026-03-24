@@ -17,18 +17,20 @@ import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
 import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
 
-const sections = [
-  { id: "overview", label: "Overview", icon: Home },
-  { id: "services", label: "Services", icon: LayoutDashboard },
-  { id: "content", label: "Site Content", icon: PenLine },
-  { id: "promotions", label: "Promotions", icon: Tag },
-  { id: "blog", label: "Blog", icon: FileText },
-  { id: "seo", label: "SEO", icon: Search },
-  { id: "media", label: "Media", icon: Image },
-  { id: "faq", label: "FAQ", icon: HelpCircle },
-  { id: "testimonials", label: "Testimonials", icon: MessageSquare },
-  { id: "history", label: "History", icon: History },
-];
+const sectionIcons = {
+  overview: Home,
+  services: LayoutDashboard,
+  content: PenLine,
+  promotions: Tag,
+  blog: FileText,
+  seo: Search,
+  media: Image,
+  faq: HelpCircle,
+  testimonials: MessageSquare,
+  history: History,
+} as const;
+
+const sectionIds = Object.keys(sectionIcons) as (keyof typeof sectionIcons)[];
 
 const langLabels: Record<Locale, string> = { es: "ES", en: "EN", ru: "RU" };
 
@@ -36,6 +38,7 @@ const Dashboard = () => {
   const [active, setActive] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { locale, setLocale } = useI18n();
+  const dt = useDashboardT(locale);
 
   const navigateTo = (section: string) => {
     setActive(section);
