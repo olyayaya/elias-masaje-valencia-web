@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Loader2, Sparkles, Clock, Tag } from "lucide-react";
+import { Plus, Trash2, Loader2, Sparkles, Clock, Tag, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { format, addDays, isAfter, isBefore } from "date-fns";
+import { format, addDays, isAfter, isBefore, differenceInDays } from "date-fns";
 
 interface Service {
   id: string;
@@ -52,6 +52,7 @@ const DURATION_OPTIONS = [
   { value: "21", label: "3 weeks" },
   { value: "30", label: "1 month" },
   { value: "60", label: "2 months" },
+  { value: "90", label: "3 months" },
 ];
 
 const DashboardPromotions = () => {
@@ -60,6 +61,7 @@ const DashboardPromotions = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
 
@@ -99,7 +101,6 @@ const DashboardPromotions = () => {
         body: { text: serviceNames, action: "suggest_badges" },
       });
       if (error) throw error;
-      // Parse the result — strip markdown code fences if present
       let raw = data?.result;
       if (typeof raw === "string") {
         raw = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
@@ -124,27 +125,65 @@ const DashboardPromotions = () => {
     toast.info("Applied — adjust and save");
   };
 
+  const startEdit = (p: Promotion) => {
+    setEditingId(p.id);
+    setSelectedService(p.service_id);
+    setBadgeText(p.badge_text);
+    setBadgeTextEn(p.badge_text_en);
+    setBadgeTextRu(p.badge_text_ru);
+    setBadgeColor(p.badge_color);
+    const daysLeft = Math.max(1, differenceInDays(new Date(p.ends_at), new Date()));
+    // Find closest duration option
+    const closest = DURATION_OPTIONS.reduce((prev, curr) =>
+      Math.abs(parseInt(curr.value) - daysLeft) < Math.abs(parseInt(prev.value) - daysLeft) ? curr : prev
+    );
+    setDuration(closest.value);
+    setShowForm(true);
+    setSuggestions([]);
+  };
+
   const savePromotion = async () => {
     if (!selectedService || !badgeText.trim()) {
       toast.error("Pick a service and enter badge text");
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("promotions").insert({
-      service_id: selectedService,
-      badge_text: badgeText.trim(),
-      badge_text_en: badgeTextEn.trim(),
-      badge_text_ru: badgeTextRu.trim(),
-      badge_color: badgeColor,
-      starts_at: new Date().toISOString(),
-      ends_at: addDays(new Date(), parseInt(duration)).toISOString(),
-    });
-    if (error) {
-      toast.error("Failed to save promotion");
+
+    if (editingId) {
+      // Update existing
+      const { error } = await supabase.from("promotions").update({
+        service_id: selectedService,
+        badge_text: badgeText.trim(),
+        badge_text_en: badgeTextEn.trim(),
+        badge_text_ru: badgeTextRu.trim(),
+        badge_color: badgeColor,
+        ends_at: addDays(new Date(), parseInt(duration)).toISOString(),
+      }).eq("id", editingId);
+      if (error) {
+        toast.error("Failed to update promotion");
+      } else {
+        toast.success("Promotion updated!");
+        resetForm();
+        fetchAll();
+      }
     } else {
-      toast.success("Promotion created!");
-      resetForm();
-      fetchAll();
+      // Create new
+      const { error } = await supabase.from("promotions").insert({
+        service_id: selectedService,
+        badge_text: badgeText.trim(),
+        badge_text_en: badgeTextEn.trim(),
+        badge_text_ru: badgeTextRu.trim(),
+        badge_color: badgeColor,
+        starts_at: new Date().toISOString(),
+        ends_at: addDays(new Date(), parseInt(duration)).toISOString(),
+      });
+      if (error) {
+        toast.error("Failed to save promotion");
+      } else {
+        toast.success("Promotion created!");
+        resetForm();
+        fetchAll();
+      }
     }
     setSaving(false);
   };
@@ -162,6 +201,7 @@ const DashboardPromotions = () => {
 
   const resetForm = () => {
     setShowForm(false);
+    setEditingId(null);
     setSelectedService("");
     setBadgeText("");
     setBadgeTextEn("");
@@ -188,22 +228,27 @@ const DashboardPromotions = () => {
         <p className="text-sm text-muted-foreground">
           {activePromos.length} active promotion{activePromos.length !== 1 ? "s" : ""}
         </p>
-        <Button onClick={() => setShowForm(true)} className="gap-2 w-full sm:w-auto" disabled={showForm}>
+        <Button onClick={() => { resetForm(); setShowForm(true); }} className="gap-2 w-full sm:w-auto" disabled={showForm}>
           <Plus size={14} /> Add promotion
         </Button>
       </div>
 
-      {/* Create form */}
+      {/* Create / Edit form */}
       {showForm && (
-        <DashboardCard title="New Promotion" description="Add a badge to a service">
+        <DashboardCard
+          title={editingId ? "Edit Promotion" : "New Promotion"}
+          description={editingId ? "Update badge text, color, or duration" : "Add a badge to a service"}
+        >
           <div className="space-y-4">
-            {/* AI Suggestions */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outline" size="sm" onClick={suggestBadges} disabled={suggestLoading} className="gap-2">
-                {suggestLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                Suggest badge ideas with AI
-              </Button>
-            </div>
+            {/* AI Suggestions — only for new */}
+            {!editingId && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={suggestBadges} disabled={suggestLoading} className="gap-2">
+                  {suggestLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  Suggest badge ideas with AI
+                </Button>
+              </div>
+            )}
 
             {suggestions.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -328,7 +373,7 @@ const DashboardPromotions = () => {
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-2">
-                  Active for {duration} days from today
+                  {editingId ? `Extends ${duration} days from today` : `Active for ${duration} days from today`}
                 </p>
               </div>
             )}
@@ -338,7 +383,7 @@ const DashboardPromotions = () => {
               <Button variant="ghost" size="sm" onClick={resetForm}>Cancel</Button>
               <Button size="sm" onClick={savePromotion} disabled={saving} className="gap-2">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Tag size={14} />}
-                Create promotion
+                {editingId ? "Save changes" : "Create promotion"}
               </Button>
             </div>
           </div>
@@ -350,7 +395,7 @@ const DashboardPromotions = () => {
         <DashboardCard title="Active" description="Currently showing on the site">
           <div className="space-y-3">
             {activePromos.map((p) => (
-              <PromoRow key={p.id} promo={p} serviceName={getServiceName(p.service_id)} onDelete={deletePromo} onToggle={toggleActive} />
+              <PromoRow key={p.id} promo={p} serviceName={getServiceName(p.service_id)} onDelete={deletePromo} onToggle={toggleActive} onEdit={startEdit} />
             ))}
           </div>
         </DashboardCard>
@@ -361,7 +406,7 @@ const DashboardPromotions = () => {
         <DashboardCard title="Expired / Inactive" description="Past or paused promotions">
           <div className="space-y-3">
             {expiredPromos.map((p) => (
-              <PromoRow key={p.id} promo={p} serviceName={getServiceName(p.service_id)} onDelete={deletePromo} onToggle={toggleActive} expired />
+              <PromoRow key={p.id} promo={p} serviceName={getServiceName(p.service_id)} onDelete={deletePromo} onToggle={toggleActive} onEdit={startEdit} expired />
             ))}
           </div>
         </DashboardCard>
@@ -380,11 +425,12 @@ const DashboardPromotions = () => {
   );
 };
 
-const PromoRow = ({ promo, serviceName, onDelete, onToggle, expired }: {
+const PromoRow = ({ promo, serviceName, onDelete, onToggle, onEdit, expired }: {
   promo: Promotion;
   serviceName: string;
   onDelete: (id: string) => void;
   onToggle: (p: Promotion) => void;
+  onEdit: (p: Promotion) => void;
   expired?: boolean;
 }) => {
   const endsAt = new Date(promo.ends_at);
@@ -407,6 +453,9 @@ const PromoRow = ({ promo, serviceName, onDelete, onToggle, expired }: {
         </div>
       </div>
       <div className="flex gap-1 shrink-0">
+        <Button variant="ghost" size="sm" onClick={() => onEdit(promo)} className="text-xs h-8">
+          <Pencil size={14} />
+        </Button>
         <Button variant="ghost" size="sm" onClick={() => onToggle(promo)} className="text-xs h-8">
           {promo.active ? "Pause" : "Resume"}
         </Button>
