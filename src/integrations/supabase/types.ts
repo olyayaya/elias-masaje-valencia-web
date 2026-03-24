@@ -20,6 +20,7 @@ export type Database = {
           content_en: string
           content_ru: string
           created_at: string
+          hidden: boolean
           id: string
           meta_description: string
           meta_description_en: string
@@ -36,6 +37,7 @@ export type Database = {
           content_en?: string
           content_ru?: string
           created_at?: string
+          hidden?: boolean
           id?: string
           meta_description?: string
           meta_description_en?: string
@@ -52,6 +54,7 @@ export type Database = {
           content_en?: string
           content_ru?: string
           created_at?: string
+          hidden?: boolean
           id?: string
           meta_description?: string
           meta_description_en?: string
@@ -138,6 +141,7 @@ export type Database = {
           description_en: string
           description_ru: string
           duration: string
+          hidden: boolean
           id: string
           price: string
           sort_order: number
@@ -152,6 +156,7 @@ export type Database = {
           description_en?: string
           description_ru?: string
           duration: string
+          hidden?: boolean
           id?: string
           price: string
           sort_order?: number
@@ -166,6 +171,7 @@ export type Database = {
           description_en?: string
           description_ru?: string
           duration?: string
+          hidden?: boolean
           id?: string
           price?: string
           sort_order?: number
@@ -215,6 +221,7 @@ export type Database = {
       testimonials: {
         Row: {
           created_at: string
+          hidden: boolean
           id: string
           name: string
           quote: string
@@ -226,6 +233,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          hidden?: boolean
           id?: string
           name: string
           quote: string
@@ -237,6 +245,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          hidden?: boolean
           id?: string
           name?: string
           quote?: string
