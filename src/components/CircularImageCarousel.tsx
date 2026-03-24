@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useFadeIn } from "@/hooks/use-fade-in";
 
 interface CircularImageCarouselProps {
@@ -6,127 +6,168 @@ interface CircularImageCarouselProps {
   className?: string;
 }
 
-const ITEM_GAP = 14;
-const ITEM_HEIGHT = 200;
-const SPEED = 0.35;
-const SCALE_MAX = 1.416;
+// Cycle duration per cell in ms
+const CYCLE_BASE = 4500;
+// Stagger between columns
+const COL_OFFSETS = [0, 1500, 800];
 
-const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
-  const anim = useFadeIn(0.1);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const offsetRef = useRef(0);
-  const rafRef = useRef<number>(0);
-  const [, setTick] = useState(0);
-  const [loadedWidths, setLoadedWidths] = useState<number[]>([]);
+/**
+ * Shuffles array using Fisher-Yates, returns new array.
+ */
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
-  const dupeCount = 3;
-  const allImages = Array.from({ length: dupeCount }, () => images).flat();
+/**
+ * Given a pool of images and the number of visible slots,
+ * build an infinite sequence where no image repeats within any window of `slots` items.
+ */
+function buildSequence(images: { src: string; alt: string }[], slots: number, length: number) {
+  const seq: { src: string; alt: string }[] = [];
+  let pool = shuffle(images);
+  let poolIdx = 0;
 
-  // Compute per-image widths from natural aspect ratios once loaded
-  const itemWidths = images.map((_, i) => loadedWidths[i] || ITEM_HEIGHT * 1.5);
-  const totalWidth = itemWidths.reduce((sum, w) => sum + w + ITEM_GAP, 0);
-
-  // Build cumulative offsets for the full duped strip
-  const allItemWidths = allImages.map((_, i) => itemWidths[i % images.length]);
-
-  const handleImageLoad = useCallback(
-    (index: number, e: React.SyntheticEvent<HTMLImageElement>) => {
-      const img = e.currentTarget;
-      const aspect = img.naturalWidth / img.naturalHeight;
-      const w = Math.round(ITEM_HEIGHT * aspect);
-      setLoadedWidths((prev) => {
-        const next = [...prev];
-        next[index] = w;
-        return next;
-      });
-    },
-    []
-  );
-
-  const animate = useCallback(() => {
-    offsetRef.current -= SPEED;
-    if (Math.abs(offsetRef.current) >= totalWidth) {
-      offsetRef.current += totalWidth;
+  for (let i = 0; i < length; i++) {
+    // refill pool when exhausted
+    if (poolIdx >= pool.length) {
+      pool = shuffle(images);
+      poolIdx = 0;
     }
-    setTick((t) => t + 1);
-    rafRef.current = requestAnimationFrame(animate);
-  }, [totalWidth]);
+    // pick next that doesn't collide with recent `slots` items
+    let candidate = pool[poolIdx];
+    const recent = seq.slice(Math.max(0, i - slots), i);
+    const recentSrcs = new Set(recent.map((r) => r.src));
+
+    if (recentSrcs.has(candidate.src)) {
+      // find one that's not in recent
+      const alt = pool.slice(poolIdx).find((p) => !recentSrcs.has(p.src));
+      if (alt) candidate = alt;
+    }
+
+    seq.push(candidate);
+    poolIdx++;
+  }
+  return seq;
+}
+
+const BreathingCell = ({
+  images,
+  cycleDuration,
+  delay,
+}: {
+  images: { src: string; alt: string }[];
+  cycleDuration: number;
+  delay: number;
+}) => {
+  const [index, setIndex] = useState(0);
+  const [phase, setPhase] = useState<"in" | "hold" | "out">("in");
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const startedRef = useRef(false);
+
+  const fadeIn = cycleDuration * 0.3;
+  const hold = cycleDuration * 0.4;
+  const fadeOut = cycleDuration * 0.3;
 
   useEffect(() => {
-    rafRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [animate]);
+    // Initial delay for stagger
+    const delayTimer = setTimeout(() => {
+      startedRef.current = true;
+      setPhase("in");
+    }, delay);
+    return () => clearTimeout(delayTimer);
+  }, [delay]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!startedRef.current) return;
+
+    if (phase === "in") {
+      timerRef.current = setTimeout(() => setPhase("hold"), fadeIn);
+    } else if (phase === "hold") {
+      timerRef.current = setTimeout(() => setPhase("out"), hold);
+    } else if (phase === "out") {
+      timerRef.current = setTimeout(() => {
+        setIndex((prev) => (prev + 1) % images.length);
+        setPhase("in");
+      }, fadeOut);
+    }
+
+    return () => clearTimeout(timerRef.current);
+  }, [phase, fadeIn, hold, fadeOut, images.length]);
+
+  const opacity = !startedRef.current
+    ? 0
+    : phase === "in"
+    ? 1
+    : phase === "hold"
+    ? 1
+    : 0;
+
+  const scale = !startedRef.current
+    ? 0.97
+    : phase === "in"
+    ? 1.02
+    : phase === "hold"
+    ? 1.02
+    : 0.97;
+
+  const transitionDuration =
+    phase === "in" ? fadeIn : phase === "out" ? fadeOut : hold;
+
+  const img = images[index];
 
   return (
     <div
-      ref={(node) => {
-        (containerRef as any).current = node;
-        if (typeof anim.ref === "function") (anim.ref as any)(node);
-        else if (anim.ref) (anim.ref as any).current = node;
+      className="rounded-2xl overflow-hidden w-full aspect-[3/2]"
+      style={{
+        opacity,
+        transform: `scale(${scale})`,
+        transition: `opacity ${transitionDuration}ms ease-in-out, transform ${transitionDuration}ms ease-in-out`,
       }}
-      style={{ ...anim.style, width: "100vw", position: "relative", left: "50%", transform: "translateX(-50%)" }}
-      className={`overflow-hidden ${className}`}
     >
-      <div
-        ref={trackRef}
-        className="flex items-center"
-        style={{
-          height: ITEM_HEIGHT * SCALE_MAX + 32,
-          transform: `translateX(${offsetRef.current}px)`,
-          willChange: "transform",
-        }}
-      >
-        {allImages.map((img, i) => {
-          const w = allItemWidths[i];
+      <img
+        src={img.src}
+        alt={img.alt}
+        className="w-full h-full object-cover"
+        loading="lazy"
+        draggable={false}
+      />
+    </div>
+  );
+};
 
-          // Compute center of this item in viewport coords
-          let itemX = offsetRef.current;
-          for (let j = 0; j < i; j++) itemX += allItemWidths[j] + ITEM_GAP;
-          const itemCenterX = itemX + w / 2;
+const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
+  const anim = useFadeIn(0.1);
 
-          const containerRect = containerRef.current?.getBoundingClientRect();
-          const viewportCenter = containerRect
-            ? containerRect.left + containerRect.width / 2
-            : typeof window !== "undefined" ? window.innerWidth / 2 : 500;
+  // Desktop 3 cols, tablet 2, mobile 1
+  const maxCols = 3;
 
-          const dist = Math.abs(itemCenterX - viewportCenter);
-          const maxDist = 500;
-          const proximity = Math.max(0, 1 - dist / maxDist);
-          const scale = 1 + (SCALE_MAX - 1) * proximity * proximity;
-          const opacity = 0.4 + 0.6 * proximity;
+  // Build sequences for each cell — enough to last a long time
+  const sequences = useMemo(() => {
+    return Array.from({ length: maxCols }, () =>
+      buildSequence(images, maxCols, images.length * 10)
+    );
+  }, [images]);
 
-          const overlayOpacity = 1 - proximity; // 0 at center, 1 at edges
-
-          return (
-            <div
-              key={i}
-              className="shrink-0 rounded-2xl overflow-hidden relative"
-              style={{
-                width: w,
-                height: ITEM_HEIGHT,
-                marginRight: ITEM_GAP,
-                transform: `scale(${scale})`,
-                opacity,
-                transition: "transform 0.15s ease-out, opacity 0.15s ease-out",
-              }}
-            >
-              <img
-                src={img.src}
-                alt={img.alt}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                draggable={false}
-                onLoad={i < images.length ? (e) => handleImageLoad(i, e) : undefined}
-              />
-              <div
-                className="absolute inset-0 bg-background/60 pointer-events-none transition-opacity duration-150"
-                style={{ opacity: overlayOpacity * 0.7 }}
-              />
-            </div>
-          );
-        })}
+  return (
+    <div ref={anim.ref} style={anim.style} className={className}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
+        {sequences.map((seq, col) => (
+          <div
+            key={col}
+            className={col === 2 ? "hidden lg:block" : col === 1 ? "hidden md:block" : ""}
+          >
+            <BreathingCell
+              images={seq}
+              cycleDuration={CYCLE_BASE + col * 400}
+              delay={COL_OFFSETS[col]}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
