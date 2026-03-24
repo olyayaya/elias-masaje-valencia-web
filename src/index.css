@@ -247,8 +247,8 @@
     --muted: 142 12% 90%;
     --muted-foreground: 150 6% 40%;
 
-    --accent: 150 25% 42%;
-    --accent-foreground: 140 20% 97%;
+    --accent: 25 35% 50%;
+    --accent-foreground: 37 30% 97%;
 
     --destructive: 0 60% 50%;
     --destructive-foreground: 140 20% 97%;
@@ -263,12 +263,12 @@
     --organic-dark-foreground: 140 18% 88%;
     --organic-dark-muted: 145 8% 46%;
 
-    --terracotta: 150 25% 42%;
-    --terracotta-light: 140 15% 91%;
-    --terracotta-dark: 150 25% 32%;
+    --terracotta: 25 35% 50%;
+    --terracotta-light: 30 20% 88%;
+    --terracotta-dark: 25 35% 38%;
     --warm-cream: 140 20% 96%;
     --warm-stone: 145 8% 68%;
-    --warm-brown: 150 10% 15%;
+    --warm-brown: 25 30% 25%;
 
     --font-display: 'Lora', serif;
     --font-body: 'Manrope', sans-serif;
@@ -280,8 +280,8 @@
     --sidebar-foreground: 150 10% 10%;
     --sidebar-primary: 150 25% 42%;
     --sidebar-primary-foreground: 140 20% 97%;
-    --sidebar-accent: 145 15% 88%;
-    --sidebar-accent-foreground: 150 10% 15%;
+    --sidebar-accent: 30 20% 88%;
+    --sidebar-accent-foreground: 25 30% 20%;
     --sidebar-border: 145 12% 80%;
     --sidebar-ring: 150 25% 42%;
   }
