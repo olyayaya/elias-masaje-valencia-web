@@ -130,6 +130,16 @@ export default {
           "50%": { transform: "translate(-3px, -8px) scale(1.08)" },
           "75%": { transform: "translate(-6px, 2px) scale(1.02)" },
         },
+        "heading-breathe": {
+          "0%, 100%": {
+            opacity: "1",
+            "letter-spacing": "0em",
+          },
+          "50%": {
+            opacity: "0.85",
+            "letter-spacing": "0.02em",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -140,6 +150,7 @@ export default {
         "organic-breathe": "organic-breathe 6s ease-in-out infinite",
         "organic-float": "organic-float 8s ease-in-out infinite",
         "organic-drift": "organic-drift 10s ease-in-out infinite",
+        "heading-breathe": "heading-breathe 7s ease-in-out infinite",
       },
     },
   },

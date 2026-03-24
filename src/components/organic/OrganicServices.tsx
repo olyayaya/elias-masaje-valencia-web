@@ -124,7 +124,7 @@ const OrganicServices = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-3xl md:text-4xl mb-4" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.finalCta.title}</h2>
+                  <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl mb-4" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.finalCta.title}</h2>
                   <p className="text-sm font-body mb-8" style={{ color: "hsl(var(--organic-dark-muted))" }}>{t.finalCta.description}</p>
                   <a
                     href={WHATSAPP_URL}

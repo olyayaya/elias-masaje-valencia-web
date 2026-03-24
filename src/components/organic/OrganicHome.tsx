@@ -88,7 +88,7 @@ const OrganicHome = () => {
         <OrganicShape shape="circle" size="w-16 h-16" position="bottom-20 left-8" animation="breathe" color="hsl(var(--primary) / 0.06)" delay={3000} />
         <div className="max-w-5xl mx-auto">
           <div ref={benefitsTitle.ref} style={benefitsTitle.style} className="text-center mb-16">
-            <h2 className="font-display text-3xl md:text-4xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.benefits.title}</h2>
+            <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.benefits.title}</h2>
             <div className="w-12 h-px mx-auto" style={{ backgroundColor: "hsl(var(--primary))" }} />
           </div>
 
@@ -124,7 +124,7 @@ const OrganicHome = () => {
         <OrganicShape shape="arc" size="w-24 h-12" position="bottom-32 left-4" animation="drift" borderColor="hsl(var(--primary) / 0.1)" delay={2000} />
         <div className="max-w-6xl mx-auto">
           <div ref={servicesTitle.ref} style={servicesTitle.style} className="mb-16">
-            <h2 className="font-display text-3xl md:text-4xl mb-2">{t.services.title}</h2>
+            <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl mb-2">{t.services.title}</h2>
             <p className="text-sm text-muted-foreground font-body max-w-md">{t.services.pageSubtitle}</p>
           </div>
 
@@ -191,7 +191,7 @@ const OrganicHome = () => {
               <p className="text-xs font-body tracking-[0.3em] uppercase mb-4" style={{ color: "hsl(var(--organic-dark-muted))" }}>
                 {t.about.title}
               </p>
-              <h2 className="font-display text-3xl md:text-4xl mb-6 leading-snug" style={{ color: "hsl(var(--organic-dark-foreground))" }}>
+              <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl mb-6 leading-snug" style={{ color: "hsl(var(--organic-dark-foreground))" }}>
                 {t.about.title}
               </h2>
               <p className="text-base font-body leading-[1.8] mb-4" style={{ color: "hsl(var(--organic-dark-muted))" }}>
@@ -232,7 +232,7 @@ const OrganicHome = () => {
       <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
         <div className="max-w-5xl mx-auto">
           <div ref={testimonialsTitle.ref} style={testimonialsTitle.style} className="text-center mb-4">
-            <h2 className="font-display text-3xl md:text-4xl mb-2">{t.testimonials.title}</h2>
+            <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl mb-2">{t.testimonials.title}</h2>
             <p className="text-sm text-muted-foreground font-body mb-1">5.0 ★ — 66+ Google & TripAdvisor reviews</p>
             <div className="w-12 h-px bg-primary mx-auto mt-3" />
           </div>
@@ -375,7 +375,7 @@ const OrganicHome = () => {
                 const anim = useFadeIn(0);
                 return (
                   <div ref={anim.ref} style={anim.style}>
-                    <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.location.title}</h2>
+                    <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl text-center mb-12">{t.location.title}</h2>
                     <div className="rounded-2xl overflow-hidden border border-border">
                       <MapBlock />
                     </div>
@@ -405,7 +405,7 @@ const OrganicHome = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.faq.title}</h2>
+                  <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl text-center mb-12">{t.faq.title}</h2>
                   <FaqAccordion items={t.faq.items} />
                 </div>
               );
@@ -424,7 +424,7 @@ const OrganicHome = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-2xl md:text-3xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.giftCard.title}</h2>
+                  <h2 className="animate-heading-breathe font-display text-2xl md:text-3xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.giftCard.title}</h2>
                   <p className="text-sm font-body mb-6" style={{ color: "hsl(var(--organic-dark-muted))" }}>{t.giftCard.description}</p>
                   <a
                     href={WHATSAPP_URL}
@@ -450,7 +450,7 @@ const OrganicHome = () => {
         <OrganicShape shape="ring" size="w-40 h-40" position="-bottom-16 -right-16" animation="breathe" borderColor="hsl(var(--foreground) / 0.06)" delay={2000} />
         <OrganicShape shape="arc" size="w-20 h-10" position="top-16 left-8" animation="float" borderColor="hsl(var(--primary) / 0.1)" delay={500} />
         <div className="max-w-2xl mx-auto text-center" ref={ctaBlock.ref} style={ctaBlock.style}>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl mb-5 leading-snug">{t.finalCta.title}</h2>
+          <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl lg:text-5xl mb-5 leading-snug">{t.finalCta.title}</h2>
           <p className="text-base text-muted-foreground font-body leading-relaxed mb-10">{t.finalCta.description}</p>
           <a
             href={WHATSAPP_URL}

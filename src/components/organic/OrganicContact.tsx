@@ -107,7 +107,7 @@ const OrganicContact = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-3xl md:text-4xl mb-4">{t.finalCta.title}</h2>
+                  <h2 className="animate-heading-breathe font-display text-3xl md:text-4xl mb-4">{t.finalCta.title}</h2>
                   <p className="text-sm text-muted-foreground font-body mb-8">{t.finalCta.description}</p>
                   <a
                     href={WHATSAPP_URL}
