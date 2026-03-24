@@ -54,6 +54,7 @@ export function useDbServices() {
     supabase
       .from("services")
       .select("*")
+      .eq("hidden", false)
       .order("sort_order", { ascending: true })
       .then(({ data }) => { if (data?.length) setServices(data as DbService[]); });
   }, []);
@@ -82,6 +83,7 @@ export function useDbTestimonials() {
     supabase
       .from("testimonials")
       .select("*")
+      .eq("hidden", false)
       .order("created_at", { ascending: false })
       .then(({ data }) => { if (data?.length) setTestimonials(data as DbTestimonial[]); });
   }, []);

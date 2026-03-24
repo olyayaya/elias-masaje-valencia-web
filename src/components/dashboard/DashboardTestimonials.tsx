@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Save, Star, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, Star, Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
@@ -12,6 +12,7 @@ interface Testimonial {
   rating: number;
   quote_en: string;
   quote_ru: string;
+  hidden: boolean;
 }
 
 const DashboardTestimonials = () => {
@@ -86,11 +87,12 @@ const DashboardTestimonials = () => {
           {editing === t.id && !isNew ? (
             <TestimonialForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} saving={saving} lang={lang} />
           ) : (
-            <div className="flex items-start justify-between gap-4">
+            <div className={`flex items-start justify-between gap-4 ${t.hidden ? "opacity-50" : ""}`}>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="text-sm font-medium text-gray-900">{t.name}</h4>
                   <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{t.source}</span>
+                  {t.hidden && <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-400 rounded-full">Hidden</span>}
                 </div>
                 <div className="flex gap-0.5 mb-1.5">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -100,6 +102,9 @@ const DashboardTestimonials = () => {
                 <p className="text-xs text-gray-400 italic">"{langVal(t, "quote", lang) || t.quote}"</p>
               </div>
               <div className="flex gap-1">
+                <button onClick={async () => { await supabase.from("testimonials").update({ hidden: !t.hidden }).eq("id", t.id); fetchTestimonials(); }} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50" title={t.hidden ? "Show on site" : "Hide from site"}>
+                  {t.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
                 <button onClick={() => startEdit(t)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50"><Pencil size={14} /></button>
                 <button onClick={() => remove(t.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50"><Trash2 size={14} /></button>
               </div>

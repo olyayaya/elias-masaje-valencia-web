@@ -4,7 +4,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import ImageExt from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Plus, Bold, Italic, Heading2, List, LinkIcon, Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb } from "lucide-react";
+import { Plus, Bold, Italic, Heading2, List, LinkIcon, Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
@@ -24,6 +24,7 @@ interface BlogPost {
   content_ru: string;
   meta_description_en: string;
   meta_description_ru: string;
+  hidden: boolean;
 }
 
 const suggestedKeywords = [
@@ -220,7 +221,7 @@ const DashboardBlog = () => {
       id: "", title: "", content: "", seo_keywords: [], meta_description: "",
       status: "draft", created_at: new Date().toISOString(),
       title_en: "", title_ru: "", content_en: "", content_ru: "",
-      meta_description_en: "", meta_description_ru: "",
+      meta_description_en: "", meta_description_ru: "", hidden: false,
     };
     setDraft(newPost); setEditing("new");
   };
@@ -236,7 +237,7 @@ const DashboardBlog = () => {
       id: "", title: "", content: "", seo_keywords: result.keywords || [], meta_description: "",
       status: "draft", created_at: new Date().toISOString(),
       title_en: "", title_ru: "", content_en: "", content_ru: "",
-      meta_description_en: "", meta_description_ru: "",
+      meta_description_en: "", meta_description_ru: "", hidden: false,
       [titleKey]: result.title,
       [contentKey]: result.content,
       [metaKey]: result.meta_description,
@@ -313,11 +314,12 @@ const DashboardBlog = () => {
 
       {posts.map((p) => (
         <DashboardCard key={p.id}>
-          <div className="flex items-start justify-between gap-4">
+          <div className={`flex items-start justify-between gap-4 ${p.hidden ? "opacity-50" : ""}`}>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-medium text-foreground">{langVal(p, "title", lang) || p.title}</h4>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.status === "published" ? "bg-green-50 text-green-600" : "bg-muted text-muted-foreground"}`}>{p.status}</span>
+                {p.hidden && <span className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded-full">Hidden</span>}
               </div>
               <p className="text-xs text-muted-foreground mt-1">{langVal(p, "meta_description", lang) || p.meta_description}</p>
               <div className="flex gap-1.5 mt-2 flex-wrap">
@@ -327,6 +329,9 @@ const DashboardBlog = () => {
               </div>
             </div>
             <div className="flex gap-1">
+              <button onClick={async () => { await supabase.from("blog_posts").update({ hidden: !p.hidden }).eq("id", p.id); fetchPosts(); }} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted" title={p.hidden ? "Show on site" : "Hide from site"}>
+                {p.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
               <button onClick={() => startEdit(p)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted"><Pencil size={14} /></button>
               <button onClick={() => remove(p.id)} className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-muted"><Trash2 size={14} /></button>
             </div>
