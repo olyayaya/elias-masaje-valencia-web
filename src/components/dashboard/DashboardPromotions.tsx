@@ -188,7 +188,7 @@ const DashboardPromotions = () => {
         <p className="text-sm text-muted-foreground">
           {activePromos.length} active promotion{activePromos.length !== 1 ? "s" : ""}
         </p>
-        <Button onClick={() => setShowForm(true)} className="gap-2" disabled={showForm}>
+        <Button onClick={() => setShowForm(true)} className="gap-2 w-full sm:w-auto" disabled={showForm}>
           <Plus size={14} /> Add promotion
         </Button>
       </div>
