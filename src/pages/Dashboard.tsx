@@ -30,9 +30,12 @@ const sections = [
   { id: "history", label: "History", icon: History },
 ];
 
+const langLabels: Record<Locale, string> = { es: "ES", en: "EN", ru: "RU" };
+
 const Dashboard = () => {
   const [active, setActive] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { locale, setLocale } = useI18n();
 
   const navigateTo = (section: string) => {
     setActive(section);
