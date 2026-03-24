@@ -10,6 +10,7 @@ import massageDeep from "@/assets/massage-deep.jpg";
 import massageOil from "@/assets/massage-oil.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
+import { useTheme } from "@/contexts/ThemeContext";
 
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
