@@ -218,10 +218,27 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
   const anim = useFadeIn(0.1);
   const maxCols = 3;
   const [mutedCol, setMutedCol] = useState(2);
+  const [visibleCols, setVisibleCols] = useState(1);
 
   useEffect(() => {
     images.forEach((img) => preloadAndCacheAspect(img.src));
   }, [images]);
+
+  // Track visible column count via matchMedia
+  useEffect(() => {
+    const lgMq = window.matchMedia("(min-width: 1024px)");
+    const mdMq = window.matchMedia("(min-width: 768px)");
+    const update = () => {
+      setVisibleCols(lgMq.matches ? 3 : mdMq.matches ? 2 : 1);
+    };
+    update();
+    lgMq.addEventListener("change", update);
+    mdMq.addEventListener("change", update);
+    return () => {
+      lgMq.removeEventListener("change", update);
+      mdMq.removeEventListener("change", update);
+    };
+  }, []);
 
   // Track which image srcs each column is currently showing (includes both during crossfade)
   const activeImagesRef = useRef<Map<number, string[]>>(new Map());
@@ -260,7 +277,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
             <BreathingCell
               images={seq}
               delay={COL_OFFSETS[col]}
-              focused={col !== mutedCol}
+              focused={visibleCols === 1 ? true : col !== mutedCol}
               colIndex={col}
               onImageChange={handleImageChange}
               getActiveImages={getActiveImages}
