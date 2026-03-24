@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { MapPin, Clock, MessageCircle, Instagram } from "lucide-react";
-import MapBlock from "@/components/MapBlock";
+import MapBlock, { MapPickerOverlay } from "@/components/MapBlock";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
@@ -28,6 +29,7 @@ const ContactItem = ({ icon: Icon, title, children, index }: {
 const OrganicContact = () => {
   const { t } = useI18n();
   const { content: sc } = useSiteContent();
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const heading = useFadeIn(0);
   const mapAnim = useFadeIn(0.15);
 
@@ -56,7 +58,12 @@ const OrganicContact = () => {
             {/* Details */}
             <div className="md:col-span-5 space-y-8">
               <ContactItem icon={MapPin} title={t.contact.address} index={0}>
-                <p className="text-sm text-muted-foreground font-body">{sc.contact_address || t.contact.addressValue}</p>
+                <button
+                  onClick={() => setShowMapPicker(true)}
+                  className="text-sm text-muted-foreground font-body text-left hover:text-primary transition-colors border-b border-transparent hover:border-primary/30 cursor-pointer"
+                >
+                  {sc.contact_address || t.contact.addressValue}
+                </button>
               </ContactItem>
 
               <ContactItem icon={Clock} title={t.contact.hours} index={1}>
@@ -122,9 +129,10 @@ const OrganicContact = () => {
                   >
                     {sc.final_cta_button || t.finalCta.cta}
                   </a>
-                </div>
-              );
-            };
+      {showMapPicker && <MapPickerOverlay onClose={() => setShowMapPicker(false)} />}
+    </div>
+  );
+};
             return <Cta />;
           })()}
         </div>
