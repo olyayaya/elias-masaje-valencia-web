@@ -203,11 +203,11 @@ const BreathingCell = ({
         }}
       />
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none rounded-2xl"
         style={{
           backgroundColor: "hsl(var(--secondary))",
-          opacity: focused ? 0 : 0.45,
-          transition: "opacity 2000ms ease-in-out",
+          opacity: focused ? 0 : 1,
+          transition: "opacity 3000ms ease-in-out",
         }}
       />
     </div>
