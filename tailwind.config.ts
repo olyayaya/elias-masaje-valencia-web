@@ -94,11 +94,16 @@ export default {
           "0%, 100%": { opacity: "0.85" },
           "50%": { opacity: "0.55" },
         },
+        "hero-zoom": {
+          "0%": { transform: "scale(1.08)" },
+          "100%": { transform: "scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "hero-breathe": "hero-breathe 6s ease-in-out infinite",
+        "hero-zoom": "hero-zoom 1.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards",
       },
     },
   },

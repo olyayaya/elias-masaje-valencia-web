@@ -44,7 +44,7 @@ const OrganicHome = () => {
           <img
             src={heroImageOrganic}
             alt="Masaje profesional"
-            className="w-full h-full object-cover object-bottom"
+            className="w-full h-full object-cover object-bottom animate-hero-zoom"
             width={1920}
             height={1080}
           />
