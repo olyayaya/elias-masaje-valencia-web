@@ -65,25 +65,22 @@ const BreathingCell = ({
   delay: number;
 }) => {
   const [index, setIndex] = useState(0);
-  const [phase, setPhase] = useState<"in" | "hold" | "out">("in");
+  const [phase, setPhase] = useState<"waiting" | "in" | "hold" | "out">("waiting");
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
-  const startedRef = useRef(false);
 
   const fadeIn = cycleDuration * 0.3;
   const hold = cycleDuration * 0.4;
   const fadeOut = cycleDuration * 0.3;
 
   useEffect(() => {
-    // Initial delay for stagger
     const delayTimer = setTimeout(() => {
-      startedRef.current = true;
       setPhase("in");
     }, delay);
     return () => clearTimeout(delayTimer);
   }, [delay]);
 
   useEffect(() => {
-    if (!startedRef.current) return;
+    if (phase === "waiting") return;
 
     if (phase === "in") {
       timerRef.current = setTimeout(() => setPhase("hold"), fadeIn);
@@ -99,21 +96,9 @@ const BreathingCell = ({
     return () => clearTimeout(timerRef.current);
   }, [phase, fadeIn, hold, fadeOut, images.length]);
 
-  const opacity = !startedRef.current
-    ? 0
-    : phase === "in"
-    ? 1
-    : phase === "hold"
-    ? 1
-    : 0;
+  const opacity = phase === "waiting" || phase === "out" ? 0 : 1;
 
-  const scale = !startedRef.current
-    ? 0.97
-    : phase === "in"
-    ? 1.02
-    : phase === "hold"
-    ? 1.02
-    : 0.97;
+  const scale = phase === "waiting" || phase === "out" ? 0.97 : 1.02;
 
   const transitionDuration =
     phase === "in" ? fadeIn : phase === "out" ? fadeOut : hold;
