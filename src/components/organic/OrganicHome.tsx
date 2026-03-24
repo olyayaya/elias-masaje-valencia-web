@@ -19,6 +19,7 @@ import locationBg from "@/assets/location-bg.jpg";
 import locationStones from "@/assets/location-stones.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
+import { useSiteContent } from "@/hooks/use-site-content";
 import CircularImage from "@/components/CircularImage";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
@@ -44,6 +45,7 @@ const OrganicHome = () => {
   const dbServices = useDbServices();
   const dbFaqs = useDbFaqs();
   const dbTestimonials = useDbTestimonials();
+  const { content: sc } = useSiteContent();
 
   
 
@@ -91,10 +93,10 @@ const OrganicHome = () => {
               Valencia · Massage · Wellness
             </p>
             <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] leading-[1.15] mb-6 whitespace-pre-line">
-              {t.hero.headline}
+              {sc.hero_headline || t.hero.headline}
             </h1>
             <p className="text-base md:text-lg text-foreground/60 font-body leading-relaxed mb-10 max-w-md">
-              {t.hero.subheadline}
+              {sc.hero_subheadline || t.hero.subheadline}
             </p>
             <a
               href={WHATSAPP_URL}
@@ -102,7 +104,7 @@ const OrganicHome = () => {
               rel="noopener noreferrer"
               className="inline-block text-sm font-body bg-foreground text-background px-8 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
             >
-              {t.hero.cta}
+              {sc.hero_cta || t.hero.cta}
             </a>
           </div>
         </div>
@@ -226,10 +228,10 @@ const OrganicHome = () => {
                 {t.about.title}
               </h2>
               <p className="text-base font-body leading-[1.8] mb-4" style={{ color: "hsl(var(--organic-dark-muted))" }}>
-                {t.about.previewP1}
+                {sc.about_preview_p1 || t.about.previewP1}
               </p>
               <p className="text-base font-body leading-[1.8] mb-8" style={{ color: "hsl(var(--organic-dark-muted))" }}>
-                {t.about.previewP2}
+                {sc.about_preview_p2 || t.about.previewP2}
               </p>
               <Link
                 to="/sobre-mi"
@@ -406,7 +408,7 @@ const OrganicHome = () => {
                 const anim = useFadeIn(0);
                 return (
                   <div ref={anim.ref} style={anim.style}>
-                    <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.location.title}</h2>
+                    <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{sc.location_title || t.location.title}</h2>
                     <div className="rounded-2xl overflow-hidden border border-border">
                       <MapBlock />
                     </div>
@@ -455,8 +457,8 @@ const OrganicHome = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-2xl md:text-3xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{t.giftCard.title}</h2>
-                  <p className="text-sm font-body mb-6" style={{ color: "hsl(var(--organic-dark-muted))" }}>{t.giftCard.description}</p>
+                   <h2 className="font-display text-2xl md:text-3xl mb-3" style={{ color: "hsl(var(--organic-dark-foreground))" }}>{sc.gift_card_title || t.giftCard.title}</h2>
+                   <p className="text-sm font-body mb-6" style={{ color: "hsl(var(--organic-dark-muted))" }}>{sc.gift_card_description || t.giftCard.description}</p>
                   <a
                     href={WHATSAPP_URL}
                     target="_blank"
@@ -464,7 +466,7 @@ const OrganicHome = () => {
                     className="inline-block text-sm font-body px-6 py-2.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
                     style={{ backgroundColor: "hsl(var(--organic-dark-foreground))", color: "hsl(var(--organic-dark))" }}
                   >
-                    {t.giftCard.cta}
+                    {sc.gift_card_cta || t.giftCard.cta}
                   </a>
                 </div>
               );
@@ -481,15 +483,15 @@ const OrganicHome = () => {
         <OrganicShape shape="ring" size="w-40 h-40" position="-bottom-16 -right-16" animation="breathe" borderColor="hsl(var(--foreground) / 0.06)" delay={2000} />
         <OrganicShape shape="arc" size="w-20 h-10" position="top-16 left-8" animation="float" borderColor="hsl(var(--primary) / 0.1)" delay={500} />
         <div className="max-w-2xl mx-auto text-center" ref={ctaBlock.ref} style={ctaBlock.style}>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl mb-5 leading-snug">{t.finalCta.title}</h2>
-          <p className="text-base text-muted-foreground font-body leading-relaxed mb-10">{t.finalCta.description}</p>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl mb-5 leading-snug">{sc.final_cta_title || t.finalCta.title}</h2>
+          <p className="text-base text-muted-foreground font-body leading-relaxed mb-10">{sc.final_cta_description || t.finalCta.description}</p>
           <a
             href={WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block text-sm font-body bg-foreground text-background px-10 py-4 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
           >
-            {t.finalCta.cta}
+            {sc.final_cta_button || t.finalCta.cta}
           </a>
         </div>
       </section>

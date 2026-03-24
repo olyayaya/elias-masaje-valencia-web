@@ -2,6 +2,7 @@ import { MapPin, Clock, MessageCircle, Instagram } from "lucide-react";
 import MapBlock from "@/components/MapBlock";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
+import { useSiteContent } from "@/hooks/use-site-content";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 
@@ -26,8 +27,12 @@ const ContactItem = ({ icon: Icon, title, children, index }: {
 
 const OrganicContact = () => {
   const { t } = useI18n();
+  const { content: sc } = useSiteContent();
   const heading = useFadeIn(0);
   const mapAnim = useFadeIn(0.15);
+
+  const whatsappNum = sc.contact_whatsapp || "34698968007";
+  const whatsappUrl = `https://wa.me/${whatsappNum}?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita`;
 
   return (
     <div>
@@ -51,20 +56,20 @@ const OrganicContact = () => {
             {/* Details */}
             <div className="md:col-span-5 space-y-8">
               <ContactItem icon={MapPin} title={t.contact.address} index={0}>
-                <p className="text-sm text-muted-foreground font-body">{t.contact.addressValue}</p>
+                <p className="text-sm text-muted-foreground font-body">{sc.contact_address || t.contact.addressValue}</p>
               </ContactItem>
 
               <ContactItem icon={Clock} title={t.contact.hours} index={1}>
                 <div className="text-sm text-muted-foreground font-body space-y-1">
-                  <p>{t.contact.weekdays}</p>
-                  <p>{t.contact.saturday}</p>
-                  <p>{t.contact.sunday}</p>
+                  <p>{sc.contact_weekdays || t.contact.weekdays}</p>
+                  <p>{sc.contact_saturday || t.contact.saturday}</p>
+                  <p>{sc.contact_sunday || t.contact.sunday}</p>
                 </div>
               </ContactItem>
 
               <ContactItem icon={MessageCircle} title={t.contact.whatsapp} index={2}>
                 <a
-                  href={WHATSAPP_URL}
+                  href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block mt-2 text-sm font-body bg-foreground text-background px-6 py-2.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
@@ -75,12 +80,12 @@ const OrganicContact = () => {
 
               <ContactItem icon={Instagram} title={t.contact.instagram} index={3}>
                 <a
-                  href="https://instagram.com/elias_masaje"
+                  href={`https://instagram.com/${(sc.contact_instagram || "@elias_masaje").replace("@", "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-primary font-body hover:opacity-80 transition-opacity border-b border-primary/30 pb-0.5"
                 >
-                  @elias_masaje
+                  {sc.contact_instagram || "@elias_masaje"}
                 </a>
               </ContactItem>
             </div>
@@ -107,15 +112,15 @@ const OrganicContact = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style}>
-                  <h2 className="font-display text-3xl md:text-4xl mb-4">{t.finalCta.title}</h2>
-                  <p className="text-sm text-muted-foreground font-body mb-8">{t.finalCta.description}</p>
+                  <h2 className="font-display text-3xl md:text-4xl mb-4">{sc.final_cta_title || t.finalCta.title}</h2>
+                  <p className="text-sm text-muted-foreground font-body mb-8">{sc.final_cta_description || t.finalCta.description}</p>
                   <a
-                    href={WHATSAPP_URL}
+                    href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-block text-sm font-body bg-foreground text-background px-10 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
                   >
-                    {t.finalCta.cta}
+                    {sc.final_cta_button || t.finalCta.cta}
                   </a>
                 </div>
               );
