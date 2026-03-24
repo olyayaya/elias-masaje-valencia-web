@@ -129,7 +129,7 @@ const Dashboard = () => {
           >
             <Menu size={20} />
           </button>
-          <h2 className="text-lg font-semibold text-gray-900 capitalize flex-1">{active}</h2>
+          <h2 className="text-lg font-semibold text-gray-900 flex-1">{dt.sections[active as keyof typeof dt.sections] ?? active}</h2>
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
             {(Object.keys(langLabels) as Locale[]).map((l) => (
               <button
