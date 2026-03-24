@@ -391,7 +391,7 @@ const PromoRow = ({ promo, serviceName, onDelete, onToggle, expired }: {
   const daysLeft = Math.max(0, Math.ceil((endsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 
   return (
-    <div className={`flex items-center justify-between gap-3 py-2 ${expired ? "opacity-50" : ""}`}>
+    <div className={`flex flex-wrap items-center justify-between gap-2 py-2 ${expired ? "opacity-50" : ""}`}>
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <span className={`text-xs font-medium px-2.5 py-1 rounded-full border whitespace-nowrap ${colorClasses(promo.badge_color)}`}>
           {promo.badge_text}
