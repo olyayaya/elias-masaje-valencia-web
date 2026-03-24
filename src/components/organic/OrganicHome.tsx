@@ -19,6 +19,7 @@ import locationBg from "@/assets/location-bg.jpg";
 import locationStones from "@/assets/location-stones.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
+import { useSiteContent } from "@/hooks/use-site-content";
 import CircularImage from "@/components/CircularImage";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
