@@ -20,14 +20,30 @@ import OrganicShape from "@/components/organic/OrganicShape";
 
 const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
 
-const ServiceRow = ({ title, description, duration, price, bookLabel, index }: {
+const PROMO_COLORS: Record<string, string> = {
+  amber: "bg-amber-100 text-amber-800 border-amber-200",
+  rose: "bg-rose-100 text-rose-800 border-rose-200",
+  emerald: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  blue: "bg-blue-100 text-blue-800 border-blue-200",
+  purple: "bg-purple-100 text-purple-800 border-purple-200",
+};
+
+const ServiceRow = ({ title, description, duration, price, bookLabel, index, badge, badgeColor }: {
   title: string; description: string; duration: string; price: string; bookLabel: string; index: number;
+  badge?: string; badgeColor?: string;
 }) => {
   const anim = useFadeIn(index * 0.08);
   return (
     <div ref={anim.ref} style={anim.style} className="flex flex-col md:flex-row md:items-center justify-between py-8 gap-4">
       <div className="flex-1">
-        <h3 className="font-display text-xl md:text-2xl mb-1.5">{title}</h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="font-display text-xl md:text-2xl mb-1.5">{title}</h3>
+          {badge && (
+            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${PROMO_COLORS[badgeColor || "amber"] ?? PROMO_COLORS.amber}`}>
+              {badge}
+            </span>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground font-body leading-relaxed max-w-xl">{description}</p>
       </div>
       <div className="flex items-center gap-6 shrink-0">
