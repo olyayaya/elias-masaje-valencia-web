@@ -10,6 +10,7 @@ import massageDeep from "@/assets/massage-deep.jpg";
 import massageOil from "@/assets/massage-oil.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
+import { useSiteContent } from "@/hooks/use-site-content";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useDbServices, resolveField } from "@/hooks/use-db-content";
 
