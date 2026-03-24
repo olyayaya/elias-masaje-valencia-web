@@ -61,6 +61,11 @@ export default {
           stone: "hsl(var(--warm-stone))",
           brown: "hsl(var(--warm-brown))",
         },
+        "organic-dark": {
+          DEFAULT: "hsl(var(--organic-dark))",
+          foreground: "hsl(var(--organic-dark-foreground))",
+          muted: "hsl(var(--organic-dark-muted))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
