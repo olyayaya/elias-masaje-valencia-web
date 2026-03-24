@@ -154,7 +154,7 @@ const BreathingCell = ({
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
   const maxCols = 3;
-  const [focalCol, setFocalCol] = useState(0);
+  const [mutedCol, setMutedCol] = useState(2); // which column is dimmed
 
   // Track which image src each column is currently showing
   const activeImagesRef = useRef<Map<number, string>>(new Map());
@@ -173,7 +173,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setFocalCol((prev) => (prev + 1) % maxCols);
+      setMutedCol((prev) => (prev + 1) % maxCols);
     }, FOCUS_DURATION);
     return () => clearInterval(interval);
   }, []);
@@ -200,7 +200,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
             <BreathingCell
               images={seq}
               delay={COL_OFFSETS[col]}
-              focused={col === focalCol}
+              focused={col !== mutedCol}
               colIndex={col}
               onImageChange={handleImageChange}
               getActiveImages={getActiveImages}
