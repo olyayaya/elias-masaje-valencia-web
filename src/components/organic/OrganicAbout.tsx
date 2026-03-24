@@ -4,9 +4,13 @@ import massageArm from "@/assets/massage-arm.jpg";
 import massageBack from "@/assets/massage-back.jpg";
 import massageStones from "@/assets/massage-stones.jpg";
 import massageOil from "@/assets/massage-oil.jpg";
+import massageNeck from "@/assets/massage-neck.jpg";
+import massageWrist from "@/assets/massage-wrist.jpg";
+import massageFoot from "@/assets/massage-foot.jpg";
+import massageDeep from "@/assets/massage-deep.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
-import CircularImage from "@/components/CircularImage";
+import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 
 const OrganicAbout = () => {
@@ -92,9 +96,9 @@ const OrganicAbout = () => {
 
       <CurvedDivider from="bg-secondary" to="bg-background" flip />
 
-      {/* Gallery — circular images, asymmetric cluster */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
-        <div className="max-w-5xl mx-auto">
+      {/* Gallery — auto-sliding horizontal carousel */}
+      <section className="py-20 md:py-28">
+        <div className="max-w-5xl mx-auto px-6 md:px-12 lg:px-20">
           {(() => {
             const GalleryTitle = () => {
               const anim = useFadeIn(0);
@@ -107,14 +111,20 @@ const OrganicAbout = () => {
             };
             return <GalleryTitle />;
           })()}
-
-          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-0">
-            <CircularImage src={massageArm} alt="Masaje de brazo" size="lg" delay={0} className="md:-mr-4" />
-            <CircularImage src={massageStones} alt="Piedras calientes" size="md" delay={0.1} className="md:mt-12 md:z-10" />
-            <CircularImage src={massageBack} alt="Masaje de espalda" size="lg" delay={0.2} className="md:-ml-4 md:-mt-4" />
-            <CircularImage src={massageOil} alt="Masaje con aceite" size="sm" delay={0.3} className="md:-ml-2 md:mt-16" />
-          </div>
         </div>
+
+        <CircularImageCarousel
+          images={[
+            { src: massageArm, alt: "Arm massage" },
+            { src: massageStones, alt: "Hot stone therapy" },
+            { src: massageBack, alt: "Back massage" },
+            { src: massageOil, alt: "Oil massage" },
+            { src: massageNeck, alt: "Neck massage" },
+            { src: massageWrist, alt: "Wrist massage" },
+            { src: massageFoot, alt: "Foot massage" },
+            { src: massageDeep, alt: "Deep tissue work" },
+          ]}
+        />
       </section>
     </div>
   );
