@@ -1,7 +1,9 @@
 import aboutPortrait from "@/assets/about-portrait.jpg";
 import interiorImage from "@/assets/interior.jpg";
-import massageWrist from "@/assets/massage-wrist.jpg";
-import massageShoulder from "@/assets/massage-shoulder.jpg";
+import massageArm from "@/assets/massage-arm.jpg";
+import massageBack from "@/assets/massage-back.jpg";
+import massageStones from "@/assets/massage-stones.jpg";
+import massageOil from "@/assets/massage-oil.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImage from "@/components/CircularImage";
@@ -107,10 +109,10 @@ const OrganicAbout = () => {
           })()}
 
           <div className="flex flex-wrap justify-center items-center gap-6 md:gap-0">
-            <CircularImage src={massageWrist} alt="Masaje de muñeca" size="lg" delay={0} className="md:-mr-4" />
-            <CircularImage src={massageShoulder} alt="Masaje de hombro" size="md" delay={0.1} className="md:mt-12 md:z-10" />
-            <CircularImage src={interiorImage} alt="Interior" size="lg" delay={0.2} className="md:-ml-4 md:-mt-4" />
-            <CircularImage src={aboutPortrait} alt="Elias" size="sm" delay={0.3} className="md:-ml-2 md:mt-16" />
+            <CircularImage src={massageArm} alt="Masaje de brazo" size="lg" delay={0} className="md:-mr-4" />
+            <CircularImage src={massageStones} alt="Piedras calientes" size="md" delay={0.1} className="md:mt-12 md:z-10" />
+            <CircularImage src={massageBack} alt="Masaje de espalda" size="lg" delay={0.2} className="md:-ml-4 md:-mt-4" />
+            <CircularImage src={massageOil} alt="Masaje con aceite" size="sm" delay={0.3} className="md:-ml-2 md:mt-16" />
           </div>
         </div>
       </section>
