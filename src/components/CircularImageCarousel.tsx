@@ -8,7 +8,7 @@ interface CircularImageCarouselProps {
 
 const ITEM_GAP = 14;
 const ITEM_HEIGHT = 200;
-const SPEED = 0.48;
+const SPEED = 0.35;
 const SCALE_MAX = 1.416;
 
 const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
