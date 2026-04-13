@@ -9,7 +9,7 @@ import {
   Plus, Bold, Italic, Heading1, Heading2, Heading3,
   List, ListOrdered, LinkIcon, AlignLeft, AlignCenter, AlignRight,
   Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb,
-  Eye, EyeOff, RotateCcw, ImageIcon,
+  Eye, EyeOff, RotateCcw, ImageIcon, Languages,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
