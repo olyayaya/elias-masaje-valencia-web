@@ -41,6 +41,16 @@ const FontPreview = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Dynamic style override scoped to preview zone */}
+      <style>{`
+        .font-preview-zone .fp-display {
+          font-family: ${pair.display} !important;
+        }
+        .font-preview-zone .fp-body {
+          font-family: ${pair.body} !important;
+        }
+      `}</style>
+
       <div className="max-w-4xl mx-auto px-6 py-16">
         <div className="font-display text-3xl mb-2">Typography Preview</div>
         <p className="text-sm text-muted-foreground font-body mb-10">
@@ -53,28 +63,21 @@ const FontPreview = () => {
             <button
               key={p.id}
               onClick={() => setActive(p.id)}
-              className={`px-5 py-2.5 rounded-full text-sm transition-all ${
+              className={`px-5 py-2.5 rounded-full text-sm font-body transition-all ${
                 active === p.id
                   ? "bg-foreground text-background"
                   : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
-              style={{ fontFamily: "'Inter', sans-serif" }}
             >
               {p.label}
             </button>
           ))}
         </div>
 
-        {/* Preview — use a wrapper div with CSS vars to override base styles */}
-        <div
-          key={pair.id}
-          style={{
-            ["--preview-display" as string]: pair.display,
-            ["--preview-body" as string]: pair.body,
-          }}
-        >
+        {/* Preview zone */}
+        <div className="font-preview-zone" key={pair.id}>
           {/* Font info */}
-          <div className="flex gap-8 text-sm text-muted-foreground mb-12" style={{ fontFamily: pair.body }}>
+          <div className="flex gap-8 text-sm text-muted-foreground fp-body mb-12">
             <div>
               <span className="text-foreground font-medium">Headlines:</span> {pair.displayName}
             </div>
@@ -85,28 +88,16 @@ const FontPreview = () => {
 
           {/* Hero preview */}
           <div className="bg-card rounded-2xl p-10 md:p-14 mb-12">
-            <p
-              className="text-xs tracking-[0.3em] uppercase mb-4 text-muted-foreground"
-              style={{ fontFamily: pair.body }}
-            >
+            <p className="text-xs tracking-[0.3em] uppercase mb-4 text-muted-foreground fp-body">
               Valencia · Massage · Wellness
             </p>
-            <div
-              className="text-4xl md:text-5xl leading-[1.15] mb-5"
-              style={{ fontFamily: pair.display, fontWeight: 500 }}
-            >
+            <div className="text-4xl md:text-5xl leading-[1.15] mb-5 fp-display font-medium">
               {SAMPLE.headline}
             </div>
-            <p
-              className="text-lg text-muted-foreground leading-relaxed max-w-lg mb-8"
-              style={{ fontFamily: pair.body }}
-            >
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-lg mb-8 fp-body">
               {SAMPLE.subhead}
             </p>
-            <span
-              className="inline-block bg-foreground text-background px-8 py-3 rounded-full text-sm"
-              style={{ fontFamily: pair.body }}
-            >
+            <span className="inline-block bg-foreground text-background px-8 py-3 rounded-full text-sm fp-body">
               Book Now
             </span>
           </div>
@@ -114,45 +105,27 @@ const FontPreview = () => {
           {/* Body text preview */}
           <div className="grid md:grid-cols-2 gap-8 mb-12">
             <div>
-              <div
-                className="text-2xl mb-4"
-                style={{ fontFamily: pair.display, fontWeight: 500 }}
-              >
+              <div className="text-2xl mb-4 fp-display font-medium">
                 English Body Text
               </div>
-              <p
-                className="text-base text-muted-foreground leading-[1.85]"
-                style={{ fontFamily: pair.body }}
-              >
+              <p className="text-base text-muted-foreground leading-[1.85] fp-body">
                 {SAMPLE.body}
               </p>
             </div>
             <div className="space-y-6">
               <div>
-                <div
-                  className="text-2xl mb-4"
-                  style={{ fontFamily: pair.display, fontWeight: 500 }}
-                >
+                <div className="text-2xl mb-4 fp-display font-medium">
                   Текст на русском
                 </div>
-                <p
-                  className="text-base text-muted-foreground leading-[1.85]"
-                  style={{ fontFamily: pair.body }}
-                >
+                <p className="text-base text-muted-foreground leading-[1.85] fp-body">
                   {SAMPLE.bodyRu}
                 </p>
               </div>
               <div>
-                <div
-                  className="text-2xl mb-4"
-                  style={{ fontFamily: pair.display, fontWeight: 500 }}
-                >
+                <div className="text-2xl mb-4 fp-display font-medium">
                   Texto en español
                 </div>
-                <p
-                  className="text-base text-muted-foreground leading-[1.85]"
-                  style={{ fontFamily: pair.body }}
-                >
+                <p className="text-base text-muted-foreground leading-[1.85] fp-body">
                   {SAMPLE.bodyEs}
                 </p>
               </div>
@@ -164,23 +137,14 @@ const FontPreview = () => {
             {["Deep Tissue Massage", "Relaxation Therapy", "Hot Stone Treatment"].map((s) => (
               <div key={s} className="flex items-center justify-between py-6">
                 <div>
-                  <div
-                    className="text-xl mb-1"
-                    style={{ fontFamily: pair.display, fontWeight: 500 }}
-                  >
+                  <div className="text-xl mb-1 fp-display font-medium">
                     {s}
                   </div>
-                  <p
-                    className="text-sm text-muted-foreground"
-                    style={{ fontFamily: pair.body }}
-                  >
+                  <p className="text-sm text-muted-foreground fp-body">
                     60 min · €55
                   </p>
                 </div>
-                <span
-                  className="text-sm border border-foreground/20 px-5 py-2 rounded-full"
-                  style={{ fontFamily: pair.body }}
-                >
+                <span className="text-sm border border-foreground/20 px-5 py-2 rounded-full fp-body">
                   Reserve
                 </span>
               </div>
