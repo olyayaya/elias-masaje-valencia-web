@@ -17,6 +17,7 @@ const Header = () => {
     { label: t.nav.services, path: "/servicios" },
     { label: t.nav.about, path: "/sobre-mi" },
     { label: t.nav.contact, path: "/contacto" },
+    { label: t.nav.blog, path: "/blog" },
   ];
 
   return (

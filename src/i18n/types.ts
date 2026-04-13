@@ -6,6 +6,7 @@ export interface Translations {
     services: string;
     about: string;
     contact: string;
+    blog: string;
     book: string;
     bookWhatsApp: string;
   };

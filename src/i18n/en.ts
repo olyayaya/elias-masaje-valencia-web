@@ -6,6 +6,7 @@ export const en: Translations = {
     services: "Services",
     about: "About",
     contact: "Contact",
+    blog: "Blog",
     book: "Book",
     bookWhatsApp: "Book via WhatsApp",
   },
