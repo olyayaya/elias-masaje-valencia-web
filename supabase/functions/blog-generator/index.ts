@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, topic, language = "es" } = await req.json();
+    const { action, topic, language = "es", source_title, source_content, source_meta } = await req.json();
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "API key not configured" }), {
@@ -189,6 +189,58 @@ Return just the new HTML content.`,
         },
       ];
       tool_choice = { type: "function", function: { name: "return_content" } };
+    } else if (action === "translate_post") {
+      messages = [
+        { role: "system", content: BRAND_SYSTEM },
+        {
+          role: "user",
+          content: `You are translating and adapting a blog post from another language into ${langName}.
+
+SOURCE TITLE: ${source_title || topic || "Massage blog post"}
+
+SOURCE CONTENT:
+${source_content || ""}
+
+SOURCE META DESCRIPTION: ${source_meta || ""}
+
+INSTRUCTIONS:
+- Translate and culturally adapt the content into ${langName}
+- Keep the same structure (headings, lists, paragraphs)
+- Maintain the Elias Masaje brand voice: calm, warm, professional, holistic
+- Adapt SEO keywords for ${langName}-speaking audience searching in Valencia
+- Keep HTML formatting: <h2>, <h3>, <p>, <ul><li>, <ol><li>, <strong>, <em>
+- Do NOT add or remove sections — keep the same structure
+- The meta description must be under 155 characters in ${langName}
+
+Return the translated post.`,
+        },
+      ];
+
+      tools = [
+        {
+          type: "function",
+          function: {
+            name: "return_blog_post",
+            description: `Return a translated blog post in ${langName}`,
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: `Translated title in ${langName}` },
+                content: { type: "string", description: `Translated HTML content in ${langName}` },
+                meta_description: { type: "string", description: `Translated meta description in ${langName}` },
+                keywords: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: `3-5 SEO keywords adapted for ${langName}`,
+                },
+              },
+              required: ["title", "content", "meta_description", "keywords"],
+              additionalProperties: false,
+            },
+          },
+        },
+      ];
+      tool_choice = { type: "function", function: { name: "return_blog_post" } };
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },

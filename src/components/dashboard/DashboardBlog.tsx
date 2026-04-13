@@ -9,7 +9,7 @@ import {
   Plus, Bold, Italic, Heading1, Heading2, Heading3,
   List, ListOrdered, LinkIcon, AlignLeft, AlignCenter, AlignRight,
   Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb,
-  Eye, EyeOff, RotateCcw, ImageIcon,
+  Eye, EyeOff, RotateCcw, ImageIcon, Languages,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
@@ -478,6 +478,61 @@ const BlogEditor = ({
     }
   };
 
+  // Cross-language generation: find source content from another language
+  const [translating, setTranslating] = useState(false);
+  const allLangs: Lang[] = ["es", "en", "ru"];
+  const langLabels: Record<Lang, string> = { es: "Spanish", en: "English", ru: "Russian" };
+  const currentTitle = (draft[titleKey] as string) || "";
+  const currentContent = (draft[contentKey] as string) || "";
+  const currentIsEmpty = !currentTitle.trim() && !currentContent.trim();
+
+  const sourceLang = currentIsEmpty
+    ? allLangs.find((l) => {
+        if (l === lang) return false;
+        const tKey = langKey("title", l) as keyof BlogPost;
+        const cKey = langKey("content", l) as keyof BlogPost;
+        return !!((draft[tKey] as string)?.trim()) || !!((draft[cKey] as string)?.trim());
+      })
+    : undefined;
+
+  const translateFromSource = async (srcLang: Lang) => {
+    setTranslating(true);
+    try {
+      const srcTitleKey = langKey("title", srcLang) as keyof BlogPost;
+      const srcContentKey = langKey("content", srcLang) as keyof BlogPost;
+      const srcMetaKey = langKey("meta_description", srcLang) as keyof BlogPost;
+
+      const { data, error } = await supabase.functions.invoke("blog-generator", {
+        body: {
+          action: "translate_post",
+          language: lang,
+          source_title: (draft[srcTitleKey] as string) || "",
+          source_content: (draft[srcContentKey] as string) || "",
+          source_meta: (draft[srcMetaKey] as string) || "",
+        },
+      });
+      if (error) throw error;
+      const result = data?.result;
+      if (result?.title && result?.content) {
+        setDraft({
+          ...draft,
+          [titleKey]: result.title,
+          [contentKey]: result.content,
+          [metaKey]: result.meta_description || "",
+          seo_keywords: result.keywords?.length ? result.keywords : draft.seo_keywords,
+        });
+        editor?.commands.setContent(result.content);
+        toast.success(`${langLabels[lang]} version generated from ${langLabels[srcLang]}`);
+      } else {
+        throw new Error("Unexpected response");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Translation failed");
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   const generateMeta = () => {
     if (!draft) return;
     const title = (draft[titleKey] as string) || "masaje profesional";
@@ -498,6 +553,30 @@ const BlogEditor = ({
         <button onClick={onCancel} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><X size={14} /> Back to posts</button>
         <LanguageTabs active={lang} onChange={setLang} />
       </div>
+
+      {/* Cross-language generation banner */}
+      {sourceLang && (
+        <DashboardCard>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Languages size={14} className="text-primary" /> No {langLabels[lang]} content yet
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                This post has content in {langLabels[sourceLang]}. Generate the {langLabels[lang]} version automatically.
+              </p>
+            </div>
+            <button
+              onClick={() => translateFromSource(sourceLang)}
+              disabled={translating}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs bg-foreground text-background rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
+            >
+              {translating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              Generate {lang.toUpperCase()} from {sourceLang.toUpperCase()}
+            </button>
+          </div>
+        </DashboardCard>
+      )}
 
       <DashboardCard title={`Post content (${lang.toUpperCase()})`}>
         <div className="space-y-4">
