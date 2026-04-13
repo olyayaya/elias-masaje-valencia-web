@@ -28,6 +28,15 @@ const FONT_PAIRS = [
     bodyName: "Source Sans 3",
     note: "Light refined serif + humanist sans. Airy, premium.",
   },
+  {
+    id: "D",
+    label: "Option D",
+    display: "'Fraunces', serif",
+    body: "'Lexend', sans-serif",
+    displayName: "Fraunces",
+    bodyName: "Lexend",
+    note: "Expressive variable serif + cognitive-friendly sans. Warm, distinctive.",
+  },
 ] as const;
 
 const SAMPLE = {
