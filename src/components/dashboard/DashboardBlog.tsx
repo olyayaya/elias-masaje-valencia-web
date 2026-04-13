@@ -542,24 +542,30 @@ const BlogEditor = ({
   const [generatingAll, setGeneratingAll] = useState(false);
   const translateToAll = async () => {
     setGeneratingAll(true);
-    try {
-      let updated = draft;
-      const targets: Lang[] = allLangs.filter((l) => l !== "es");
-      for (const targetLang of targets) {
-        toast.info(`Generating ${langLabels[targetLang]}…`);
+    let updated = draft;
+    const targets: Lang[] = allLangs.filter((l) => l !== "es");
+    const failed: string[] = [];
+    for (const targetLang of targets) {
+      toast.info(`Generating ${langLabels[targetLang]}…`);
+      try {
         updated = await translateOne("es", targetLang, updated);
+      } catch (e: any) {
+        failed.push(langLabels[targetLang]);
+        console.error(`Failed to generate ${targetLang}:`, e);
       }
-      setDraft(updated);
-      // If currently viewing a non-ES tab, update editor content
-      if (lang !== "es") {
-        editor?.commands.setContent((updated[contentKey] as string) || "", { emitUpdate: false });
-      }
-      toast.success("All language versions generated!");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to generate all languages");
-    } finally {
-      setGeneratingAll(false);
     }
+    setDraft(updated);
+    if (lang !== "es") {
+      editor?.commands.setContent((updated[contentKey] as string) || "", { emitUpdate: false });
+    }
+    if (failed.length === 0) {
+      toast.success("All language versions generated!");
+    } else if (failed.length < targets.length) {
+      toast.warning(`Generated partially. Failed: ${failed.join(", ")}. You can retry those individually.`);
+    } else {
+      toast.error("Failed to generate translations. Please try again.");
+    }
+    setGeneratingAll(false);
   };
 
   const generateMeta = () => {
