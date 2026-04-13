@@ -311,7 +311,7 @@ const DashboardSiteContent = () => {
         if (!catItems.length) return null;
         return (
           <CategorySection
-            key={cat.id} cat={cat} catItems={catItems} lang={lang}
+            key={cat.id} cat={cat} catItems={catItems} allItems={items} lang={lang}
             drafts={drafts} setDrafts={setDrafts} saveItem={saveItem}
             saving={saving} aiLoading={aiLoading} translateField={translateField}
             seoOptimize={seoOptimize} hasChanged={hasChanged}
