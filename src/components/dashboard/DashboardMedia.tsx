@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Upload, Trash2, FileImage, Loader2, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { optimizeImage, getOptimizedExtension, formatFileSize } from "@/lib/image-utils";
+import { toast } from "sonner";
 import DashboardCard from "./DashboardCard";
 
 interface MediaFile {
