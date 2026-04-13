@@ -190,9 +190,6 @@ Return just the new HTML content.`,
       ];
       tool_choice = { type: "function", function: { name: "return_content" } };
     } else if (action === "translate_post") {
-      const { source_title, source_content, source_meta } = await req.json().catch(() => ({}));
-      // We already destructured above, so use the variables from the outer scope
-      const srcTitle = topic; // reuse topic as a fallback
       messages = [
         { role: "system", content: BRAND_SYSTEM },
         {
