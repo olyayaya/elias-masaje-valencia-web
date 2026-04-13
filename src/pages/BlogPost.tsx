@@ -128,17 +128,18 @@ const BlogPost = () => {
     })()),
   };
 
+  const postUrl = `https://elias-masaje-valencia-web.lovable.app/blog/${post.slug || post.id}`;
+  useHead({
+    title: `${title} | Elias Masaje`,
+    description: metaDesc,
+    canonical: postUrl,
+    ogTitle: title,
+    ogDescription: metaDesc,
+    ogType: "article",
+    jsonLd,
+  });
+
   return (
-    <>
-      <Helmet>
-        <title>{title} | Elias Masaje</title>
-        <meta name="description" content={metaDesc} />
-        <link rel="canonical" href={`https://elias-masaje-valencia-web.lovable.app/blog/${post.slug || post.id}`} />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={metaDesc} />
-        <meta property="og:type" content="article" />
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-      </Helmet>
       <article className="section-padding">
       <div className="container-narrow">
         <Link
