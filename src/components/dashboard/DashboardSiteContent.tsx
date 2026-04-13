@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
 import ImagePicker from "./ImagePicker";
@@ -40,6 +41,147 @@ const isLongField = (key: string) =>
 const isImageField = (key: string) =>
   key.includes("image") || key.includes("photo") || key.includes("logo") || key.includes("_img");
 
+/* ─── Category Section (extracted for open/closed state tracking) ─── */
+const CategorySection = ({
+  cat, catItems, lang, drafts, setDrafts, saveItem, saving, aiLoading,
+  translateField, seoOptimize, hasChanged, setPickerOpen, isMobile,
+}: {
+  cat: { id: string; label: string };
+  catItems: SiteContentRow[];
+  lang: Lang;
+  drafts: Record<string, string>;
+  setDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  saveItem: (item: SiteContentRow) => void;
+  saving: string | null;
+  aiLoading: string | null;
+  translateField: (item: SiteContentRow) => void;
+  seoOptimize: (item: SiteContentRow) => void;
+  hasChanged: (item: SiteContentRow) => boolean;
+  setPickerOpen: (id: string | null) => void;
+  isMobile: boolean;
+}) => {
+  const [open, setOpen] = useState(false);
+  const verb = isMobile ? "tap" : "click";
+  const hint = open
+    ? `${catItems.length} fields — ${verb} to collapse`
+    : `${catItems.length} fields — ${verb} to expand`;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="w-full text-left">
+        <DashboardCard title={cat.label} description={`Edit ${cat.label.toLowerCase()} text`}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+            <ChevronRight size={14} className={`transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
+            <span>{hint}</span>
+          </div>
+        </DashboardCard>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="border border-t-0 border-border rounded-b-lg bg-card px-5 pb-5 pt-3 space-y-4">
+          {catItems.map((item) => (
+            <div key={item.id} className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">{item.label}</label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  {isImageField(item.content_key) ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={drafts[item.id] ?? ""}
+                        onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
+                        className="text-sm"
+                        placeholder="Image URL..."
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPickerOpen(item.id)}
+                        className="h-10 shrink-0"
+                      >
+                        <ImageIcon size={14} />
+                      </Button>
+                      {(drafts[item.id] ?? "").startsWith("http") && (
+                        <img src={drafts[item.id]} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                      )}
+                    </div>
+                  ) : isLongField(item.content_key) ? (
+                    <Textarea
+                      value={drafts[item.id] ?? ""}
+                      onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
+                      rows={3}
+                      className="text-sm"
+                    />
+                  ) : (
+                    <Input
+                      value={drafts[item.id] ?? ""}
+                      onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
+                      className="text-sm"
+                    />
+                  )}
+                </div>
+                <div className="flex gap-1.5 shrink-0">
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => seoOptimize(item)}
+                          disabled={aiLoading === `seo-${item.id}`}
+                          className="h-10"
+                        >
+                          {aiLoading === `seo-${item.id}` ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Search size={14} />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Improve for SEO</TooltipContent>
+                    </Tooltip>
+                    {lang !== "es" && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => translateField(item)}
+                            disabled={aiLoading === `translate-${item.id}`}
+                            className="h-10"
+                          >
+                            {aiLoading === `translate-${item.id}` ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Languages size={14} />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Translate from Spanish</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </TooltipProvider>
+                  <Button
+                    size="sm"
+                    onClick={() => saveItem(item)}
+                    disabled={saving === item.id || !hasChanged(item)}
+                    className="h-10"
+                  >
+                    {saving === item.id ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Save size={14} />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
+/* ─── Main Component ─── */
 const DashboardSiteContent = () => {
   const [items, setItems] = useState<SiteContentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +190,7 @@ const DashboardSiteContent = () => {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const fetchContent = async () => {
     setLoading(true);
@@ -151,117 +294,13 @@ const DashboardSiteContent = () => {
         const catItems = items.filter((i) => i.category === cat.id);
         if (!catItems.length) return null;
         return (
-          <Collapsible key={cat.id}>
-            <CollapsibleTrigger className="w-full text-left">
-              <DashboardCard title={cat.label} description={`Edit ${cat.label.toLowerCase()} text`}>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
-                  <ChevronRight size={14} className="transition-transform duration-200 group-data-[state=open]:rotate-90" />
-                  <span>{catItems.length} fields — click to expand</span>
-                </div>
-              </DashboardCard>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="border border-t-0 border-border rounded-b-lg bg-card px-5 pb-5 pt-3 space-y-4">
-                {catItems.map((item) => (
-                  <div key={item.id} className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">{item.label}</label>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        {isImageField(item.content_key) ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={drafts[item.id] ?? ""}
-                              onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
-                              className="text-sm"
-                              placeholder="Image URL..."
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setPickerOpen(item.id)}
-                              className="h-10 shrink-0"
-                            >
-                              <ImageIcon size={14} />
-                            </Button>
-                            {(drafts[item.id] ?? "").startsWith("http") && (
-                              <img src={drafts[item.id]} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
-                            )}
-                          </div>
-                        ) : isLongField(item.content_key) ? (
-                          <Textarea
-                            value={drafts[item.id] ?? ""}
-                            onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
-                            rows={3}
-                            className="text-sm"
-                          />
-                        ) : (
-                          <Input
-                            value={drafts[item.id] ?? ""}
-                            onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
-                            className="text-sm"
-                          />
-                        )}
-                      </div>
-                      <div className="flex gap-1.5 shrink-0">
-                        <TooltipProvider delayDuration={300}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => seoOptimize(item)}
-                                disabled={aiLoading === `seo-${item.id}`}
-                                className="h-10"
-                              >
-                                {aiLoading === `seo-${item.id}` ? (
-                                  <Loader2 size={14} className="animate-spin" />
-                                ) : (
-                                  <Search size={14} />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Improve for SEO</TooltipContent>
-                          </Tooltip>
-                          {lang !== "es" && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => translateField(item)}
-                                  disabled={aiLoading === `translate-${item.id}`}
-                                  className="h-10"
-                                >
-                                  {aiLoading === `translate-${item.id}` ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                  ) : (
-                                    <Languages size={14} />
-                                  )}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Translate from Spanish</TooltipContent>
-                            </Tooltip>
-                          )}
-                        </TooltipProvider>
-                        <Button
-                          size="sm"
-                          onClick={() => saveItem(item)}
-                          disabled={saving === item.id || !hasChanged(item)}
-                          className="h-10"
-                        >
-                          {saving === item.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Save size={14} />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+          <CategorySection
+            key={cat.id} cat={cat} catItems={catItems} lang={lang}
+            drafts={drafts} setDrafts={setDrafts} saveItem={saveItem}
+            saving={saving} aiLoading={aiLoading} translateField={translateField}
+            seoOptimize={seoOptimize} hasChanged={hasChanged}
+            setPickerOpen={setPickerOpen} isMobile={isMobile}
+          />
         );
       })}
 
