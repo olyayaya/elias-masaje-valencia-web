@@ -30,7 +30,8 @@ const ThemeSwitcher = () => {
       {/* Font options panel */}
       {showFonts && (
         <div className="bg-card border border-border rounded-lg shadow-soft p-3 min-w-[200px] max-w-[240px]">
-          <p className="text-xs font-body text-muted-foreground mb-2 uppercase tracking-wider">Typography</p>
+          <p className="text-xs font-body text-muted-foreground uppercase tracking-wider">Typography</p>
+          <p className="text-[11px] font-body text-primary mb-2">{FONT_PAIRS.find(p => p.id === fontPairId)?.displayName} + {FONT_PAIRS.find(p => p.id === fontPairId)?.bodyName}</p>
           <div className="flex flex-col gap-1">
             {FONT_PAIRS.map((pair) => (
               <button
