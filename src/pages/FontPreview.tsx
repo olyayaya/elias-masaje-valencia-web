@@ -31,11 +31,11 @@ const FONT_PAIRS = [
   {
     id: "D",
     label: "Option D",
-    display: "'Fraunces', serif",
-    body: "'Lexend', sans-serif",
-    displayName: "Fraunces",
-    bodyName: "Lexend",
-    note: "Expressive variable serif + cognitive-friendly sans. Warm, distinctive.",
+    display: "'Bodoni Moda', serif",
+    body: "'Quicksand', sans-serif",
+    displayName: "Bodoni Moda",
+    bodyName: "Quicksand",
+    note: "High-contrast editorial serif + soft rounded sans. Elegant, warm, readable.",
   },
   {
     id: "E",
