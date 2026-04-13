@@ -75,6 +75,8 @@ const OrganicHome = () => {
             className="w-full h-full object-cover object-bottom animate-hero-zoom"
             width={1920}
             height={1080}
+            loading="eager"
+            fetchPriority="high"
           />
           <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
           <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-primary/20 via-primary/8 to-transparent" />

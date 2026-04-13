@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
+import ImagePicker from "./ImagePicker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Save, Loader2, Sparkles, ChevronRight, Search, Languages } from "lucide-react";
+import { Save, Loader2, Sparkles, ChevronRight, Search, Languages, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -36,6 +37,9 @@ const langKey = (lang: Lang): "value_es" | "value_en" | "value_ru" =>
 const isLongField = (key: string) =>
   key.includes("description") || key.includes("tagline") || key.includes("preview_p");
 
+const isImageField = (key: string) =>
+  key.includes("image") || key.includes("photo") || key.includes("logo") || key.includes("_img");
+
 const DashboardSiteContent = () => {
   const [items, setItems] = useState<SiteContentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +47,7 @@ const DashboardSiteContent = () => {
   const [lang, setLang] = useState<Lang>("es");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [aiLoading, setAiLoading] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState<string | null>(null);
 
   const fetchContent = async () => {
     setLoading(true);
@@ -162,7 +167,27 @@ const DashboardSiteContent = () => {
                     <label className="text-xs font-medium text-muted-foreground">{item.label}</label>
                     <div className="flex gap-2">
                       <div className="flex-1">
-                        {isLongField(item.content_key) ? (
+                        {isImageField(item.content_key) ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={drafts[item.id] ?? ""}
+                              onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
+                              className="text-sm"
+                              placeholder="Image URL..."
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setPickerOpen(item.id)}
+                              className="h-10 shrink-0"
+                            >
+                              <ImageIcon size={14} />
+                            </Button>
+                            {(drafts[item.id] ?? "").startsWith("http") && (
+                              <img src={drafts[item.id]} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                            )}
+                          </div>
+                        ) : isLongField(item.content_key) ? (
                           <Textarea
                             value={drafts[item.id] ?? ""}
                             onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
@@ -239,6 +264,15 @@ const DashboardSiteContent = () => {
           </Collapsible>
         );
       })}
+
+      <ImagePicker
+        open={!!pickerOpen}
+        onClose={() => setPickerOpen(null)}
+        onSelect={(url) => {
+          if (pickerOpen) setDrafts((p) => ({ ...p, [pickerOpen]: url }));
+        }}
+        currentUrl={pickerOpen ? drafts[pickerOpen] : undefined}
+      />
     </div>
   );
 };

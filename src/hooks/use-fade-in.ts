@@ -14,7 +14,7 @@ export const useFadeIn = (delay = 0) => {
           observer.disconnect();
         }
       },
-      { threshold: 0.15 }
+      { threshold: 0.05, rootMargin: "100px 0px" }
     );
     observer.observe(el);
     return () => observer.disconnect();

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Upload, Trash2, FileImage, Loader2, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { optimizeImage, getOptimizedExtension, formatFileSize } from "@/lib/image-utils";
+import { toast } from "sonner";
 import DashboardCard from "./DashboardCard";
 
 interface MediaFile {
@@ -42,11 +44,21 @@ const DashboardMedia = () => {
   const handleUpload = async (fileList: FileList) => {
     setUploading(true);
     for (const file of Array.from(fileList)) {
-      const name = `${Date.now()}-${file.name}`;
-      await supabase.storage.from("media").upload(name, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+      if (!file.type.startsWith("image/")) continue;
+      try {
+        const optimized = await optimizeImage(file);
+        const ext = getOptimizedExtension();
+        const name = `${Date.now()}-${file.name.replace(/\.[^.]+$/, "")}.${ext}`;
+        await supabase.storage.from("media").upload(name, optimized.blob, {
+          contentType: optimized.blob.type,
+          cacheControl: "3600",
+          upsert: false,
+        });
+        const saved = formatFileSize(optimized.originalSize - optimized.optimizedSize);
+        toast.success(`Optimized & uploaded (saved ${saved})`);
+      } catch (err: any) {
+        toast.error(err.message || "Upload failed");
+      }
     }
     setUploading(false);
     fetchFiles();
