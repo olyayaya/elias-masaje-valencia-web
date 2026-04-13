@@ -210,6 +210,72 @@
   }
 }
 
+/* ═══════════ AMBIENT RADIAL GLOW SYSTEM ═══════════ */
+
+/* Shared ambient layer — pseudo-element on the layout wrapper */
+.ambient-glow {
+  position: relative;
+}
+
+.ambient-glow::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  animation: ambient-breathe 18s ease-in-out infinite;
+  will-change: opacity;
+}
+
+/* Ensure all direct children sit above the ambient layer */
+.ambient-glow > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* — Light mode glow: warm ivory / champagne orbs — */
+:root .ambient-glow::before,
+[data-theme="light"] .ambient-glow::before {
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 8%, hsl(36 40% 92% / 0.55) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 85% 35%, hsl(34 30% 90% / 0.35) 0%, transparent 65%),
+    radial-gradient(ellipse 70% 40% at 50% 85%, hsl(33 25% 88% / 0.25) 0%, transparent 60%);
+}
+
+/* — Dark mode glow: very subtle warm charcoal orbs — */
+[data-theme="dark"] .ambient-glow::before {
+  background:
+    radial-gradient(ellipse 75% 55% at 12% 6%, hsl(34 12% 18% / 0.45) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 45% at 88% 40%, hsl(30 10% 16% / 0.3) 0%, transparent 60%),
+    radial-gradient(ellipse 65% 35% at 45% 90%, hsl(28 8% 14% / 0.2) 0%, transparent 55%);
+}
+
+/* — Dark gradient mode glow: warm golden-charcoal diffusion — */
+[data-theme="dark-gradient"] .ambient-glow::before {
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 5%, hsl(35 14% 20% / 0.5) 0%, transparent 65%),
+    radial-gradient(ellipse 60% 50% at 90% 30%, hsl(33 12% 18% / 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 40% at 40% 88%, hsl(30 10% 15% / 0.25) 0%, transparent 55%);
+}
+
+/* Breathing animation — ultra-subtle opacity drift */
+@keyframes ambient-breathe {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .ambient-glow::before {
+    animation: none !important;
+    opacity: 0.8;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
