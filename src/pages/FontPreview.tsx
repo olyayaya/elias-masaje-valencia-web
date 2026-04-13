@@ -12,17 +12,17 @@ const FONT_PAIRS = [
   {
     id: "modern",
     label: "Modern Wellness",
-    display: "'Playfair Display', serif",
+    display: "'Manrope', sans-serif",
     body: "'Manrope', sans-serif",
-    displayName: "Playfair Display",
+    displayName: "Manrope (Sans-serif)",
     bodyName: "Manrope",
   },
   {
     id: "refined",
     label: "Refined Elegance",
-    display: "'Lora', serif",
+    display: "'Playfair Display', serif",
     body: "'Inter', sans-serif",
-    displayName: "Lora",
+    displayName: "Playfair Display",
     bodyName: "Inter",
   },
 ];
