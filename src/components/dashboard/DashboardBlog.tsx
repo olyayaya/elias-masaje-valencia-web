@@ -589,7 +589,8 @@ const BlogEditor = ({
                     prose-ol:list-decimal prose-ul:list-disc
                     [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-6
                     [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-6
-                    [&_.ProseMirror_li]:my-1"
+                    [&_.ProseMirror_li]:my-1
+                    [&_.ProseMirror_img]:max-w-full [&_.ProseMirror_img]:h-auto [&_.ProseMirror_img]:rounded-lg [&_.ProseMirror_img]:my-4"
                 />
               </div>
             </div>
