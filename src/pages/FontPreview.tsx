@@ -63,9 +63,11 @@ const FontPreview = () => {
   const [active, setActive] = useState<(typeof FONT_PAIRS)[number]["id"]>("A");
   const pair = FONT_PAIRS.find((item) => item.id === active) ?? FONT_PAIRS[0];
 
+  const bodyItalic = "bodyItalic" in pair && pair.bodyItalic;
   const previewVars = {
     "--font-display": pair.display,
     "--font-body": pair.body,
+    fontStyle: bodyItalic ? "italic" : "normal",
   } as CSSProperties;
 
   return (
