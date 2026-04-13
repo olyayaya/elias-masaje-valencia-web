@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, type CSSProperties } from "react";
 
 const FONT_PAIRS = [
   {
@@ -28,243 +28,187 @@ const FONT_PAIRS = [
     bodyName: "Source Sans 3",
     note: "Light refined serif + humanist sans. Airy, premium.",
   },
-];
+] as const;
 
 const SAMPLE = {
   headline: "Experience the Art of Relaxation",
   subhead: "Professional massage therapy in Valencia",
   body: "Our treatments combine traditional techniques with modern wellness principles. Each session is tailored to your unique needs, helping you find balance and restore your natural vitality. We believe in the power of therapeutic touch to heal both body and mind.",
-  bodyRu: "Наши процедуры сочетают традиционные техники с современными принципами оздоровления. Каждый сеанс адаптирован под ваши индивидуальные потребности, помогая обрести баланс и восстановить жизненную энергию.",
-  bodyEs: "Nuestros tratamientos combinan técnicas tradicionales con principios modernos de bienestar. Cada sesión se adapta a tus necesidades únicas, ayudándote a encontrar el equilibrio.",
+  bodyRu:
+    "Наши процедуры сочетают традиционные техники с современными принципами оздоровления. Каждый сеанс адаптирован под ваши индивидуальные потребности, помогая обрести баланс и восстановить жизненную энергию.",
+  bodyEs:
+    "Nuestros tratamientos combinan técnicas tradicionales con principios modernos de bienestar. Cada sesión se adapta a tus necesidades únicas, ayudándote a encontrar el equilibrio.",
 };
 
 const FontPreview = () => {
-  const [active, setActive] = useState("A");
-  const pair = FONT_PAIRS.find((p) => p.id === active)!;
+  const [active, setActive] = useState<(typeof FONT_PAIRS)[number]["id"]>("A");
+  const pair = FONT_PAIRS.find((item) => item.id === active) ?? FONT_PAIRS[0];
 
-  useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty("--font-display", pair.display);
-    root.style.setProperty("--font-body", pair.body);
-    return () => {
-      root.style.removeProperty("--font-display");
-      root.style.removeProperty("--font-body");
-    };
-  }, [pair]);
+  const previewVars = {
+    "--font-display": pair.display,
+    "--font-body": pair.body,
+  } as CSSProperties;
 
   return (
-    <div className="min-h-screen bg-background text-foreground" key={active}>
-      <div className="max-w-4xl mx-auto px-6 py-16">
-        {/* Page title — uses fixed Inter so it doesn't shift with previews */}
-        <div className="mb-12" style={{ fontFamily: "'Inter', sans-serif" }}>
-          <div className="text-2xl font-medium mb-1">Typography Preview</div>
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto max-w-4xl px-6 py-16" style={previewVars}>
+        <div className="mb-12 font-body">
+          <div className="mb-1 text-2xl font-medium">Typography Preview</div>
           <p className="text-sm text-muted-foreground">
             Compare font pairings. Click each option to preview across the page.
           </p>
         </div>
 
-        {/* Selector */}
-        <div className="flex gap-3 mb-6 flex-wrap">
-          {FONT_PAIRS.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setActive(p.id)}
-              style={{ fontFamily: "'Inter', sans-serif" }}
-              className={`px-6 py-2.5 rounded-full text-sm transition-all ${
-                active === p.id
-                  ? "bg-foreground text-background"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="mb-6 flex flex-wrap gap-3">
+          {FONT_PAIRS.map((option) => {
+            const isActive = active === option.id;
+
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => setActive(option.id)}
+                className={`rounded-full px-6 py-2.5 text-sm font-body transition-all ${
+                  isActive
+                    ? "bg-foreground text-background shadow-card"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Font info */}
-        <div className="flex flex-wrap gap-6 text-sm text-muted-foreground mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>
-          <div>
-            <span className="text-foreground font-medium">Headlines:</span> {pair.displayName}
-          </div>
-          <div>
-            <span className="text-foreground font-medium">Body:</span> {pair.bodyName}
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground mb-12 italic" style={{ fontFamily: "'Inter', sans-serif" }}>
-          {pair.note}
-        </p>
-
-        {/* Hero preview */}
-        <div className="bg-card rounded-2xl p-10 md:p-14 mb-12">
-          <p
-            className="text-xs tracking-[0.3em] uppercase mb-4 text-muted-foreground"
-            style={{ fontFamily: pair.body }}
-          >
-            Valencia · Massage · Wellness
-          </p>
-          <div
-            className="text-4xl md:text-5xl leading-[1.15] mb-5"
-            style={{ fontFamily: pair.display, fontWeight: 500 }}
-          >
-            {SAMPLE.headline}
-          </div>
-          <p
-            className="text-lg text-muted-foreground leading-relaxed max-w-lg mb-8"
-            style={{ fontFamily: pair.body }}
-          >
-            {SAMPLE.subhead}
-          </p>
-          <span
-            className="inline-block bg-foreground text-background px-8 py-3 rounded-full text-sm"
-            style={{ fontFamily: pair.body }}
-          >
-            Book Now
-          </span>
-        </div>
-
-        {/* Body text — multilingual */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          <div>
-            <div
-              className="text-2xl mb-4"
-              style={{ fontFamily: pair.display, fontWeight: 500 }}
-            >
-              English Body Text
+        <div key={active} className="font-body">
+          <div className="mb-4 flex flex-wrap gap-6 text-sm text-muted-foreground">
+            <div>
+              <span className="font-medium text-foreground">Headlines:</span>{" "}
+              {pair.displayName}
             </div>
-            <p
-              className="text-base text-muted-foreground leading-[1.85]"
-              style={{ fontFamily: pair.body }}
-            >
-              {SAMPLE.body}
+            <div>
+              <span className="font-medium text-foreground">Body:</span> {pair.bodyName}
+            </div>
+          </div>
+          <p className="mb-12 text-xs italic text-muted-foreground">{pair.note}</p>
+
+          <div className="mb-12 rounded-2xl bg-card p-10 md:p-14">
+            <p className="mb-4 text-xs uppercase tracking-[0.3em] text-muted-foreground font-body">
+              Valencia · Massage · Wellness
             </p>
+            <div className="mb-5 text-4xl leading-[1.15] font-display md:text-5xl">
+              {SAMPLE.headline}
+            </div>
+            <p className="mb-8 max-w-lg text-lg leading-relaxed text-muted-foreground font-body">
+              {SAMPLE.subhead}
+            </p>
+            <span className="inline-block rounded-full bg-foreground px-8 py-3 text-sm text-background font-body">
+              Book Now
+            </span>
           </div>
-          <div className="space-y-6">
+
+          <div className="mb-12 grid gap-8 md:grid-cols-2">
             <div>
-              <div
-                className="text-2xl mb-4"
-                style={{ fontFamily: pair.display, fontWeight: 500 }}
-              >
-                Текст на русском
-              </div>
-              <p
-                className="text-base text-muted-foreground leading-[1.85]"
-                style={{ fontFamily: pair.body }}
-              >
-                {SAMPLE.bodyRu}
+              <div className="mb-4 text-2xl font-display">English Body Text</div>
+              <p className="text-base leading-[1.85] text-muted-foreground font-body">
+                {SAMPLE.body}
               </p>
             </div>
-            <div>
-              <div
-                className="text-2xl mb-4"
-                style={{ fontFamily: pair.display, fontWeight: 500 }}
-              >
-                Texto en español
-              </div>
-              <p
-                className="text-base text-muted-foreground leading-[1.85]"
-                style={{ fontFamily: pair.body }}
-              >
-                {SAMPLE.bodyEs}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Heading hierarchy */}
-        <div className="border-t border-border pt-10 mb-12">
-          <p className="text-xs text-muted-foreground uppercase tracking-[0.2em] mb-6" style={{ fontFamily: pair.body }}>
-            Heading Hierarchy
-          </p>
-          {[
-            { tag: "H1", size: "text-5xl" },
-            { tag: "H2", size: "text-4xl" },
-            { tag: "H3", size: "text-3xl" },
-            { tag: "H4", size: "text-2xl" },
-          ].map((h) => (
-            <div
-              key={h.tag}
-              className={`${h.size} mb-4`}
-              style={{ fontFamily: pair.display, fontWeight: 500 }}
-            >
-              {h.tag} — Wellness & Relaxation
-            </div>
-          ))}
-        </div>
-
-        {/* Service list preview */}
-        <div className="border-t border-border pt-8 space-y-0 divide-y divide-border mb-12">
-          <p className="text-xs text-muted-foreground uppercase tracking-[0.2em] mb-6 pb-0" style={{ fontFamily: pair.body }}>
-            Service List
-          </p>
-          {["Deep Tissue Massage", "Relaxation Therapy", "Hot Stone Treatment"].map((s) => (
-            <div key={s} className="flex items-center justify-between py-6">
+            <div className="space-y-6">
               <div>
-                <div
-                  className="text-xl mb-1"
-                  style={{ fontFamily: pair.display, fontWeight: 500 }}
-                >
-                  {s}
-                </div>
-                <p
-                  className="text-sm text-muted-foreground"
-                  style={{ fontFamily: pair.body }}
-                >
-                  60 min · €55
+                <div className="mb-4 text-2xl font-display">Текст на русском</div>
+                <p className="text-base leading-[1.85] text-muted-foreground font-body">
+                  {SAMPLE.bodyRu}
                 </p>
               </div>
-              <span
-                className="text-sm border border-foreground/20 px-5 py-2 rounded-full"
-                style={{ fontFamily: pair.body }}
-              >
-                Reserve
-              </span>
+              <div>
+                <div className="mb-4 text-2xl font-display">Texto en español</div>
+                <p className="text-base leading-[1.85] text-muted-foreground font-body">
+                  {SAMPLE.bodyEs}
+                </p>
+              </div>
             </div>
-          ))}
-        </div>
+          </div>
 
-        {/* Navigation + Button preview */}
-        <div className="border-t border-border pt-8 mb-12">
-          <p className="text-xs text-muted-foreground uppercase tracking-[0.2em] mb-6" style={{ fontFamily: pair.body }}>
-            Navigation & Buttons
-          </p>
-          <div className="flex gap-6 items-center mb-6" style={{ fontFamily: pair.body }}>
-            {["Home", "Services", "About", "Contact"].map((n) => (
-              <span key={n} className="text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
-                {n}
-              </span>
+          <div className="mb-12 border-t border-border pt-10">
+            <p className="mb-6 text-xs uppercase tracking-[0.2em] text-muted-foreground font-body">
+              Heading Hierarchy
+            </p>
+            {[
+              { tag: "H1", size: "text-5xl" },
+              { tag: "H2", size: "text-4xl" },
+              { tag: "H3", size: "text-3xl" },
+              { tag: "H4", size: "text-2xl" },
+            ].map((heading) => (
+              <div key={heading.tag} className={`${heading.size} mb-4 font-display`}>
+                {heading.tag} — Wellness & Relaxation
+              </div>
             ))}
           </div>
-          <div className="flex gap-3 flex-wrap" style={{ fontFamily: pair.body }}>
-            <span className="bg-foreground text-background px-6 py-2.5 rounded-full text-sm">
-              Primary Button
-            </span>
-            <span className="border border-foreground/20 px-6 py-2.5 rounded-full text-sm">
-              Secondary Button
-            </span>
-          </div>
-        </div>
 
-        {/* FAQ preview */}
-        <div className="border-t border-border pt-8">
-          <p className="text-xs text-muted-foreground uppercase tracking-[0.2em] mb-6" style={{ fontFamily: pair.body }}>
-            FAQ Preview
-          </p>
-          {["What should I expect during my first visit?", "How long does a session last?", "Do you offer gift cards?"].map((q) => (
-            <div key={q} className="border-b border-border py-5">
-              <div
-                className="text-lg"
-                style={{ fontFamily: pair.display, fontWeight: 500 }}
-              >
-                {q}
+          <div className="mb-12 space-y-0 divide-y divide-border border-t border-border pt-8">
+            <p className="mb-6 pb-0 text-xs uppercase tracking-[0.2em] text-muted-foreground font-body">
+              Service List
+            </p>
+            {[
+              "Deep Tissue Massage",
+              "Relaxation Therapy",
+              "Hot Stone Treatment",
+            ].map((service) => (
+              <div key={service} className="flex items-center justify-between py-6">
+                <div>
+                  <div className="mb-1 text-xl font-display">{service}</div>
+                  <p className="text-sm text-muted-foreground font-body">60 min · €55</p>
+                </div>
+                <span className="rounded-full border border-foreground/20 px-5 py-2 text-sm font-body">
+                  Reserve
+                </span>
               </div>
-              <p
-                className="text-sm text-muted-foreground mt-2 leading-relaxed"
-                style={{ fontFamily: pair.body }}
-              >
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.
-              </p>
+            ))}
+          </div>
+
+          <div className="mb-12 border-t border-border pt-8">
+            <p className="mb-6 text-xs uppercase tracking-[0.2em] text-muted-foreground font-body">
+              Navigation & Buttons
+            </p>
+            <div className="mb-6 flex items-center gap-6 font-body">
+              {["Home", "Services", "About", "Contact"].map((item) => (
+                <span
+                  key={item}
+                  className="cursor-pointer text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {item}
+                </span>
+              ))}
             </div>
-          ))}
+            <div className="flex flex-wrap gap-3 font-body">
+              <span className="rounded-full bg-foreground px-6 py-2.5 text-sm text-background">
+                Primary Button
+              </span>
+              <span className="rounded-full border border-foreground/20 px-6 py-2.5 text-sm">
+                Secondary Button
+              </span>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-8">
+            <p className="mb-6 text-xs uppercase tracking-[0.2em] text-muted-foreground font-body">
+              FAQ Preview
+            </p>
+            {[
+              "What should I expect during my first visit?",
+              "How long does a session last?",
+              "Do you offer gift cards?",
+            ].map((question) => (
+              <div key={question} className="border-b border-border py-5">
+                <div className="text-lg font-display">{question}</div>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground font-body">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
