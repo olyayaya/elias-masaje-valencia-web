@@ -79,6 +79,45 @@ const BlogPost = () => {
     );
   };
 
+  // Compute head data (must be before any early returns to satisfy hooks rules)
+  const title = post ? getField(post, "title") : "";
+  const content = post ? getField(post, "content") : "";
+  const metaDesc = post ? getField(post, "meta_description") : "";
+  const postUrl = post
+    ? `https://elias-masaje-valencia-web.lovable.app/blog/${post.slug || post.id}`
+    : "";
+
+  const jsonLd = post ? {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: title,
+    description: metaDesc,
+    datePublished: post.published_at,
+    dateModified: post.published_at,
+    author: { "@type": "Person", name: "Elias Masaje" },
+    publisher: {
+      "@type": "Organization",
+      name: "Elias Masaje",
+      url: "https://elias-masaje-valencia-web.lovable.app",
+    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
+    inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
+    ...((() => {
+      const kws = locale === "en" ? post.seo_keywords_en : locale === "ru" ? post.seo_keywords_ru : post.seo_keywords;
+      return kws?.length ? { keywords: kws.join(", ") } : {};
+    })()),
+  } : undefined;
+
+  useHead({
+    title: post ? `${title} | Elias Masaje` : undefined,
+    description: metaDesc || undefined,
+    canonical: postUrl || undefined,
+    ogTitle: title || undefined,
+    ogDescription: metaDesc || undefined,
+    ogType: post ? "article" : undefined,
+    jsonLd,
+  });
+
   if (loading) {
     return (
       <div className="section-padding flex justify-center">
@@ -99,45 +138,6 @@ const BlogPost = () => {
       </div>
     );
   }
-
-  const title = getField(post, "title");
-  const content = getField(post, "content");
-  const metaDesc = getField(post, "meta_description");
-
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: title,
-    description: metaDesc,
-    datePublished: post.published_at,
-    dateModified: post.published_at,
-    author: { "@type": "Person", name: "Elias Masaje" },
-    publisher: {
-      "@type": "Organization",
-      name: "Elias Masaje",
-      url: "https://elias-masaje-valencia-web.lovable.app",
-    },
-    mainEntityOfPage: {
-      "@type": "WebPage",
-      "@id": `https://elias-masaje-valencia-web.lovable.app/blog/${post.slug || post.id}`,
-    },
-    inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
-    ...((() => {
-      const kws = locale === "en" ? post.seo_keywords_en : locale === "ru" ? post.seo_keywords_ru : post.seo_keywords;
-      return kws?.length ? { keywords: kws.join(", ") } : {};
-    })()),
-  };
-
-  const postUrl = `https://elias-masaje-valencia-web.lovable.app/blog/${post.slug || post.id}`;
-  useHead({
-    title: `${title} | Elias Masaje`,
-    description: metaDesc,
-    canonical: postUrl,
-    ogTitle: title,
-    ogDescription: metaDesc,
-    ogType: "article",
-    jsonLd,
-  });
 
   return (
       <article className="section-padding">
