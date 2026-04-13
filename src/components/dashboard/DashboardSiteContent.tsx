@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
 import ImagePicker from "./ImagePicker";
+import ImagePreviewEditor from "./ImagePreviewEditor";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,9 @@ const isLongField = (key: string) =>
   key.includes("description") || key.includes("tagline") || key.includes("preview_p");
 
 const isImageField = (key: string) =>
-  key.includes("image") || key.includes("photo") || key.includes("logo") || key.includes("_img");
+  (key.includes("image") || key.includes("photo") || key.includes("logo") || key.includes("_img")) && !key.endsWith("_position");
+
+const isPositionField = (key: string) => key.endsWith("_position");
 
 /* ─── Category Section (extracted for open/closed state tracking) ─── */
 const CategorySection = ({
