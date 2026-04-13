@@ -22,6 +22,8 @@ interface BlogPost {
   title: string;
   content: string;
   seo_keywords: string[];
+  seo_keywords_en: string[];
+  seo_keywords_ru: string[];
   meta_description: string;
   status: string;
   created_at: string;
@@ -36,11 +38,26 @@ interface BlogPost {
   slug: string;
 }
 
-const suggestedKeywords = [
-  "masaje Valencia", "masajista Valencia centro", "masaje descontracturante",
-  "masaje relajante Valencia", "terapia manual Valencia", "dolor de espalda masaje",
-  "masaje deportivo Valencia", "bienestar Valencia", "masaje cerca de mí",
-];
+const suggestedKeywordsByLang: Record<Lang, string[]> = {
+  es: [
+    "masaje Valencia", "masajista Valencia centro", "masaje descontracturante",
+    "masaje relajante Valencia", "terapia manual Valencia", "dolor de espalda masaje",
+    "masaje deportivo Valencia", "bienestar Valencia", "masaje cerca de mí",
+  ],
+  en: [
+    "massage Valencia", "massage therapist Valencia", "deep tissue massage",
+    "relaxation massage Valencia", "manual therapy Valencia", "back pain massage",
+    "sports massage Valencia", "wellness Valencia", "massage near me",
+  ],
+  ru: [
+    "массаж Валенсия", "массажист Валенсия центр", "лечебный массаж",
+    "расслабляющий массаж Валенсия", "мануальная терапия Валенсия", "массаж от боли в спине",
+    "спортивный массаж Валенсия", "велнес Валенсия", "массаж рядом со мной",
+  ],
+};
+
+const kwKey = (lang: Lang): "seo_keywords" | "seo_keywords_en" | "seo_keywords_ru" =>
+  lang === "es" ? "seo_keywords" : lang === "en" ? "seo_keywords_en" : "seo_keywords_ru";
 
 /* ─── AI Generation Panel ─── */
 interface TopicSuggestion { title: string; reason: string; }
@@ -229,8 +246,8 @@ const DashboardBlog = () => {
 
   const startNew = () => {
     const newPost: BlogPost = {
-      id: "", title: "", content: "", seo_keywords: [], meta_description: "",
-      status: "draft", created_at: new Date().toISOString(),
+      id: "", title: "", content: "", seo_keywords: [], seo_keywords_en: [], seo_keywords_ru: [],
+      meta_description: "", status: "draft", created_at: new Date().toISOString(),
       title_en: "", title_ru: "", content_en: "", content_ru: "",
       meta_description_en: "", meta_description_ru: "", hidden: false,
       published_at: null, slug: "",
@@ -241,19 +258,20 @@ const DashboardBlog = () => {
   const startEdit = (p: BlogPost) => { setDraft({ ...p }); setEditing(p.id); };
 
   const handleAIGenerated = (result: { title: string; content: string; meta_description: string; keywords: string[] }) => {
-    const titleKey = langKey("title", lang) as keyof BlogPost;
-    const contentKey = langKey("content", lang) as keyof BlogPost;
-    const metaKey = langKey("meta_description", lang) as keyof BlogPost;
+    const titleK = langKey("title", lang) as keyof BlogPost;
+    const contentK = langKey("content", lang) as keyof BlogPost;
+    const metaK = langKey("meta_description", lang) as keyof BlogPost;
 
     const newPost: BlogPost = {
-      id: "", title: "", content: "", seo_keywords: result.keywords || [], meta_description: "",
-      status: "draft", created_at: new Date().toISOString(),
+      id: "", title: "", content: "", seo_keywords: [], seo_keywords_en: [], seo_keywords_ru: [],
+      meta_description: "", status: "draft", created_at: new Date().toISOString(),
       title_en: "", title_ru: "", content_en: "", content_ru: "",
       meta_description_en: "", meta_description_ru: "", hidden: false,
       published_at: null, slug: "",
-      [titleKey]: result.title,
-      [contentKey]: result.content,
-      [metaKey]: result.meta_description,
+      [titleK]: result.title,
+      [contentK]: result.content,
+      [metaK]: result.meta_description,
+      [kwKey(lang)]: result.keywords || [],
     };
     setDraft(newPost);
     setEditing("new");
@@ -264,8 +282,8 @@ const DashboardBlog = () => {
     setSaving(true);
     const payload = {
       title: draft.title, content: draft.content,
-      seo_keywords: draft.seo_keywords, meta_description: draft.meta_description,
-      status: draft.status,
+      seo_keywords: draft.seo_keywords, seo_keywords_en: draft.seo_keywords_en, seo_keywords_ru: draft.seo_keywords_ru,
+      meta_description: draft.meta_description, status: draft.status,
       title_en: draft.title_en, title_ru: draft.title_ru,
       content_en: draft.content_en, content_ru: draft.content_ru,
       meta_description_en: draft.meta_description_en, meta_description_ru: draft.meta_description_ru,
@@ -275,9 +293,9 @@ const DashboardBlog = () => {
         : draft.published_at,
     };
     if (editing === "new") {
-      await supabase.from("blog_posts").insert(payload);
+      await supabase.from("blog_posts").insert(payload as any);
     } else if (editing) {
-      await supabase.from("blog_posts").update(payload).eq("id", editing);
+      await supabase.from("blog_posts").update(payload as any).eq("id", editing);
     }
     setEditing(null); setDraft(null); setSaving(false);
     fetchPosts();
@@ -290,8 +308,10 @@ const DashboardBlog = () => {
 
   const toggleKeyword = (kw: string) => {
     if (!draft) return;
-    const has = draft.seo_keywords.includes(kw);
-    setDraft({ ...draft, seo_keywords: has ? draft.seo_keywords.filter((k) => k !== kw) : [...draft.seo_keywords, kw] });
+    const field = kwKey(lang);
+    const current = draft[field];
+    const has = current.includes(kw);
+    setDraft({ ...draft, [field]: has ? current.filter((k) => k !== kw) : [...current, kw] });
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
