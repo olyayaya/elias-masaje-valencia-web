@@ -129,8 +129,8 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">{dt.welcome}, {nameByLang[locale] ?? "Elias"}</h1>
-        <p className="text-sm text-gray-500">{dt.siteOverview}</p>
+        <h1 className="text-2xl font-semibold text-foreground mb-1">{dt.welcome}, {nameByLang[locale] ?? "Elias"}</h1>
+        <p className="text-sm text-muted-foreground">{dt.siteOverview}</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
