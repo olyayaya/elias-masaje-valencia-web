@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, topic, language = "es" } = await req.json();
+    const { action, topic, language = "es", source_title, source_content, source_meta } = await req.json();
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "API key not configured" }), {
