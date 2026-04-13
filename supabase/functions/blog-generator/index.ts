@@ -8,14 +8,21 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const LANG_NAMES: Record<string, string> = {
+  es: "Spanish",
+  en: "English",
+  ru: "Russian",
+};
+
 const BRAND_SYSTEM = `You are the content writer for Elias Masaje, a professional therapeutic massage studio in central Valencia, Spain.
 
 BRAND VOICE:
 - Warm, calm, professional — like a trusted therapist speaking to a friend
-- Use "yo/mi" (first person) when referring to the practitioner
 - Grounded and honest — no exaggerated claims or medical promises
 - Gentle confidence — expertise without arrogance
 - Focus on well-being, relief, and personal care
+- Non-medical, holistic, premium but simple
+- Easy to read — short paragraphs, clear language
 
 BUSINESS CONTEXT:
 - Located at Calle de la Paz 18, Valencia centro
@@ -35,7 +42,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, topic, language } = await req.json();
+    const { action, topic, language = "es" } = await req.json();
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "API key not configured" }), {
@@ -43,49 +50,158 @@ Deno.serve(async (req) => {
       });
     }
 
-    let prompt = "";
+    const langName = LANG_NAMES[language] || "Spanish";
+
+    let messages: { role: string; content: string }[] = [];
+    let tools: any[] | undefined;
+    let tool_choice: any | undefined;
 
     if (action === "suggest_topics") {
-      prompt = `Suggest 5 blog post topics for Elias Masaje that would perform well for SEO in Valencia.
+      messages = [
+        { role: "system", content: BRAND_SYSTEM },
+        {
+          role: "user",
+          content: `Suggest 5 blog post topics for Elias Masaje that would perform well for SEO in Valencia.
 Each topic should:
 - Target a specific search intent related to massage/wellness in Valencia
 - Be something a potential client would search for
 - Balance informational and commercial intent
+- Write titles and reasons in ${langName}
 
-Return ONLY a JSON array of objects with "title" (the post title in ${language === "en" ? "English" : language === "ru" ? "Russian" : "Spanish"}) and "reason" (why this topic is good for SEO, 1 sentence, same language). No markdown, no code fences.`;
+Return the topics.`,
+        },
+      ];
+
+      tools = [
+        {
+          type: "function",
+          function: {
+            name: "return_topics",
+            description: "Return blog topic suggestions",
+            parameters: {
+              type: "object",
+              properties: {
+                topics: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string", description: `Blog post title in ${langName}` },
+                      reason: { type: "string", description: `Why this topic is good for SEO, 1 sentence, in ${langName}` },
+                    },
+                    required: ["title", "reason"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["topics"],
+              additionalProperties: false,
+            },
+          },
+        },
+      ];
+      tool_choice = { type: "function", function: { name: "return_topics" } };
     } else if (action === "generate_post") {
-      const langInstruction = language === "en"
-        ? "Write entirely in English."
-        : language === "ru"
-        ? "Write entirely in Russian."
-        : "Write entirely in Spanish.";
+      messages = [
+        { role: "system", content: BRAND_SYSTEM },
+        {
+          role: "user",
+          content: `Write a blog post about: "${topic}"
 
-      prompt = `Write a blog post about: "${topic}"
-
-${langInstruction}
+LANGUAGE: Write the ENTIRE post in ${langName}. Every word must be in ${langName}.
 
 REQUIREMENTS:
 - 400-600 words
-- Use HTML formatting (h2, h3, p, ul/li, strong, em) — no markdown
-- Include the primary keyword naturally 2-3 times
-- Include related secondary keywords where natural
+- Use HTML formatting: <h2>, <h3>, <p>, <ul><li>, <ol><li>, <strong>, <em> — no markdown
+- Include relevant keywords naturally 2-3 times
 - Open with a hook that addresses the reader's pain point or curiosity
 - Include practical advice or insights (not just promotion)
 - End with a soft call-to-action mentioning booking a session
 - Maintain the warm, professional Elias Masaje brand voice
-- Do NOT use clickbait or medical claims
+- Do NOT use clickbait, medical claims, or keyword stuffing
+- Keep paragraphs short and easy to scan
 
-Also provide:
-1. An SEO-optimized title (under 60 characters)
-2. A meta description (under 155 characters)  
-3. 3-5 relevant SEO keywords
+Provide the blog post with title, meta description, SEO keywords, and body content — all in ${langName}.`,
+        },
+      ];
 
-Return ONLY a JSON object with keys: "title", "content" (HTML string), "meta_description", "keywords" (array of strings). No markdown, no code fences.`;
+      tools = [
+        {
+          type: "function",
+          function: {
+            name: "return_blog_post",
+            description: `Return a complete blog post in ${langName}`,
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: `SEO-optimized title under 60 characters in ${langName}` },
+                content: { type: "string", description: `Full blog post body as an HTML string in ${langName}` },
+                meta_description: { type: "string", description: `Meta description under 155 characters in ${langName}` },
+                keywords: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "3-5 relevant SEO keywords",
+                },
+              },
+              required: ["title", "content", "meta_description", "keywords"],
+              additionalProperties: false,
+            },
+          },
+        },
+      ];
+      tool_choice = { type: "function", function: { name: "return_blog_post" } };
+    } else if (action === "regenerate_content") {
+      // Regenerate just the body content for an existing post
+      messages = [
+        { role: "system", content: BRAND_SYSTEM },
+        {
+          role: "user",
+          content: `Rewrite this blog post content about "${topic}" in ${langName}.
+
+LANGUAGE: Write ENTIRELY in ${langName}.
+
+REQUIREMENTS:
+- 400-600 words
+- Use HTML formatting: <h2>, <h3>, <p>, <ul><li>, <ol><li>, <strong>, <em>
+- Fresh perspective on the same topic
+- Maintain brand voice: calm, wellness-oriented, holistic, premium but simple
+- Do NOT use clickbait, medical claims, or keyword stuffing
+
+Return just the new HTML content.`,
+        },
+      ];
+
+      tools = [
+        {
+          type: "function",
+          function: {
+            name: "return_content",
+            description: `Return regenerated blog content in ${langName}`,
+            parameters: {
+              type: "object",
+              properties: {
+                content: { type: "string", description: `Regenerated HTML blog content in ${langName}` },
+              },
+              required: ["content"],
+              additionalProperties: false,
+            },
+          },
+        },
+      ];
+      tool_choice = { type: "function", function: { name: "return_content" } };
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const body: any = {
+      model: "google/gemini-3-flash-preview",
+      messages,
+      temperature: action === "suggest_topics" ? 0.7 : 0.5,
+    };
+    if (tools) body.tools = tools;
+    if (tool_choice) body.tool_choice = tool_choice;
 
     const response = await fetch(LOVABLE_API_URL, {
       method: "POST",
@@ -93,14 +209,7 @@ Return ONLY a JSON object with keys: "title", "content" (HTML string), "meta_des
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: BRAND_SYSTEM },
-          { role: "user", content: prompt },
-        ],
-        temperature: action === "suggest_topics" ? 0.7 : 0.5,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -123,9 +232,28 @@ Return ONLY a JSON object with keys: "title", "content" (HTML string), "meta_des
     }
 
     const data = await response.json();
-    let raw = data.choices?.[0]?.message?.content?.trim() || "";
 
-    // Strip markdown code fences if present
+    // Extract from tool call response
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (toolCall?.function?.arguments) {
+      try {
+        const parsed = JSON.parse(toolCall.function.arguments);
+        // For suggest_topics, return the topics array
+        if (action === "suggest_topics" && parsed.topics) {
+          return new Response(JSON.stringify({ result: parsed.topics }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ result: parsed }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e) {
+        console.error("Failed to parse tool call arguments:", e);
+      }
+    }
+
+    // Fallback: try to parse from message content
+    let raw = data.choices?.[0]?.message?.content?.trim() || "";
     raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
 
     try {
@@ -134,7 +262,6 @@ Return ONLY a JSON object with keys: "title", "content" (HTML string), "meta_des
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch {
-      // If not valid JSON, return raw text
       return new Response(JSON.stringify({ result: raw }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

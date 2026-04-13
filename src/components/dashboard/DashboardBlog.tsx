@@ -1,10 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import ImageExt from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Plus, Bold, Italic, Heading2, List, LinkIcon, Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb, Eye, EyeOff } from "lucide-react";
+import TextAlign from "@tiptap/extension-text-align";
+import {
+  Plus, Bold, Italic, Heading1, Heading2, Heading3,
+  List, ListOrdered, LinkIcon, AlignLeft, AlignCenter, AlignRight,
+  Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb,
+  Eye, EyeOff, RotateCcw,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
@@ -46,6 +52,8 @@ const AIGeneratePanel = ({ onGenerated, lang }: {
   const [topics, setTopics] = useState<TopicSuggestion[]>([]);
   const [customTopic, setCustomTopic] = useState("");
 
+  const langLabel = lang === "es" ? "Spanish" : lang === "en" ? "English" : "Russian";
+
   const suggestTopics = async () => {
     setStep("suggesting");
     try {
@@ -76,7 +84,7 @@ const AIGeneratePanel = ({ onGenerated, lang }: {
       const result = data?.result;
       if (result && typeof result === "object" && result.title) {
         onGenerated(result);
-        toast.success("Post generated — review and edit before saving");
+        toast.success(`Post generated in ${langLabel} — review and edit before saving`);
         setStep("idle");
       } else {
         throw new Error("Unexpected response format");
@@ -96,7 +104,7 @@ const AIGeneratePanel = ({ onGenerated, lang }: {
               <Wand2 size={14} className="text-primary" /> Generate with AI
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Get SEO-optimized topic suggestions or enter your own theme
+              Content will be generated natively in <strong>{langLabel}</strong>
             </p>
           </div>
           <div className="flex gap-2">
@@ -124,7 +132,7 @@ const AIGeneratePanel = ({ onGenerated, lang }: {
         <div className="flex items-center justify-center gap-3 py-8">
           <Loader2 size={18} className="animate-spin text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            {step === "suggesting" ? "Finding trending topics…" : "Writing your post…"}
+            {step === "suggesting" ? "Finding trending topics…" : `Writing your post in ${langLabel}…`}
           </p>
         </div>
       </DashboardCard>
@@ -133,7 +141,7 @@ const AIGeneratePanel = ({ onGenerated, lang }: {
 
   if (step === "topics") {
     return (
-      <DashboardCard title="Topic Suggestions" description="Click a topic to generate a full post, or enter your own">
+      <DashboardCard title="Topic Suggestions" description={`Generated for ${langLabel} — click to generate a full post`}>
         <div className="space-y-2">
           {topics.map((t, i) => (
             <button
@@ -150,7 +158,7 @@ const AIGeneratePanel = ({ onGenerated, lang }: {
               value={customTopic}
               onChange={(e) => setCustomTopic(e.target.value)}
               placeholder="Or type your own topic…"
-              className="flex-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               onKeyDown={(e) => { if (e.key === "Enter" && customTopic.trim()) generatePost(customTopic); }}
             />
             <button
@@ -171,13 +179,13 @@ const AIGeneratePanel = ({ onGenerated, lang }: {
 
   if (step === "custom") {
     return (
-      <DashboardCard title="Write about…" description="Enter a topic or theme for your blog post">
+      <DashboardCard title="Write about…" description={`Post will be generated in ${langLabel}`}>
         <div className="space-y-3">
           <input
             value={customTopic}
             onChange={(e) => setCustomTopic(e.target.value)}
             placeholder="e.g. Benefits of deep tissue massage for office workers"
-            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             autoFocus
             onKeyDown={(e) => { if (e.key === "Enter" && customTopic.trim()) generatePost(customTopic); }}
           />
@@ -279,15 +287,6 @@ const DashboardBlog = () => {
     fetchPosts();
   };
 
-  const generateMeta = () => {
-    if (!draft) return;
-    const title = draft.title || "masaje profesional";
-    setDraft({
-      ...draft,
-      meta_description: `${title} en el centro de Valencia. Reserva tu sesión y descubre los beneficios del masaje terapéutico personalizado.`.slice(0, 160),
-    });
-  };
-
   const toggleKeyword = (kw: string) => {
     if (!draft) return;
     const has = draft.seo_keywords.includes(kw);
@@ -300,7 +299,7 @@ const DashboardBlog = () => {
     return <BlogEditor
       draft={draft} setDraft={setDraft} onSave={save}
       onCancel={() => { setEditing(null); setDraft(null); }}
-      onGenerateMeta={generateMeta} suggestedKeywords={suggestedKeywords}
+      suggestedKeywords={suggestedKeywords}
       onToggleKeyword={toggleKeyword} saving={saving}
       lang={lang} setLang={setLang}
     />;
@@ -353,37 +352,115 @@ const DashboardBlog = () => {
   );
 };
 
+/* ─── Toolbar Button ─── */
+const ToolbarBtn = ({
+  onClick,
+  active = false,
+  title,
+  children,
+}: {
+  onClick: () => void;
+  active?: boolean;
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title={title}
+    className={`p-1.5 rounded transition-colors ${
+      active ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+    }`}
+  >
+    {children}
+  </button>
+);
+
+const ToolbarSep = () => <div className="w-px h-5 bg-border mx-0.5" />;
+
 /* ─── Blog Editor ─── */
 const BlogEditor = ({
-  draft, setDraft, onSave, onCancel, onGenerateMeta, suggestedKeywords, onToggleKeyword, saving, lang, setLang,
+  draft, setDraft, onSave, onCancel, suggestedKeywords, onToggleKeyword, saving, lang, setLang,
 }: {
   draft: BlogPost;
   setDraft: (d: BlogPost) => void;
   onSave: () => void;
   onCancel: () => void;
-  onGenerateMeta: () => void;
   suggestedKeywords: string[];
   onToggleKeyword: (kw: string) => void;
   saving: boolean;
   lang: Lang;
   setLang: (l: Lang) => void;
 }) => {
+  const [regenerating, setRegenerating] = useState(false);
   const titleKey = langKey("title", lang) as keyof BlogPost;
   const contentKey = langKey("content", lang) as keyof BlogPost;
   const metaKey = langKey("meta_description", lang) as keyof BlogPost;
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+      }),
       Link.configure({ openOnClick: false }),
       ImageExt,
       Placeholder.configure({ placeholder: "Start writing your post…" }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
     content: (draft[contentKey] as string) || "",
     onUpdate: ({ editor }) => {
       setDraft({ ...draft, [contentKey]: editor.getHTML() });
     },
   }, [lang]);
+
+  const insertLink = useCallback(() => {
+    if (!editor) return;
+    const existingHref = editor.getAttributes("link").href;
+    const url = window.prompt("URL:", existingHref || "https://");
+    if (url === null) return; // cancelled
+    if (url === "") {
+      editor.chain().focus().unsetLink().run();
+    } else {
+      editor.chain().focus().extendMarkRange("link").setLink({ href: url, target: "_blank" }).run();
+    }
+  }, [editor]);
+
+  const regenerateContent = async () => {
+    const title = (draft[titleKey] as string) || "massage wellness";
+    setRegenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("blog-generator", {
+        body: { action: "regenerate_content", topic: title, language: lang },
+      });
+      if (error) throw error;
+      const result = data?.result;
+      if (result?.content) {
+        setDraft({ ...draft, [contentKey]: result.content });
+        editor?.commands.setContent(result.content);
+        toast.success("Content regenerated");
+      } else {
+        throw new Error("Unexpected response");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to regenerate");
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const generateMeta = () => {
+    if (!draft) return;
+    const title = (draft[titleKey] as string) || "masaje profesional";
+    const langSuffix = lang === "en"
+      ? `in central Valencia. Book your session and discover the benefits of personalized therapeutic massage.`
+      : lang === "ru"
+      ? `в центре Валенсии. Запишитесь на сеанс и откройте для себя преимущества персонализированного массажа.`
+      : `en el centro de Valencia. Reserva tu sesión y descubre los beneficios del masaje terapéutico personalizado.`;
+    setDraft({
+      ...draft,
+      [metaKey]: `${title} ${langSuffix}`.slice(0, 160),
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -399,7 +476,7 @@ const BlogEditor = ({
             <input
               value={(draft[titleKey] as string) || ""}
               onChange={(e) => setDraft({ ...draft, [titleKey]: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="Post title"
             />
           </div>
@@ -408,14 +485,69 @@ const BlogEditor = ({
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Content ({lang.toUpperCase()})</label>
               <div className="border border-border rounded-lg overflow-hidden">
-                <div className="flex gap-0.5 p-2 border-b border-border bg-muted">
-                  <button onClick={() => editor.chain().focus().toggleBold().run()} className={`p-1.5 rounded ${editor.isActive("bold") ? "bg-background shadow-sm" : "hover:bg-background/50"}`}><Bold size={14} /></button>
-                  <button onClick={() => editor.chain().focus().toggleItalic().run()} className={`p-1.5 rounded ${editor.isActive("italic") ? "bg-background shadow-sm" : "hover:bg-background/50"}`}><Italic size={14} /></button>
-                  <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`p-1.5 rounded ${editor.isActive("heading") ? "bg-background shadow-sm" : "hover:bg-background/50"}`}><Heading2 size={14} /></button>
-                  <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`p-1.5 rounded ${editor.isActive("bulletList") ? "bg-background shadow-sm" : "hover:bg-background/50"}`}><List size={14} /></button>
-                  <button onClick={() => { const url = window.prompt("URL:"); if (url) editor.chain().focus().setLink({ href: url }).run(); }} className={`p-1.5 rounded ${editor.isActive("link") ? "bg-background shadow-sm" : "hover:bg-background/50"}`}><LinkIcon size={14} /></button>
+                {/* ── Toolbar ── */}
+                <div className="flex flex-wrap items-center gap-0.5 p-2 border-b border-border bg-muted">
+                  <ToolbarBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Bold">
+                    <Bold size={14} />
+                  </ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} title="Italic">
+                    <Italic size={14} />
+                  </ToolbarBtn>
+
+                  <ToolbarSep />
+
+                  <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive("heading", { level: 1 })} title="Heading 1">
+                    <Heading1 size={14} />
+                  </ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} title="Heading 2">
+                    <Heading2 size={14} />
+                  </ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })} title="Heading 3">
+                    <Heading3 size={14} />
+                  </ToolbarBtn>
+
+                  <ToolbarSep />
+
+                  <ToolbarBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title="Bullet list">
+                    <List size={14} />
+                  </ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Numbered list">
+                    <ListOrdered size={14} />
+                  </ToolbarBtn>
+
+                  <ToolbarSep />
+
+                  <ToolbarBtn onClick={insertLink} active={editor.isActive("link")} title="Insert link">
+                    <LinkIcon size={14} />
+                  </ToolbarBtn>
+
+                  <ToolbarSep />
+
+                  <ToolbarBtn onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} title="Align left">
+                    <AlignLeft size={14} />
+                  </ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} title="Align center">
+                    <AlignCenter size={14} />
+                  </ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} title="Align right">
+                    <AlignRight size={14} />
+                  </ToolbarBtn>
+
+                  <ToolbarSep />
+
+                  <ToolbarBtn onClick={regenerateContent} active={false} title="Regenerate content with AI">
+                    {regenerating ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                  </ToolbarBtn>
                 </div>
-                <EditorContent editor={editor} className="prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[180px]" />
+                {/* ── Editor ── */}
+                <EditorContent
+                  editor={editor}
+                  className="prose prose-sm max-w-none p-4 min-h-[240px] focus:outline-none
+                    [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[220px]
+                    prose-headings:font-display prose-p:text-foreground
+                    prose-a:text-primary prose-a:underline
+                    prose-ol:list-decimal prose-ul:list-disc"
+                />
               </div>
             </div>
           )}
@@ -424,7 +556,7 @@ const BlogEditor = ({
             <div className="flex flex-wrap gap-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
-                <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none">
+                <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none">
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
                 </select>
@@ -435,7 +567,7 @@ const BlogEditor = ({
                   type="datetime-local"
                   value={draft.published_at ? new Date(draft.published_at).toISOString().slice(0, 16) : ""}
                   onChange={(e) => setDraft({ ...draft, published_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                  className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none"
+                  className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none"
                 />
               </div>
             </div>
@@ -447,7 +579,7 @@ const BlogEditor = ({
               <input
                 value={draft.slug || ""}
                 onChange={(e) => setDraft({ ...draft, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-") })}
-                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none"
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none"
                 placeholder="my-post-title"
               />
               <p className="text-[11px] text-muted-foreground mt-1">/blog/{draft.slug || "..."}</p>
@@ -472,16 +604,14 @@ const BlogEditor = ({
             value={(draft[metaKey] as string) || ""}
             onChange={(e) => setDraft({ ...draft, [metaKey]: e.target.value })}
             rows={2} maxLength={160}
-            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             placeholder="Meta description for search engines..."
           />
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">{((draft[metaKey] as string) || "").length}/160</span>
-            {lang === "es" && (
-              <button onClick={onGenerateMeta} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted">
-                <Sparkles size={12} /> Auto-generate
-              </button>
-            )}
+            <button onClick={generateMeta} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted">
+              <Sparkles size={12} /> Auto-generate
+            </button>
           </div>
         </div>
       </DashboardCard>
