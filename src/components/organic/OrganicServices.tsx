@@ -17,8 +17,7 @@ import { useDbServices, useDbPromotions, resolveField } from "@/hooks/use-db-con
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
-
-const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
+import { WHATSAPP_URL } from "@/config/contact";
 
 const PROMO_COLORS: Record<string, string> = {
   amber: "bg-amber-100 text-amber-800 border-amber-200",
