@@ -18,6 +18,8 @@ interface Post {
   slug: string;
   published_at: string;
   seo_keywords: string[];
+  seo_keywords_en: string[];
+  seo_keywords_ru: string[];
 }
 
 const langField = (field: string, locale: string) => {
@@ -138,15 +140,18 @@ const BlogPost = () => {
           dangerouslySetInnerHTML={{ __html: content }}
         />
 
-        {post.seo_keywords.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-12 pt-8 border-t border-border">
-            {post.seo_keywords.map((kw) => (
-              <span key={kw} className="text-xs px-3 py-1 bg-secondary text-muted-foreground rounded-full">
-                {kw}
-              </span>
-            ))}
-          </div>
-        )}
+        {(() => {
+          const kws = locale === "en" ? post.seo_keywords_en : locale === "ru" ? post.seo_keywords_ru : post.seo_keywords;
+          return kws && kws.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mt-12 pt-8 border-t border-border">
+              {kws.map((kw) => (
+                <span key={kw} className="text-xs px-3 py-1 bg-secondary text-muted-foreground rounded-full">
+                  {kw}
+                </span>
+              ))}
+            </div>
+          ) : null;
+        })()}
       </div>
     </article>
   );
