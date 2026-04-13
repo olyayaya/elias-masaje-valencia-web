@@ -184,10 +184,10 @@ const FontPreview = () => {
               ))}
             </div>
             <div className="flex flex-wrap gap-3 font-body">
-              <span className="rounded-full bg-foreground px-6 py-2.5 text-sm text-background">
+              <span className="rounded-full bg-foreground px-6 py-2.5 text-sm text-background cursor-pointer transition-all hover:opacity-90 hover:-translate-y-0.5">
                 Primary Button
               </span>
-              <span className="rounded-full border border-foreground/20 px-6 py-2.5 text-sm">
+              <span className="rounded-full border border-foreground/20 px-6 py-2.5 text-sm cursor-pointer transition-all hover:bg-foreground hover:text-background hover:-translate-y-0.5">
                 Secondary Button
               </span>
             </div>
