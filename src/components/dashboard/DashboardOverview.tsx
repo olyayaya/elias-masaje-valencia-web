@@ -135,47 +135,47 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {mockStats.map((s) => (
-          <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4">
+          <div key={s.label} className="bg-card rounded-xl border border-border p-4">
             <div className="flex items-center gap-2 mb-2">
-              <s.icon size={14} className="text-gray-400" />
-              <span className="text-xs text-gray-500">{s.label}</span>
+              <s.icon size={14} className="text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">{s.label}</span>
             </div>
-            <p className="text-xl font-semibold text-gray-900">{s.value}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{s.trend}</p>
+            <p className="text-xl font-semibold text-foreground">{s.value}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{s.trend}</p>
           </div>
         ))}
       </div>
 
       <div>
-        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">{dt.manageYourSite}</h2>
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">{dt.manageYourSite}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {quickLinks.map((link) => (
             <button
               key={link.id}
               onClick={() => onNavigate(link.id)}
-              className="group bg-white rounded-xl border border-gray-100 p-5 text-left transition-all hover:border-gray-200 hover:shadow-sm"
+              className="group bg-card rounded-xl border border-border p-5 text-left transition-all hover:border-muted-foreground/30 hover:shadow-sm"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-gray-100 transition-colors">
-                    <link.icon size={16} className="text-gray-600" />
+                  <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center group-hover:bg-secondary/80 transition-colors">
+                    <link.icon size={16} className="text-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900">{link.label}</h3>
-                    <p className="text-xs text-gray-400">{link.stat}</p>
+                    <h3 className="text-sm font-medium text-foreground">{link.label}</h3>
+                    <p className="text-xs text-muted-foreground">{link.stat}</p>
                   </div>
                 </div>
-                <ArrowUpRight size={14} className="text-gray-300 group-hover:text-gray-500 transition-colors mt-1" />
+                <ArrowUpRight size={14} className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors mt-1" />
               </div>
-              <p className="text-xs text-gray-500 leading-relaxed">{link.description}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{link.description}</p>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="bg-gray-50 rounded-xl border border-gray-100 p-5">
-        <h3 className="text-sm font-medium text-gray-700 mb-1">{dt.tip}</h3>
-        <p className="text-xs text-gray-500 leading-relaxed">{dt.tipText}</p>
+      <div className="bg-secondary rounded-xl border border-border p-5">
+        <h3 className="text-sm font-medium text-foreground mb-1">{dt.tip}</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed">{dt.tipText}</p>
       </div>
     </div>
   );
