@@ -328,6 +328,9 @@ const DashboardBlog = () => {
                 <h4 className="text-sm font-medium text-foreground">{langVal(p, "title", lang) || p.title}</h4>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.status === "published" ? "bg-green-50 text-green-600" : "bg-muted text-muted-foreground"}`}>{p.status}</span>
                 {p.hidden && <span className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded-full">Hidden</span>}
+                {p.published_at && new Date(p.published_at) > new Date() && (
+                  <span className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary rounded-full">Scheduled</span>
+                )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">{langVal(p, "meta_description", lang) || p.meta_description}</p>
               <div className="flex gap-1.5 mt-2 flex-wrap">
