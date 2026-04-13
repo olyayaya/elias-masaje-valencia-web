@@ -104,7 +104,7 @@ const FontPreview = () => {
             <p className="mb-8 max-w-lg text-lg leading-relaxed text-muted-foreground font-body">
               {SAMPLE.subhead}
             </p>
-            <span className="inline-block rounded-full bg-foreground px-8 py-3 text-sm text-background font-body">
+            <span className="inline-block rounded-full bg-foreground px-8 py-3 text-sm text-background font-body cursor-pointer transition-all hover:opacity-90 hover:-translate-y-0.5">
               Book Now
             </span>
           </div>
@@ -162,7 +162,7 @@ const FontPreview = () => {
                   <div className="mb-1 text-xl font-display">{service}</div>
                   <p className="text-sm text-muted-foreground font-body">60 min · €55</p>
                 </div>
-                <span className="rounded-full border border-foreground/20 px-5 py-2 text-sm font-body">
+                <span className="rounded-full border border-foreground/20 px-5 py-2 text-sm font-body cursor-pointer transition-all hover:bg-foreground hover:text-background hover:-translate-y-0.5">
                   Reserve
                 </span>
               </div>
@@ -184,10 +184,10 @@ const FontPreview = () => {
               ))}
             </div>
             <div className="flex flex-wrap gap-3 font-body">
-              <span className="rounded-full bg-foreground px-6 py-2.5 text-sm text-background">
+              <span className="rounded-full bg-foreground px-6 py-2.5 text-sm text-background cursor-pointer transition-all hover:opacity-90 hover:-translate-y-0.5">
                 Primary Button
               </span>
-              <span className="rounded-full border border-foreground/20 px-6 py-2.5 text-sm">
+              <span className="rounded-full border border-foreground/20 px-6 py-2.5 text-sm cursor-pointer transition-all hover:bg-foreground hover:text-background hover:-translate-y-0.5">
                 Secondary Button
               </span>
             </div>
