@@ -25,7 +25,9 @@ export type Database = {
           meta_description: string
           meta_description_en: string
           meta_description_ru: string
+          published_at: string | null
           seo_keywords: string[]
+          slug: string | null
           status: string
           title: string
           title_en: string
@@ -42,7 +44,9 @@ export type Database = {
           meta_description?: string
           meta_description_en?: string
           meta_description_ru?: string
+          published_at?: string | null
           seo_keywords?: string[]
+          slug?: string | null
           status?: string
           title?: string
           title_en?: string
@@ -59,7 +63,9 @@ export type Database = {
           meta_description?: string
           meta_description_en?: string
           meta_description_ru?: string
+          published_at?: string | null
           seo_keywords?: string[]
+          slug?: string | null
           status?: string
           title?: string
           title_en?: string
