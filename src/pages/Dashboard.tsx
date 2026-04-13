@@ -47,6 +47,7 @@ const Dashboard = () => {
   const [moreOpen, setMoreOpen] = useState(false);
   const { locale, setLocale } = useI18n();
   const dt = useDashboardT(locale);
+  const { mode, toggleMode } = useTheme();
 
   const navigateTo = (section: string) => {
     setActive(section);
