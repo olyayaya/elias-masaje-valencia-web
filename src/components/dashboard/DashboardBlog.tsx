@@ -9,10 +9,11 @@ import {
   Plus, Bold, Italic, Heading1, Heading2, Heading3,
   List, ListOrdered, LinkIcon, AlignLeft, AlignCenter, AlignRight,
   Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb,
-  Eye, EyeOff, RotateCcw, ImageIcon, Languages,
+  Eye, EyeOff, RotateCcw, ImageIcon, Languages, FolderOpen,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
+import ImagePicker from "./ImagePicker";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
 import { toast } from "sonner";
 
@@ -394,6 +395,7 @@ const BlogEditor = ({
 }) => {
   const [regenerating, setRegenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -688,8 +690,11 @@ const BlogEditor = ({
                   <ToolbarBtn onClick={insertLink} active={editor.isActive("link")} title="Insert link">
                     <LinkIcon size={14} />
                   </ToolbarBtn>
-                  <ToolbarBtn onClick={() => fileInputRef.current?.click()} active={false} title="Insert image">
+                  <ToolbarBtn onClick={() => fileInputRef.current?.click()} active={false} title="Upload image">
                     {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+                  </ToolbarBtn>
+                  <ToolbarBtn onClick={() => setMediaPickerOpen(true)} active={false} title="Insert from media library">
+                    <FolderOpen size={14} />
                   </ToolbarBtn>
                   <input
                     ref={fileInputRef}
@@ -697,6 +702,14 @@ const BlogEditor = ({
                     accept="image/*"
                     className="hidden"
                     onChange={handleImageUpload}
+                  />
+                  <ImagePicker
+                    open={mediaPickerOpen}
+                    onClose={() => setMediaPickerOpen(false)}
+                    onSelect={(url) => {
+                      editor?.chain().focus().setImage({ src: url }).run();
+                      toast.success("Image inserted from library");
+                    }}
                   />
 
                   <ToolbarSep />
