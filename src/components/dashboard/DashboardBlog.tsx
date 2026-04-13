@@ -607,7 +607,30 @@ const BlogEditor = ({
         </DashboardCard>
       )}
 
-      <DashboardCard title={`Post content (${lang.toUpperCase()})`}>
+      {/* Generate all languages button — shown on ES tab when Spanish content exists */}
+      {lang === "es" && !currentIsEmpty && (
+        <DashboardCard>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Languages size={14} className="text-primary" /> Generate all languages
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Automatically create English and Russian versions from the Spanish content.
+              </p>
+            </div>
+            <button
+              onClick={translateToAll}
+              disabled={generatingAll || translating}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs bg-foreground text-background rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
+            >
+              {generatingAll ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              {generatingAll ? "Generating…" : "Generate EN + RU"}
+            </button>
+          </div>
+        </DashboardCard>
+      )}
+
         <div className="space-y-4">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Title ({lang.toUpperCase()})</label>
