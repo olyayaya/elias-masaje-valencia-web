@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -9,7 +9,7 @@ import {
   Plus, Bold, Italic, Heading1, Heading2, Heading3,
   List, ListOrdered, LinkIcon, AlignLeft, AlignCenter, AlignRight,
   Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb,
-  Eye, EyeOff, RotateCcw,
+  Eye, EyeOff, RotateCcw, ImageIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
@@ -393,6 +393,8 @@ const BlogEditor = ({
   setLang: (l: Lang) => void;
 }) => {
   const [regenerating, setRegenerating] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const titleKey = langKey("title", lang) as keyof BlogPost;
   const contentKey = langKey("content", lang) as keyof BlogPost;
   const metaKey = langKey("meta_description", lang) as keyof BlogPost;
@@ -422,6 +424,34 @@ const BlogEditor = ({
       editor.chain().focus().unsetLink().run();
     } else {
       editor.chain().focus().extendMarkRange("link").setLink({ href: url, target: "_blank" }).run();
+    }
+  }, [editor]);
+
+  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editor) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5 MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `blog/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("media").upload(path, file, { contentType: file.type });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+      editor.chain().focus().setImage({ src: urlData.publicUrl }).run();
+      toast.success("Image inserted");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [editor]);
 
@@ -520,6 +550,16 @@ const BlogEditor = ({
                   <ToolbarBtn onClick={insertLink} active={editor.isActive("link")} title="Insert link">
                     <LinkIcon size={14} />
                   </ToolbarBtn>
+                  <ToolbarBtn onClick={() => fileInputRef.current?.click()} active={false} title="Insert image">
+                    {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+                  </ToolbarBtn>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
 
                   <ToolbarSep />
 
@@ -549,7 +589,8 @@ const BlogEditor = ({
                     prose-ol:list-decimal prose-ul:list-disc
                     [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-6
                     [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-6
-                    [&_.ProseMirror_li]:my-1"
+                    [&_.ProseMirror_li]:my-1
+                    [&_.ProseMirror_img]:max-w-full [&_.ProseMirror_img]:h-auto [&_.ProseMirror_img]:rounded-lg [&_.ProseMirror_img]:my-4"
                 />
               </div>
             </div>
