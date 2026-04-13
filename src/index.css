@@ -200,7 +200,11 @@
   }
 
   [data-theme="dark-gradient"] .bg-background {
-    background: linear-gradient(155deg, hsl(25 8% 8%) 0%, hsl(30 6% 13%) 30%, hsl(35 10% 16%) 55%, hsl(28 7% 10%) 80%, hsl(20 6% 7%) 100%);
+    background: transparent;
+  }
+
+  [data-theme="dark-gradient"] .bg-secondary {
+    background: transparent;
   }
 
   /* Footer gradient in dark-gradient mode */

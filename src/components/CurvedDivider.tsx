@@ -1,3 +1,5 @@
+import { useTheme } from "@/contexts/ThemeContext";
+
 interface CurvedDividerProps {
   /** Background class of the section ABOVE */
   from?: string;
@@ -18,14 +20,25 @@ const colorVar: Record<string, string> = {
   "bg-organic-dark": "var(--organic-dark)",
 };
 
-const toHsl = (cls: string) => {
+/**
+ * In dark-gradient mode the body uses a fixed multi-stop gradient.
+ * Flat-color fills for `bg-background` and `bg-secondary` create a
+ * visible seam. We replace those with `transparent` so the body
+ * gradient shows through seamlessly.
+ */
+const TRANSPARENT_IN_GRADIENT = new Set(["bg-background", "bg-secondary"]);
+
+const resolveColor = (cls: string, isDarkGradient: boolean) => {
+  if (isDarkGradient && TRANSPARENT_IN_GRADIENT.has(cls)) return "transparent";
   const v = colorVar[cls];
   return v ? `hsl(${v})` : undefined;
 };
 
 const CurvedDivider = ({ from = "bg-background", to = "bg-secondary", flip = false }: CurvedDividerProps) => {
-  const fromColor = toHsl(from);
-  const toColor = toHsl(to);
+  const { mode } = useTheme();
+  const isDG = mode === "dark-gradient";
+  const fromColor = resolveColor(from, isDG);
+  const toColor = resolveColor(to, isDG);
 
   if (flip) {
     return (
