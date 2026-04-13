@@ -202,6 +202,12 @@
   [data-theme="dark-gradient"] .bg-background {
     background: linear-gradient(168deg, hsl(30 6% 11%) 0%, hsl(33 8% 13.5%) 50%, hsl(28 7% 11.5%) 100%);
   }
+
+  /* Footer gradient in dark-gradient mode */
+  [data-theme="dark-gradient"] footer.bg-card {
+    background: linear-gradient(168deg, hsl(30 6% 13%) 0%, hsl(33 8% 15%) 40%, hsl(28 7% 12%) 100%);
+    border-image: linear-gradient(90deg, transparent, hsl(var(--border)) 20%, hsl(var(--border)) 80%, transparent) 1;
+  }
 }
 
 @layer base {
