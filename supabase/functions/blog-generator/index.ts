@@ -196,7 +196,7 @@ Return just the new HTML content.`,
           role: "user",
           content: `You are translating and adapting a blog post from another language into ${langName}.
 
-SOURCE TITLE: ${source_title || srcTitle || "Massage blog post"}
+SOURCE TITLE: ${source_title || topic || "Massage blog post"}
 
 SOURCE CONTENT:
 ${source_content || ""}
