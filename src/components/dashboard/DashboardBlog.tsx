@@ -497,41 +497,68 @@ const BlogEditor = ({
       })
     : undefined;
 
+  const translateOne = async (srcLang: Lang, targetLang: Lang, currentDraft: BlogPost): Promise<BlogPost> => {
+    const srcTitleKey = langKey("title", srcLang) as keyof BlogPost;
+    const srcContentKey = langKey("content", srcLang) as keyof BlogPost;
+    const srcMetaKey = langKey("meta_description", srcLang) as keyof BlogPost;
+    const tgtTitleKey = langKey("title", targetLang) as keyof BlogPost;
+    const tgtContentKey = langKey("content", targetLang) as keyof BlogPost;
+    const tgtMetaKey = langKey("meta_description", targetLang) as keyof BlogPost;
+
+    const { data, error } = await supabase.functions.invoke("blog-generator", {
+      body: {
+        action: "translate_post",
+        language: targetLang,
+        source_title: (currentDraft[srcTitleKey] as string) || "",
+        source_content: (currentDraft[srcContentKey] as string) || "",
+        source_meta: (currentDraft[srcMetaKey] as string) || "",
+      },
+    });
+    if (error) throw error;
+    const result = data?.result;
+    if (!result?.title || !result?.content) throw new Error("Unexpected response");
+    return {
+      ...currentDraft,
+      [tgtTitleKey]: result.title,
+      [tgtContentKey]: result.content,
+      [tgtMetaKey]: result.meta_description || "",
+    };
+  };
+
   const translateFromSource = async (srcLang: Lang) => {
     setTranslating(true);
     try {
-      const srcTitleKey = langKey("title", srcLang) as keyof BlogPost;
-      const srcContentKey = langKey("content", srcLang) as keyof BlogPost;
-      const srcMetaKey = langKey("meta_description", srcLang) as keyof BlogPost;
-
-      const { data, error } = await supabase.functions.invoke("blog-generator", {
-        body: {
-          action: "translate_post",
-          language: lang,
-          source_title: (draft[srcTitleKey] as string) || "",
-          source_content: (draft[srcContentKey] as string) || "",
-          source_meta: (draft[srcMetaKey] as string) || "",
-        },
-      });
-      if (error) throw error;
-      const result = data?.result;
-      if (result?.title && result?.content) {
-        setDraft({
-          ...draft,
-          [titleKey]: result.title,
-          [contentKey]: result.content,
-          [metaKey]: result.meta_description || "",
-          seo_keywords: result.keywords?.length ? result.keywords : draft.seo_keywords,
-        });
-        editor?.commands.setContent(result.content, { emitUpdate: false });
-        toast.success(`${langLabels[lang]} version generated from ${langLabels[srcLang]}`);
-      } else {
-        throw new Error("Unexpected response");
-      }
+      const updated = await translateOne(srcLang, lang, draft);
+      setDraft(updated);
+      editor?.commands.setContent((updated[contentKey] as string) || "", { emitUpdate: false });
+      toast.success(`${langLabels[lang]} version generated from ${langLabels[srcLang]}`);
     } catch (e: any) {
       toast.error(e.message || "Translation failed");
     } finally {
       setTranslating(false);
+    }
+  };
+
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const translateToAll = async () => {
+    setGeneratingAll(true);
+    try {
+      let updated = draft;
+      const targets: Lang[] = allLangs.filter((l) => l !== "es");
+      for (const targetLang of targets) {
+        toast.info(`Generating ${langLabels[targetLang]}…`);
+        updated = await translateOne("es", targetLang, updated);
+      }
+      setDraft(updated);
+      // If currently viewing a non-ES tab, update editor content
+      if (lang !== "es") {
+        editor?.commands.setContent((updated[contentKey] as string) || "", { emitUpdate: false });
+      }
+      toast.success("All language versions generated!");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to generate all languages");
+    } finally {
+      setGeneratingAll(false);
     }
   };
 
@@ -575,6 +602,30 @@ const BlogEditor = ({
             >
               {translating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
               Generate {lang.toUpperCase()} from {sourceLang.toUpperCase()}
+            </button>
+          </div>
+        </DashboardCard>
+      )}
+
+      {/* Generate all languages button — shown on ES tab when Spanish content exists */}
+      {lang === "es" && !currentIsEmpty && (
+        <DashboardCard>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Languages size={14} className="text-primary" /> Generate all languages
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Automatically create English and Russian versions from the Spanish content.
+              </p>
+            </div>
+            <button
+              onClick={translateToAll}
+              disabled={generatingAll || translating}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs bg-foreground text-background rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
+            >
+              {generatingAll ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              {generatingAll ? "Generating…" : "Generate EN + RU"}
             </button>
           </div>
         </DashboardCard>
