@@ -62,16 +62,16 @@ const DashboardTestimonials = () => {
     fetchTestimonials();
   };
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" size={24} /></div>;
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
-          <p className="text-sm text-gray-500">{items.length} testimonials</p>
+          <p className="text-sm text-muted-foreground">{items.length} testimonials</p>
           <LanguageTabs active={lang} onChange={setLang} />
         </div>
-        <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors">
+        <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 transition-colors">
           <Plus size={14} /> Add testimonial
         </button>
       </div>
@@ -90,23 +90,23 @@ const DashboardTestimonials = () => {
             <div className={`flex items-start justify-between gap-4 ${t.hidden ? "opacity-50" : ""}`}>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <h4 className="text-sm font-medium text-gray-900">{t.name}</h4>
-                  <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{t.source}</span>
-                  {t.hidden && <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-400 rounded-full">Hidden</span>}
+                  <h4 className="text-sm font-medium text-foreground">{t.name}</h4>
+                  <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">{t.source}</span>
+                  {t.hidden && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">Hidden</span>}
                 </div>
                 <div className="flex gap-0.5 mb-1.5">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} size={12} className={i < t.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200"} />
+                    <Star key={i} size={12} className={i < t.rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/30"} />
                   ))}
                 </div>
-                <p className="text-xs text-gray-400 italic">"{langVal(t, "quote", lang) || t.quote}"</p>
+                <p className="text-xs text-muted-foreground italic">"{langVal(t, "quote", lang) || t.quote}"</p>
               </div>
               <div className="flex gap-1">
-                <button onClick={async () => { await supabase.from("testimonials").update({ hidden: !t.hidden }).eq("id", t.id); fetchTestimonials(); }} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50" title={t.hidden ? "Show on site" : "Hide from site"}>
+                <button onClick={async () => { await supabase.from("testimonials").update({ hidden: !t.hidden }).eq("id", t.id); fetchTestimonials(); }} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary" title={t.hidden ? "Show on site" : "Hide from site"}>
                   {t.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
-                <button onClick={() => startEdit(t)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50"><Pencil size={14} /></button>
-                <button onClick={() => remove(t.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50"><Trash2 size={14} /></button>
+                <button onClick={() => startEdit(t)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary"><Pencil size={14} /></button>
+                <button onClick={() => remove(t.id)} className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-secondary"><Trash2 size={14} /></button>
               </div>
             </div>
           )}
@@ -132,20 +132,20 @@ const TestimonialForm = ({
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Client name</label>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Client name</label>
           <input
             value={draft.name || ""}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground"
             placeholder="Name"
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Source</label>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Source</label>
           <select
             value={draft.source || "Google"}
             onChange={(e) => setDraft({ ...draft, source: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none"
+            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none bg-background text-foreground"
           >
             <option value="Google">Google</option>
             <option value="TripAdvisor">TripAdvisor</option>
@@ -155,28 +155,28 @@ const TestimonialForm = ({
         </div>
       </div>
       <div>
-        <label className="text-xs font-medium text-gray-500 mb-1 block">Rating</label>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Rating</label>
         <div className="flex gap-1">
           {Array.from({ length: 5 }).map((_, i) => (
             <button key={i} onClick={() => setDraft({ ...draft, rating: i + 1 })} className="p-0.5">
-              <Star size={18} className={i < (draft.rating ?? 5) ? "text-yellow-400 fill-yellow-400" : "text-gray-200"} />
+              <Star size={18} className={i < (draft.rating ?? 5) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/30"} />
             </button>
           ))}
         </div>
       </div>
       <div>
-        <label className="text-xs font-medium text-gray-500 mb-1 block">Quote ({lang.toUpperCase()})</label>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Quote ({lang.toUpperCase()})</label>
         <textarea
           value={(draft[quoteKey] as string) || ""}
           onChange={(e) => setDraft({ ...draft, [quoteKey]: e.target.value })}
           rows={3}
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 resize-none"
+          className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none bg-background text-foreground"
           placeholder="Client's feedback..."
         />
       </div>
       <div className="flex gap-2 justify-end">
-        <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
-        <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50">
+        <button onClick={onCancel} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary">Cancel</button>
+        <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 disabled:opacity-50">
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
         </button>
       </div>

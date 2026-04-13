@@ -86,16 +86,16 @@ const DashboardFAQ = () => {
     fetchFaqs();
   };
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" size={24} /></div>;
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
-          <p className="text-sm text-gray-500">{faqs.length} questions</p>
+          <p className="text-sm text-muted-foreground">{faqs.length} questions</p>
           <LanguageTabs active={lang} onChange={setLang} />
         </div>
-        <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors">
+        <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 transition-colors">
           <Plus size={14} /> Add question
         </button>
       </div>
@@ -113,16 +113,16 @@ const DashboardFAQ = () => {
           ) : (
             <div className="flex items-start gap-3">
               <div className="flex flex-col gap-0.5 shrink-0 pt-0.5">
-                <button onClick={() => moveUp(i)} className="p-1 text-gray-300 hover:text-gray-500 disabled:opacity-30" disabled={i === 0}><ChevronUp size={12} /></button>
-                <button onClick={() => moveDown(i)} className="p-1 text-gray-300 hover:text-gray-500 disabled:opacity-30" disabled={i === faqs.length - 1}><ChevronDown size={12} /></button>
+                <button onClick={() => moveUp(i)} className="p-1 text-muted-foreground/40 hover:text-muted-foreground disabled:opacity-30" disabled={i === 0}><ChevronUp size={12} /></button>
+                <button onClick={() => moveDown(i)} className="p-1 text-muted-foreground/40 hover:text-muted-foreground disabled:opacity-30" disabled={i === faqs.length - 1}><ChevronDown size={12} /></button>
               </div>
               <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-900">{langVal(f, "question", lang) || f.question}</h4>
-                <p className="text-xs text-gray-400 mt-1 line-clamp-2">{langVal(f, "answer", lang) || f.answer}</p>
+                <h4 className="text-sm font-medium text-foreground">{langVal(f, "question", lang) || f.question}</h4>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{langVal(f, "answer", lang) || f.answer}</p>
               </div>
               <div className="flex gap-1">
-                <button onClick={() => startEdit(f)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50"><Pencil size={14} /></button>
-                <button onClick={() => remove(f.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50"><Trash2 size={14} /></button>
+                <button onClick={() => startEdit(f)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary"><Pencil size={14} /></button>
+                <button onClick={() => remove(f.id)} className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-secondary"><Trash2 size={14} /></button>
               </div>
             </div>
           )}
@@ -148,27 +148,27 @@ const FAQForm = ({
   return (
     <div className="space-y-4">
       <div>
-        <label className="text-xs font-medium text-gray-500 mb-1 block">Question ({lang.toUpperCase()})</label>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Question ({lang.toUpperCase()})</label>
         <input
           value={(draft[qKey] as string) || ""}
           onChange={(e) => setDraft({ ...draft, [qKey]: e.target.value })}
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+          className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground"
           placeholder="Enter question..."
         />
       </div>
       <div>
-        <label className="text-xs font-medium text-gray-500 mb-1 block">Answer ({lang.toUpperCase()})</label>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Answer ({lang.toUpperCase()})</label>
         <textarea
           value={(draft[aKey] as string) || ""}
           onChange={(e) => setDraft({ ...draft, [aKey]: e.target.value })}
           rows={3}
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 resize-none"
+          className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none bg-background text-foreground"
           placeholder="Enter answer..."
         />
       </div>
       <div className="flex gap-2 justify-end">
-        <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
-        <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50">
+        <button onClick={onCancel} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary">Cancel</button>
+        <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 disabled:opacity-50">
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
         </button>
       </div>

@@ -42,7 +42,6 @@ const DashboardMedia = () => {
   const handleUpload = async (fileList: FileList) => {
     setUploading(true);
     for (const file of Array.from(fileList)) {
-      const ext = file.name.split(".").pop();
       const name = `${Date.now()}-${file.name}`;
       await supabase.storage.from("media").upload(name, file, {
         cacheControl: "3600",
@@ -70,14 +69,14 @@ const DashboardMedia = () => {
     return `${(bytes / 1048576).toFixed(1)} MB`;
   };
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" size={24} /></div>;
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   return (
     <div className="space-y-6">
       <DashboardCard>
         <div
           className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors cursor-pointer ${
-            dragging ? "border-gray-400 bg-gray-50" : "border-gray-200 hover:border-gray-300"
+            dragging ? "border-muted-foreground bg-secondary" : "border-border hover:border-muted-foreground/40"
           }`}
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
@@ -89,14 +88,14 @@ const DashboardMedia = () => {
           onClick={() => inputRef.current?.click()}
         >
           {uploading ? (
-            <Loader2 size={24} className="mx-auto text-gray-400 mb-3 animate-spin" />
+            <Loader2 size={24} className="mx-auto text-muted-foreground mb-3 animate-spin" />
           ) : (
-            <Upload size={24} className="mx-auto text-gray-300 mb-3" />
+            <Upload size={24} className="mx-auto text-muted-foreground/50 mb-3" />
           )}
-          <p className="text-sm text-gray-500">
-            {uploading ? "Uploading..." : <>Drop images here or <span className="text-gray-700 underline">browse</span></>}
+          <p className="text-sm text-muted-foreground">
+            {uploading ? "Uploading..." : <>Drop images here or <span className="text-foreground underline">browse</span></>}
           </p>
-          <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">JPG, PNG, WebP</p>
           <input
             ref={inputRef}
             type="file"
@@ -109,20 +108,20 @@ const DashboardMedia = () => {
       </DashboardCard>
 
       <DashboardCard title="Library" description={`${files.length} files`}>
-        <div className="divide-y divide-gray-50">
+        <div className="divide-y divide-border">
           {files.map((f) => (
             <div key={f.name} className="flex items-center gap-4 py-3">
-              <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden">
+              <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center overflow-hidden">
                 <img src={f.url} alt={f.name} className="w-10 h-10 rounded-lg object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700 truncate">{f.name}</p>
-                <span className="text-xs text-gray-400">{formatSize(f.size)}</span>
+                <p className="text-sm text-foreground truncate">{f.name}</p>
+                <span className="text-xs text-muted-foreground">{formatSize(f.size)}</span>
               </div>
-              <button onClick={() => copyUrl(f.url)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50" title="Copy URL">
+              <button onClick={() => copyUrl(f.url)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary" title="Copy URL">
                 {copied === f.url ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
               </button>
-              <button onClick={() => remove(f.name)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50">
+              <button onClick={() => remove(f.name)} className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-secondary">
                 <Trash2 size={14} />
               </button>
             </div>
