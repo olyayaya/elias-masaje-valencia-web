@@ -546,7 +546,10 @@ const BlogEditor = ({
                     [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[220px]
                     prose-headings:font-display prose-p:text-foreground
                     prose-a:text-primary prose-a:underline
-                    prose-ol:list-decimal prose-ul:list-disc"
+                    prose-ol:list-decimal prose-ul:list-disc
+                    [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-6
+                    [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-6
+                    [&_.ProseMirror_li]:my-1"
                 />
               </div>
             </div>
