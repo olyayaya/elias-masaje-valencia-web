@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/context";
 import { Calendar, ChevronLeft, Loader2 } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 
 interface Post {
   id: string;
