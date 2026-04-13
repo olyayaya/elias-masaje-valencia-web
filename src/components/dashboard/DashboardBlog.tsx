@@ -497,41 +497,68 @@ const BlogEditor = ({
       })
     : undefined;
 
+  const translateOne = async (srcLang: Lang, targetLang: Lang, currentDraft: BlogPost): Promise<BlogPost> => {
+    const srcTitleKey = langKey("title", srcLang) as keyof BlogPost;
+    const srcContentKey = langKey("content", srcLang) as keyof BlogPost;
+    const srcMetaKey = langKey("meta_description", srcLang) as keyof BlogPost;
+    const tgtTitleKey = langKey("title", targetLang) as keyof BlogPost;
+    const tgtContentKey = langKey("content", targetLang) as keyof BlogPost;
+    const tgtMetaKey = langKey("meta_description", targetLang) as keyof BlogPost;
+
+    const { data, error } = await supabase.functions.invoke("blog-generator", {
+      body: {
+        action: "translate_post",
+        language: targetLang,
+        source_title: (currentDraft[srcTitleKey] as string) || "",
+        source_content: (currentDraft[srcContentKey] as string) || "",
+        source_meta: (currentDraft[srcMetaKey] as string) || "",
+      },
+    });
+    if (error) throw error;
+    const result = data?.result;
+    if (!result?.title || !result?.content) throw new Error("Unexpected response");
+    return {
+      ...currentDraft,
+      [tgtTitleKey]: result.title,
+      [tgtContentKey]: result.content,
+      [tgtMetaKey]: result.meta_description || "",
+    };
+  };
+
   const translateFromSource = async (srcLang: Lang) => {
     setTranslating(true);
     try {
-      const srcTitleKey = langKey("title", srcLang) as keyof BlogPost;
-      const srcContentKey = langKey("content", srcLang) as keyof BlogPost;
-      const srcMetaKey = langKey("meta_description", srcLang) as keyof BlogPost;
-
-      const { data, error } = await supabase.functions.invoke("blog-generator", {
-        body: {
-          action: "translate_post",
-          language: lang,
-          source_title: (draft[srcTitleKey] as string) || "",
-          source_content: (draft[srcContentKey] as string) || "",
-          source_meta: (draft[srcMetaKey] as string) || "",
-        },
-      });
-      if (error) throw error;
-      const result = data?.result;
-      if (result?.title && result?.content) {
-        setDraft({
-          ...draft,
-          [titleKey]: result.title,
-          [contentKey]: result.content,
-          [metaKey]: result.meta_description || "",
-          seo_keywords: result.keywords?.length ? result.keywords : draft.seo_keywords,
-        });
-        editor?.commands.setContent(result.content, { emitUpdate: false });
-        toast.success(`${langLabels[lang]} version generated from ${langLabels[srcLang]}`);
-      } else {
-        throw new Error("Unexpected response");
-      }
+      const updated = await translateOne(srcLang, lang, draft);
+      setDraft(updated);
+      editor?.commands.setContent((updated[contentKey] as string) || "", { emitUpdate: false });
+      toast.success(`${langLabels[lang]} version generated from ${langLabels[srcLang]}`);
     } catch (e: any) {
       toast.error(e.message || "Translation failed");
     } finally {
       setTranslating(false);
+    }
+  };
+
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const translateToAll = async () => {
+    setGeneratingAll(true);
+    try {
+      let updated = draft;
+      const targets: Lang[] = allLangs.filter((l) => l !== "es");
+      for (const targetLang of targets) {
+        toast.info(`Generating ${langLabels[targetLang]}…`);
+        updated = await translateOne("es", targetLang, updated);
+      }
+      setDraft(updated);
+      // If currently viewing a non-ES tab, update editor content
+      if (lang !== "es") {
+        editor?.commands.setContent((updated[contentKey] as string) || "", { emitUpdate: false });
+      }
+      toast.success("All language versions generated!");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to generate all languages");
+    } finally {
+      setGeneratingAll(false);
     }
   };
 
