@@ -46,11 +46,12 @@ const isPositionField = (key: string) => key.endsWith("_position");
 
 /* ─── Category Section (extracted for open/closed state tracking) ─── */
 const CategorySection = ({
-  cat, catItems, lang, drafts, setDrafts, saveItem, saving, aiLoading,
+  cat, catItems, allItems, lang, drafts, setDrafts, saveItem, saving, aiLoading,
   translateField, seoOptimize, hasChanged, setPickerOpen, isMobile,
 }: {
   cat: { id: string; label: string };
   catItems: SiteContentRow[];
+  allItems: SiteContentRow[];
   lang: Lang;
   drafts: Record<string, string>;
   setDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
@@ -64,10 +65,14 @@ const CategorySection = ({
   isMobile: boolean;
 }) => {
   const [open, setOpen] = useState(false);
+  const visibleItems = catItems.filter((i) => !isPositionField(i.content_key));
   const verb = isMobile ? "tap" : "click";
   const hint = open
-    ? `${catItems.length} fields — ${verb} to collapse`
-    : `${catItems.length} fields — ${verb} to expand`;
+    ? `${visibleItems.length} fields — ${verb} to collapse`
+    : `${visibleItems.length} fields — ${verb} to expand`;
+
+  const findPositionItem = (imageKey: string) =>
+    allItems.find((i) => i.content_key === `${imageKey}_position`);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
