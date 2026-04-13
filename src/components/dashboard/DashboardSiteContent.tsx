@@ -167,7 +167,27 @@ const DashboardSiteContent = () => {
                     <label className="text-xs font-medium text-muted-foreground">{item.label}</label>
                     <div className="flex gap-2">
                       <div className="flex-1">
-                        {isLongField(item.content_key) ? (
+                        {isImageField(item.content_key) ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={drafts[item.id] ?? ""}
+                              onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
+                              className="text-sm"
+                              placeholder="Image URL..."
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setPickerOpen(item.id)}
+                              className="h-10 shrink-0"
+                            >
+                              <ImageIcon size={14} />
+                            </Button>
+                            {(drafts[item.id] ?? "").startsWith("http") && (
+                              <img src={drafts[item.id]} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                            )}
+                          </div>
+                        ) : isLongField(item.content_key) ? (
                           <Textarea
                             value={drafts[item.id] ?? ""}
                             onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
