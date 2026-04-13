@@ -4,11 +4,12 @@ const FONT_PAIRS = [
   {
     id: "A",
     label: "Option A",
-    display: "'Playfair Display', serif",
-    body: "'Inter', sans-serif",
-    displayName: "Playfair Display",
-    bodyName: "Inter",
-    note: "High-contrast serif + neutral sans. Editorial, elegant.",
+    display: "'Italiana', serif",
+    body: "'Arapey', serif",
+    displayName: "Italiana",
+    bodyName: "Arapey (italic)",
+    note: "Elegant didone display + refined italic serif body. Luxurious, editorial.",
+    bodyItalic: true,
   },
   {
     id: "B",
@@ -62,9 +63,11 @@ const FontPreview = () => {
   const [active, setActive] = useState<(typeof FONT_PAIRS)[number]["id"]>("A");
   const pair = FONT_PAIRS.find((item) => item.id === active) ?? FONT_PAIRS[0];
 
+  const bodyItalic = "bodyItalic" in pair && pair.bodyItalic;
   const previewVars = {
     "--font-display": pair.display,
     "--font-body": pair.body,
+    "--body-font-style": bodyItalic ? "italic" : "normal",
   } as CSSProperties;
 
   return (
