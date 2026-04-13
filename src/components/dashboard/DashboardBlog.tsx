@@ -241,6 +241,7 @@ const DashboardBlog = () => {
       status: "draft", created_at: new Date().toISOString(),
       title_en: "", title_ru: "", content_en: "", content_ru: "",
       meta_description_en: "", meta_description_ru: "", hidden: false,
+      published_at: null, slug: "",
       [titleKey]: result.title,
       [contentKey]: result.content,
       [metaKey]: result.meta_description,
