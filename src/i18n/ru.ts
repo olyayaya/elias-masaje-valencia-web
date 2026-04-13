@@ -6,6 +6,7 @@ export const ru: Translations = {
     services: "Услуги",
     about: "Обо мне",
     contact: "Контакты",
+    blog: "Блог",
     book: "Записаться",
     bookWhatsApp: "Записаться через WhatsApp",
   },
