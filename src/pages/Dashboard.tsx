@@ -143,10 +143,10 @@ const Dashboard = () => {
             <button
               onClick={toggleMode}
               className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              aria-label={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
+              aria-label="Cycle theme"
             >
-              {mode === "light" ? <Moon size={14} /> : <Sun size={14} />}
-              {mode === "light" ? "Dark" : "Light"}
+              {mode === "light" ? <Moon size={14} /> : mode === "dark" ? <Sparkles size={14} /> : <Sun size={14} />}
+              {mode === "light" ? "Dark" : mode === "dark" ? "Gradient" : "Light"}
             </button>
           </div>
           <div className="flex items-center gap-1 bg-secondary rounded-lg p-0.5 mx-3">
