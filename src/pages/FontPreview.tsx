@@ -1,4 +1,6 @@
 import { useState, type CSSProperties } from "react";
+import { Sun, Moon, Sparkles } from "lucide-react";
+import { useTheme, ThemeMode } from "@/contexts/ThemeContext";
 import { FONT_PAIRS } from "@/config/fontPairs";
 
 const SAMPLE = {
@@ -11,8 +13,15 @@ const SAMPLE = {
     "Nuestros tratamientos combinan técnicas tradicionales con principios modernos de bienestar. Cada sesión se adapta a tus necesidades únicas, ayudándote a encontrar el equilibrio.",
 };
 
+const modeConfig: { mode: ThemeMode; icon: typeof Sun; label: string }[] = [
+  { mode: "light", icon: Sun, label: "Light" },
+  { mode: "dark", icon: Moon, label: "Dark" },
+  { mode: "dark-gradient", icon: Sparkles, label: "Gradient" },
+];
+
 const FontPreview = () => {
   const [active, setActive] = useState<(typeof FONT_PAIRS)[number]["id"]>("A");
+  const { mode, setMode } = useTheme();
   const pair = FONT_PAIRS.find((item) => item.id === active) ?? FONT_PAIRS[0];
 
   const bodyItalic = "bodyItalic" in pair && pair.bodyItalic;
@@ -26,7 +35,26 @@ const FontPreview = () => {
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-4xl px-6 py-16" style={previewVars}>
         <div className="mb-12 font-body">
-          <div className="mb-1 text-2xl font-medium">Typography Preview</div>
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-2xl font-medium">Typography Preview</div>
+            <div className="flex items-center gap-1 rounded-full bg-secondary p-1">
+              {modeConfig.map(({ mode: m, icon: Icon, label }) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  aria-label={label}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-body transition-all ${
+                    mode === m
+                      ? "bg-foreground text-background shadow-card"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon size={13} />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <p className="text-sm text-muted-foreground">
             Compare font pairings. Click each option to preview across the page.
           </p>
