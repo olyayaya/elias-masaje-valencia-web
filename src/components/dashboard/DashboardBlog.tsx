@@ -260,6 +260,10 @@ const DashboardBlog = () => {
       title_en: draft.title_en, title_ru: draft.title_ru,
       content_en: draft.content_en, content_ru: draft.content_ru,
       meta_description_en: draft.meta_description_en, meta_description_ru: draft.meta_description_ru,
+      slug: draft.slug,
+      published_at: draft.status === "published" && !draft.published_at
+        ? new Date().toISOString()
+        : draft.published_at,
     };
     if (editing === "new") {
       await supabase.from("blog_posts").insert(payload);
