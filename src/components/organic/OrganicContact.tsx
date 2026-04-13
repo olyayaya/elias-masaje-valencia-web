@@ -32,8 +32,8 @@ const OrganicContact = () => {
   const heading = useFadeIn(0);
   const mapAnim = useFadeIn(0.15);
 
-  const whatsappNum = sc.contact_whatsapp || "34698968007";
-  const whatsappUrl = `https://wa.me/${whatsappNum}?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita`;
+  const whatsappNum = sc.contact_whatsapp || WHATSAPP_PHONE;
+  const whatsappUrl = `https://wa.me/${whatsappNum}?text=${WHATSAPP_DEFAULT_MESSAGE}`;
 
   return (
     <div>
@@ -86,12 +86,12 @@ const OrganicContact = () => {
 
               <ContactItem icon={Instagram} title={t.contact.instagram} index={3}>
                 <a
-                  href={`https://instagram.com/${(sc.contact_instagram || "@elias_masaje").replace("@", "")}`}
+                  href={`https://instagram.com/${(sc.contact_instagram || INSTAGRAM_HANDLE).replace("@", "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-primary font-body hover:opacity-80 transition-opacity border-b border-primary/30 pb-0.5"
                 >
-                  {sc.contact_instagram || "@elias_masaje"}
+                  {sc.contact_instagram || INSTAGRAM_HANDLE}
                 </a>
               </ContactItem>
             </div>

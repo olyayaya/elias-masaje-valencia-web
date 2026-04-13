@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useI18n } from "@/i18n/context";
 import { useSiteContent } from "@/hooks/use-site-content";
+import { INSTAGRAM_HANDLE } from "@/config/contact";
 
 const Footer = () => {
   const { t } = useI18n();
@@ -30,8 +31,8 @@ const Footer = () => {
               <p>{sc.contact_address || t.contact.addressValue}</p>
               <p>{sc.contact_weekdays || t.contact.weekdays}</p>
               <p>{sc.contact_saturday || t.contact.saturday}</p>
-              <a href={`https://instagram.com/${(sc.contact_instagram || "@elias_masaje").replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
-                {sc.contact_instagram || "@elias_masaje"}
+              <a href={`https://instagram.com/${(sc.contact_instagram || INSTAGRAM_HANDLE).replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+                {sc.contact_instagram || INSTAGRAM_HANDLE}
               </a>
             </div>
           </div>
