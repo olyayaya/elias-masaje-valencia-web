@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Navigation } from "lucide-react";
+import { useI18n } from "@/i18n/context";
 
 const ADDRESS = "Calle San Vicente Mártir, 24, 46002 Valencia";
 const COORDS = "39.4700,-0.3773";
@@ -8,6 +9,7 @@ const APPLE_MAPS_URL = `https://maps.apple.com/?q=${encodeURIComponent(ADDRESS)}
 
 const MapBlock = () => {
   const [showPicker, setShowPicker] = useState(false);
+  const { t } = useI18n();
 
   return (
     <div className="relative w-full aspect-video md:aspect-[21/9] rounded overflow-hidden border border-border">
@@ -25,46 +27,65 @@ const MapBlock = () => {
       <button
         onClick={() => setShowPicker(true)}
         className="absolute inset-0 z-10 bg-transparent cursor-pointer"
-        aria-label="Open in maps app"
+        aria-label={t.a11y.openMaps}
       />
       {showPicker && <MapPickerOverlay onClose={() => setShowPicker(false)} />}
     </div>
   );
 };
 
-export const MapPickerOverlay = ({ onClose }: { onClose: () => void }) => (
-  <>
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-    <div className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background rounded-2xl border border-border shadow-xl p-6 w-[min(90vw,320px)] space-y-3">
-      <h3 className="font-display text-lg text-center mb-4">Open in…</h3>
-      <a
-        href={GOOGLE_MAPS_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-border hover:bg-secondary transition-colors"
-        onClick={onClose}
+export const MapPickerOverlay = ({ onClose }: { onClose: () => void }) => {
+  const { t } = useI18n();
+
+  // Close on Escape
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div
+        className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background rounded-2xl border border-border shadow-xl p-6 w-[min(90vw,320px)] space-y-3"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.map.openIn}
       >
-        <Navigation size={18} className="text-primary" />
-        <span className="text-sm font-body font-medium">Google Maps</span>
-      </a>
-      <a
-        href={APPLE_MAPS_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-border hover:bg-secondary transition-colors"
-        onClick={onClose}
-      >
-        <Navigation size={18} className="text-primary" />
-        <span className="text-sm font-body font-medium">Apple Maps</span>
-      </a>
-      <button
-        onClick={onClose}
-        className="w-full text-center text-xs text-muted-foreground py-2 hover:text-foreground transition-colors"
-      >
-        Cancel
-      </button>
-    </div>
-  </>
-);
+        <h3 className="font-display text-lg text-center mb-4">{t.map.openIn}</h3>
+        <a
+          href={GOOGLE_MAPS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-border hover:bg-secondary transition-colors"
+          onClick={onClose}
+        >
+          <Navigation size={18} className="text-primary" />
+          <span className="text-sm font-body font-medium">Google Maps</span>
+        </a>
+        <a
+          href={APPLE_MAPS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-border hover:bg-secondary transition-colors"
+          onClick={onClose}
+        >
+          <Navigation size={18} className="text-primary" />
+          <span className="text-sm font-body font-medium">Apple Maps</span>
+        </a>
+        <button
+          onClick={onClose}
+          className="w-full text-center text-xs text-muted-foreground py-2 hover:text-foreground transition-colors"
+        >
+          {t.map.cancel}
+        </button>
+      </div>
+    </>
+  );
+};
 
 export default MapBlock;
