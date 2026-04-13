@@ -43,7 +43,7 @@ const OrganicContact = () => {
         <OrganicShape shape="ring" size="w-32 h-32" position="top-8 right-4" animation="drift" borderColor="hsl(var(--primary) / 0.08)" delay={500} />
         <div className="max-w-6xl mx-auto" ref={heading.ref} style={heading.style}>
           <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/70 mb-4">
-            Get in touch
+            {t.contact.sectionLabel}
           </p>
           <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] leading-snug max-w-md">
             {t.contact.title}

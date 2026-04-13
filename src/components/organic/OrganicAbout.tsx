@@ -30,7 +30,7 @@ const OrganicAbout = () => {
         <div className="max-w-6xl mx-auto">
           <div ref={heroLabel.ref} style={heroLabel.style} className="mb-12">
             <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/70 mb-4">
-              The therapist
+              {t.about.sectionLabel}
             </p>
             <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] leading-snug max-w-lg">
               {t.about.title}
@@ -85,7 +85,7 @@ const OrganicAbout = () => {
             </div>
             <div className="md:col-span-5 md:col-start-1 md:order-1" ref={spaceText.ref} style={spaceText.style}>
               <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
-                The space
+                {t.about.spaceLabel}
               </p>
               <h2 className="font-display text-3xl md:text-4xl mb-6 leading-snug">{t.about.spaceTitle}</h2>
               <div className="space-y-4 text-base text-muted-foreground font-body leading-[1.8]">
@@ -108,7 +108,7 @@ const OrganicAbout = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style} className="text-center mb-16">
-                  <h2 className="font-display text-3xl md:text-4xl mb-3">Gallery</h2>
+                  <h2 className="font-display text-3xl md:text-4xl mb-3">{t.about.gallery}</h2>
                   <div className="w-12 h-px bg-primary mx-auto" />
                 </div>
               );
