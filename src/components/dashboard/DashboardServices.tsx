@@ -38,11 +38,7 @@ const DashboardServices = () => {
 
   useEffect(() => { fetchServices(); }, []);
 
-  const startEdit = (s: Service) => {
-    setEditing(s.id);
-    setDraft({ ...s });
-    setIsNew(false);
-  };
+  const startEdit = (s: Service) => { setEditing(s.id); setDraft({ ...s }); setIsNew(false); };
 
   const startNew = () => {
     setDraft({ title: "", duration: "", price: "", description: "", sort_order: services.length, title_en: "", title_ru: "", description_en: "", description_ru: "" });
@@ -54,23 +50,16 @@ const DashboardServices = () => {
     setSaving(true);
     if (isNew) {
       await supabase.from("services").insert({
-        title: draft.title || "",
-        duration: draft.duration || "",
-        price: draft.price || "",
-        description: draft.description || "",
-        sort_order: draft.sort_order ?? services.length,
-        title_en: draft.title_en || "",
-        title_ru: draft.title_ru || "",
-        description_en: draft.description_en || "",
-        description_ru: draft.description_ru || "",
+        title: draft.title || "", duration: draft.duration || "", price: draft.price || "",
+        description: draft.description || "", sort_order: draft.sort_order ?? services.length,
+        title_en: draft.title_en || "", title_ru: draft.title_ru || "",
+        description_en: draft.description_en || "", description_ru: draft.description_ru || "",
       });
     } else if (editing) {
       const { id, ...rest } = draft;
       await supabase.from("services").update(rest).eq("id", editing);
     }
-    setEditing(null);
-    setIsNew(false);
-    setSaving(false);
+    setEditing(null); setIsNew(false); setSaving(false);
     fetchServices();
   };
 
@@ -81,16 +70,16 @@ const DashboardServices = () => {
     fetchServices();
   };
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" size={24} /></div>;
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
-          <p className="text-sm text-gray-500">{services.length} services</p>
+          <p className="text-sm text-muted-foreground">{services.length} services</p>
           <LanguageTabs active={lang} onChange={setLang} />
         </div>
-        <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors">
+        <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 transition-colors">
           <Plus size={14} /> Add service
         </button>
       </div>
@@ -109,21 +98,21 @@ const DashboardServices = () => {
             <div className={`flex items-start justify-between gap-4 ${s.hidden ? "opacity-50" : ""}`}>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-medium text-gray-900">{langVal(s, "title", lang) || s.title}</h4>
-                  {s.hidden && <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-400 rounded-full">Hidden</span>}
+                  <h4 className="text-sm font-medium text-foreground">{langVal(s, "title", lang) || s.title}</h4>
+                  {s.hidden && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">Hidden</span>}
                 </div>
-                <p className="text-xs text-gray-400 mt-1">{langVal(s, "description", lang) || s.description}</p>
+                <p className="text-xs text-muted-foreground mt-1">{langVal(s, "description", lang) || s.description}</p>
                 <div className="flex gap-4 mt-2">
-                  <span className="text-xs text-gray-500">{s.duration}</span>
-                  <span className="text-xs font-medium text-gray-700">{s.price}</span>
+                  <span className="text-xs text-muted-foreground">{s.duration}</span>
+                  <span className="text-xs font-medium text-foreground">{s.price}</span>
                 </div>
               </div>
               <div className="flex gap-1">
-                <button onClick={async () => { await supabase.from("services").update({ hidden: !s.hidden }).eq("id", s.id); fetchServices(); }} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50" title={s.hidden ? "Show on site" : "Hide from site"}>
+                <button onClick={async () => { await supabase.from("services").update({ hidden: !s.hidden }).eq("id", s.id); fetchServices(); }} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary" title={s.hidden ? "Show on site" : "Hide from site"}>
                   {s.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
-                <button onClick={() => startEdit(s)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50"><Pencil size={14} /></button>
-                <button onClick={() => remove(s.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50"><Trash2 size={14} /></button>
+                <button onClick={() => startEdit(s)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary"><Pencil size={14} /></button>
+                <button onClick={() => remove(s.id)} className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-secondary"><Trash2 size={14} /></button>
               </div>
             </div>
           )}
@@ -149,19 +138,13 @@ const ServiceForm = ({
 
   const callAi = async (action: "translate" | "seo_optimize") => {
     const currentDesc = (draft[descKey] as string) || "";
-    // For translate, use ES description as source if editing EN/RU
     const sourceText = action === "translate" ? (draft.description || "") : currentDesc;
     if (!sourceText.trim()) return;
 
     setAiLoading(action);
     try {
       const { data, error } = await supabase.functions.invoke("ai-content-helper", {
-        body: {
-          text: sourceText,
-          action,
-          targetLang: lang,
-          sourceLang: "es",
-        },
+        body: { text: sourceText, action, targetLang: lang, sourceLang: "es" },
       });
       if (error) throw error;
       if (data?.result) {
@@ -178,30 +161,30 @@ const ServiceForm = ({
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Title ({lang.toUpperCase()})</label>
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Title ({lang.toUpperCase()})</label>
           <input
             value={(draft[titleKey] as string) || ""}
             onChange={(e) => setDraft({ ...draft, [titleKey]: e.target.value })}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground"
             placeholder="Service name"
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Duration</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Duration</label>
             <input
               value={draft.duration || ""}
               onChange={(e) => setDraft({ ...draft, duration: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground"
               placeholder="60 min"
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Price</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Price</label>
             <input
               value={draft.price || ""}
               onChange={(e) => setDraft({ ...draft, price: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground"
               placeholder="50 €"
             />
           </div>
@@ -209,13 +192,13 @@ const ServiceForm = ({
       </div>
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-xs font-medium text-gray-500">Description ({lang.toUpperCase()})</label>
+          <label className="text-xs font-medium text-muted-foreground">Description ({lang.toUpperCase()})</label>
           <div className="flex items-center gap-1">
             {lang !== "es" && (
               <button
                 onClick={() => callAi("translate")}
                 disabled={!!aiLoading}
-                className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 px-2 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-secondary disabled:opacity-50"
                 title="Translate from Spanish"
               >
                 {aiLoading === "translate" ? <Loader2 size={12} className="animate-spin" /> : <Languages size={12} />}
@@ -225,7 +208,7 @@ const ServiceForm = ({
             <button
               onClick={() => callAi("seo_optimize")}
               disabled={!!aiLoading}
-              className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 px-2 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-secondary disabled:opacity-50"
               title="Optimize for SEO"
             >
               {aiLoading === "seo_optimize" ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
@@ -237,13 +220,13 @@ const ServiceForm = ({
           value={(draft[descKey] as string) || ""}
           onChange={(e) => setDraft({ ...draft, [descKey]: e.target.value })}
           rows={3}
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 resize-none"
+          className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none bg-background text-foreground"
           placeholder="Describe the service..."
         />
       </div>
       <div className="flex gap-2 justify-end">
-        <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
-        <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50">
+        <button onClick={onCancel} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary">Cancel</button>
+        <button onClick={onSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 disabled:opacity-50">
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
         </button>
       </div>
