@@ -468,7 +468,7 @@ const BlogEditor = ({
       const result = data?.result;
       if (result?.content) {
         setDraft({ ...draft, [contentKey]: result.content });
-        editor?.commands.setContent(result.content);
+        editor?.commands.setContent(result.content, false);
         toast.success("Content regenerated");
       } else {
         throw new Error("Unexpected response");
@@ -523,7 +523,7 @@ const BlogEditor = ({
           [metaKey]: result.meta_description || "",
           seo_keywords: result.keywords?.length ? result.keywords : draft.seo_keywords,
         });
-        editor?.commands.setContent(result.content);
+        editor?.commands.setContent(result.content, false);
         toast.success(`${langLabels[lang]} version generated from ${langLabels[srcLang]}`);
       } else {
         throw new Error("Unexpected response");
