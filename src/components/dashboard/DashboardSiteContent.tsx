@@ -152,17 +152,9 @@ const DashboardSiteContent = () => {
         const catItems = items.filter((i) => i.category === cat.id);
         if (!catItems.length) return null;
         return (
-          <Collapsible key={cat.id}>
-            <CollapsibleTrigger className="w-full text-left">
-              <DashboardCard title={cat.label} description={`Edit ${cat.label.toLowerCase()} text`}>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
-                  <ChevronRight size={14} className="transition-transform duration-200 group-data-[state=open]:rotate-90" />
-                  <span>{catItems.length} fields — click to expand</span>
-                </div>
-              </DashboardCard>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="border border-t-0 border-border rounded-b-lg bg-card px-5 pb-5 pt-3 space-y-4">
+          <CategorySection key={cat.id} cat={cat} catItems={catItems} lang={lang} drafts={drafts} setDrafts={setDrafts} saveItem={saveItem} saving={saving} aiLoading={aiLoading} translateField={translateField} seoOptimize={seoOptimize} hasChanged={hasChanged} setPickerOpen={setPickerOpen} isMobile={isMobile} />
+        );
+      })}
                 {catItems.map((item) => (
                   <div key={item.id} className="space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground">{item.label}</label>
