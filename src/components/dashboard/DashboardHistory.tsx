@@ -51,13 +51,10 @@ const DashboardHistory = () => {
       const { id, created_at, updated_at, ...fields } = entry.snapshot;
 
       if (entry.action === "delete") {
-        // Re-insert the deleted record
         await supabase.from(entry.table_name as any).insert({ ...entry.snapshot, id: entry.record_id } as any);
       } else {
-        // Update with the old snapshot
         await supabase.from(entry.table_name as any).update(fields as any).eq("id", entry.record_id);
       }
-      // Refresh history
       fetchHistory();
     } catch (err) {
       console.error("Restore failed:", err);
@@ -82,17 +79,17 @@ const DashboardHistory = () => {
     return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   };
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-gray-400" size={24} /></div>;
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <p className="text-sm text-gray-500">{filtered.length} changes recorded</p>
+        <p className="text-sm text-muted-foreground">{filtered.length} changes recorded</p>
         <div className="flex items-center gap-2">
           <select
             value={filterTable}
             onChange={(e) => setFilterTable(e.target.value)}
-            className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none text-gray-600"
+            className="px-3 py-1.5 text-xs border border-border rounded-lg focus:outline-none text-foreground bg-background"
           >
             <option value="all">All sections</option>
             {Object.entries(TABLE_LABELS).map(([key, label]) => (
@@ -104,7 +101,7 @@ const DashboardHistory = () => {
 
       {filtered.length === 0 && (
         <DashboardCard>
-          <div className="text-center py-8 text-gray-400">
+          <div className="text-center py-8 text-muted-foreground">
             <History size={32} className="mx-auto mb-3 opacity-50" />
             <p className="text-sm">No changes recorded yet</p>
             <p className="text-xs mt-1">Edit any content item and its previous versions will appear here</p>
@@ -125,31 +122,31 @@ const DashboardHistory = () => {
                   onClick={() => setExpandedId(isExpanded ? null : entry.id)}
                   className="flex items-start gap-2 text-left flex-1 min-w-0"
                 >
-                  {isExpanded ? <ChevronDown size={14} className="mt-0.5 text-gray-400 shrink-0" /> : <ChevronRight size={14} className="mt-0.5 text-gray-400 shrink-0" />}
+                  {isExpanded ? <ChevronDown size={14} className="mt-0.5 text-muted-foreground shrink-0" /> : <ChevronRight size={14} className="mt-0.5 text-muted-foreground shrink-0" />}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                        entry.action === "delete" ? "bg-red-50 text-red-500" : "bg-blue-50 text-blue-500"
+                        entry.action === "delete" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
                       }`}>
                         {entry.action === "delete" ? <Trash2 size={9} className="inline mr-0.5 -mt-px" /> : <Pencil size={9} className="inline mr-0.5 -mt-px" />}
                         {entry.action}
                       </span>
-                      <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
+                      <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">
                         {TABLE_LABELS[entry.table_name] || entry.table_name}
                       </span>
                     </div>
-                    <h4 className="text-sm font-medium text-gray-900 mt-1 truncate">{itemName}</h4>
+                    <h4 className="text-sm font-medium text-foreground mt-1 truncate">{itemName}</h4>
                   </div>
                 </button>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                     <Clock size={10} />
                     {formatDate(entry.changed_at)}
                   </span>
                   <button
                     onClick={() => restore(entry)}
                     disabled={restoring === entry.id}
-                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 border border-gray-200 disabled:opacity-50"
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg hover:bg-secondary border border-border disabled:opacity-50"
                     title="Restore this version"
                   >
                     {restoring === entry.id ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
@@ -159,8 +156,8 @@ const DashboardHistory = () => {
               </div>
 
               {isExpanded && (
-                <div className="ml-6 mt-2 p-3 bg-gray-50 rounded-lg overflow-x-auto">
-                  <pre className="text-[11px] text-gray-600 whitespace-pre-wrap font-mono leading-relaxed">
+                <div className="ml-6 mt-2 p-3 bg-secondary rounded-lg overflow-x-auto">
+                  <pre className="text-[11px] text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
                     {Object.entries(entry.snapshot)
                       .filter(([k]) => !["id", "created_at", "updated_at"].includes(k))
                       .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)

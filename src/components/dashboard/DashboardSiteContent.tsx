@@ -130,7 +130,7 @@ const DashboardSiteContent = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="animate-spin text-gray-400" size={24} />
+        <Loader2 className="animate-spin text-muted-foreground" size={24} />
       </div>
     );
   }
@@ -138,7 +138,7 @@ const DashboardSiteContent = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{items.length} editable fields</p>
+        <p className="text-sm text-muted-foreground">{items.length} editable fields</p>
         <LanguageTabs active={lang} onChange={setLang} />
       </div>
 
