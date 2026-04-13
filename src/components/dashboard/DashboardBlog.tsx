@@ -619,10 +619,9 @@ const BlogEditor = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <button onClick={onCancel} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><X size={14} /> Back to posts</button>
-        <LanguageTabs active={lang} onChange={setLang} />
       </div>
 
-      {/* Cross-language generation banner */}
+      {/* Cross-language generation banner — only when current lang is empty and another has content */}
       {sourceLang && (
         <DashboardCard>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -646,8 +645,8 @@ const BlogEditor = ({
         </DashboardCard>
       )}
 
-      {/* Generate all languages button — shown on ES tab when Spanish content exists */}
-      {lang === "es" && !currentIsEmpty && (
+      {/* Generate all languages button — only on ES tab when Spanish content exists AND not all translations done yet */}
+      {lang === "es" && !currentIsEmpty && !allLanguagesGenerated && (
         <DashboardCard>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex-1">
@@ -670,7 +669,26 @@ const BlogEditor = ({
         </DashboardCard>
       )}
 
-      <DashboardCard title={`Post content (${lang.toUpperCase()})`}>
+      <DashboardCard>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-medium text-foreground">Post content ({lang.toUpperCase()})</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Edit the {langLabels[lang]} version of this post</p>
+          </div>
+          <LanguageTabs active={lang} onChange={setLang} contentStatus={contentStatus} />
+        </div>
+        {currentIsEmpty && lang !== "es" ? (
+          /* Don't show empty editor — prompt to generate */
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Languages size={24} className="text-muted-foreground/40 mb-3" />
+            <p className="text-sm text-muted-foreground mb-1">No {langLabels[lang]} content yet</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              {contentStatus.es
+                ? `Generate it from the Spanish version using the banner above.`
+                : `Write the Spanish version first, then generate translations.`}
+            </p>
+          </div>
+        ) : (
         <div className="space-y-4">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Title ({lang.toUpperCase()})</label>
