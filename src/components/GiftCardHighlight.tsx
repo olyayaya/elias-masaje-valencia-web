@@ -16,7 +16,7 @@ const GiftCardHighlight = () => {
           {t.giftCard.description}
         </p>
         <a
-          href={WHATSAPP_URL}
+          href={GIFT_WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block text-sm font-body bg-primary text-primary-foreground px-6 py-3 rounded transition-opacity hover:opacity-90"
