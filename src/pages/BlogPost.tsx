@@ -189,6 +189,7 @@ const BlogPost = () => {
         })()}
       </div>
     </article>
+    </>
   );
 };
 
