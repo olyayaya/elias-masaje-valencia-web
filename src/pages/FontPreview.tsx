@@ -53,11 +53,11 @@ const FontPreview = () => {
   }, [pair]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground" key={active}>
       <div className="max-w-4xl mx-auto px-6 py-16">
-        {/* Page title */}
+        {/* Page title — uses fixed Inter so it doesn't shift with previews */}
         <div className="mb-12" style={{ fontFamily: "'Inter', sans-serif" }}>
-          <h1 className="text-2xl font-medium mb-1">Typography Preview</h1>
+          <div className="text-2xl font-medium mb-1">Typography Preview</div>
           <p className="text-sm text-muted-foreground">
             Compare font pairings. Click each option to preview across the page.
           </p>
