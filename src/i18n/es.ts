@@ -6,6 +6,7 @@ export const es: Translations = {
     services: "Servicios",
     about: "Sobre mí",
     contact: "Contacto",
+    blog: "Blog",
     book: "Reservar",
     bookWhatsApp: "Reservar por WhatsApp",
   },
