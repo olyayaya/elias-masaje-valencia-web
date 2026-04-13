@@ -54,14 +54,14 @@ const DashboardSEO = () => {
           { label: "Click-through Rate", value: "3.2%", change: "+0.4%", icon: MousePointerClick, up: true },
           { label: "Google Reviews", value: "47", change: "+5 this month", icon: Star, up: true },
         ].map((stat) => (
-          <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4">
+          <div key={stat.label} className="bg-card rounded-xl border border-border p-4">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center">
-                <stat.icon size={14} className="text-gray-400" />
+              <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center">
+                <stat.icon size={14} className="text-muted-foreground" />
               </div>
             </div>
-            <p className="text-xl font-semibold text-gray-900">{stat.value}</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">{stat.label}</p>
+            <p className="text-xl font-semibold text-foreground">{stat.value}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{stat.label}</p>
             <p className="text-[11px] text-green-500 mt-1">{stat.change}</p>
           </div>
         ))}
@@ -79,10 +79,10 @@ const DashboardSEO = () => {
           ].map((q) => (
             <div key={q.query} className="flex items-center justify-between py-2">
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700 truncate">{q.query}</p>
-                <p className="text-[11px] text-gray-400">{q.impressions} impressions · {q.clicks} clicks</p>
+                <p className="text-sm text-foreground truncate">{q.query}</p>
+                <p className="text-[11px] text-muted-foreground">{q.impressions} impressions · {q.clicks} clicks</p>
               </div>
-              <span className="text-xs font-medium text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full shrink-0 ml-3">
+              <span className="text-xs font-medium text-muted-foreground bg-secondary px-2.5 py-1 rounded-full shrink-0 ml-3">
                 #{q.position.toFixed(0)}
               </span>
             </div>
@@ -95,30 +95,30 @@ const DashboardSEO = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
+              <tr className="text-left text-xs text-muted-foreground border-b border-border">
                 <th className="pb-3 font-medium">Keyword</th>
                 <th className="pb-3 font-medium">Volume</th>
                 <th className="pb-3 font-medium">Difficulty</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-border">
               {keywordSuggestions.map((kw) => (
                 <tr key={kw.keyword}>
-                  <td className="py-3 text-gray-700">{kw.keyword}</td>
+                  <td className="py-3 text-foreground">{kw.keyword}</td>
                   <td className="py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      kw.volume === "High" ? "bg-green-50 text-green-600" :
-                      kw.volume === "Medium" ? "bg-yellow-50 text-yellow-600" :
-                      "bg-gray-100 text-gray-500"
+                      kw.volume === "High" ? "bg-green-500/10 text-green-600" :
+                      kw.volume === "Medium" ? "bg-yellow-500/10 text-yellow-600" :
+                      "bg-secondary text-muted-foreground"
                     }`}>
                       {kw.volume}
                     </span>
                   </td>
                   <td className="py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      kw.difficulty === "Low" ? "bg-green-50 text-green-600" :
-                      kw.difficulty === "Medium" ? "bg-yellow-50 text-yellow-600" :
-                      "bg-red-50 text-red-500"
+                      kw.difficulty === "Low" ? "bg-green-500/10 text-green-600" :
+                      kw.difficulty === "Medium" ? "bg-yellow-500/10 text-yellow-600" :
+                      "bg-destructive/10 text-destructive"
                     }`}>
                       {kw.difficulty}
                     </span>
@@ -137,14 +137,14 @@ const DashboardSEO = () => {
             <button
               key={item.id}
               onClick={() => toggle(item.id)}
-              className="w-full flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-gray-50 text-left transition-colors"
+              className="w-full flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-secondary text-left transition-colors"
             >
               {item.done ? (
                 <CheckCircle2 size={16} className="text-green-500 shrink-0" />
               ) : (
-                <Circle size={16} className="text-gray-300 shrink-0" />
+                <Circle size={16} className="text-muted-foreground/40 shrink-0" />
               )}
-              <span className={`text-sm ${item.done ? "text-gray-400 line-through" : "text-gray-700"}`}>
+              <span className={`text-sm ${item.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
                 {item.label}
               </span>
             </button>
@@ -157,10 +157,10 @@ const DashboardSEO = () => {
         <div className="space-y-4">
           {gmaTips.map((t, i) => (
             <div key={i} className="flex gap-3 items-start">
-              <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-                <t.icon size={14} className="text-gray-500" />
+              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                <t.icon size={14} className="text-muted-foreground" />
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed">{t.tip}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{t.tip}</p>
             </div>
           ))}
         </div>
