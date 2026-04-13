@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/context";
-
-const WHATSAPP_URL = "https://wa.me/34600000000?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
+import { WHATSAPP_URL } from "@/config/contact";
 
 interface ServiceCardProps {
   title: string;

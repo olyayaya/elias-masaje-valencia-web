@@ -6,8 +6,7 @@ import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
-
-const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita";
+import { WHATSAPP_PHONE, WHATSAPP_DEFAULT_MESSAGE, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/config/contact";
 
 const ContactItem = ({ icon: Icon, title, children, index }: {
   icon: typeof MapPin; title: string; children: React.ReactNode; index: number;
@@ -33,8 +32,8 @@ const OrganicContact = () => {
   const heading = useFadeIn(0);
   const mapAnim = useFadeIn(0.15);
 
-  const whatsappNum = sc.contact_whatsapp || "34698968007";
-  const whatsappUrl = `https://wa.me/${whatsappNum}?text=Hola%2C%20me%20gustaría%20reservar%20una%20cita`;
+  const whatsappNum = sc.contact_whatsapp || WHATSAPP_PHONE;
+  const whatsappUrl = `https://wa.me/${whatsappNum}?text=${WHATSAPP_DEFAULT_MESSAGE}`;
 
   return (
     <div>
@@ -87,12 +86,12 @@ const OrganicContact = () => {
 
               <ContactItem icon={Instagram} title={t.contact.instagram} index={3}>
                 <a
-                  href={`https://instagram.com/${(sc.contact_instagram || "@elias_masaje").replace("@", "")}`}
+                  href={`https://instagram.com/${(sc.contact_instagram || INSTAGRAM_HANDLE).replace("@", "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-primary font-body hover:opacity-80 transition-opacity border-b border-primary/30 pb-0.5"
                 >
-                  {sc.contact_instagram || "@elias_masaje"}
+                  {sc.contact_instagram || INSTAGRAM_HANDLE}
                 </a>
               </ContactItem>
             </div>

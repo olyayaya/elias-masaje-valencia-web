@@ -13,6 +13,7 @@ import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
+import { WHATSAPP_URL } from "@/config/contact";
 
 const OrganicAbout = () => {
   const { t } = useI18n();
@@ -158,7 +159,7 @@ const OrganicAbout = () => {
                 {t.finalCta.description}
               </p>
               <a
-                href="https://wa.me/34698968007?text=Hola%20Elias%2C%20me%20gustaría%20reservar%20una%20sesión"
+                href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-primary text-primary-foreground font-body text-sm tracking-wide hover:opacity-90 transition-opacity"
