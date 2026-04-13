@@ -631,6 +631,7 @@ const BlogEditor = ({
         </DashboardCard>
       )}
 
+      <DashboardCard title={`Post content (${lang.toUpperCase()})`}>
         <div className="space-y-4">
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Title ({lang.toUpperCase()})</label>
