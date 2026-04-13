@@ -13,6 +13,8 @@ import ContactoPage from "./pages/Contacto";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FontPreview from "./pages/FontPreview";
+import Blog from "./pages/Blog";
+import BlogPostPage from "./pages/BlogPost";
 import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
               <Route path="/servicios" element={<ServiciosPage />} />
               <Route path="/sobre-mi" element={<SobreMiPage />} />
               <Route path="/contacto" element={<ContactoPage />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPostPage />} />
             </Route>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/font-preview" element={<FontPreview />} />

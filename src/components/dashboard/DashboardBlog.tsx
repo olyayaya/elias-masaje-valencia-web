@@ -25,6 +25,8 @@ interface BlogPost {
   meta_description_en: string;
   meta_description_ru: string;
   hidden: boolean;
+  published_at: string | null;
+  slug: string;
 }
 
 const suggestedKeywords = [
@@ -222,6 +224,7 @@ const DashboardBlog = () => {
       status: "draft", created_at: new Date().toISOString(),
       title_en: "", title_ru: "", content_en: "", content_ru: "",
       meta_description_en: "", meta_description_ru: "", hidden: false,
+      published_at: null, slug: "",
     };
     setDraft(newPost); setEditing("new");
   };
@@ -238,6 +241,7 @@ const DashboardBlog = () => {
       status: "draft", created_at: new Date().toISOString(),
       title_en: "", title_ru: "", content_en: "", content_ru: "",
       meta_description_en: "", meta_description_ru: "", hidden: false,
+      published_at: null, slug: "",
       [titleKey]: result.title,
       [contentKey]: result.content,
       [metaKey]: result.meta_description,
@@ -256,6 +260,10 @@ const DashboardBlog = () => {
       title_en: draft.title_en, title_ru: draft.title_ru,
       content_en: draft.content_en, content_ru: draft.content_ru,
       meta_description_en: draft.meta_description_en, meta_description_ru: draft.meta_description_ru,
+      slug: draft.slug,
+      published_at: draft.status === "published" && !draft.published_at
+        ? new Date().toISOString()
+        : draft.published_at,
     };
     if (editing === "new") {
       await supabase.from("blog_posts").insert(payload);
@@ -320,6 +328,9 @@ const DashboardBlog = () => {
                 <h4 className="text-sm font-medium text-foreground">{langVal(p, "title", lang) || p.title}</h4>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${p.status === "published" ? "bg-green-50 text-green-600" : "bg-muted text-muted-foreground"}`}>{p.status}</span>
                 {p.hidden && <span className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded-full">Hidden</span>}
+                {p.published_at && new Date(p.published_at) > new Date() && (
+                  <span className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary rounded-full">Scheduled</span>
+                )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">{langVal(p, "meta_description", lang) || p.meta_description}</p>
               <div className="flex gap-1.5 mt-2 flex-wrap">
@@ -409,11 +420,38 @@ const BlogEditor = ({
             </div>
           )}
 
-          <div className="flex gap-2">
-            <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none">
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-            </select>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
+                <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none">
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Publish date</label>
+                <input
+                  type="datetime-local"
+                  value={draft.published_at ? new Date(draft.published_at).toISOString().slice(0, 16) : ""}
+                  onChange={(e) => setDraft({ ...draft, published_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                  className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none"
+                />
+              </div>
+            </div>
+            {draft.published_at && new Date(draft.published_at) > new Date() && (
+              <p className="text-xs text-primary">⏰ Scheduled — will go live {new Date(draft.published_at).toLocaleString()}</p>
+            )}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">URL slug</label>
+              <input
+                value={draft.slug || ""}
+                onChange={(e) => setDraft({ ...draft, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-") })}
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none"
+                placeholder="my-post-title"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">/blog/{draft.slug || "..."}</p>
+            </div>
           </div>
         </div>
       </DashboardCard>
