@@ -539,11 +539,13 @@ const BlogEditor = ({
     if (error) throw error;
     const result = data?.result;
     if (!result?.title || !result?.content) throw new Error("Unexpected response");
+    const tgtKwKey = kwKey(targetLang);
     return {
       ...currentDraft,
       [tgtTitleKey]: result.title,
       [tgtContentKey]: result.content,
       [tgtMetaKey]: result.meta_description || "",
+      [tgtKwKey]: result.keywords || [],
     };
   };
 
