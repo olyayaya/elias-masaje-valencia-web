@@ -437,9 +437,23 @@ const OrganicHome = () => {
 
       {/* ═══════════ FAQ ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
+        {/* Warm glow accent behind FAQ heading — visible mainly in dark-gradient mode */}
+        <div
+          className="absolute pointer-events-none"
+          aria-hidden="true"
+          style={{
+            top: "8%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "min(600px, 80vw)",
+            height: "280px",
+            background: "radial-gradient(ellipse 100% 100% at 50% 40%, hsl(var(--primary) / 0.07) 0%, transparent 70%)",
+            animation: "ambient-breathe 22s ease-in-out infinite",
+          }}
+        />
         <OrganicShape shape="ring" size="w-28 h-28" position="top-4 right-12" animation="float" borderColor="hsl(var(--primary) / 0.08)" delay={1500} />
         <OrganicShape shape="blob" size="w-36 h-36" position="bottom-10 left-4" animation="drift" color="hsl(var(--primary) / 0.03)" delay={4000} />
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto relative z-[1]">
           {(() => {
             const Faq = () => {
               const anim = useFadeIn(0);
