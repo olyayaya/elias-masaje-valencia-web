@@ -180,8 +180,17 @@ const CategorySection = ({
                   </Button>
                 </div>
               </div>
+              {/* Image preview + position editor */}
+              {isImageField(item.content_key) && posItem && (
+                <ImagePreviewEditor
+                  url={drafts[item.id] ?? ""}
+                  position={drafts[posItem.id] ?? "center center"}
+                  onPositionChange={(pos) => setDrafts((p) => ({ ...p, [posItem.id]: pos }))}
+                />
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </CollapsibleContent>
     </Collapsible>
