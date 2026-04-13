@@ -104,8 +104,42 @@ const BlogPost = () => {
   const content = getField(post, "content");
   const metaDesc = getField(post, "meta_description");
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: title,
+    description: metaDesc,
+    datePublished: post.published_at,
+    dateModified: post.published_at,
+    author: { "@type": "Person", name: "Elias Masaje" },
+    publisher: {
+      "@type": "Organization",
+      name: "Elias Masaje",
+      url: "https://elias-masaje-valencia-web.lovable.app",
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `https://elias-masaje-valencia-web.lovable.app/blog/${post.slug || post.id}`,
+    },
+    inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
+    ...((() => {
+      const kws = locale === "en" ? post.seo_keywords_en : locale === "ru" ? post.seo_keywords_ru : post.seo_keywords;
+      return kws?.length ? { keywords: kws.join(", ") } : {};
+    })()),
+  };
+
   return (
-    <article className="section-padding">
+    <>
+      <Helmet>
+        <title>{title} | Elias Masaje</title>
+        <meta name="description" content={metaDesc} />
+        <link rel="canonical" href={`https://elias-masaje-valencia-web.lovable.app/blog/${post.slug || post.id}`} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={metaDesc} />
+        <meta property="og:type" content="article" />
+        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+      </Helmet>
+      <article className="section-padding">
       <div className="container-narrow">
         <Link
           to="/blog"
