@@ -320,7 +320,7 @@ const DashboardBlog = () => {
     return <BlogEditor
       draft={draft} setDraft={setDraft} onSave={save}
       onCancel={() => { setEditing(null); setDraft(null); }}
-      suggestedKeywords={suggestedKeywords}
+      suggestedKeywords={suggestedKeywordsByLang[lang]}
       onToggleKeyword={toggleKeyword} saving={saving}
       lang={lang} setLang={setLang}
     />;
@@ -354,7 +354,7 @@ const DashboardBlog = () => {
               </div>
               <p className="text-xs text-muted-foreground mt-1">{langVal(p, "meta_description", lang) || p.meta_description}</p>
               <div className="flex gap-1.5 mt-2 flex-wrap">
-                {p.seo_keywords.map((kw) => (
+                {(p[kwKey(lang)] || p.seo_keywords).map((kw) => (
                   <span key={kw} className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded">{kw}</span>
                 ))}
               </div>
