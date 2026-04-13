@@ -830,6 +830,7 @@ const BlogEditor = ({
             </div>
           </div>
         </div>
+        )}
       </DashboardCard>
 
       <DashboardCard title={`SEO Keywords (${lang.toUpperCase()})`} description="Click to add keywords to this post">
