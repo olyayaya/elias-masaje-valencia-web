@@ -264,6 +264,15 @@ const DashboardSiteContent = () => {
           </Collapsible>
         );
       })}
+
+      <ImagePicker
+        open={!!pickerOpen}
+        onClose={() => setPickerOpen(null)}
+        onSelect={(url) => {
+          if (pickerOpen) setDrafts((p) => ({ ...p, [pickerOpen]: url }));
+        }}
+        currentUrl={pickerOpen ? drafts[pickerOpen] : undefined}
+      />
     </div>
   );
 };
