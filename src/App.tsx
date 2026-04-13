@@ -13,6 +13,8 @@ import ContactoPage from "./pages/Contacto";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FontPreview from "./pages/FontPreview";
+import Blog from "./pages/Blog";
+import BlogPostPage from "./pages/BlogPost";
 import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
