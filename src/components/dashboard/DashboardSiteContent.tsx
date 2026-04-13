@@ -181,12 +181,27 @@ const CategorySection = ({
                 </div>
               </div>
               {/* Image preview + position editor */}
-              {isImageField(item.content_key) && posItem && (
-                <ImagePreviewEditor
-                  url={drafts[item.id] ?? ""}
-                  position={drafts[posItem.id] ?? "center center"}
-                  onPositionChange={(pos) => setDrafts((p) => ({ ...p, [posItem.id]: pos }))}
-                />
+              {isImageField(item.content_key) && posItem && (drafts[item.id] ?? "").startsWith("http") && (
+                <div className="space-y-2">
+                  <ImagePreviewEditor
+                    url={drafts[item.id] ?? ""}
+                    position={drafts[posItem.id] ?? "center center"}
+                    onPositionChange={(pos) => setDrafts((p) => ({ ...p, [posItem.id]: pos }))}
+                  />
+                  {drafts[posItem.id] !== posItem[langKey(lang)] && (
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => saveItem(posItem)}
+                        disabled={saving === posItem.id}
+                        className="text-xs"
+                      >
+                        {saving === posItem.id ? <Loader2 size={12} className="animate-spin mr-1" /> : <Save size={12} className="mr-1" />}
+                        Save position
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             );
