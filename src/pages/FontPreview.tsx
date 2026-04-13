@@ -9,6 +9,7 @@ const FONT_PAIRS = [
     displayName: "Italiana",
     bodyName: "Arapey (italic)",
     note: "Elegant didone display + refined italic serif body. Luxurious, editorial.",
+    bodyItalic: true,
   },
   {
     id: "B",
