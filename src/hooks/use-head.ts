@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface HeadProps {
   title?: string;
@@ -10,29 +10,38 @@ interface HeadProps {
   jsonLd?: Record<string, any>;
 }
 
-const setMeta = (attr: string, value: string, content: string) => {
-  let el = document.querySelector(`meta[${attr}="${value}"]`) as HTMLMetaElement | null;
-  if (!el) {
-    el = document.createElement("meta");
-    el.setAttribute(attr, value);
-    document.head.appendChild(el);
-  }
-  el.setAttribute("content", content);
-  return el;
-};
+/**
+ * Manages document head elements (title, meta, canonical, JSON-LD).
+ * Safe to call unconditionally — undefined values are skipped.
+ * Cleans up on unmount.
+ */
+export function useHead(props: HeadProps) {
+  const jsonLdStr = props.jsonLd ? JSON.stringify(props.jsonLd) : "";
+  const propsRef = useRef(props);
+  propsRef.current = props;
 
-const JSONLD_ID = "app-jsonld";
-
-export function useHead({ title, description, canonical, ogTitle, ogDescription, ogType, jsonLd }: HeadProps) {
   useEffect(() => {
-    const prev = document.title;
+    const { title, description, canonical, ogTitle, ogDescription, ogType } = propsRef.current;
+    const prevTitle = document.title;
+    const created: Element[] = [];
+
     if (title) document.title = title;
 
-    const metas: HTMLMetaElement[] = [];
-    if (description) metas.push(setMeta("name", "description", description));
-    if (ogTitle) metas.push(setMeta("property", "og:title", ogTitle));
-    if (ogDescription) metas.push(setMeta("property", "og:description", ogDescription));
-    if (ogType) metas.push(setMeta("property", "og:type", ogType));
+    const setMeta = (attr: string, val: string, content: string) => {
+      let el = document.querySelector(`meta[${attr}="${val}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, val);
+        document.head.appendChild(el);
+        created.push(el);
+      }
+      el.setAttribute("content", content);
+    };
+
+    if (description) setMeta("name", "description", description);
+    if (ogTitle) setMeta("property", "og:title", ogTitle);
+    if (ogDescription) setMeta("property", "og:description", ogDescription);
+    if (ogType) setMeta("property", "og:type", ogType);
 
     let linkEl: HTMLLinkElement | null = null;
     if (canonical) {
@@ -41,27 +50,34 @@ export function useHead({ title, description, canonical, ogTitle, ogDescription,
         linkEl = document.createElement("link");
         linkEl.setAttribute("rel", "canonical");
         document.head.appendChild(linkEl);
+        created.push(linkEl);
       }
       linkEl.setAttribute("href", canonical);
     }
 
-    let scriptEl: HTMLScriptElement | null = null;
-    if (jsonLd) {
-      scriptEl = document.getElementById(JSONLD_ID) as HTMLScriptElement | null;
+    if (jsonLdStr) {
+      let scriptEl = document.getElementById("app-jsonld") as HTMLScriptElement | null;
       if (!scriptEl) {
         scriptEl = document.createElement("script");
-        scriptEl.id = JSONLD_ID;
+        scriptEl.id = "app-jsonld";
         scriptEl.type = "application/ld+json";
         document.head.appendChild(scriptEl);
+        created.push(scriptEl);
       }
-      scriptEl.textContent = JSON.stringify(jsonLd);
+      scriptEl.textContent = jsonLdStr;
     }
 
     return () => {
-      document.title = prev;
-      metas.forEach((el) => el.remove());
-      linkEl?.remove();
-      scriptEl?.remove();
+      document.title = prevTitle;
+      created.forEach((el) => el.remove());
     };
-  }, [title, description, canonical, ogTitle, ogDescription, ogType, jsonLd]);
+  }, [
+    propsRef.current.title,
+    propsRef.current.description,
+    propsRef.current.canonical,
+    propsRef.current.ogTitle,
+    propsRef.current.ogDescription,
+    propsRef.current.ogType,
+    jsonLdStr,
+  ]);
 }
