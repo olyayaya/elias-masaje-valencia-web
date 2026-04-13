@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/context";
 import { Calendar, ArrowRight, Loader2 } from "lucide-react";
+import { useHead } from "@/hooks/use-head";
 
 interface BlogPost {
   id: string;
