@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
 import { useDbServices, resolveField } from "@/hooks/use-db-content";
 import OrganicServices from "@/components/organic/OrganicServices";
