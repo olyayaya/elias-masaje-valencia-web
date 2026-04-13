@@ -14,6 +14,7 @@ export const en: Translations = {
     headline: "Professional massage\nin the heart of Valencia",
     subheadline: "A space to slow down, release tension, and reconnect with your body.",
     cta: "Book via WhatsApp",
+    tagline: "Valencia · Massage · Wellness",
   },
   benefits: {
     title: "Benefits of massage",
@@ -29,6 +30,7 @@ export const en: Translations = {
     viewAll: "View all →",
     pageSubtitle: "Every session is tailored to your body and what you need that day. These are the treatments I offer at my center in Valencia.",
     bookBtn: "Book",
+    sectionLabel: "Treatments",
     items: [
       { title: "Deep tissue massage", description: "Deep work on knots and chronic muscle tension. Ideal for back, neck, and shoulder pain. Combines deep pressure techniques and stretching.", duration: "60 min", price: "€50" },
       { title: "Relaxation massage", description: "Gentle pressure and slow rhythm to release accumulated stress and improve rest quality. Perfect for disconnecting from daily life.", duration: "60 min", price: "€45" },
@@ -40,6 +42,7 @@ export const en: Translations = {
   },
   about: {
     title: "About me",
+    sectionLabel: "The therapist",
     previewP1: "I'm Elias, a professional massage therapist with over 8 years of experience. I trained in therapeutic, sports, and relaxation massage techniques, and have since treated hundreds of people in Valencia.",
     previewP2: "My approach combines anatomical knowledge with active body listening. Every session adapts to what you need that day.",
     learnMore: "Learn more →",
@@ -50,10 +53,12 @@ export const en: Translations = {
       "The space where I work is designed so you feel calm from the moment you arrive. No loud music, no artificial lights, no rush. Just you, your body, and the time you need.",
     ],
     spaceTitle: "The space",
+    spaceLabel: "The space",
     spaceParagraphs: [
       "My practice is in the center of Valencia, in a quiet and accessible area. It's a bright, warm space designed so you can disconnect from the very first moment.",
       "I work with natural products and quality materials. Everything is carefully curated for a complete and pleasant experience.",
     ],
+    gallery: "Gallery",
   },
   testimonials: {
     title: "What my clients say",
@@ -93,6 +98,7 @@ export const en: Translations = {
   },
   contact: {
     title: "Contact",
+    sectionLabel: "Get in touch",
     address: "Address",
     addressValue: "Calle San Vicente Mártir, 24, 46002 Valencia",
     hours: "Opening hours",
@@ -103,10 +109,23 @@ export const en: Translations = {
     sendMessage: "Send message",
     instagram: "Instagram",
   },
+  map: {
+    openIn: "Open in…",
+    cancel: "Cancel",
+  },
   footer: {
     tagline: "Professional massage in the heart of Valencia. A space to slow down and reconnect with your body.",
     navigation: "Navigation",
     contact: "Contact",
     rights: "All rights reserved.",
+  },
+  a11y: {
+    skipToContent: "Skip to content",
+    mainNavigation: "Main navigation",
+    footerNavigation: "Footer navigation",
+    changeLanguage: "Change language",
+    toggleMenu: "Toggle menu",
+    openMaps: "Open in maps app",
+    whatsappBook: "Book via WhatsApp",
   },
 };

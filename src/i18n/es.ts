@@ -14,6 +14,7 @@ export const es: Translations = {
     headline: "Masaje profesional\nen el centro de Valencia",
     subheadline: "Un espacio para bajar el ritmo, liberar tensión y reconectar con tu cuerpo.",
     cta: "Reservar por WhatsApp",
+    tagline: "Valencia · Masaje · Bienestar",
   },
   benefits: {
     title: "Beneficios del masaje",
@@ -29,6 +30,7 @@ export const es: Translations = {
     viewAll: "Ver todos →",
     pageSubtitle: "Cada sesión se adapta a tu cuerpo y a lo que necesitas ese día. Estos son los tratamientos que ofrezco en mi centro del centro de Valencia.",
     bookBtn: "Reservar",
+    sectionLabel: "Tratamientos",
     items: [
       { title: "Masaje descontracturante", description: "Trabajo profundo sobre nudos y tensiones musculares crónicas. Ideal para dolores de espalda, cuello y hombros. Se combinan técnicas de presión profunda y estiramientos.", duration: "60 min", price: "50 €" },
       { title: "Masaje relajante", description: "Presión suave y ritmo lento para liberar estrés acumulado y mejorar la calidad del descanso. Perfecto para desconectar del día a día.", duration: "60 min", price: "45 €" },
@@ -40,6 +42,7 @@ export const es: Translations = {
   },
   about: {
     title: "Sobre mí",
+    sectionLabel: "El terapeuta",
     previewP1: "Soy Elias, masajista profesional con más de 8 años de experiencia. Me formé en técnicas de masaje terapéutico, deportivo y relajante, y desde entonces he atendido a cientos de personas en Valencia.",
     previewP2: "Mi enfoque combina conocimiento anatómico con una escucha activa del cuerpo. Cada sesión se adapta a lo que necesitas ese día.",
     learnMore: "Conoce más →",
@@ -50,10 +53,12 @@ export const es: Translations = {
       "El espacio donde trabajo está pensado para que te sientas tranquilo desde que llegas. Sin música alta, sin luces artificiales, sin prisas. Solo tú, tu cuerpo y el tiempo que necesitas.",
     ],
     spaceTitle: "El espacio",
+    spaceLabel: "El espacio",
     spaceParagraphs: [
       "Mi consulta está en el centro de Valencia, en una zona tranquila y accesible. Es un espacio luminoso, cálido y diseñado para que puedas desconectar desde el primer momento.",
       "Trabajo con productos naturales y materiales de calidad. Todo está cuidado para que la experiencia sea completa y agradable.",
     ],
+    gallery: "Galería",
   },
   testimonials: {
     title: "Lo que dicen mis clientes",
@@ -93,6 +98,7 @@ export const es: Translations = {
   },
   contact: {
     title: "Contacto",
+    sectionLabel: "Contactar",
     address: "Dirección",
     addressValue: "Calle San Vicente Mártir, 24, 46002 Valencia",
     hours: "Horario",
@@ -103,10 +109,23 @@ export const es: Translations = {
     sendMessage: "Enviar mensaje",
     instagram: "Instagram",
   },
+  map: {
+    openIn: "Abrir en…",
+    cancel: "Cancelar",
+  },
   footer: {
     tagline: "Masaje profesional en el centro de Valencia. Un espacio para bajar el ritmo y reconectar con tu cuerpo.",
     navigation: "Navegación",
     contact: "Contacto",
     rights: "Todos los derechos reservados.",
+  },
+  a11y: {
+    skipToContent: "Saltar al contenido",
+    mainNavigation: "Navegación principal",
+    footerNavigation: "Navegación del pie de página",
+    changeLanguage: "Cambiar idioma",
+    toggleMenu: "Abrir o cerrar menú",
+    openMaps: "Abrir en aplicación de mapas",
+    whatsappBook: "Reservar por WhatsApp",
   },
 };

@@ -14,6 +14,7 @@ export interface Translations {
     headline: string;
     subheadline: string;
     cta: string;
+    tagline: string;
   };
   benefits: {
     title: string;
@@ -24,16 +25,20 @@ export interface Translations {
     viewAll: string;
     pageSubtitle: string;
     bookBtn: string;
+    sectionLabel: string;
     items: { title: string; description: string; duration: string; price: string }[];
   };
   about: {
     title: string;
+    sectionLabel: string;
     previewP1: string;
     previewP2: string;
     learnMore: string;
     paragraphs: string[];
     spaceTitle: string;
+    spaceLabel: string;
     spaceParagraphs: string[];
+    gallery: string;
   };
   testimonials: {
     title: string;
@@ -58,6 +63,7 @@ export interface Translations {
   };
   contact: {
     title: string;
+    sectionLabel: string;
     address: string;
     addressValue: string;
     hours: string;
@@ -68,10 +74,23 @@ export interface Translations {
     sendMessage: string;
     instagram: string;
   };
+  map: {
+    openIn: string;
+    cancel: string;
+  };
   footer: {
     tagline: string;
     navigation: string;
     contact: string;
     rights: string;
+  };
+  a11y: {
+    skipToContent: string;
+    mainNavigation: string;
+    footerNavigation: string;
+    changeLanguage: string;
+    toggleMenu: string;
+    openMaps: string;
+    whatsappBook: string;
   };
 }
