@@ -71,7 +71,7 @@ const DashboardSiteContent = () => {
     setSaving(item.id);
     const { error } = await supabase
       .from("site_content")
-      .update({ [langKey(lang)]: drafts[item.id] })
+      .update({ [langKey(lang)]: drafts[item.id] } as any)
       .eq("id", item.id);
     if (error) {
       toast.error("Failed to save");

@@ -12,6 +12,7 @@ import SobreMiPage from "./pages/SobreMi";
 import ContactoPage from "./pages/Contacto";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
+import FontPreview from "./pages/FontPreview";
 import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/contacto" element={<ContactoPage />} />
             </Route>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/font-preview" element={<FontPreview />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

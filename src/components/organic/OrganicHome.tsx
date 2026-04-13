@@ -32,8 +32,7 @@ const WHATSAPP_URL = "https://wa.me/34698968007?text=Hola%2C%20me%20gustaría%20
 
 const OrganicHome = () => {
   const { t, locale } = useI18n();
-  const { theme } = useTheme();
-  const useAltLocationBg = theme === "organic" || theme === "natural";
+  const { mode } = useTheme();
   const heroText = useFadeIn(0.2);
   const benefitsTitle = useFadeIn(0);
   const servicesTitle = useFadeIn(0);
@@ -79,12 +78,7 @@ const OrganicHome = () => {
             height={1080}
           />
           <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
-          {theme === "clinical" && (
-            <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-primary/30 via-primary/10 to-transparent" />
-          )}
-          {theme === "organic" && (
-            <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-primary/25 via-primary/10 to-transparent" />
-          )}
+          <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-primary/20 via-primary/8 to-transparent" />
         </div>
 
         <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 pt-20 pb-[18vh] md:pb-[20vh]">
@@ -371,7 +365,7 @@ const OrganicHome = () => {
                   {allItems.map((item, i) => (
                     <div
                       key={i}
-                      className="bg-card rounded-2xl border border-border p-6 shrink-0"
+                      className="bg-secondary/60 rounded-2xl border border-border/50 p-6 shrink-0"
                       style={{ width: CARD_WIDTH }}
                     >
                       <p className="text-sm text-muted-foreground font-body leading-relaxed italic mb-4">
@@ -405,7 +399,7 @@ const OrganicHome = () => {
         {/* Background image */}
         <div className="absolute inset-0">
           <img
-            src={useAltLocationBg ? locationStones : locationBg}
+            src={locationBg}
             alt=""
             className="w-full h-full object-cover"
             loading="lazy"
