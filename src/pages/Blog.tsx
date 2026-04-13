@@ -18,6 +18,8 @@ interface BlogPost {
   slug: string;
   published_at: string;
   seo_keywords: string[];
+  seo_keywords_en: string[];
+  seo_keywords_ru: string[];
 }
 
 const langField = (field: string, locale: string) => {
@@ -127,7 +129,7 @@ const Blog = () => {
                       {locale === "es" ? "Leer más" : locale === "ru" ? "Читать далее" : "Read more"}
                       <ArrowRight size={12} />
                     </span>
-                    {post.seo_keywords.slice(0, 3).map((kw) => (
+                    {(locale === "en" ? post.seo_keywords_en : locale === "ru" ? post.seo_keywords_ru : post.seo_keywords)?.slice(0, 3).map((kw) => (
                       <span key={kw} className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">
                         {kw}
                       </span>

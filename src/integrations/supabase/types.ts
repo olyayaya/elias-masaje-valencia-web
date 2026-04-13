@@ -27,6 +27,8 @@ export type Database = {
           meta_description_ru: string
           published_at: string | null
           seo_keywords: string[]
+          seo_keywords_en: string[]
+          seo_keywords_ru: string[]
           slug: string | null
           status: string
           title: string
@@ -46,6 +48,8 @@ export type Database = {
           meta_description_ru?: string
           published_at?: string | null
           seo_keywords?: string[]
+          seo_keywords_en?: string[]
+          seo_keywords_ru?: string[]
           slug?: string | null
           status?: string
           title?: string
@@ -65,6 +69,8 @@ export type Database = {
           meta_description_ru?: string
           published_at?: string | null
           seo_keywords?: string[]
+          seo_keywords_en?: string[]
+          seo_keywords_ru?: string[]
           slug?: string | null
           status?: string
           title?: string
