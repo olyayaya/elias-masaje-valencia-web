@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
 import { useDbServices, resolveField } from "@/hooks/use-db-content";
 import OrganicServices from "@/components/organic/OrganicServices";
@@ -60,20 +60,17 @@ const ServiciosPage = () => {
     ? "Услуги Массажа | Elias Masaje Валенсия"
     : "Massage Services | Elias Masaje Valencia";
 
-  return (
-    <>
-      <Helmet>
-        <title>{title}</title>
-        <meta name="description" content={metaDesc} />
-        <link rel="canonical" href="https://elias-masaje-valencia-web.lovable.app/servicios" />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={metaDesc} />
-        <meta property="og:type" content="website" />
-        <script type="application/ld+json">{JSON.stringify(localBusiness)}</script>
-      </Helmet>
-      <OrganicServices />
-    </>
-  );
+  useHead({
+    title,
+    description: metaDesc,
+    canonical: "https://elias-masaje-valencia-web.lovable.app/servicios",
+    ogTitle: title,
+    ogDescription: metaDesc,
+    ogType: "website",
+    jsonLd: localBusiness,
+  });
+
+  return <OrganicServices />;
 };
 
 export default ServiciosPage;
