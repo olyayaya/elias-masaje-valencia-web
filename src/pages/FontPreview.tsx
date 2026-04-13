@@ -67,7 +67,7 @@ const FontPreview = () => {
   const previewVars = {
     "--font-display": pair.display,
     "--font-body": pair.body,
-    fontStyle: bodyItalic ? "italic" : "normal",
+    "--body-font-style": bodyItalic ? "italic" : "normal",
   } as CSSProperties;
 
   return (
