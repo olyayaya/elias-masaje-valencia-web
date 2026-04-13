@@ -805,10 +805,10 @@ const BlogEditor = ({
         </div>
       </DashboardCard>
 
-      <DashboardCard title="SEO Keywords" description="Click to add keywords to this post">
+      <DashboardCard title={`SEO Keywords (${lang.toUpperCase()})`} description="Click to add keywords to this post">
         <div className="flex flex-wrap gap-2">
           {suggestedKeywords.map((kw) => (
-            <button key={kw} onClick={() => onToggleKeyword(kw)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${draft.seo_keywords.includes(kw) ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:border-foreground/30"}`}>
+            <button key={kw} onClick={() => onToggleKeyword(kw)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${(draft[kwKey(lang)] || []).includes(kw) ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:border-foreground/30"}`}>
               {kw}
             </button>
           ))}
