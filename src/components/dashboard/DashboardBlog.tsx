@@ -563,6 +563,15 @@ const BlogEditor = ({
     }
   };
 
+  // Check which languages have content
+  const langHasContent = (l: Lang): boolean => {
+    const tKey = langKey("title", l) as keyof BlogPost;
+    const cKey = langKey("content", l) as keyof BlogPost;
+    return !!((draft[tKey] as string)?.trim()) || !!((draft[cKey] as string)?.trim());
+  };
+  const contentStatus: Record<Lang, boolean> = { es: langHasContent("es"), en: langHasContent("en"), ru: langHasContent("ru") };
+  const allLanguagesGenerated = contentStatus.en && contentStatus.ru;
+
   const [generatingAll, setGeneratingAll] = useState(false);
   const translateToAll = async () => {
     setGeneratingAll(true);
