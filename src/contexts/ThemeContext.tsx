@@ -1,7 +1,9 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { FONT_PAIRS, type FontPair } from "@/config/fontPairs";
 
-export type ThemeMode = "light" | "dark";
+export type ThemeMode = "light" | "dark" | "dark-gradient";
+
+const MODE_CYCLE: ThemeMode[] = ["light", "dark", "dark-gradient"];
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -16,10 +18,13 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const DEFAULT_FONT_ID = "C"; // Cormorant Garamond + Source Sans 3 (current site default)
 
+const isValidMode = (v: string | null): v is ThemeMode =>
+  v === "light" || v === "dark" || v === "dark-gradient";
+
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [mode, setModeState] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem("theme-mode") as ThemeMode | null;
-    if (saved && ["light", "dark"].includes(saved)) return saved;
+    const saved = localStorage.getItem("theme-mode");
+    if (saved && isValidMode(saved)) return saved;
     if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
     return "light";
   });
@@ -41,7 +46,9 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const toggleMode = useCallback(() => {
-    setMode(mode === "light" ? "dark" : "light");
+    const idx = MODE_CYCLE.indexOf(mode);
+    const next = MODE_CYCLE[(idx + 1) % MODE_CYCLE.length];
+    setMode(next);
   }, [mode, setMode]);
 
   useEffect(() => {
