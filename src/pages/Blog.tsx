@@ -80,6 +80,44 @@ const Blog = () => {
     ru: "Советы и статьи о здоровье, расслаблении и уходе за телом.",
   };
 
+  const title = locale === "es"
+    ? "Blog — Elias Masaje Valencia"
+    : locale === "ru"
+    ? "Блог — Elias Masaje Валенсия"
+    : "Blog — Elias Masaje Valencia";
+
+  const desc = subtitles[locale];
+
+  useHead({
+    title,
+    description: desc,
+    canonical: "https://elias-masaje-valencia-web.lovable.app/blog",
+    ogTitle: title,
+    ogDescription: desc,
+    ogType: "website",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "@id": "https://elias-masaje-valencia-web.lovable.app/blog",
+      name: headings[locale],
+      description: desc,
+      url: "https://elias-masaje-valencia-web.lovable.app/blog",
+      isPartOf: { "@id": "https://elias-masaje-valencia-web.lovable.app/#website" },
+      inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
+      ...(posts.length > 0 ? {
+        mainEntity: {
+          "@type": "ItemList",
+          itemListElement: posts.map((post, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            url: `https://elias-masaje-valencia-web.lovable.app/blog/${post.slug || post.id}`,
+            name: getField(post, "title"),
+          })),
+        },
+      } : {}),
+    },
+  });
+
   return (
     <div className="section-padding">
       <div className="container-narrow">
