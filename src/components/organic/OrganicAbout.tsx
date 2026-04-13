@@ -13,6 +13,7 @@ import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
+import { WHATSAPP_URL } from "@/config/contact";
 
 const OrganicAbout = () => {
   const { t } = useI18n();
