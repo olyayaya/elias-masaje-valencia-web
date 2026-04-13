@@ -106,7 +106,7 @@ const OrganicServices = () => {
         <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 py-16 pb-[10vh]">
           <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
             <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/90 mb-4">
-              Treatments
+              {t.services.sectionLabel}
             </p>
             <h1 className="font-display text-4xl md:text-5xl leading-snug mb-6 text-foreground">{t.services.title}</h1>
             <p className="text-base text-foreground/70 font-body leading-[1.8] max-w-md">{t.services.pageSubtitle}</p>

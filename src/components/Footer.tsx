@@ -16,7 +16,7 @@ const Footer = () => {
           </div>
           <div>
             <h4 className="font-display text-lg mb-4 text-foreground">{t.footer.navigation}</h4>
-            <nav className="flex flex-col gap-2">
+            <nav className="flex flex-col gap-2" aria-label={t.a11y.footerNavigation}>
               <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.home}</Link>
               <Link to="/servicios" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.services}</Link>
               <Link to="/sobre-mi" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.about}</Link>
