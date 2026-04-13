@@ -8,7 +8,7 @@ interface CircularImageCarouselProps {
 
 const CYCLE_DURATION = 12000;
 const FADE_TIME = 5000;
-const COL_OFFSETS = [0, 4000, 2200];
+const COL_OFFSETS = [0, 1200, 600];
 const FOCUS_DURATION = 10000;
 
 // Landscape images: subtle zoom variation
@@ -113,6 +113,7 @@ const BreathingCell = ({
   const [next, setNext] = useState(1);
   const [fading, setFading] = useState(false);
   const [started, setStarted] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const [sizeScale, setSizeScale] = useState(() => randomSize(getIsPortrait(images[0]?.src ?? "")));
 
   useEffect(() => {
@@ -176,10 +177,11 @@ const BreathingCell = ({
         src={currentImg.src}
         alt={currentImg.alt}
         className="absolute inset-0 w-full h-full object-cover"
-        loading="lazy"
+        loading="eager"
         draggable={false}
+        onLoad={() => setImgLoaded(true)}
         style={{
-          opacity: !started ? 0 : fading ? 0 : 1,
+          opacity: !started || !imgLoaded ? 0 : fading ? 0 : 1,
           transform: !started
             ? `scale(${currentRestScale})`
             : fading
