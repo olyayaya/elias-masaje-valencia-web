@@ -25,6 +25,8 @@ interface BlogPost {
   meta_description_en: string;
   meta_description_ru: string;
   hidden: boolean;
+  published_at: string | null;
+  slug: string;
 }
 
 const suggestedKeywords = [
