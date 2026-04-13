@@ -37,6 +37,15 @@ const FONT_PAIRS = [
     bodyName: "Lexend",
     note: "Expressive variable serif + cognitive-friendly sans. Warm, distinctive.",
   },
+  {
+    id: "E",
+    label: "Option E",
+    display: "'Poiret One', cursive",
+    body: "'Montserrat', sans-serif",
+    displayName: "Poiret One",
+    bodyName: "Montserrat",
+    note: "Geometric art deco display + versatile modern sans. Elegant, airy, distinctive.",
+  },
 ] as const;
 
 const SAMPLE = {
