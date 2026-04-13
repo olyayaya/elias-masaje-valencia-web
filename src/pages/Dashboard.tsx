@@ -139,6 +139,16 @@ const Dashboard = () => {
         </nav>
 
         <div className="px-3 pb-4 space-y-2">
+          <div className="flex items-center gap-2 mx-3">
+            <button
+              onClick={toggleMode}
+              className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              aria-label={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            >
+              {mode === "light" ? <Moon size={14} /> : <Sun size={14} />}
+              {mode === "light" ? "Dark" : "Light"}
+            </button>
+          </div>
           <div className="flex items-center gap-1 bg-secondary rounded-lg p-0.5 mx-3">
             {(Object.keys(langLabels) as Locale[]).map((l) => (
               <button
