@@ -47,6 +47,7 @@ const DashboardSiteContent = () => {
   const [lang, setLang] = useState<Lang>("es");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [aiLoading, setAiLoading] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState<string | null>(null);
 
   const fetchContent = async () => {
     setLoading(true);
