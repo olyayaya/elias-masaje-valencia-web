@@ -47,6 +47,15 @@ const FONT_PAIRS = [
     bodyName: "Montserrat",
     note: "Geometric art deco display + versatile modern sans. Elegant, airy, distinctive.",
   },
+  {
+    id: "F",
+    label: "Option F",
+    display: "'Playfair Display', serif",
+    body: "'DM Sans', sans-serif",
+    displayName: "Playfair Display",
+    bodyName: "DM Sans",
+    note: "High-contrast didone serif + clean geometric sans. Luxurious, modern, editorial.",
+  },
 ] as const;
 
 const SAMPLE = {
