@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
 import ImagePicker from "./ImagePicker";
+import ImagePreviewEditor from "./ImagePreviewEditor";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -39,15 +40,18 @@ const isLongField = (key: string) =>
   key.includes("description") || key.includes("tagline") || key.includes("preview_p");
 
 const isImageField = (key: string) =>
-  key.includes("image") || key.includes("photo") || key.includes("logo") || key.includes("_img");
+  (key.includes("image") || key.includes("photo") || key.includes("logo") || key.includes("_img")) && !key.endsWith("_position");
+
+const isPositionField = (key: string) => key.endsWith("_position");
 
 /* ─── Category Section (extracted for open/closed state tracking) ─── */
 const CategorySection = ({
-  cat, catItems, lang, drafts, setDrafts, saveItem, saving, aiLoading,
+  cat, catItems, allItems, lang, drafts, setDrafts, saveItem, saving, aiLoading,
   translateField, seoOptimize, hasChanged, setPickerOpen, isMobile,
 }: {
   cat: { id: string; label: string };
   catItems: SiteContentRow[];
+  allItems: SiteContentRow[];
   lang: Lang;
   drafts: Record<string, string>;
   setDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
@@ -61,10 +65,14 @@ const CategorySection = ({
   isMobile: boolean;
 }) => {
   const [open, setOpen] = useState(false);
+  const visibleItems = catItems.filter((i) => !isPositionField(i.content_key));
   const verb = isMobile ? "tap" : "click";
   const hint = open
-    ? `${catItems.length} fields — ${verb} to collapse`
-    : `${catItems.length} fields — ${verb} to expand`;
+    ? `${visibleItems.length} fields — ${verb} to collapse`
+    : `${visibleItems.length} fields — ${verb} to expand`;
+
+  const findPositionItem = (imageKey: string) =>
+    allItems.find((i) => i.content_key === `${imageKey}_position`);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -78,7 +86,9 @@ const CategorySection = ({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="border border-t-0 border-border rounded-b-lg bg-card px-5 pb-5 pt-3 space-y-4">
-          {catItems.map((item) => (
+          {visibleItems.map((item) => {
+            const posItem = isImageField(item.content_key) ? findPositionItem(item.content_key) : null;
+            return (
             <div key={item.id} className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">{item.label}</label>
               <div className="flex gap-2">
@@ -99,9 +109,6 @@ const CategorySection = ({
                       >
                         <ImageIcon size={14} />
                       </Button>
-                      {(drafts[item.id] ?? "").startsWith("http") && (
-                        <img src={drafts[item.id]} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
-                      )}
                     </div>
                   ) : isLongField(item.content_key) ? (
                     <Textarea
@@ -173,8 +180,32 @@ const CategorySection = ({
                   </Button>
                 </div>
               </div>
+              {/* Image preview + position editor */}
+              {isImageField(item.content_key) && posItem && (drafts[item.id] ?? "").startsWith("http") && (
+                <div className="space-y-2">
+                  <ImagePreviewEditor
+                    url={drafts[item.id] ?? ""}
+                    position={drafts[posItem.id] ?? "center center"}
+                    onPositionChange={(pos) => setDrafts((p) => ({ ...p, [posItem.id]: pos }))}
+                  />
+                  {drafts[posItem.id] !== posItem[langKey(lang)] && (
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => saveItem(posItem)}
+                        disabled={saving === posItem.id}
+                        className="text-xs"
+                      >
+                        {saving === posItem.id ? <Loader2 size={12} className="animate-spin mr-1" /> : <Save size={12} className="mr-1" />}
+                        Save position
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -295,7 +326,7 @@ const DashboardSiteContent = () => {
         if (!catItems.length) return null;
         return (
           <CategorySection
-            key={cat.id} cat={cat} catItems={catItems} lang={lang}
+            key={cat.id} cat={cat} catItems={catItems} allItems={items} lang={lang}
             drafts={drafts} setDrafts={setDrafts} saveItem={saveItem}
             saving={saving} aiLoading={aiLoading} translateField={translateField}
             seoOptimize={seoOptimize} hasChanged={hasChanged}
