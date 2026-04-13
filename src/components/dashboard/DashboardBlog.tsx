@@ -395,6 +395,8 @@ const BlogEditor = ({
   const [regenerating, setRegenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const titleKey = langKey("title", lang) as keyof BlogPost;
   const contentKey = langKey("content", lang) as keyof BlogPost;
   const metaKey = langKey("meta_description", lang) as keyof BlogPost;
@@ -411,7 +413,7 @@ const BlogEditor = ({
     ],
     content: (draft[contentKey] as string) || "",
     onUpdate: ({ editor }) => {
-      setDraft({ ...draft, [contentKey]: editor.getHTML() });
+      setDraft({ ...draftRef.current, [contentKey]: editor.getHTML() });
     },
   }, [lang]);
 
