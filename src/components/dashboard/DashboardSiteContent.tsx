@@ -86,7 +86,9 @@ const CategorySection = ({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="border border-t-0 border-border rounded-b-lg bg-card px-5 pb-5 pt-3 space-y-4">
-          {catItems.map((item) => (
+          {visibleItems.map((item) => {
+            const posItem = isImageField(item.content_key) ? findPositionItem(item.content_key) : null;
+            return (
             <div key={item.id} className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">{item.label}</label>
               <div className="flex gap-2">
@@ -107,9 +109,6 @@ const CategorySection = ({
                       >
                         <ImageIcon size={14} />
                       </Button>
-                      {(drafts[item.id] ?? "").startsWith("http") && (
-                        <img src={drafts[item.id]} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
-                      )}
                     </div>
                   ) : isLongField(item.content_key) ? (
                     <Textarea
