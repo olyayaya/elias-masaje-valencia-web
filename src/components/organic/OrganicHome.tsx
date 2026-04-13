@@ -365,7 +365,7 @@ const OrganicHome = () => {
                   {allItems.map((item, i) => (
                     <div
                       key={i}
-                      className="bg-card rounded-2xl border border-border p-6 shrink-0"
+                      className="bg-secondary/60 rounded-2xl border border-border/50 p-6 shrink-0"
                       style={{ width: CARD_WIDTH }}
                     >
                       <p className="text-sm text-muted-foreground font-body leading-relaxed italic mb-4">
