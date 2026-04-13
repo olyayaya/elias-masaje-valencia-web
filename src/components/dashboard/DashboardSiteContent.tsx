@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
+import ImagePicker from "./ImagePicker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Save, Loader2, Sparkles, ChevronRight, Search, Languages } from "lucide-react";
+import { Save, Loader2, Sparkles, ChevronRight, Search, Languages, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -35,6 +36,9 @@ const langKey = (lang: Lang): "value_es" | "value_en" | "value_ru" =>
 
 const isLongField = (key: string) =>
   key.includes("description") || key.includes("tagline") || key.includes("preview_p");
+
+const isImageField = (key: string) =>
+  key.includes("image") || key.includes("photo") || key.includes("logo") || key.includes("_img");
 
 const DashboardSiteContent = () => {
   const [items, setItems] = useState<SiteContentRow[]>([]);
