@@ -550,6 +550,16 @@ const BlogEditor = ({
                   <ToolbarBtn onClick={insertLink} active={editor.isActive("link")} title="Insert link">
                     <LinkIcon size={14} />
                   </ToolbarBtn>
+                  <ToolbarBtn onClick={() => fileInputRef.current?.click()} active={false} title="Insert image">
+                    {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+                  </ToolbarBtn>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
 
                   <ToolbarSep />
 
