@@ -8,7 +8,7 @@ const Footer = () => {
   const { content: sc } = useSiteContent();
 
   return (
-    <footer className="relative -mt-px bg-card section-padding">
+    <footer className="relative -mt-16 md:-mt-24 pt-16 md:pt-24 bg-card section-padding z-20">
       <div className="container-wide">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
