@@ -110,12 +110,18 @@ const ImagePicker = ({ open, onClose, onSelect, currentUrl }: ImagePickerProps) 
             className="hidden"
             onChange={(e) => e.target.files && handleUpload(e.target.files)}
           />
-          {selected && (
-            <Button size="sm" onClick={confirm}>
-              <Check size={14} className="mr-1.5" />
-              Use Selected
+          <div className="flex gap-2 ml-auto">
+            <Button size="sm" variant="ghost" onClick={onClose}>
+              <X size={14} className="mr-1.5" />
+              Cancel
             </Button>
-          )}
+            {selected && (
+              <Button size="sm" onClick={confirm}>
+                <Check size={14} className="mr-1.5" />
+                Use Selected
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-0">
