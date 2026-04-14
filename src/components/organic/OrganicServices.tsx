@@ -149,7 +149,7 @@ const OrganicServices = () => {
           <CurvedDivider from="bg-background" to="bg-secondary" />
         </div>
 
-        <div className="bg-transparent md:bg-secondary px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden">
+        <div className={`${isDG ? 'bg-transparent' : 'bg-transparent md:bg-secondary'} px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden`}>
           <div className="max-w-5xl mx-auto">
             <CircularImageCarousel
               images={[
