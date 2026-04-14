@@ -174,14 +174,14 @@ const OrganicAbout = () => {
           );
         })()}
       </section>
-      {/* Bottom divider — footer-colored half moon overlapping the section above */}
+      {/* Bottom divider — footer overlap with seamless card-colored base */}
       <div
-        className="relative h-16 md:h-24 -mb-4 pointer-events-none z-10"
-        style={{ backgroundColor: isDG ? "hsl(var(--organic-dark))" : bgColor("--organic-dark") }}
+        className="relative h-16 md:h-24 -mb-px pointer-events-none z-10 overflow-hidden"
+        style={{ backgroundColor: "hsl(var(--card))" }}
         aria-hidden="true"
       >
-        <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-x-0 top-0 w-full" style={{ height: "calc(100% + 1rem)" }}>
-          <path d="M0,96 C480,0 960,0 1440,96 L1440,96 L0,96 Z" style={{ fill: "hsl(var(--card))" }} />
+        <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 h-full w-full block">
+          <path d="M0,96 C480,0 960,0 1440,96 L1440,0 L0,0 Z" style={{ fill: "hsl(var(--organic-dark))" }} />
         </svg>
       </div>
     </div>
