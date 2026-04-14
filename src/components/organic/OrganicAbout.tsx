@@ -174,8 +174,8 @@ const OrganicAbout = () => {
           );
         })()}
       </section>
-      {/* Bottom divider — match footer bg (foreground color) */}
-      <div className="relative h-16 md:h-24 overflow-hidden" style={{ backgroundColor: isDG ? "transparent" : "hsl(var(--foreground))" }} aria-hidden="true">
+      {/* Bottom divider — match footer bg (card color) */}
+      <div className="relative h-16 md:h-24 overflow-hidden" style={{ backgroundColor: "hsl(var(--card))" }} aria-hidden="true">
         <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
           <path d="M0,96 C480,0 960,0 1440,96 L1440,0 L0,0 Z" style={{ fill: bgColor("--organic-dark") }} />
         </svg>
