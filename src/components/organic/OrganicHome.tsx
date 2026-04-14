@@ -67,7 +67,7 @@ const OrganicHome = () => {
   return (
     <div>
       {/* ═══════════ EDITORIAL HERO — Split layout ═══════════ */}
-      <section className="relative min-h-[85vh] md:min-h-[92vh] flex items-center overflow-hidden -mt-16">
+      <section className="relative min-h-[85vh] md:min-h-[92vh] flex items-center overflow-hidden">
         <div className="absolute inset-0">
           <img
             src={heroImageOrganic}

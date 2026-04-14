@@ -119,7 +119,7 @@ const Blog = () => {
   });
 
   return (
-    <div className="section-padding">
+    <div className="section-padding pt-32 md:pt-36">
       <div className="container-narrow">
         <h1 className="text-3xl md:text-4xl font-display text-foreground mb-3">
           {headings[locale]}
