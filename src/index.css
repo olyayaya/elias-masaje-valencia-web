@@ -271,6 +271,22 @@
   }
 }
 
+/* Faster, more pronounced breathing for dark-gradient */
+@keyframes ambient-breathe-dramatic {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(1.03);
+  }
+}
+
+[data-theme="dark-gradient"] .ambient-glow::before {
+  animation: ambient-breathe-dramatic 11s ease-in-out infinite;
+}
+
 /* Respect reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
   .ambient-glow::before {
