@@ -191,16 +191,16 @@
 
   /* Apply gradient backgrounds for dark-gradient mode */
   [data-theme="dark-gradient"] body {
-    background: linear-gradient(155deg, hsl(25 8% 8%) 0%, hsl(30 6% 13%) 30%, hsl(35 10% 16%) 55%, hsl(28 7% 10%) 80%, hsl(20 6% 7%) 100%);
+    background: linear-gradient(155deg, hsl(20 6% 4%) 0%, hsl(28 10% 8%) 18%, hsl(35 14% 18%) 42%, hsl(32 12% 14%) 62%, hsl(25 8% 6%) 82%, hsl(18 5% 3%) 100%);
     background-attachment: fixed;
   }
 
   [data-theme="dark-gradient"] .bg-card {
-    background: linear-gradient(145deg, hsl(30 6% 14%) 0%, hsl(34 9% 17%) 60%, hsl(28 6% 13%) 100%);
+    background: linear-gradient(145deg, hsl(28 8% 12%) 0%, hsl(34 14% 19%) 50%, hsl(26 7% 11%) 100%);
   }
 
   [data-theme="dark-gradient"] .bg-background {
-    background: linear-gradient(155deg, hsl(25 8% 8%) 0%, hsl(30 6% 13%) 30%, hsl(35 10% 16%) 55%, hsl(28 7% 10%) 80%, hsl(20 6% 7%) 100%);
+    background: linear-gradient(155deg, hsl(20 6% 4%) 0%, hsl(28 10% 8%) 18%, hsl(35 14% 18%) 42%, hsl(32 12% 14%) 62%, hsl(25 8% 6%) 82%, hsl(18 5% 3%) 100%);
   }
 
   /* Footer uses a solid card surface so curved dividers blend seamlessly */
