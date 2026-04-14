@@ -573,6 +573,16 @@ const BlogEditor = ({
   const allLanguagesGenerated = contentStatus.en && contentStatus.ru;
 
   const [generatingAll, setGeneratingAll] = useState(false);
+  const autoSaveDraft = async (d: BlogPost) => {
+    if (!d.id) return;
+    await supabase.from("blog_posts").update({
+      title_en: d.title_en, title_ru: d.title_ru,
+      content_en: d.content_en, content_ru: d.content_ru,
+      meta_description_en: d.meta_description_en, meta_description_ru: d.meta_description_ru,
+      seo_keywords_en: d.seo_keywords_en, seo_keywords_ru: d.seo_keywords_ru,
+    } as any).eq("id", d.id);
+  };
+
   const translateToAll = async () => {
     setGeneratingAll(true);
     let updated = draft;
@@ -592,8 +602,10 @@ const BlogEditor = ({
       editor?.commands.setContent((updated[contentKey] as string) || "", { emitUpdate: false });
     }
     if (failed.length === 0) {
-      toast.success("All language versions generated!");
+      await autoSaveDraft(updated);
+      toast.success("All language versions generated and saved!");
     } else if (failed.length < targets.length) {
+      await autoSaveDraft(updated);
       toast.warning(`Generated partially. Failed: ${failed.join(", ")}. You can retry those individually.`);
     } else {
       toast.error("Failed to generate translations. Please try again.");
