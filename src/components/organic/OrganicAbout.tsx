@@ -13,10 +13,14 @@ import { useFadeIn } from "@/hooks/use-fade-in";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
+import { useTheme } from "@/contexts/ThemeContext";
 import { WHATSAPP_URL } from "@/config/contact";
 
 const OrganicAbout = () => {
   const { t } = useI18n();
+  const { mode } = useTheme();
+  const isDG = mode === "dark-gradient";
+  const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
   const heroLabel = useFadeIn(0);
   const portrait = useFadeIn(0.1);
   const bio = useFadeIn(0.2);
@@ -69,7 +73,7 @@ const OrganicAbout = () => {
       <CurvedDivider from="bg-background" to="bg-secondary" />
 
       {/* The space — reversed asymmetric layout */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
+      <section className={`${isDG ? '' : 'bg-secondary'} px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden`}>
         <OrganicShape shape="ring" size="w-36 h-36" position="top-16 -left-12" animation="float" borderColor="hsl(var(--primary) / 0.08)" delay={1000} />
         <OrganicShape shape="arc" size="w-28 h-14" position="bottom-20 right-8" animation="drift" borderColor="hsl(var(--primary) / 0.1)" delay={3000} />
         <div className="max-w-6xl mx-auto">
@@ -135,7 +139,7 @@ const OrganicAbout = () => {
           {/* Bottom half-moon overlaying gallery image on mobile */}
           <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none md:hidden">
             <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="w-full h-16 block">
-              <path d="M0,96 L1440,96 L1440,0 C960,96 480,96 0,0 Z" style={{ fill: "hsl(var(--organic-dark))" }} />
+              <path d="M0,96 L1440,96 L1440,0 C960,96 480,96 0,0 Z" style={{ fill: bgColor("--organic-dark") }} />
             </svg>
           </div>
         </div>
@@ -145,7 +149,7 @@ const OrganicAbout = () => {
       <div className="hidden md:block">
         <CurvedDivider from="bg-background" to="bg-organic-dark" />
       </div>
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden" style={{ backgroundColor: bgColor("--organic-dark") }}>
         <OrganicShape shape="ring" size="w-32 h-32" position="top-8 right-8" animation="breathe" borderColor="hsl(var(--organic-dark-muted) / 0.15)" delay={0} />
         <OrganicShape shape="arc" size="w-20 h-10" position="bottom-12 left-8" animation="float" borderColor="hsl(var(--organic-dark-muted) / 0.1)" delay={500} />
         {(() => {
@@ -171,9 +175,9 @@ const OrganicAbout = () => {
         })()}
       </section>
       {/* Bottom divider — match footer bg (foreground color) */}
-      <div className="relative h-16 md:h-24 overflow-hidden" style={{ backgroundColor: "hsl(var(--foreground))" }} aria-hidden="true">
+      <div className="relative h-16 md:h-24 overflow-hidden" style={{ backgroundColor: isDG ? "transparent" : "hsl(var(--foreground))" }} aria-hidden="true">
         <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-          <path d="M0,96 C480,0 960,0 1440,96 L1440,0 L0,0 Z" style={{ fill: "hsl(var(--organic-dark))" }} />
+          <path d="M0,96 C480,0 960,0 1440,96 L1440,0 L0,0 Z" style={{ fill: bgColor("--organic-dark") }} />
         </svg>
       </div>
     </div>

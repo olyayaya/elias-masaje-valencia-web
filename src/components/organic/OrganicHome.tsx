@@ -32,6 +32,7 @@ import { WHATSAPP_URL } from "@/config/contact";
 const OrganicHome = () => {
   const { t, locale } = useI18n();
   const { mode } = useTheme();
+  const isDG = mode === "dark-gradient";
   const heroText = useFadeIn(0.2);
   const benefitsTitle = useFadeIn(0);
   const servicesTitle = useFadeIn(0);
@@ -44,6 +45,9 @@ const OrganicHome = () => {
   const dbFaqs = useDbFaqs();
   const dbTestimonials = useDbTestimonials();
   const { content: sc } = useSiteContent();
+
+  /** Resolve a CSS color; returns "transparent" in dark-gradient mode for seamless bg */
+  const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
 
   
 
@@ -107,13 +111,13 @@ const OrganicHome = () => {
         {/* Half-moon overlap into benefits section */}
         <div className="absolute bottom-0 left-0 right-0 z-20">
           <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[6vh] md:h-[8vh] max-h-20 block">
-            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: "hsl(var(--organic-dark))" }} />
+            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: bgColor("--organic-dark") }} />
           </svg>
         </div>
       </section>
 
       {/* ═══════════ BENEFITS — Dark section ═══════════ */}
-      <section className="-mt-2 relative z-20 px-6 md:px-12 lg:px-20 pt-8 md:pt-12 pb-20 md:pb-28 overflow-hidden" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
+      <section className="-mt-2 relative z-20 px-6 md:px-12 lg:px-20 pt-8 md:pt-12 pb-20 md:pb-28 overflow-hidden" style={{ backgroundColor: bgColor("--organic-dark") }}>
         <OrganicShape shape="ring" size="w-32 h-32" position="top-12 right-4" animation="drift" color="transparent" borderColor="hsl(var(--organic-dark-foreground) / 0.08)" delay={1000} />
         <OrganicShape shape="circle" size="w-16 h-16" position="bottom-20 left-8" animation="breathe" color="hsl(var(--primary) / 0.06)" delay={3000} />
         <div className="max-w-5xl mx-auto">
@@ -147,7 +151,7 @@ const OrganicHome = () => {
       <CurvedDivider from="bg-organic-dark" to="bg-secondary" />
 
       {/* ═══════════ SERVICES — Circular images + editorial list ═══════════ */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-20 md:py-28 overflow-hidden relative pb-0 md:pb-28">
+      <section className={`${isDG ? '' : 'bg-secondary'} px-6 md:px-12 lg:px-20 py-20 md:py-28 overflow-hidden relative pb-0 md:pb-28`}>
         <OrganicShape shape="blob" size="w-40 h-40" position="top-4 right-4" animation="float" color="hsl(var(--primary) / 0.04)" delay={500} />
         <OrganicShape shape="arc" size="w-24 h-12" position="bottom-32 left-4" animation="drift" borderColor="hsl(var(--primary) / 0.1)" delay={2000} />
         <div className="max-w-6xl mx-auto">
@@ -213,7 +217,7 @@ const OrganicHome = () => {
         {/* Mobile: curved divider overlays bottom of gallery image */}
         <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none md:hidden">
           <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="w-full h-16 block">
-            <path d="M0,96 L1440,96 L1440,0 C960,96 480,96 0,0 Z" style={{ fill: "hsl(var(--organic-dark))" }} />
+            <path d="M0,96 L1440,96 L1440,0 C960,96 480,96 0,0 Z" style={{ fill: bgColor("--organic-dark") }} />
           </svg>
         </div>
       </section>
@@ -224,7 +228,7 @@ const OrganicHome = () => {
       </div>
 
       {/* ═══════════ STORY — Dark editorial section ═══════════ */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
+      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28" style={{ backgroundColor: bgColor("--organic-dark") }}>
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
             <div className="md:col-span-5 md:col-start-1" ref={storyText.ref} style={storyText.style}>
@@ -393,7 +397,7 @@ const OrganicHome = () => {
         {/* Top half-moon */}
         <div className="relative z-10">
           <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[5vh] md:h-[6vh] max-h-16 block" style={{ marginBottom: "-1px" }}>
-            <ellipse cx="720" cy="0" rx="900" ry="180" style={{ fill: "hsl(var(--background))" }} />
+            <ellipse cx="720" cy="0" rx="900" ry="180" style={{ fill: bgColor("--background") }} />
           </svg>
         </div>
 
@@ -430,7 +434,7 @@ const OrganicHome = () => {
         {/* Bottom half-moon */}
         <div className="relative z-10">
           <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[5vh] md:h-[6vh] max-h-16 block" style={{ marginTop: "-1px" }}>
-            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: "hsl(var(--background))" }} />
+            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: bgColor("--background") }} />
           </svg>
         </div>
       </section>
@@ -471,7 +475,7 @@ const OrganicHome = () => {
       <CurvedDivider from="bg-background" to="bg-organic-dark" />
 
       {/* ═══════════ GIFT CARD — Dark section ═══════════ */}
-      <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
+      <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20" style={{ backgroundColor: bgColor("--organic-dark") }}>
         <div className="max-w-3xl mx-auto text-center">
           {(() => {
             const GiftSection = () => {

@@ -26,7 +26,7 @@ const colorVar: Record<string, string> = {
  * visible seam. We replace those with `transparent` so the body
  * gradient shows through seamlessly.
  */
-const TRANSPARENT_IN_GRADIENT = new Set(["bg-background", "bg-secondary"]);
+const TRANSPARENT_IN_GRADIENT = new Set(["bg-background", "bg-secondary", "bg-organic-dark"]);
 
 const resolveColor = (cls: string, isDarkGradient: boolean) => {
   if (isDarkGradient && TRANSPARENT_IN_GRADIENT.has(cls)) return "transparent";

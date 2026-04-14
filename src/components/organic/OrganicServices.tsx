@@ -63,6 +63,8 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index, bad
 
 const OrganicServices = () => {
   const { mode } = useTheme();
+  const isDG = mode === "dark-gradient";
+  const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
   const { t, locale } = useI18n();
   const { content: sc } = useSiteContent();
   const dbServices = useDbServices();
@@ -115,7 +117,7 @@ const OrganicServices = () => {
         {/* Half-moon overlap into services section */}
         <div className="absolute bottom-0 left-0 right-0 z-20">
           <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[5vh] md:h-[6vh] max-h-16 block">
-            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: "hsl(var(--background))" }} />
+            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: bgColor("--background") }} />
           </svg>
         </div>
       </section>
@@ -138,7 +140,7 @@ const OrganicServices = () => {
         {/* Top curved divider — sits on top of image, filled with services-list bg */}
         <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none md:hidden">
           <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="w-full h-16 block">
-            <path d="M0,0 L1440,0 L1440,96 C960,0 480,0 0,96 Z" style={{ fill: "hsl(var(--background))" }} />
+            <path d="M0,0 L1440,0 L1440,96 C960,0 480,0 0,96 Z" style={{ fill: bgColor("--background") }} />
           </svg>
         </div>
 
@@ -147,7 +149,7 @@ const OrganicServices = () => {
           <CurvedDivider from="bg-background" to="bg-secondary" />
         </div>
 
-        <div className="bg-transparent md:bg-secondary px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden">
+        <div className={`${isDG ? 'bg-transparent' : 'bg-transparent md:bg-secondary'} px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden`}>
           <div className="max-w-5xl mx-auto">
             <CircularImageCarousel
               images={[
@@ -168,22 +170,22 @@ const OrganicServices = () => {
         {/* Bottom curved divider — sits on bottom of image, filled with CTA bg */}
         <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none md:hidden">
           <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="w-full h-16 block">
-            <path d="M0,96 L1440,96 L1440,0 C960,96 480,96 0,0 Z" style={{ fill: "hsl(var(--organic-dark))" }} />
+            <path d="M0,96 L1440,96 L1440,0 C960,96 480,96 0,0 Z" style={{ fill: bgColor("--organic-dark") }} />
           </svg>
         </div>
 
         {/* Desktop bottom divider */}
         <div className="hidden md:block">
-          <div className="relative h-24 overflow-hidden" style={{ backgroundColor: "hsl(var(--organic-dark))" }} aria-hidden="true">
+        <div className="relative h-24 overflow-hidden" style={{ backgroundColor: bgColor("--organic-dark") }} aria-hidden="true">
             <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-              <path d="M0,96 C480,0 960,0 1440,96 L1440,0 L0,0 Z" style={{ fill: "hsl(var(--secondary))" }} />
+              <path d="M0,96 C480,0 960,0 1440,96 L1440,0 L0,0 Z" style={{ fill: isDG ? "transparent" : "hsl(var(--secondary))" }} />
             </svg>
           </div>
         </div>
       </section>
 
       {/* Quiet CTA — dark to match half-moon */}
-      <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20" style={{ backgroundColor: "hsl(var(--organic-dark))" }}>
+      <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20" style={{ backgroundColor: bgColor("--organic-dark") }}>
         <div className="max-w-2xl mx-auto text-center">
           {(() => {
             const Cta = () => {

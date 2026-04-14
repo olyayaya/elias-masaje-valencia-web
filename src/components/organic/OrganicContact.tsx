@@ -6,6 +6,7 @@ import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
+import { useTheme } from "@/contexts/ThemeContext";
 import { WHATSAPP_PHONE, WHATSAPP_DEFAULT_MESSAGE, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/config/contact";
 
 const ContactItem = ({ icon: Icon, title, children, index }: {
@@ -28,6 +29,8 @@ const ContactItem = ({ icon: Icon, title, children, index }: {
 const OrganicContact = () => {
   const { t } = useI18n();
   const { content: sc } = useSiteContent();
+  const { mode } = useTheme();
+  const isDG = mode === "dark-gradient";
   const [showMapPicker, setShowMapPicker] = useState(false);
   const heading = useFadeIn(0);
   const mapAnim = useFadeIn(0.15);
@@ -109,7 +112,7 @@ const OrganicContact = () => {
       <CurvedDivider from="bg-background" to="bg-secondary" />
 
       {/* Quiet CTA */}
-      <section className="bg-secondary px-6 md:px-12 lg:px-20 py-16 md:py-20 relative overflow-hidden">
+      <section className={`${isDG ? '' : 'bg-secondary'} px-6 md:px-12 lg:px-20 py-16 md:py-20 relative overflow-hidden`}>
         <OrganicShape shape="blob" size="w-40 h-40" position="bottom-4 right-4" animation="breathe" color="hsl(var(--primary) / 0.04)" delay={2000} />
         <OrganicShape shape="arc" size="w-20 h-10" position="top-10 left-12" animation="float" borderColor="hsl(var(--primary) / 0.1)" delay={0} />
         <div className="max-w-2xl mx-auto text-center">
