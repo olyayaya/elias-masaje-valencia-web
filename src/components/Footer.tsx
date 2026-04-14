@@ -8,8 +8,14 @@ const Footer = () => {
   const { content: sc } = useSiteContent();
 
   return (
-    <footer className="relative -mt-px bg-card section-padding">
-      <div className="container-wide">
+    <footer className="relative bg-card section-padding overflow-visible">
+      <div className="pointer-events-none absolute -top-16 md:-top-24 left-0 right-0 h-16 md:h-24 z-10" aria-hidden="true">
+        <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="block h-full w-full">
+          <path d="M0,96 C480,0 960,0 1440,96 L1440,96 L0,96 Z" style={{ fill: "hsl(var(--card))" }} />
+        </svg>
+      </div>
+
+      <div className="container-wide relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
             <h3 className="font-display text-2xl mb-4 text-foreground">Elias Masaje</h3>
