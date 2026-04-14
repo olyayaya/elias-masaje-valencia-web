@@ -176,8 +176,7 @@ const OrganicAbout = () => {
       </section>
       {/* Bottom divider — footer overlap with seamless card-colored base */}
       <div
-        className="relative h-16 md:h-24 -mb-px pointer-events-none z-10 overflow-hidden"
-        style={{ backgroundColor: "hsl(var(--card))" }}
+        className="relative h-16 md:h-24 -mb-4 pointer-events-none z-10 overflow-hidden bg-card"
         aria-hidden="true"
       >
         <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 h-full w-full block">
