@@ -555,7 +555,8 @@ const BlogEditor = ({
       const updated = await translateOne(srcLang, lang, draft);
       setDraft(updated);
       editor?.commands.setContent((updated[contentKey] as string) || "", { emitUpdate: false });
-      toast.success(`${langLabels[lang]} version generated from ${langLabels[srcLang]}`);
+      await autoSaveDraft(updated);
+      toast.success(`${langLabels[lang]} version generated and saved`);
     } catch (e: any) {
       toast.error(e.message || "Translation failed");
     } finally {
