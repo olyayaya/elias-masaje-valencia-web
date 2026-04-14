@@ -68,8 +68,23 @@ const BlogPost = () => {
 
   const getField = (p: Post, field: string): string => {
     const key = langField(field, locale) as keyof Post;
-    const val = p[key] as string;
-    return val || (p[field as keyof Post] as string) || "";
+    const val = (p[key] as string) || "";
+    const esFallback = (p[field as keyof Post] as string) || "";
+
+    // For content fields, if the localized version is a stub (much shorter
+    // than the richest translation), fall back to the longest version so users
+    // never see a one-liner when a full article exists in another language.
+    if (field === "content" && val.length > 0 && val.length < 500) {
+      const candidates = [
+        p.content || "",
+        p.content_en || "",
+        p.content_ru || "",
+      ];
+      const longest = candidates.reduce((a, b) => (a.length >= b.length ? a : b), "");
+      if (longest.length > val.length * 3) return longest;
+    }
+
+    return val || esFallback;
   };
 
   const formatDate = (dateStr: string) => {
