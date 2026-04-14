@@ -38,7 +38,7 @@ const OrganicContact = () => {
   return (
     <div>
       {/* Hero heading */}
-      <section className="px-6 md:px-12 lg:px-20 pt-20 pb-12 md:pt-28 md:pb-16 relative overflow-hidden">
+      <section className="px-6 md:px-12 lg:px-20 pt-36 pb-12 md:pt-44 md:pb-16 relative overflow-hidden">
         <OrganicShape shape="ring" size="w-32 h-32" position="top-8 right-4" animation="drift" borderColor="hsl(var(--primary) / 0.08)" delay={500} />
         <div className="max-w-6xl mx-auto" ref={heading.ref} style={heading.style}>
           <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/70 mb-4">

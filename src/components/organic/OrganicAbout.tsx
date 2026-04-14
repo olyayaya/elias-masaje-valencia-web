@@ -26,7 +26,7 @@ const OrganicAbout = () => {
   return (
     <div>
       {/* Hero — editorial intro with large portrait */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
+      <section className="px-6 md:px-12 lg:px-20 pt-36 pb-20 md:pt-44 md:pb-28 relative overflow-hidden">
         <OrganicShape shape="blob" size="w-48 h-48" position="top-4 right-4" animation="drift" color="hsl(var(--primary) / 0.03)" delay={0} />
         <div className="max-w-6xl mx-auto">
           <div ref={heroLabel.ref} style={heroLabel.style} className="mb-12">
