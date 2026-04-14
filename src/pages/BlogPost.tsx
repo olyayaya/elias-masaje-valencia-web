@@ -128,7 +128,7 @@ const BlogPost = () => {
 
   if (!post) {
     return (
-      <div className="section-padding text-center">
+      <div className="section-padding pt-32 md:pt-36 text-center">
         <p className="text-muted-foreground mb-4">
           {locale === "es" ? "Artículo no encontrado." : locale === "ru" ? "Статья не найдена." : "Article not found."}
         </p>
@@ -140,7 +140,7 @@ const BlogPost = () => {
   }
 
   return (
-      <article className="section-padding">
+      <article className="section-padding pt-32 md:pt-36">
       <div className="container-narrow">
         <Link
           to="/blog"
