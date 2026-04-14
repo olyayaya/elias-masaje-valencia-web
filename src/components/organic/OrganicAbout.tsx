@@ -17,6 +17,9 @@ import { WHATSAPP_URL } from "@/config/contact";
 
 const OrganicAbout = () => {
   const { t } = useI18n();
+  const { mode } = useTheme();
+  const isDG = mode === "dark-gradient";
+  const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
   const heroLabel = useFadeIn(0);
   const portrait = useFadeIn(0.1);
   const bio = useFadeIn(0.2);
