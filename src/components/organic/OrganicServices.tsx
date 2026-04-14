@@ -63,6 +63,8 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index, bad
 
 const OrganicServices = () => {
   const { mode } = useTheme();
+  const isDG = mode === "dark-gradient";
+  const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
   const { t, locale } = useI18n();
   const { content: sc } = useSiteContent();
   const dbServices = useDbServices();
