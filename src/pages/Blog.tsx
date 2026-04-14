@@ -50,9 +50,17 @@ const Blog = () => {
 
   const getField = (post: BlogPost, field: string): string => {
     const key = langField(field, locale) as keyof BlogPost;
-    const val = post[key] as string;
-    // Fallback to Spanish
-    return val || (post[field as keyof BlogPost] as string) || "";
+    const val = (post[key] as string) || "";
+    const esFallback = (post[field as keyof BlogPost] as string) || "";
+
+    // For content fields, fall back to longest translation when current is a stub
+    if (field === "content" && val.length > 0 && val.length < 500) {
+      const candidates = [post.content || "", post.content_en || "", post.content_ru || ""];
+      const longest = candidates.reduce((a, b) => (a.length >= b.length ? a : b), "");
+      if (longest.length > val.length * 3) return longest;
+    }
+
+    return val || esFallback;
   };
 
   const formatDate = (dateStr: string) => {
