@@ -48,6 +48,7 @@ const OrganicHome = () => {
 
   /** Resolve a CSS color; returns "transparent" in dark-gradient mode for seamless bg */
   const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
+  const solidBgColor = (cssVar: string) => `hsl(var(${cssVar}))`;
 
   
 
@@ -434,13 +435,16 @@ const OrganicHome = () => {
         {/* Bottom half-moon */}
         <div className="relative z-10">
           <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[5vh] md:h-[6vh] max-h-16 block" style={{ marginTop: "-1px" }}>
-            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: bgColor("--background") }} />
+            <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: solidBgColor("--background") }} />
           </svg>
         </div>
       </section>
 
       {/* ═══════════ FAQ ═══════════ */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden">
+      <section
+        className="px-6 md:px-12 lg:px-20 py-20 md:py-28 relative overflow-hidden"
+        style={{ backgroundColor: solidBgColor("--background") }}
+      >
         {/* Warm glow accent behind FAQ heading — visible mainly in dark-gradient mode */}
         <div
           className="absolute pointer-events-none"
@@ -462,7 +466,14 @@ const OrganicHome = () => {
             const Faq = () => {
               const anim = useFadeIn(0);
               return (
-                <div ref={anim.ref} style={anim.style}>
+                <div
+                  ref={anim.ref}
+                  style={{
+                    opacity: anim.style.opacity,
+                    transition: anim.style.transition,
+                    willChange: "opacity",
+                  }}
+                >
                   <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.faq.title}</h2>
                   <FaqAccordion items={faqItems} />
                 </div>
@@ -472,7 +483,15 @@ const OrganicHome = () => {
           })()}
         </div>
       </section>
-      <CurvedDivider from="bg-background" to="bg-organic-dark" />
+      <div
+        className="relative h-16 md:h-24 overflow-hidden"
+        style={{ backgroundColor: solidBgColor("--background") }}
+        aria-hidden="true"
+      >
+        <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+          <path d="M0,0 C480,96 960,96 1440,0 L1440,96 L0,96 Z" style={{ fill: bgColor("--organic-dark") }} />
+        </svg>
+      </div>
 
       {/* ═══════════ GIFT CARD — Dark section ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20" style={{ backgroundColor: bgColor("--organic-dark") }}>
