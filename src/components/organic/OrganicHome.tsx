@@ -32,6 +32,7 @@ import { WHATSAPP_URL } from "@/config/contact";
 const OrganicHome = () => {
   const { t, locale } = useI18n();
   const { mode } = useTheme();
+  const isDG = mode === "dark-gradient";
   const heroText = useFadeIn(0.2);
   const benefitsTitle = useFadeIn(0);
   const servicesTitle = useFadeIn(0);
@@ -44,6 +45,9 @@ const OrganicHome = () => {
   const dbFaqs = useDbFaqs();
   const dbTestimonials = useDbTestimonials();
   const { content: sc } = useSiteContent();
+
+  /** Resolve a CSS color; returns "transparent" in dark-gradient mode for seamless bg */
+  const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
 
   
 
