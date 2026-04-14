@@ -6,6 +6,7 @@ import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
+import { useTheme } from "@/contexts/ThemeContext";
 import { WHATSAPP_PHONE, WHATSAPP_DEFAULT_MESSAGE, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/config/contact";
 
 const ContactItem = ({ icon: Icon, title, children, index }: {
