@@ -203,10 +203,11 @@
     background: linear-gradient(155deg, hsl(25 8% 8%) 0%, hsl(30 6% 13%) 30%, hsl(35 10% 16%) 55%, hsl(28 7% 10%) 80%, hsl(20 6% 7%) 100%);
   }
 
-  /* Footer gradient in dark-gradient mode */
+  /* Footer uses a solid card surface so curved dividers blend seamlessly */
   [data-theme="dark-gradient"] footer.bg-card {
-    background: linear-gradient(155deg, hsl(25 8% 9%) 0%, hsl(33 10% 16%) 45%, hsl(28 7% 11%) 100%);
-    border-image: linear-gradient(90deg, transparent, hsl(var(--border)) 20%, hsl(var(--border)) 80%, transparent) 1;
+    background: hsl(var(--card));
+    background-image: none;
+    border-image: none;
   }
 }
 
