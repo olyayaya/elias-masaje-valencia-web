@@ -70,7 +70,7 @@ const LanguageSwitcher = () => {
       </button>
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 bg-background border border-border rounded shadow-soft py-1 min-w-[80px] z-50"
+          className="absolute right-0 top-full mt-2 bg-background border border-border rounded shadow-soft py-1 min-w-[80px] z-[9999]"
           role="listbox"
           aria-label={t.a11y.changeLanguage}
         >
