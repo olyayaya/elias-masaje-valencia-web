@@ -6,6 +6,13 @@ import { ru } from "./ru";
 
 const translationsMap: Record<Locale, Translations> = { es, en, ru };
 
+function detectInitialLocale(): Locale {
+  const path = typeof window !== "undefined" ? window.location.pathname : "/";
+  if (path.startsWith("/en")) return "en";
+  if (path.startsWith("/ru")) return "ru";
+  return "es";
+}
+
 interface I18nContextType {
   locale: Locale;
   t: Translations;
@@ -15,14 +22,10 @@ interface I18nContextType {
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
 export const I18nProvider = ({ children }: { children: ReactNode }) => {
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    const saved = localStorage.getItem("locale") as Locale | null;
-    return saved && translationsMap[saved] ? saved : "es";
-  });
+  const [locale, setLocaleState] = useState<Locale>(detectInitialLocale);
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
-    localStorage.setItem("locale", l);
     document.documentElement.lang = l;
   }, []);
 

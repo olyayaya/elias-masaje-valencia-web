@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/context";
+import { useLocalePath } from "@/hooks/use-locale-path";
 import { Calendar, ArrowRight, Loader2 } from "lucide-react";
 import { useHead } from "@/hooks/use-head";
+import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 
 interface BlogPost {
   id: string;
@@ -30,6 +32,7 @@ const langField = (field: string, locale: string) => {
 
 const Blog = () => {
   const { locale } = useI18n();
+  const lp = useLocalePath();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +56,6 @@ const Blog = () => {
     const val = (post[key] as string) || "";
     const esFallback = (post[field as keyof BlogPost] as string) || "";
 
-    // For content fields, fall back to longest translation when current is a stub
     if (field === "content" && val.length > 0 && val.length < 500) {
       const candidates = [post.content || "", post.content_en || "", post.content_ru || ""];
       const longest = candidates.reduce((a, b) => (a.length >= b.length ? a : b), "");
@@ -95,22 +97,24 @@ const Blog = () => {
     : "Blog — Elias Masaje Valencia";
 
   const desc = subtitles[locale];
+  const blogUrl = `${BASE_URL}${ROUTE_MAP.blog[locale]}`;
 
   useHead({
     title,
     description: desc,
-    canonical: "https://elias-masaje-valencia-web.lovable.app/blog",
+    canonical: blogUrl,
     ogTitle: title,
     ogDescription: desc,
     ogType: "website",
+    alternates: getAlternates("blog"),
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
-      "@id": "https://elias-masaje-valencia-web.lovable.app/blog",
+      "@id": blogUrl,
       name: headings[locale],
       description: desc,
-      url: "https://elias-masaje-valencia-web.lovable.app/blog",
-      isPartOf: { "@id": "https://elias-masaje-valencia-web.lovable.app/#website" },
+      url: blogUrl,
+      isPartOf: { "@id": `${BASE_URL}/#website` },
       inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
       ...(posts.length > 0 ? {
         mainEntity: {
@@ -118,7 +122,7 @@ const Blog = () => {
           itemListElement: posts.map((post, i) => ({
             "@type": "ListItem",
             position: i + 1,
-            url: `https://elias-masaje-valencia-web.lovable.app/blog/${post.slug || post.id}`,
+            url: `${blogUrl}/${post.slug || post.id}`,
             name: getField(post, "title"),
           })),
         },
@@ -158,7 +162,7 @@ const Blog = () => {
               return (
                 <Link
                   key={post.id}
-                  to={`/blog/${slug}`}
+                  to={lp("blogPost", { slug })}
                   className="group block bg-card rounded-xl border border-border p-6 md:p-8 transition-all hover:border-muted-foreground/30 hover:shadow-soft"
                 >
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">

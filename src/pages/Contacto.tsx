@@ -1,6 +1,7 @@
 import OrganicContact from "@/components/organic/OrganicContact";
 import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
+import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 
 const ContactoPage = () => {
   const { locale } = useI18n();
@@ -20,18 +21,19 @@ const ContactoPage = () => {
   useHead({
     title,
     description: desc,
-    canonical: "https://elias-masaje-valencia-web.lovable.app/contacto",
+    canonical: `${BASE_URL}${ROUTE_MAP.contact[locale]}`,
     ogTitle: title,
     ogDescription: desc,
     ogType: "website",
+    alternates: getAlternates("contact"),
     jsonLd: {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "HealthAndBeautyBusiness",
-          "@id": "https://elias-masaje-valencia-web.lovable.app/#localbusiness",
+          "@id": `${BASE_URL}/#localbusiness`,
           name: "Elias Masaje",
-          url: "https://elias-masaje-valencia-web.lovable.app",
+          url: BASE_URL,
           telephone: "+34698968007",
           address: {
             "@type": "PostalAddress",
@@ -68,10 +70,10 @@ const ContactoPage = () => {
         },
         {
           "@type": "WebPage",
-          "@id": "https://elias-masaje-valencia-web.lovable.app/contacto",
+          "@id": `${BASE_URL}${ROUTE_MAP.contact[locale]}`,
           name: title,
           description: desc,
-          isPartOf: { "@id": "https://elias-masaje-valencia-web.lovable.app/#website" },
+          isPartOf: { "@id": `${BASE_URL}/#website` },
           inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
         },
       ],

@@ -1,6 +1,7 @@
 import OrganicAbout from "@/components/organic/OrganicAbout";
 import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
+import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 
 const SobreMiPage = () => {
   const { locale } = useI18n();
@@ -20,23 +21,24 @@ const SobreMiPage = () => {
   useHead({
     title,
     description: desc,
-    canonical: "https://elias-masaje-valencia-web.lovable.app/sobre-mi",
+    canonical: `${BASE_URL}${ROUTE_MAP.about[locale]}`,
     ogTitle: title,
     ogDescription: desc,
     ogType: "profile",
+    alternates: getAlternates("about"),
     jsonLd: {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Person",
-          "@id": "https://elias-masaje-valencia-web.lovable.app/#person",
+          "@id": `${BASE_URL}/#person`,
           name: "Elias",
           jobTitle: locale === "es" ? "Masajista profesional" : locale === "ru" ? "Профессиональный массажист" : "Professional Massage Therapist",
           description: desc,
-          url: "https://elias-masaje-valencia-web.lovable.app/sobre-mi",
+          url: `${BASE_URL}${ROUTE_MAP.about[locale]}`,
           worksFor: {
             "@type": "HealthAndBeautyBusiness",
-            "@id": "https://elias-masaje-valencia-web.lovable.app/#localbusiness",
+            "@id": `${BASE_URL}/#localbusiness`,
             name: "Elias Masaje",
           },
           workLocation: {
@@ -60,11 +62,11 @@ const SobreMiPage = () => {
         },
         {
           "@type": "WebPage",
-          "@id": "https://elias-masaje-valencia-web.lovable.app/sobre-mi",
+          "@id": `${BASE_URL}${ROUTE_MAP.about[locale]}`,
           name: title,
           description: desc,
-          isPartOf: { "@id": "https://elias-masaje-valencia-web.lovable.app/#website" },
-          about: { "@id": "https://elias-masaje-valencia-web.lovable.app/#person" },
+          isPartOf: { "@id": `${BASE_URL}/#website` },
+          about: { "@id": `${BASE_URL}/#person` },
           inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
         },
       ],

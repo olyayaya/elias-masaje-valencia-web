@@ -1,6 +1,7 @@
 import OrganicHome from "@/components/organic/OrganicHome";
 import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
+import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 
 const Index = () => {
   const { locale } = useI18n();
@@ -20,27 +21,28 @@ const Index = () => {
   useHead({
     title,
     description: desc,
-    canonical: "https://elias-masaje-valencia-web.lovable.app/",
+    canonical: `${BASE_URL}${ROUTE_MAP.home[locale]}`,
     ogTitle: title,
     ogDescription: desc,
     ogType: "website",
+    alternates: getAlternates("home"),
     jsonLd: {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Organization",
-          "@id": "https://elias-masaje-valencia-web.lovable.app/#organization",
+          "@id": `${BASE_URL}/#organization`,
           name: "Elias Masaje",
-          url: "https://elias-masaje-valencia-web.lovable.app",
+          url: BASE_URL,
           telephone: "+34698968007",
           sameAs: ["https://instagram.com/elias_masaje"],
         },
         {
           "@type": "HealthAndBeautyBusiness",
-          "@id": "https://elias-masaje-valencia-web.lovable.app/#localbusiness",
+          "@id": `${BASE_URL}/#localbusiness`,
           name: "Elias Masaje",
           description: desc,
-          url: "https://elias-masaje-valencia-web.lovable.app",
+          url: BASE_URL,
           telephone: "+34698968007",
           address: {
             "@type": "PostalAddress",
@@ -69,10 +71,10 @@ const Index = () => {
         },
         {
           "@type": "WebSite",
-          "@id": "https://elias-masaje-valencia-web.lovable.app/#website",
-          url: "https://elias-masaje-valencia-web.lovable.app",
+          "@id": `${BASE_URL}/#website`,
+          url: BASE_URL,
           name: "Elias Masaje",
-          publisher: { "@id": "https://elias-masaje-valencia-web.lovable.app/#organization" },
+          publisher: { "@id": `${BASE_URL}/#organization` },
           inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
         },
       ],

@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
 import { useI18n } from "@/i18n/context";
 import { useSiteContent } from "@/hooks/use-site-content";
+import { useLocalePath } from "@/hooks/use-locale-path";
 import { INSTAGRAM_HANDLE } from "@/config/contact";
 
 const Footer = () => {
   const { t } = useI18n();
   const { content: sc } = useSiteContent();
+  const lp = useLocalePath();
 
   return (
     <footer className="relative bg-card section-padding overflow-visible">
@@ -24,11 +26,11 @@ const Footer = () => {
           <div>
             <h4 className="font-display text-lg mb-4 text-foreground">{t.footer.navigation}</h4>
             <nav className="flex flex-col gap-2" aria-label={t.a11y.footerNavigation}>
-              <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.home}</Link>
-              <Link to="/servicios" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.services}</Link>
-              <Link to="/sobre-mi" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.about}</Link>
-              <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.blog}</Link>
-              <Link to="/contacto" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.contact}</Link>
+              <Link to={lp("home")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.home}</Link>
+              <Link to={lp("services")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.services}</Link>
+              <Link to={lp("about")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.about}</Link>
+              <Link to={lp("blog")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.blog}</Link>
+              <Link to={lp("contact")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.contact}</Link>
             </nav>
           </div>
           <div>

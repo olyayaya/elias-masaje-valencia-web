@@ -8,20 +8,22 @@ interface HeadProps {
   ogDescription?: string;
   ogType?: string;
   jsonLd?: Record<string, any>;
+  alternates?: { hreflang: string; href: string }[];
 }
 
 /**
- * Manages document head elements (title, meta, canonical, JSON-LD).
+ * Manages document head elements (title, meta, canonical, hreflang, JSON-LD).
  * Safe to call unconditionally — undefined values are skipped.
  * Cleans up on unmount.
  */
 export function useHead(props: HeadProps) {
   const jsonLdStr = props.jsonLd ? JSON.stringify(props.jsonLd) : "";
+  const alternatesStr = props.alternates ? JSON.stringify(props.alternates) : "";
   const propsRef = useRef(props);
   propsRef.current = props;
 
   useEffect(() => {
-    const { title, description, canonical, ogTitle, ogDescription, ogType } = propsRef.current;
+    const { title, description, canonical, ogTitle, ogDescription, ogType, alternates } = propsRef.current;
     const prevTitle = document.title;
     const created: Element[] = [];
 
@@ -55,6 +57,19 @@ export function useHead(props: HeadProps) {
       linkEl.setAttribute("href", canonical);
     }
 
+    // hreflang alternate links
+    if (alternates?.length) {
+      document.querySelectorAll('link[rel="alternate"][hreflang]').forEach((el) => el.remove());
+      alternates.forEach(({ hreflang, href }) => {
+        const el = document.createElement("link");
+        el.setAttribute("rel", "alternate");
+        el.setAttribute("hreflang", hreflang);
+        el.setAttribute("href", href);
+        document.head.appendChild(el);
+        created.push(el);
+      });
+    }
+
     if (jsonLdStr) {
       let scriptEl = document.getElementById("app-jsonld") as HTMLScriptElement | null;
       if (!scriptEl) {
@@ -79,5 +94,6 @@ export function useHead(props: HeadProps) {
     propsRef.current.ogDescription,
     propsRef.current.ogType,
     jsonLdStr,
+    alternatesStr,
   ]);
 }
