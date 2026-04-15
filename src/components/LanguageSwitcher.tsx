@@ -1,5 +1,7 @@
 import { useI18n } from "@/i18n/context";
 import { Locale } from "@/i18n/types";
+import { useNavigate, useLocation } from "react-router-dom";
+import { getEquivalentPath } from "@/config/routes";
 import { Globe } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 
@@ -7,13 +9,14 @@ const labels: Record<Locale, string> = { es: "ES", en: "EN", ru: "RU" };
 const locales: Locale[] = ["es", "en", "ru"];
 
 const LanguageSwitcher = () => {
-  const { locale, setLocale, t } = useI18n();
+  const { locale, t } = useI18n();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const [focusIdx, setFocusIdx] = useState(-1);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -22,7 +25,6 @@ const LanguageSwitcher = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Focus management
   useEffect(() => {
     if (open && focusIdx >= 0) {
       itemRefs.current[focusIdx]?.focus();
@@ -56,6 +58,12 @@ const LanguageSwitcher = () => {
     }
   }, [open]);
 
+  const switchTo = (l: Locale) => {
+    const target = getEquivalentPath(pathname, l);
+    navigate(target);
+    setOpen(false);
+  };
+
   return (
     <div ref={ref} className="relative" onKeyDown={handleKeyDown}>
       <button
@@ -78,7 +86,7 @@ const LanguageSwitcher = () => {
             <button
               key={l}
               ref={el => { itemRefs.current[i] = el; }}
-              onClick={() => { setLocale(l); setOpen(false); }}
+              onClick={() => switchTo(l)}
               role="option"
               aria-selected={l === locale}
               className={`block w-full text-left px-4 py-2 text-sm font-body transition-colors hover:bg-secondary ${

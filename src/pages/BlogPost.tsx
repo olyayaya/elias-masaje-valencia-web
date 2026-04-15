@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/context";
+import { useLocalePath } from "@/hooks/use-locale-path";
 import { Calendar, ChevronLeft, Loader2 } from "lucide-react";
 import { useHead } from "@/hooks/use-head";
+import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 
 interface Post {
   id: string;
@@ -31,6 +33,7 @@ const langField = (field: string, locale: string) => {
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
   const { locale } = useI18n();
+  const lp = useLocalePath();
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +41,6 @@ const BlogPost = () => {
     const load = async () => {
       if (!slug) return;
 
-      // Try slug first, then id
       let { data } = await supabase
         .from("blog_posts")
         .select("*")
@@ -71,15 +73,8 @@ const BlogPost = () => {
     const val = (p[key] as string) || "";
     const esFallback = (p[field as keyof Post] as string) || "";
 
-    // For content fields, if the localized version is a stub (much shorter
-    // than the richest translation), fall back to the longest version so users
-    // never see a one-liner when a full article exists in another language.
     if (field === "content" && val.length > 0 && val.length < 500) {
-      const candidates = [
-        p.content || "",
-        p.content_en || "",
-        p.content_ru || "",
-      ];
+      const candidates = [p.content || "", p.content_en || "", p.content_ru || ""];
       const longest = candidates.reduce((a, b) => (a.length >= b.length ? a : b), "");
       if (longest.length > val.length * 3) return longest;
     }
@@ -94,13 +89,11 @@ const BlogPost = () => {
     );
   };
 
-  // Compute head data (must be before any early returns to satisfy hooks rules)
   const title = post ? getField(post, "title") : "";
   const content = post ? getField(post, "content") : "";
   const metaDesc = post ? getField(post, "meta_description") : "";
-  const postUrl = post
-    ? `https://elias-masaje-valencia-web.lovable.app/blog/${post.slug || post.id}`
-    : "";
+  const postSlug = post ? (post.slug || post.id) : "";
+  const postUrl = post ? `${BASE_URL}${ROUTE_MAP.blog[locale]}/${postSlug}` : "";
 
   const jsonLd = post ? {
     "@context": "https://schema.org",
@@ -113,7 +106,7 @@ const BlogPost = () => {
     publisher: {
       "@type": "Organization",
       name: "Elias Masaje",
-      url: "https://elias-masaje-valencia-web.lovable.app",
+      url: BASE_URL,
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
     inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
@@ -130,6 +123,7 @@ const BlogPost = () => {
     ogTitle: title || undefined,
     ogDescription: metaDesc || undefined,
     ogType: post ? "article" : undefined,
+    alternates: postSlug ? getAlternates("blogPost", { slug: postSlug }) : undefined,
     jsonLd,
   });
 
@@ -147,7 +141,7 @@ const BlogPost = () => {
         <p className="text-muted-foreground mb-4">
           {locale === "es" ? "Artículo no encontrado." : locale === "ru" ? "Статья не найдена." : "Article not found."}
         </p>
-        <Link to="/blog" className="text-sm text-primary hover:underline">
+        <Link to={lp("blog")} className="text-sm text-primary hover:underline">
           ← {locale === "es" ? "Volver al blog" : locale === "ru" ? "Назад к блогу" : "Back to blog"}
         </Link>
       </div>
@@ -155,10 +149,10 @@ const BlogPost = () => {
   }
 
   return (
-      <article className="section-padding pt-32 md:pt-36">
+    <article className="section-padding pt-32 md:pt-36">
       <div className="container-narrow">
         <Link
-          to="/blog"
+          to={lp("blog")}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
         >
           <ChevronLeft size={14} />

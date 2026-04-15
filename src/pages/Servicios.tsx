@@ -2,6 +2,7 @@ import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
 import { useDbServices, resolveField } from "@/hooks/use-db-content";
 import OrganicServices from "@/components/organic/OrganicServices";
+import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 
 const ServiciosPage = () => {
   const { locale } = useI18n();
@@ -11,7 +12,7 @@ const ServiciosPage = () => {
     "@context": "https://schema.org",
     "@type": "HealthAndBeautyBusiness",
     name: "Elias Masaje",
-    url: "https://elias-masaje-valencia-web.lovable.app",
+    url: BASE_URL,
     telephone: "+34698968007",
     address: {
       "@type": "PostalAddress",
@@ -63,10 +64,11 @@ const ServiciosPage = () => {
   useHead({
     title,
     description: metaDesc,
-    canonical: "https://elias-masaje-valencia-web.lovable.app/servicios",
+    canonical: `${BASE_URL}${ROUTE_MAP.services[locale]}`,
     ogTitle: title,
     ogDescription: metaDesc,
     ogType: "website",
+    alternates: getAlternates("services"),
     jsonLd: localBusiness,
   });
 
