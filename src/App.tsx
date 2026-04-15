@@ -16,6 +16,7 @@ import Blog from "./pages/Blog";
 import BlogPostPage from "./pages/BlogPost";
 import ScrollToTop from "./components/ScrollToTop";
 import LocaleSync from "./components/LocaleSync";
+import LanguageSuggestionBanner from "./components/LanguageSuggestionBanner";
 
 const queryClient = new QueryClient();
 
