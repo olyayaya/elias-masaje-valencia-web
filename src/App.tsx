@@ -30,6 +30,7 @@ const App = () => (
         <BrowserRouter>
           <ScrollToTop />
           <LocaleSync />
+          <LanguageSuggestionBanner />
           <Routes>
             {/* Spanish (default — no prefix) */}
             <Route element={<Layout />}>
