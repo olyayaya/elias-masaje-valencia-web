@@ -1,7 +1,6 @@
-const BASE_URL = "https://eliasmas.es";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-Deno.serve(async (_req) => {
-  const body = `User-agent: Googlebot
+const FALLBACK = `User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
@@ -16,14 +15,36 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: ${BASE_URL}/sitemap.xml
+Sitemap: https://eliasmas.es/sitemap.xml
 `;
+
+Deno.serve(async (_req) => {
+  let body = FALLBACK;
+
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data, error } = await supabase
+      .from("site_content")
+      .select("value_es")
+      .eq("content_key", "robots_txt")
+      .maybeSingle();
+
+    if (!error && data?.value_es?.trim()) {
+      body = data.value_es;
+    }
+  } catch (err) {
+    console.error("robots.txt DB error, using fallback:", err);
+  }
 
   return new Response(body, {
     status: 200,
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "public, max-age=3600, s-maxage=3600",
+      "Cache-Control": "public, max-age=300, s-maxage=300",
       "Access-Control-Allow-Origin": "*",
     },
   });

@@ -31,13 +31,22 @@ const CATEGORIES = [
   { id: "about", label: "About Preview" },
   { id: "footer", label: "Footer" },
   { id: "location", label: "Location" },
+  { id: "seo", label: "SEO & Crawlers" },
 ];
 
 const langKey = (lang: Lang): "value_es" | "value_en" | "value_ru" =>
   lang === "es" ? "value_es" : lang === "en" ? "value_en" : "value_ru";
 
+// robots.txt is locale-independent — always edit value_es regardless of selected language tab.
+const isLocaleIndependent = (key: string) => key === "robots_txt";
+
+const effectiveLangKey = (lang: Lang, key: string) =>
+  isLocaleIndependent(key) ? "value_es" : langKey(lang);
+
 const isLongField = (key: string) =>
-  key.includes("description") || key.includes("tagline") || key.includes("preview_p");
+  key.includes("description") || key.includes("tagline") || key.includes("preview_p") || key === "robots_txt";
+
+const isMonoField = (key: string) => key === "robots_txt";
 
 const isImageField = (key: string) =>
   (key.includes("image") || key.includes("photo") || key.includes("logo") || key.includes("_img")) && !key.endsWith("_position");
@@ -88,9 +97,17 @@ const CategorySection = ({
         <div className="border border-t-0 border-border rounded-b-lg bg-card px-5 pb-5 pt-3 space-y-4">
           {visibleItems.map((item) => {
             const posItem = isImageField(item.content_key) ? findPositionItem(item.content_key) : null;
+            const localeIndep = isLocaleIndependent(item.content_key);
             return (
             <div key={item.id} className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">{item.label}</label>
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                {item.label}
+                {localeIndep && (
+                  <span className="text-[10px] uppercase tracking-wide bg-secondary text-muted-foreground px-1.5 py-0.5 rounded">
+                    Shared across languages
+                  </span>
+                )}
+              </label>
               <div className="flex gap-2">
                 <div className="flex-1">
                   {isImageField(item.content_key) ? (
@@ -114,8 +131,8 @@ const CategorySection = ({
                     <Textarea
                       value={drafts[item.id] ?? ""}
                       onChange={(e) => setDrafts((p) => ({ ...p, [item.id]: e.target.value }))}
-                      rows={3}
-                      className="text-sm"
+                      rows={isMonoField(item.content_key) ? 12 : 3}
+                      className={`text-sm ${isMonoField(item.content_key) ? "font-mono whitespace-pre" : ""}`}
                     />
                   ) : (
                     <Input
@@ -126,46 +143,48 @@ const CategorySection = ({
                   )}
                 </div>
                 <div className="flex gap-1.5 shrink-0">
-                  <TooltipProvider delayDuration={300}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => seoOptimize(item)}
-                          disabled={aiLoading === `seo-${item.id}`}
-                          className="h-10"
-                        >
-                          {aiLoading === `seo-${item.id}` ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Search size={14} />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Improve for SEO</TooltipContent>
-                    </Tooltip>
-                    {lang !== "es" && (
+                  {!localeIndep && (
+                    <TooltipProvider delayDuration={300}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => translateField(item)}
-                            disabled={aiLoading === `translate-${item.id}`}
+                            onClick={() => seoOptimize(item)}
+                            disabled={aiLoading === `seo-${item.id}`}
                             className="h-10"
                           >
-                            {aiLoading === `translate-${item.id}` ? (
+                            {aiLoading === `seo-${item.id}` ? (
                               <Loader2 size={14} className="animate-spin" />
                             ) : (
-                              <Languages size={14} />
+                              <Search size={14} />
                             )}
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Translate from Spanish</TooltipContent>
+                        <TooltipContent>Improve for SEO</TooltipContent>
                       </Tooltip>
-                    )}
-                  </TooltipProvider>
+                      {lang !== "es" && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => translateField(item)}
+                              disabled={aiLoading === `translate-${item.id}`}
+                              className="h-10"
+                            >
+                              {aiLoading === `translate-${item.id}` ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Languages size={14} />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Translate from Spanish</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </TooltipProvider>
+                  )}
                   <Button
                     size="sm"
                     onClick={() => saveItem(item)}
@@ -232,7 +251,9 @@ const DashboardSiteContent = () => {
     if (data) {
       setItems(data as SiteContentRow[]);
       const d: Record<string, string> = {};
-      data.forEach((r: any) => { d[r.id] = r[langKey(lang)]; });
+      data.forEach((r: any) => {
+        d[r.id] = r[effectiveLangKey(lang, r.content_key)];
+      });
       setDrafts(d);
     }
     setLoading(false);
@@ -242,22 +263,25 @@ const DashboardSiteContent = () => {
 
   useEffect(() => {
     const d: Record<string, string> = {};
-    items.forEach((r) => { d[r.id] = r[langKey(lang)]; });
+    items.forEach((r) => {
+      d[r.id] = r[effectiveLangKey(lang, r.content_key)];
+    });
     setDrafts(d);
   }, [lang, items]);
 
   const saveItem = async (item: SiteContentRow) => {
     setSaving(item.id);
+    const targetCol = effectiveLangKey(lang, item.content_key);
     const { error } = await supabase
       .from("site_content")
-      .update({ [langKey(lang)]: drafts[item.id] } as any)
+      .update({ [targetCol]: drafts[item.id] } as any)
       .eq("id", item.id);
     if (error) {
       toast.error("Failed to save");
     } else {
       toast.success(`${item.label} saved`);
       setItems((prev) =>
-        prev.map((r) => r.id === item.id ? { ...r, [langKey(lang)]: drafts[item.id] } : r)
+        prev.map((r) => r.id === item.id ? { ...r, [targetCol]: drafts[item.id] } : r)
       );
     }
     setSaving(null);
@@ -304,7 +328,8 @@ const DashboardSiteContent = () => {
     setAiLoading(null);
   };
 
-  const hasChanged = (item: SiteContentRow) => drafts[item.id] !== item[langKey(lang)];
+  const hasChanged = (item: SiteContentRow) =>
+    drafts[item.id] !== item[effectiveLangKey(lang, item.content_key)];
 
   if (loading) {
     return (
