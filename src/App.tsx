@@ -17,6 +17,7 @@ import BlogPostPage from "./pages/BlogPost";
 import ScrollToTop from "./components/ScrollToTop";
 import LocaleSync from "./components/LocaleSync";
 import LanguageSuggestionBanner from "./components/LanguageSuggestionBanner";
+import { PageTracker } from "./components/PageTracker";
 
 const queryClient = new QueryClient();
 
