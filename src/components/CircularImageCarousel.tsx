@@ -6,64 +6,13 @@ interface CircularImageCarouselProps {
   className?: string;
 }
 
-const CYCLE_DURATION = 12000;
-const FADE_TIME = 5000;
-const COL_OFFSETS = [0, 1200, 600];
+const CYCLE_DURATION = 6000; // total time each image is shown (including crossfade)
+const FADE_TIME = 750; // single dissolve duration
+const COL_OFFSETS = [0, 800, 400];
 const FOCUS_DURATION = 10000;
 
-// Landscape images: subtle zoom variation
-const SIZE_MIN = 0.82;
-const SIZE_MAX = 1.18;
-// Portrait images: stronger zoom range
-const PORTRAIT_SIZE_MIN = 0.72;
-const PORTRAIT_SIZE_MAX = 1.22;
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function randomSize(isPortrait: boolean) {
-  const min = isPortrait ? PORTRAIT_SIZE_MIN : SIZE_MIN;
-  const max = isPortrait ? PORTRAIT_SIZE_MAX : SIZE_MAX;
-  return min + Math.random() * (max - min);
-}
-
-function normalize(value: number, min: number, max: number) {
-  if (max <= min) return 0;
-  return Math.min(1, Math.max(0, (value - min) / (max - min)));
-}
-
-function getBreathScale(sizeValue: number, src: string) {
-  const isPortrait = getIsPortrait(src);
-
-  if (isPortrait) {
-    const t = normalize(sizeValue, PORTRAIT_SIZE_MIN, PORTRAIT_SIZE_MAX);
-    return 1.08 + t * 0.25; // 1.08 → 1.33 (strong reveal for portrait)
-  }
-
-  const t = normalize(sizeValue, SIZE_MIN, SIZE_MAX);
-  return 1.02 + t * 0.08; // 1.02 → 1.10 (gentle for landscape)
-}
-
-/** Cache of image aspect ratios (width/height). >1 = landscape, <1 = portrait */
-const aspectCache = new Map<string, number>();
-
-function getIsPortrait(src: string): boolean {
-  const ratio = aspectCache.get(src);
-  return ratio !== undefined && ratio < 1;
-}
-
-function preloadAndCacheAspect(src: string) {
-  if (aspectCache.has(src)) return;
+function preloadImage(src: string) {
   const img = new Image();
-  img.onload = () => {
-    aspectCache.set(src, img.naturalWidth / img.naturalHeight);
-  };
   img.src = src;
 }
 
@@ -94,7 +43,7 @@ function buildSyncedSequences(
   return seqs;
 }
 
-const BreathingCell = ({
+const DissolveCell = ({
   images,
   delay,
   focused,
@@ -114,7 +63,6 @@ const BreathingCell = ({
   const [fading, setFading] = useState(false);
   const [started, setStarted] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
-  const [sizeScale, setSizeScale] = useState(() => randomSize(getIsPortrait(images[0]?.src ?? "")));
 
   useEffect(() => {
     onImageChange(colIndex, [images[0]?.src ?? ""]);
@@ -144,6 +92,8 @@ const BreathingCell = ({
     if (!started) return;
     const holdTimer = setTimeout(() => {
       const nextIdx = pickNext(current);
+      // Preload next image before triggering crossfade
+      preloadImage(images[nextIdx].src);
       setNext(nextIdx);
       onImageChange(colIndex, [images[current].src, images[nextIdx].src]);
       setFading(true);
@@ -156,7 +106,6 @@ const BreathingCell = ({
     const fadeTimer = setTimeout(() => {
       setCurrent(next);
       onImageChange(colIndex, [images[next].src]);
-      setSizeScale(randomSize(getIsPortrait(images[next].src)));
       setFading(false);
     }, FADE_TIME);
     return () => clearTimeout(fadeTimer);
@@ -164,12 +113,6 @@ const BreathingCell = ({
 
   const currentImg = images[current];
   const nextImg = images[next];
-
-  const currentBreathScale = getBreathScale(sizeScale, currentImg.src);
-  const nextBreathScale = getBreathScale(sizeScale, nextImg.src);
-
-  const currentRestScale = Math.max(1, currentBreathScale - 0.06).toFixed(3);
-  const nextRestScale = Math.max(1, nextBreathScale - 0.06).toFixed(3);
 
   return (
     <div className="rounded-none md:rounded-2xl overflow-hidden w-full aspect-[9/8] md:aspect-[3/2] relative">
@@ -182,12 +125,8 @@ const BreathingCell = ({
         onLoad={() => setImgLoaded(true)}
         style={{
           opacity: !started || !imgLoaded ? 0 : fading ? 0 : 1,
-          transform: !started
-            ? `scale(${currentRestScale})`
-            : fading
-              ? `scale(${currentRestScale})`
-              : `scale(${currentBreathScale.toFixed(3)})`,
-          transition: `opacity ${fading ? FADE_TIME : 1000}ms ease-in-out, transform ${fading ? FADE_TIME : 3000}ms ease-in-out`,
+          transition: `opacity ${FADE_TIME}ms ease-in-out`,
+          willChange: "opacity",
         }}
       />
       <img
@@ -198,10 +137,8 @@ const BreathingCell = ({
         draggable={false}
         style={{
           opacity: fading ? 1 : 0,
-          transform: fading
-            ? `scale(${nextBreathScale.toFixed(3)})`
-            : `scale(${nextRestScale})`,
-          transition: `opacity ${FADE_TIME}ms ease-in-out, transform ${FADE_TIME}ms ease-in-out`,
+          transition: `opacity ${FADE_TIME}ms ease-in-out`,
+          willChange: "opacity",
         }}
       />
       <div
@@ -222,8 +159,9 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
   const [mutedCol, setMutedCol] = useState(2);
   const [visibleCols, setVisibleCols] = useState(1);
 
+  // Preload all images up front so dissolves never wait on the network
   useEffect(() => {
-    images.forEach((img) => preloadAndCacheAspect(img.src));
+    images.forEach((img) => preloadImage(img.src));
   }, [images]);
 
   // Track visible column count via matchMedia
@@ -276,7 +214,7 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
             key={col}
             className={col === 2 ? "hidden lg:block" : col === 1 ? "hidden md:block" : ""}
           >
-            <BreathingCell
+            <DissolveCell
               images={seq}
               delay={COL_OFFSETS[col]}
               focused={visibleCols === 1 ? true : col !== mutedCol}
