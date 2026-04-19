@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://eliasmas.es/sitemap.xml
+Sitemap: https://ukjljyrejfkyurebksqz.supabase.co/functions/v1/sitemap
