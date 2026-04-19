@@ -32,6 +32,7 @@ const App = () => (
           <ScrollToTop />
           <LocaleSync />
           <LanguageSuggestionBanner />
+          <PageTracker />
           <Routes>
             {/* Spanish (default — no prefix) */}
             <Route element={<Layout />}>
