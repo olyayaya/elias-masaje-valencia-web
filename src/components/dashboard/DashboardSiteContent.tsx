@@ -211,7 +211,7 @@ const CategorySection = ({
                   <Button
                     size="sm"
                     onClick={() => saveItem(item)}
-                    disabled={saving === item.id || !hasChanged(item)}
+                    disabled={saving === item.id || !hasChanged(item) || !!jsonError}
                     className="h-10"
                   >
                     {saving === item.id ? (
@@ -222,6 +222,14 @@ const CategorySection = ({
                   </Button>
                 </div>
               </div>
+              {jsonError && (
+                <p className="text-xs text-destructive font-mono">{jsonError}</p>
+              )}
+              {jsonField && !jsonError && (
+                <p className="text-[11px] text-muted-foreground">
+                  Format: {`{ "extraUrls": [{ "loc": "https://eliasmas.es/landing", "changefreq": "monthly", "priority": "0.5" }] }`}
+                </p>
+              )}
               {/* Image preview + position editor */}
               {isImageField(item.content_key) && posItem && (drafts[item.id] ?? "").startsWith("http") && (
                 <div className="space-y-2">
