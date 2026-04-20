@@ -18,6 +18,7 @@ import interiorImage from "@/assets/interior.jpg";
 import locationBg from "@/assets/location-bg.jpg";
 import locationStones from "@/assets/location-stones.jpg";
 import { useI18n } from "@/i18n/context";
+import { formatPrice } from "@/lib/format-price";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import CircularImage from "@/components/CircularImage";
