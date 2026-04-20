@@ -257,9 +257,9 @@ const CategorySection = ({
                 </p>
               )}
               {robotsField && robotsWarnings.length > 0 && (
-                <ul className="space-y-1 pt-1">
+                <ul className="space-y-1 pt-1 border-l-2 border-destructive/40 pl-3">
                   {robotsWarnings.map((w, i) => (
-                    <li key={i} className="text-xs text-amber-600 dark:text-amber-400">{w}</li>
+                    <li key={i} className="text-xs text-destructive/90">{w}</li>
                   ))}
                 </ul>
               )}
