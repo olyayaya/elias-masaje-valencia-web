@@ -62,7 +62,7 @@ const CategorySection = ({
   cat, catItems, allItems, lang, drafts, setDrafts, saveItem, saving, aiLoading,
   translateField, seoOptimize, hasChanged, setPickerOpen, isMobile,
 }: {
-  cat: { id: string; label: string };
+  cat: { id: string; label: string; pathHint?: string };
   catItems: SiteContentRow[];
   allItems: SiteContentRow[];
   lang: Lang;
@@ -90,7 +90,7 @@ const CategorySection = ({
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="w-full text-left">
-        <DashboardCard title={cat.label} description={`Edit ${cat.label.toLowerCase()} text`}>
+        <DashboardCard title={cat.label} description={cat.pathHint || `Edit ${cat.label.toLowerCase()} text`}>
           <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
             <ChevronRight size={14} className={`transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
             <span>{hint}</span>
