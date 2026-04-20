@@ -256,6 +256,13 @@ const CategorySection = ({
                   Format: {`{ "extraUrls": [{ "loc": "https://eliasmas.es/landing", "changefreq": "monthly", "priority": "0.5" }] }`}
                 </p>
               )}
+              {robotsField && robotsWarnings.length > 0 && (
+                <ul className="space-y-1 pt-1">
+                  {robotsWarnings.map((w, i) => (
+                    <li key={i} className="text-xs text-amber-600 dark:text-amber-400">{w}</li>
+                  ))}
+                </ul>
+              )}
               {/* Image preview + position editor */}
               {isImageField(item.content_key) && posItem && (drafts[item.id] ?? "").startsWith("http") && (
                 <div className="space-y-2">
