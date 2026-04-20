@@ -31,6 +31,7 @@ export const es: Translations = {
     pageSubtitle: "Cada sesión se adapta a tu cuerpo y a lo que necesitas ese día. Estos son los tratamientos que ofrezco en mi centro del centro de Valencia.",
     bookBtn: "Reservar",
     sectionLabel: "Tratamientos",
+    priceFrom: "desde",
     items: [
       { title: "Masaje descontracturante", description: "Trabajo profundo sobre nudos y tensiones musculares crónicas. Ideal para dolores de espalda, cuello y hombros. Se combinan técnicas de presión profunda y estiramientos.", duration: "60 min", price: "50 €" },
       { title: "Masaje relajante", description: "Presión suave y ritmo lento para liberar estrés acumulado y mejorar la calidad del descanso. Perfecto para desconectar del día a día.", duration: "60 min", price: "45 €" },

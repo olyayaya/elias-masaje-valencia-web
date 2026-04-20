@@ -31,6 +31,7 @@ export const en: Translations = {
     pageSubtitle: "Every session is tailored to your body and what you need that day. These are the treatments I offer at my center in Valencia.",
     bookBtn: "Book",
     sectionLabel: "Treatments",
+    priceFrom: "from",
     items: [
       { title: "Deep tissue massage", description: "Deep work on knots and chronic muscle tension. Ideal for back, neck, and shoulder pain. Combines deep pressure techniques and stretching.", duration: "60 min", price: "€50" },
       { title: "Relaxation massage", description: "Gentle pressure and slow rhythm to release accumulated stress and improve rest quality. Perfect for disconnecting from daily life.", duration: "60 min", price: "€45" },

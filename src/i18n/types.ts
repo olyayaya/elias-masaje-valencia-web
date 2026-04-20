@@ -26,6 +26,7 @@ export interface Translations {
     pageSubtitle: string;
     bookBtn: string;
     sectionLabel: string;
+    priceFrom: string;
     items: { title: string; description: string; duration: string; price: string }[];
   };
   about: {
