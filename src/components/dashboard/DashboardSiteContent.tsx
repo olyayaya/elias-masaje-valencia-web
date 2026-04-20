@@ -101,6 +101,26 @@ const CategorySection = ({
           {visibleItems.map((item) => {
             const posItem = isImageField(item.content_key) ? findPositionItem(item.content_key) : null;
             const localeIndep = isLocaleIndependent(item.content_key);
+            const jsonField = isJsonField(item.content_key);
+            let jsonError: string | null = null;
+            if (jsonField) {
+              const raw = drafts[item.id] ?? "";
+              if (raw.trim()) {
+                try {
+                  const parsed = JSON.parse(raw);
+                  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.extraUrls)) {
+                    jsonError = "Must be an object with an `extraUrls` array";
+                  } else {
+                    const bad = parsed.extraUrls.findIndex(
+                      (u: any) => !u || typeof u.loc !== "string" || !u.loc.startsWith("http")
+                    );
+                    if (bad !== -1) jsonError = `Entry #${bad + 1}: \`loc\` must be a full http(s) URL`;
+                  }
+                } catch (e: any) {
+                  jsonError = `Invalid JSON: ${e.message}`;
+                }
+              }
+            }
             return (
             <div key={item.id} className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
