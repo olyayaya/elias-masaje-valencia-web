@@ -37,16 +37,19 @@ const CATEGORIES = [
 const langKey = (lang: Lang): "value_es" | "value_en" | "value_ru" =>
   lang === "es" ? "value_es" : lang === "en" ? "value_en" : "value_ru";
 
-// robots.txt is locale-independent — always edit value_es regardless of selected language tab.
-const isLocaleIndependent = (key: string) => key === "robots_txt";
+// Locale-independent fields (technical configs) — always edit value_es regardless of selected language tab.
+const LOCALE_INDEPENDENT_KEYS = new Set(["robots_txt", "sitemap_config"]);
+const isLocaleIndependent = (key: string) => LOCALE_INDEPENDENT_KEYS.has(key);
 
 const effectiveLangKey = (lang: Lang, key: string) =>
   isLocaleIndependent(key) ? "value_es" : langKey(lang);
 
 const isLongField = (key: string) =>
-  key.includes("description") || key.includes("tagline") || key.includes("preview_p") || key === "robots_txt";
+  key.includes("description") || key.includes("tagline") || key.includes("preview_p") ||
+  key === "robots_txt" || key === "sitemap_config";
 
-const isMonoField = (key: string) => key === "robots_txt";
+const isMonoField = (key: string) => key === "robots_txt" || key === "sitemap_config";
+const isJsonField = (key: string) => key === "sitemap_config";
 
 const isImageField = (key: string) =>
   (key.includes("image") || key.includes("photo") || key.includes("logo") || key.includes("_img")) && !key.endsWith("_position");
@@ -98,6 +101,26 @@ const CategorySection = ({
           {visibleItems.map((item) => {
             const posItem = isImageField(item.content_key) ? findPositionItem(item.content_key) : null;
             const localeIndep = isLocaleIndependent(item.content_key);
+            const jsonField = isJsonField(item.content_key);
+            let jsonError: string | null = null;
+            if (jsonField) {
+              const raw = drafts[item.id] ?? "";
+              if (raw.trim()) {
+                try {
+                  const parsed = JSON.parse(raw);
+                  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.extraUrls)) {
+                    jsonError = "Must be an object with an `extraUrls` array";
+                  } else {
+                    const bad = parsed.extraUrls.findIndex(
+                      (u: any) => !u || typeof u.loc !== "string" || !u.loc.startsWith("http")
+                    );
+                    if (bad !== -1) jsonError = `Entry #${bad + 1}: \`loc\` must be a full http(s) URL`;
+                  }
+                } catch (e: any) {
+                  jsonError = `Invalid JSON: ${e.message}`;
+                }
+              }
+            }
             return (
             <div key={item.id} className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
@@ -188,7 +211,7 @@ const CategorySection = ({
                   <Button
                     size="sm"
                     onClick={() => saveItem(item)}
-                    disabled={saving === item.id || !hasChanged(item)}
+                    disabled={saving === item.id || !hasChanged(item) || !!jsonError}
                     className="h-10"
                   >
                     {saving === item.id ? (
@@ -199,6 +222,14 @@ const CategorySection = ({
                   </Button>
                 </div>
               </div>
+              {jsonError && (
+                <p className="text-xs text-destructive font-mono">{jsonError}</p>
+              )}
+              {jsonField && !jsonError && (
+                <p className="text-[11px] text-muted-foreground">
+                  Format: {`{ "extraUrls": [{ "loc": "https://eliasmas.es/landing", "changefreq": "monthly", "priority": "0.5" }] }`}
+                </p>
+              )}
               {/* Image preview + position editor */}
               {isImageField(item.content_key) && posItem && (drafts[item.id] ?? "").startsWith("http") && (
                 <div className="space-y-2">

@@ -70,6 +70,28 @@ Deno.serve(async (_req) => {
 
     if (error) throw error;
 
+    // Load extra URLs configured from the dashboard (sitemap_config JSON blob in site_content)
+    type ExtraUrl = { loc: string; changefreq?: string; priority?: string; lastmod?: string };
+    let extraUrls: ExtraUrl[] = [];
+    try {
+      const { data: cfgRow } = await supabase
+        .from("site_content")
+        .select("value_es")
+        .eq("content_key", "sitemap_config")
+        .maybeSingle();
+      const raw = cfgRow?.value_es?.trim();
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.extraUrls)) {
+          extraUrls = parsed.extraUrls.filter(
+            (u: any) => u && typeof u.loc === "string" && u.loc.startsWith("http")
+          );
+        }
+      }
+    } catch (e) {
+      console.warn("sitemap_config parse failed, ignoring:", e);
+    }
+
     const entries: string[] = [];
 
     // Static pages — one entry per locale, with hreflang alternates
@@ -118,6 +140,19 @@ Deno.serve(async (_req) => {
       }
     }
 
+    // Dashboard-managed extra URLs (no hreflang alternates, single locale)
+    for (const u of extraUrls) {
+      entries.push(
+        urlEntry({
+          loc: u.loc,
+          alternates: [],
+          changefreq: u.changefreq || "monthly",
+          priority: u.priority || "0.5",
+          lastmod: u.lastmod,
+        })
+      );
+    }
+
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
@@ -128,7 +163,7 @@ ${entries.join("\n")}
       status: 200,
       headers: {
         "Content-Type": "application/xml; charset=utf-8",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600",
+        "Cache-Control": "public, max-age=300, s-maxage=300",
         "Access-Control-Allow-Origin": "*",
       },
     });
