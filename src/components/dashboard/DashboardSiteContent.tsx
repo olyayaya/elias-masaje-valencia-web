@@ -37,16 +37,19 @@ const CATEGORIES = [
 const langKey = (lang: Lang): "value_es" | "value_en" | "value_ru" =>
   lang === "es" ? "value_es" : lang === "en" ? "value_en" : "value_ru";
 
-// robots.txt is locale-independent — always edit value_es regardless of selected language tab.
-const isLocaleIndependent = (key: string) => key === "robots_txt";
+// Locale-independent fields (technical configs) — always edit value_es regardless of selected language tab.
+const LOCALE_INDEPENDENT_KEYS = new Set(["robots_txt", "sitemap_config"]);
+const isLocaleIndependent = (key: string) => LOCALE_INDEPENDENT_KEYS.has(key);
 
 const effectiveLangKey = (lang: Lang, key: string) =>
   isLocaleIndependent(key) ? "value_es" : langKey(lang);
 
 const isLongField = (key: string) =>
-  key.includes("description") || key.includes("tagline") || key.includes("preview_p") || key === "robots_txt";
+  key.includes("description") || key.includes("tagline") || key.includes("preview_p") ||
+  key === "robots_txt" || key === "sitemap_config";
 
-const isMonoField = (key: string) => key === "robots_txt";
+const isMonoField = (key: string) => key === "robots_txt" || key === "sitemap_config";
+const isJsonField = (key: string) => key === "sitemap_config";
 
 const isImageField = (key: string) =>
   (key.includes("image") || key.includes("photo") || key.includes("logo") || key.includes("_img")) && !key.endsWith("_position");
