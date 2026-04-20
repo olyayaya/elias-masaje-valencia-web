@@ -24,11 +24,12 @@ interface SiteContentRow {
   sort_order: number;
 }
 
-const CATEGORIES = [
+const CATEGORIES: { id: string; label: string; pathHint?: string }[] = [
   { id: "contact", label: "Contact & Location" },
   { id: "hero", label: "Hero Section" },
   { id: "cta", label: "CTAs & Gift Card" },
-  { id: "about", label: "About Preview" },
+  { id: "about", label: "About Preview (homepage)" },
+  { id: "about_page", label: "About Me — full page", pathHint: "Controls the content shown on /sobre-mi" },
   { id: "footer", label: "Footer" },
   { id: "location", label: "Location" },
   { id: "seo", label: "SEO & Crawlers" },
