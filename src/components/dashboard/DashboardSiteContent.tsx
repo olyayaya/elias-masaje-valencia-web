@@ -121,6 +121,32 @@ const CategorySection = ({
                 }
               }
             }
+
+            // robots.txt linting (warnings, non-blocking)
+            const robotsField = item.content_key === "robots_txt";
+            const robotsWarnings: string[] = [];
+            if (robotsField) {
+              const raw = drafts[item.id] ?? "";
+              if (raw.trim()) {
+                const lines = raw.split(/\r?\n/);
+                // Detect "Disallow: /" (exact root, ignoring trailing whitespace/comments)
+                const blocksAll = lines.some((l) => /^\s*Disallow\s*:\s*\/\s*(#.*)?$/i.test(l));
+                if (blocksAll) {
+                  robotsWarnings.push("⚠️ A `Disallow: /` directive will block ALL crawlers from your entire site.");
+                }
+                // Sitemap directive present?
+                const hasSitemap = lines.some((l) => /^\s*Sitemap\s*:\s*https?:\/\/\S+/i.test(l));
+                if (!hasSitemap) {
+                  robotsWarnings.push("⚠️ No `Sitemap:` directive found. Add `Sitemap: https://eliasmas.es/sitemap.xml` so crawlers can discover all pages.");
+                }
+                // At least one User-agent?
+                const hasUserAgent = lines.some((l) => /^\s*User-agent\s*:\s*\S+/i.test(l));
+                if (!hasUserAgent) {
+                  robotsWarnings.push("⚠️ No `User-agent:` line found. robots.txt requires at least one user-agent block.");
+                }
+              }
+            }
+
             return (
             <div key={item.id} className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
@@ -229,6 +255,13 @@ const CategorySection = ({
                 <p className="text-[11px] text-muted-foreground">
                   Format: {`{ "extraUrls": [{ "loc": "https://eliasmas.es/landing", "changefreq": "monthly", "priority": "0.5" }] }`}
                 </p>
+              )}
+              {robotsField && robotsWarnings.length > 0 && (
+                <ul className="space-y-1 pt-1 border-l-2 border-destructive/40 pl-3">
+                  {robotsWarnings.map((w, i) => (
+                    <li key={i} className="text-xs text-destructive/90">{w}</li>
+                  ))}
+                </ul>
               )}
               {/* Image preview + position editor */}
               {isImageField(item.content_key) && posItem && (drafts[item.id] ?? "").startsWith("http") && (
