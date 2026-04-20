@@ -1,22 +1,27 @@
 import OrganicAbout from "@/components/organic/OrganicAbout";
 import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
+import { useSiteContent } from "@/hooks/use-site-content";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 
 const SobreMiPage = () => {
   const { locale } = useI18n();
+  const { content: sc } = useSiteContent();
 
-  const title = locale === "es"
+  const fallbackTitle = locale === "es"
     ? "Sobre Mí — Elias Masaje Valencia"
     : locale === "ru"
     ? "Обо мне — Elias Masaje Валенсия"
     : "About Me — Elias Masaje Valencia";
 
-  const desc = locale === "es"
+  const fallbackDesc = locale === "es"
     ? "Conoce a Elias, masajista profesional en Valencia con experiencia en masaje descontracturante, relajante y deportivo."
     : locale === "ru"
     ? "Познакомьтесь с Элиасом — профессиональным массажистом в Валенсии с опытом в лечебном, расслабляющем и спортивном массаже."
     : "Meet Elias, a professional massage therapist in Valencia specializing in deep tissue, relaxation and sports massage.";
+
+  const title = sc.about_seo_title?.trim() || fallbackTitle;
+  const desc = sc.about_seo_description?.trim() || fallbackDesc;
 
   useHead({
     title,

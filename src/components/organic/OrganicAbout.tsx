@@ -10,14 +10,20 @@ import massageFoot from "@/assets/massage-foot.jpg";
 import massageDeep from "@/assets/massage-deep.jpg";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
+import { useSiteContent } from "@/hooks/use-site-content";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { useTheme } from "@/contexts/ThemeContext";
 import { WHATSAPP_URL } from "@/config/contact";
 
+/** Splits a long-form text field into paragraphs on blank lines, keeping single newlines as soft breaks. */
+const splitParagraphs = (raw: string): string[] =>
+  raw.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+
 const OrganicAbout = () => {
   const { t } = useI18n();
+  const { content: sc } = useSiteContent();
   const { mode } = useTheme();
   const isDG = mode === "dark-gradient";
   const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
@@ -27,6 +33,19 @@ const OrganicAbout = () => {
   const spaceText = useFadeIn(0);
   const spaceImg = useFadeIn(0.15);
 
+  // CMS-overridable fields, fall back to static i18n strings if the dashboard hasn't been edited yet.
+  const sectionLabel    = sc.about_section_label?.trim()  || t.about.sectionLabel;
+  const aboutTitle      = sc.about_title?.trim()          || t.about.title;
+  const bioParagraphs   = sc.about_bio?.trim()
+    ? splitParagraphs(sc.about_bio)
+    : t.about.paragraphs;
+  const spaceLabel      = sc.about_space_label?.trim()    || t.about.spaceLabel;
+  const spaceTitle      = sc.about_space_title?.trim()    || t.about.spaceTitle;
+  const spaceParagraphs = sc.about_space_paragraphs?.trim()
+    ? splitParagraphs(sc.about_space_paragraphs)
+    : t.about.spaceParagraphs;
+  const galleryTitle    = sc.about_gallery_title?.trim()  || t.about.gallery;
+
   return (
     <div>
       {/* Hero — editorial intro with large portrait */}
@@ -35,10 +54,10 @@ const OrganicAbout = () => {
         <div className="max-w-6xl mx-auto">
           <div ref={heroLabel.ref} style={heroLabel.style} className="mb-12">
             <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/70 mb-4">
-              {t.about.sectionLabel}
+              {sectionLabel}
             </p>
             <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] leading-snug max-w-lg">
-              {t.about.title}
+              {aboutTitle}
             </h1>
           </div>
 
@@ -61,7 +80,7 @@ const OrganicAbout = () => {
             {/* Bio — editorial long-form */}
             <div className="md:col-span-6 md:col-start-7 md:pt-8" ref={bio.ref} style={bio.style}>
               <div className="space-y-5 text-base text-muted-foreground font-body leading-[1.85]">
-                {t.about.paragraphs.map((p, i) => (
+                {bioParagraphs.map((p, i) => (
                   <p key={i}>{p}</p>
                 ))}
               </div>
@@ -90,11 +109,11 @@ const OrganicAbout = () => {
             </div>
             <div className="md:col-span-5 md:col-start-1 md:order-1" ref={spaceText.ref} style={spaceText.style}>
               <p className="text-xs font-body tracking-[0.3em] uppercase text-muted-foreground mb-4">
-                {t.about.spaceLabel}
+                {spaceLabel}
               </p>
-              <h2 className="font-display text-3xl md:text-4xl mb-6 leading-snug">{t.about.spaceTitle}</h2>
+              <h2 className="font-display text-3xl md:text-4xl mb-6 leading-snug">{spaceTitle}</h2>
               <div className="space-y-4 text-base text-muted-foreground font-body leading-[1.8]">
-                {t.about.spaceParagraphs.map((p, i) => (
+                {spaceParagraphs.map((p, i) => (
                   <p key={i}>{p}</p>
                 ))}
               </div>
@@ -113,7 +132,7 @@ const OrganicAbout = () => {
               const anim = useFadeIn(0);
               return (
                 <div ref={anim.ref} style={anim.style} className="text-center mb-16">
-                  <h2 className="font-display text-3xl md:text-4xl mb-3">{t.about.gallery}</h2>
+                  <h2 className="font-display text-3xl md:text-4xl mb-3">{galleryTitle}</h2>
                   <div className="w-12 h-px bg-primary mx-auto" />
                 </div>
               );

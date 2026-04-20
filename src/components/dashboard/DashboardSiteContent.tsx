@@ -24,11 +24,12 @@ interface SiteContentRow {
   sort_order: number;
 }
 
-const CATEGORIES = [
+const CATEGORIES: { id: string; label: string; pathHint?: string }[] = [
   { id: "contact", label: "Contact & Location" },
   { id: "hero", label: "Hero Section" },
   { id: "cta", label: "CTAs & Gift Card" },
-  { id: "about", label: "About Preview" },
+  { id: "about", label: "About Preview (homepage)" },
+  { id: "about_page", label: "About Me — full page", pathHint: "Controls the content shown on /sobre-mi" },
   { id: "footer", label: "Footer" },
   { id: "location", label: "Location" },
   { id: "seo", label: "SEO & Crawlers" },
@@ -46,7 +47,8 @@ const effectiveLangKey = (lang: Lang, key: string) =>
 
 const isLongField = (key: string) =>
   key.includes("description") || key.includes("tagline") || key.includes("preview_p") ||
-  key === "robots_txt" || key === "sitemap_config";
+  key === "robots_txt" || key === "sitemap_config" ||
+  key === "about_bio" || key === "about_space_paragraphs";
 
 const isMonoField = (key: string) => key === "robots_txt" || key === "sitemap_config";
 const isJsonField = (key: string) => key === "sitemap_config";
@@ -61,7 +63,7 @@ const CategorySection = ({
   cat, catItems, allItems, lang, drafts, setDrafts, saveItem, saving, aiLoading,
   translateField, seoOptimize, hasChanged, setPickerOpen, isMobile,
 }: {
-  cat: { id: string; label: string };
+  cat: { id: string; label: string; pathHint?: string };
   catItems: SiteContentRow[];
   allItems: SiteContentRow[];
   lang: Lang;
@@ -89,7 +91,7 @@ const CategorySection = ({
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="w-full text-left">
-        <DashboardCard title={cat.label} description={`Edit ${cat.label.toLowerCase()} text`}>
+        <DashboardCard title={cat.label} description={cat.pathHint || `Edit ${cat.label.toLowerCase()} text`}>
           <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
             <ChevronRight size={14} className={`transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
             <span>{hint}</span>

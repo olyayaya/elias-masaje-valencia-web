@@ -18,6 +18,7 @@ import interiorImage from "@/assets/interior.jpg";
 import locationBg from "@/assets/location-bg.jpg";
 import locationStones from "@/assets/location-stones.jpg";
 import { useI18n } from "@/i18n/context";
+import { formatPrice } from "@/lib/format-price";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import CircularImage from "@/components/CircularImage";
@@ -174,7 +175,7 @@ const OrganicHome = () => {
                     </div>
                     <div className="flex items-center gap-6 shrink-0">
                       <span className="text-sm font-body text-muted-foreground">{s.duration}</span>
-                      <span className="text-sm font-body font-medium">{s.price}</span>
+                      <span className="text-sm font-body font-medium">{formatPrice(s.price, t)}</span>
                       <a
                         href={WHATSAPP_URL}
                         target="_blank"
