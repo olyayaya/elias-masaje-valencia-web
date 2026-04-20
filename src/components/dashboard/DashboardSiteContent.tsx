@@ -47,7 +47,8 @@ const effectiveLangKey = (lang: Lang, key: string) =>
 
 const isLongField = (key: string) =>
   key.includes("description") || key.includes("tagline") || key.includes("preview_p") ||
-  key === "robots_txt" || key === "sitemap_config";
+  key === "robots_txt" || key === "sitemap_config" ||
+  key === "about_bio" || key === "about_space_paragraphs";
 
 const isMonoField = (key: string) => key === "robots_txt" || key === "sitemap_config";
 const isJsonField = (key: string) => key === "sitemap_config";
