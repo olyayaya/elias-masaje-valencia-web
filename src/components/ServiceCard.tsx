@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import { WHATSAPP_URL } from "@/config/contact";
+import { formatPrice } from "@/lib/format-price";
 
 interface ServiceCardProps {
   title: string;
@@ -42,7 +43,7 @@ const ServiceCard = ({ title, description, duration, price, index = 0 }: Service
         <div className="flex items-center gap-4 text-sm font-body text-muted-foreground mb-6">
           <span>{duration}</span>
           <span className="w-px h-4 bg-border" />
-          <span className="font-medium text-foreground">{price}</span>
+          <span className="font-medium text-foreground">{formatPrice(price, t)}</span>
         </div>
       </div>
       <a

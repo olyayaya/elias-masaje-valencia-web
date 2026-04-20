@@ -174,7 +174,7 @@ const OrganicHome = () => {
                     </div>
                     <div className="flex items-center gap-6 shrink-0">
                       <span className="text-sm font-body text-muted-foreground">{s.duration}</span>
-                      <span className="text-sm font-body font-medium">{s.price}</span>
+                      <span className="text-sm font-body font-medium">{formatPrice(s.price, t)}</span>
                       <a
                         href={WHATSAPP_URL}
                         target="_blank"

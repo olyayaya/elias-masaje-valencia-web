@@ -18,6 +18,7 @@ import CircularImageCarousel from "@/components/CircularImageCarousel";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { WHATSAPP_URL } from "@/config/contact";
+import { formatPrice } from "@/lib/format-price";
 
 const PROMO_COLORS: Record<string, string> = {
   amber: "bg-amber-100 text-amber-800 border-amber-200",
@@ -32,6 +33,7 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index, bad
   badge?: string; badgeColor?: string;
 }) => {
   const anim = useFadeIn(index * 0.08);
+  const { t } = useI18n();
   return (
     <div ref={anim.ref} style={anim.style} className="flex flex-col md:flex-row md:items-center justify-between py-8 gap-4">
       <div className="flex-1">
@@ -47,7 +49,7 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index, bad
       </div>
       <div className="flex items-center gap-6 shrink-0">
         <span className="text-sm font-body text-muted-foreground">{duration}</span>
-        <span className="text-sm font-body font-medium">{price}</span>
+        <span className="text-sm font-body font-medium">{formatPrice(price, t)}</span>
         <a
           href={WHATSAPP_URL}
           target="_blank"
