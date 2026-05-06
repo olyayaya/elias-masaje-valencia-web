@@ -53,16 +53,12 @@ const DashboardHistory = () => {
   const restore = async (entry: HistoryEntry) => {
     setRestoring(entry.id);
     try {
-      const { id, created_at, updated_at, ...fields } = entry.snapshot;
-
-      if (entry.action === "delete") {
-        await supabase.from(entry.table_name as any).insert({ ...entry.snapshot, id: entry.record_id } as any);
-      } else {
-        await supabase.from(entry.table_name as any).update(fields as any).eq("id", entry.record_id);
-      }
+      await restoreEntry(entry);
+      toast.success("Restored to previous version");
       fetchHistory();
     } catch (err) {
       console.error("Restore failed:", err);
+      toast.error("Restore failed");
     } finally {
       setRestoring(null);
     }
