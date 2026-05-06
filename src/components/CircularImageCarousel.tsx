@@ -23,6 +23,7 @@ const CircularImageCarousel = ({
   const [visibleCols, setVisibleCols] = useState(1);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
   // Touch / drag tracking
@@ -43,6 +44,15 @@ const CircularImageCarousel = ({
     };
   }, []);
 
+  // Detect prefers-reduced-motion
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   // Preload all images
   useEffect(() => {
     images.forEach((img) => {
@@ -58,12 +68,12 @@ const CircularImageCarousel = ({
   const next = useCallback(() => setIndex((i) => i + 1), []);
   const prev = useCallback(() => setIndex((i) => i - 1), []);
 
-  // Autoplay
+  // Autoplay — disabled when user prefers reduced motion
   useEffect(() => {
-    if (paused || total === 0) return;
+    if (paused || total === 0 || reducedMotion) return;
     const id = setInterval(next, autoplayMs);
     return () => clearInterval(id);
-  }, [paused, autoplayMs, next, total]);
+  }, [paused, autoplayMs, next, total, reducedMotion]);
 
   // Seamless loop reset: when we cross into the duplicated tail, snap back without animation
   useEffect(() => {
@@ -135,7 +145,7 @@ const CircularImageCarousel = ({
             className="flex touch-pan-y select-none"
             style={{
               transform: `translateX(${translatePct}%)`,
-              transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+              transition: reducedMotion ? "none" : `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
               willChange: "transform",
             }}
             onPointerDown={onPointerDown}
