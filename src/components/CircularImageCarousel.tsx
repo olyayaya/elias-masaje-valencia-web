@@ -119,7 +119,7 @@ const CircularImageCarousel = ({
   // and any preloads in-flight from a previous index get aborted (img.src cleared) so the
   // browser can cancel the network request.
   useEffect(() => {
-    if (total === 0) return;
+    if (total === 0 || !nearViewport) return;
     const inFlight: HTMLImageElement[] = [];
     const debounce = setTimeout(() => {
       const normalized = ((index % total) + total) % total;
