@@ -35,17 +35,23 @@ const ServiciosPage = () => {
     hasOfferCatalog: dbServices?.length ? {
       "@type": "OfferCatalog",
       name: locale === "es" ? "Servicios de masaje" : locale === "ru" ? "Услуги массажа" : "Massage Services",
-      itemListElement: dbServices.map((s) => ({
-        "@type": "Offer",
-        itemOffered: {
-          "@type": "Service",
-          name: resolveField(s, "title", locale),
-          description: resolveField(s, "description", locale),
-          provider: { "@type": "HealthAndBeautyBusiness", name: "Elias Masaje" },
-        },
-        price: s.price.replace(/[^0-9.,]/g, ""),
-        priceCurrency: "EUR",
-      })),
+      itemListElement: dbServices.map((s) => {
+        const localizedPrice = resolveField(s, "price", locale);
+        const offer: any = {
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: resolveField(s, "title", locale),
+            description: resolveField(s, "description", locale),
+            provider: { "@type": "HealthAndBeautyBusiness", name: "Elias Masaje" },
+          },
+        };
+        if (!s.hide_price && localizedPrice) {
+          offer.price = localizedPrice.replace(/[^0-9.,]/g, "");
+          offer.priceCurrency = "EUR";
+        }
+        return offer;
+      }),
     } : undefined,
   };
 
