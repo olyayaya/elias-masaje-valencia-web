@@ -13,6 +13,13 @@ export interface DbService {
   title_ru: string;
   description_en: string;
   description_ru: string;
+  duration_en: string;
+  duration_ru: string;
+  price_en: string;
+  price_ru: string;
+  hide_price: boolean;
+  hide_duration: boolean;
+  hide_price_from: boolean;
 }
 
 export interface DbFaq {
