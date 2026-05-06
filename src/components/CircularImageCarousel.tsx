@@ -276,8 +276,8 @@ const CircularImageCarousel = ({
                     alt={img.alt}
                     className="w-full h-full object-cover"
                     draggable={false}
-                    loading={i >= index && i < index + visibleCols + 1 ? "eager" : "lazy"}
-                    fetchPriority={i >= index && i < index + visibleCols ? "high" : "auto"}
+                    loading={nearViewport && i >= index && i < index + visibleCols + 1 ? "eager" : "lazy"}
+                    fetchPriority={nearViewport && i >= index && i < index + visibleCols ? "high" : "auto"}
                   />
                 </div>
               </div>
