@@ -23,6 +23,7 @@ import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import CircularImage from "@/components/CircularImage";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
+import { usePageImages } from "@/hooks/use-page-images";
 import CurvedDivider from "@/components/CurvedDivider";
 import FaqAccordion from "@/components/FaqAccordion";
 import MapBlock from "@/components/MapBlock";
