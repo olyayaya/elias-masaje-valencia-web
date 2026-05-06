@@ -158,12 +158,24 @@ const CircularImageCarousel = ({
   const onPointerDown = (e: React.PointerEvent) => {
     dragStartX.current = e.clientX;
     dragDelta.current = 0;
+    swipeIntent.current = "none";
     setPaused(true);
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (dragStartX.current === null) return;
     dragDelta.current = e.clientX - dragStartX.current;
+    // As soon as the swipe is decisive enough, prefetch the slide entering view
+    const intentThreshold = 16;
+    if (swipeIntent.current === "none" && Math.abs(dragDelta.current) > intentThreshold) {
+      if (dragDelta.current < 0) {
+        swipeIntent.current = "next";
+        prefetchInDirection(1);
+      } else {
+        swipeIntent.current = "prev";
+        prefetchInDirection(-1);
+      }
+    }
   };
   const onPointerUp = () => {
     if (dragStartX.current === null) return;
@@ -172,6 +184,7 @@ const CircularImageCarousel = ({
     else if (dragDelta.current < -threshold) next();
     dragStartX.current = null;
     dragDelta.current = 0;
+    swipeIntent.current = "none";
     setPaused(false);
   };
 
