@@ -40,7 +40,7 @@ const langKey = (lang: Lang): "value_es" | "value_en" | "value_ru" =>
   lang === "es" ? "value_es" : lang === "en" ? "value_en" : "value_ru";
 
 // Locale-independent fields (technical configs) — always edit value_es regardless of selected language tab.
-const LOCALE_INDEPENDENT_KEYS = new Set(["robots_txt", "sitemap_config"]);
+const LOCALE_INDEPENDENT_KEYS = new Set(["robots_txt", "sitemap_config", "google_rating", "google_review_count"]);
 const isLocaleIndependent = (key: string) => LOCALE_INDEPENDENT_KEYS.has(key);
 
 const effectiveLangKey = (lang: Lang, key: string) =>
