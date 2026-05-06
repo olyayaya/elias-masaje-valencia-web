@@ -101,8 +101,11 @@ const OrganicServices = () => {
     return {
       title: resolveField(s, "title", locale),
       description: resolveField(s, "description", locale),
-      duration: s.duration,
-      price: s.price,
+      duration: resolveField(s, "duration", locale),
+      price: resolveField(s, "price", locale),
+      hidePrice: s.hide_price,
+      hideDuration: s.hide_duration,
+      hidePriceFrom: s.hide_price_from,
       badge: promo ? langBadge(promo) : undefined,
       badgeColor: promo?.badge_color,
     };
