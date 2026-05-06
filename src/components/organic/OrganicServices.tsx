@@ -15,6 +15,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useDbServices, useDbPromotions, resolveField } from "@/hooks/use-db-content";
 
 import CircularImageCarousel from "@/components/CircularImageCarousel";
+import { usePageImages } from "@/hooks/use-page-images";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { WHATSAPP_URL } from "@/config/contact";
