@@ -254,6 +254,35 @@ const DashboardHistory = () => {
           </DashboardCard>
         );
       })}
+
+      <AlertDialog open={bulkOpen} onOpenChange={(o) => !o && setBulkOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Undo {selected.size} change{selected.size === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Each selected item will be restored to the snapshot shown in this row. Changes go live immediately. If multiple snapshots exist for the same record, the oldest selected one wins.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-64 overflow-auto space-y-1 text-xs border border-border rounded-lg p-3">
+            {entries.filter((e) => selected.has(e.id)).map((e) => {
+              const name = e.snapshot[DISPLAY_FIELD[e.table_name] || "id"] || e.record_id.slice(0, 8);
+              return (
+                <div key={e.id} className="flex items-center justify-between gap-2">
+                  <span className="truncate text-foreground">{name}</span>
+                  <span className="text-muted-foreground shrink-0">{TABLE_LABELS[e.table_name] || e.table_name} · {formatDate(e.changed_at)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkRunning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={runBulkUndo} disabled={bulkRunning}>
+              {bulkRunning ? <Loader2 size={14} className="animate-spin mr-1" /> : <RotateCcw size={14} className="mr-1" />}
+              Undo all selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
