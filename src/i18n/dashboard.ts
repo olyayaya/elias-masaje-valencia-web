@@ -225,6 +225,7 @@ const es: DashboardTranslations = {
     faq: "Preguntas frecuentes",
     testimonials: "Testimonios",
     history: "Historial",
+    carousels: "Carruseles",
   },
   overview: {
     monthlyViews: "Visitas mensuales",
