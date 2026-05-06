@@ -196,8 +196,12 @@ const OrganicHome = () => {
                       <p className="text-sm text-muted-foreground font-body leading-relaxed max-w-lg">{s.description}</p>
                     </div>
                     <div className="flex items-center gap-6 shrink-0">
-                      <span className="text-sm font-body text-muted-foreground">{s.duration}</span>
-                      <span className="text-sm font-body font-medium">{formatPrice(s.price, t)}</span>
+                      {!(s as any).hideDuration && s.duration && (
+                        <span className="text-sm font-body text-muted-foreground">{s.duration}</span>
+                      )}
+                      {!(s as any).hidePrice && s.price && (
+                        <span className="text-sm font-body font-medium">{formatPrice(s.price, t, { hidePrefix: (s as any).hidePriceFrom })}</span>
+                      )}
                       <a
                         href={WHATSAPP_URL}
                         target="_blank"
