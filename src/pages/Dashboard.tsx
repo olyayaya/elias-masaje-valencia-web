@@ -18,12 +18,14 @@ import DashboardTestimonials from "@/components/dashboard/DashboardTestimonials"
 import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
 import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
+import DashboardCarousels from "@/components/dashboard/DashboardCarousels";
 
 // Primary sections — always visible
 const primarySections = [
   { id: "overview", icon: Home },
   { id: "services", icon: LayoutDashboard },
   { id: "content", icon: PenLine },
+  { id: "carousels", icon: Images },
   { id: "faq", icon: HelpCircle },
   { id: "blog", icon: FileText },
   { id: "media", icon: Image },
