@@ -29,6 +29,16 @@ const CircularImageCarousel = ({
   // Touch / drag tracking
   const dragStartX = useRef<number | null>(null);
   const dragDelta = useRef(0);
+  const swipeIntent = useRef<"none" | "next" | "prev">("none");
+
+  // De-duped immediate prefetch cache (kept across renders)
+  const prefetched = useRef<Set<string>>(new Set());
+  const prefetch = useCallback((src: string) => {
+    if (!src || prefetched.current.has(src)) return;
+    prefetched.current.add(src);
+    const img = new Image();
+    img.src = src;
+  }, []);
 
   // Responsive column count
   useEffect(() => {
