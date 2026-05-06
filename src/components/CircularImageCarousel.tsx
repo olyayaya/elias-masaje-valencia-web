@@ -178,34 +178,38 @@ const CircularImageCarousel = ({
                 type="button"
                 aria-label="Previous"
                 onClick={prev}
-                className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-full bg-background/70 backdrop-blur-sm text-foreground hover:bg-background transition-colors shadow-sm"
+                className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2 w-11 h-11 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-background/70 backdrop-blur-sm text-foreground hover:bg-background active:bg-background transition-colors shadow-sm"
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={20} />
               </button>
               <button
                 type="button"
                 aria-label="Next"
                 onClick={next}
-                className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-full bg-background/70 backdrop-blur-sm text-foreground hover:bg-background transition-colors shadow-sm"
+                className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 w-11 h-11 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-background/70 backdrop-blur-sm text-foreground hover:bg-background active:bg-background transition-colors shadow-sm"
               >
-                <ChevronRight size={18} />
+                <ChevronRight size={20} />
               </button>
             </>
           )}
         </div>
 
         {showControls && total > 1 && (
-          <div className="flex justify-center gap-1.5 mt-4">
+          <div className="flex justify-center gap-1 mt-3">
             {images.map((_, i) => (
               <button
                 key={i}
                 type="button"
                 aria-label={`Go to slide ${i + 1}`}
                 onClick={() => setIndex(i)}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === activeDot ? "w-6 bg-foreground" : "w-1.5 bg-foreground/30 hover:bg-foreground/50"
-                }`}
-              />
+                className="group flex items-center justify-center h-9 w-9 -mx-0.5"
+              >
+                <span
+                  className={`block h-1.5 rounded-full transition-all ${
+                    i === activeDot ? "w-6 bg-foreground" : "w-1.5 bg-foreground/30 group-hover:bg-foreground/50"
+                  }`}
+                />
+              </button>
             ))}
           </div>
         )}
