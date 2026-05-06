@@ -337,7 +337,14 @@ const DashboardSiteContent = () => {
     setDrafts(d);
   }, [lang, items]);
 
-  const saveItem = async (item: SiteContentRow) => {
+  const [pendingSave, setPendingSave] = useState<SiteContentRow | null>(null);
+
+  const requestSave = (item: SiteContentRow) => setPendingSave(item);
+
+  const confirmSave = async () => {
+    const item = pendingSave;
+    if (!item) return;
+    setPendingSave(null);
     setSaving(item.id);
     const targetCol = effectiveLangKey(lang, item.content_key);
     const { error } = await supabase
@@ -347,7 +354,7 @@ const DashboardSiteContent = () => {
     if (error) {
       toast.error("Failed to save");
     } else {
-      toast.success(`${item.label} saved`);
+      toast.success(`${item.label} is now live`);
       setItems((prev) =>
         prev.map((r) => r.id === item.id ? { ...r, [targetCol]: drafts[item.id] } : r)
       );
