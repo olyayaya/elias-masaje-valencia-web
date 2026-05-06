@@ -24,6 +24,7 @@ const CircularImageCarousel = ({
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [dataMode, setDataMode] = useState<"normal" | "reduced" | "off">("normal");
   const trackRef = useRef<HTMLDivElement>(null);
 
   // Touch / drag tracking
@@ -63,6 +64,29 @@ const CircularImageCarousel = ({
     return () => mq.removeEventListener("change", update);
   }, []);
 
+  // Respect Save-Data and slow / metered connections via the Network Information API.
+  // - off: 2g/slow-2g or save-data → no proactive preload, only the visible slide
+  // - reduced: 3g → preload visible slides only, skip the look-ahead
+  // - normal: 4g/unknown → full visible + 1 look-ahead
+  useEffect(() => {
+    const conn: any = (navigator as any).connection
+      || (navigator as any).mozConnection
+      || (navigator as any).webkitConnection;
+    const update = () => {
+      if (!conn) { setDataMode("normal"); return; }
+      if (conn.saveData || conn.effectiveType === "slow-2g" || conn.effectiveType === "2g") {
+        setDataMode("off");
+      } else if (conn.effectiveType === "3g") {
+        setDataMode("reduced");
+      } else {
+        setDataMode("normal");
+      }
+    };
+    update();
+    conn?.addEventListener?.("change", update);
+    return () => conn?.removeEventListener?.("change", update);
+  }, []);
+
   const total = images.length;
   // Duplicate first `visibleCols` images at the end for seamless looping
   const looped = total > 0 ? [...images, ...images.slice(0, visibleCols)] : [];
@@ -76,7 +100,11 @@ const CircularImageCarousel = ({
     const inFlight: HTMLImageElement[] = [];
     const debounce = setTimeout(() => {
       const normalized = ((index % total) + total) % total;
-      const preloadCount = visibleCols + 1; // current visible + next slide
+      // Tune look-ahead based on connection: off=visible only, reduced=visible only, normal=visible+1
+      const preloadCount =
+        dataMode === "off" ? 1
+        : dataMode === "reduced" ? visibleCols
+        : visibleCols + 1;
       for (let i = 0; i < preloadCount; i++) {
         const img = new Image();
         img.src = images[(normalized + i) % total].src;
@@ -85,25 +113,24 @@ const CircularImageCarousel = ({
     }, 180);
     return () => {
       clearTimeout(debounce);
-      // Cancel any preloads that did start by clearing their src — most browsers
-      // will abort the in-flight network request when src is reset.
       for (const img of inFlight) {
         if (!img.complete) img.src = "";
       }
     };
-  }, [images, index, visibleCols, total]);
+  }, [images, index, visibleCols, total, dataMode]);
 
-  // Immediately warm the image about to scroll into view (bypasses the 180ms debounce)
+  // Immediately warm the image about to scroll into view (bypasses the 180ms debounce).
+  // Skip on save-data / 2g — the regular preloader will load it once it's actually visible.
   const prefetchInDirection = useCallback(
     (dir: 1 | -1) => {
-      if (total === 0) return;
+      if (total === 0 || dataMode === "off") return;
       const normalized = ((index % total) + total) % total;
       const target = dir === 1
-        ? (normalized + visibleCols) % total       // first slide entering from the right
-        : (normalized - 1 + total) % total;        // slide entering from the left
+        ? (normalized + visibleCols) % total
+        : (normalized - 1 + total) % total;
       prefetch(images[target].src);
     },
-    [images, index, visibleCols, total, prefetch],
+    [images, index, visibleCols, total, prefetch, dataMode],
   );
 
   const next = useCallback(() => {
