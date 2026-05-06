@@ -68,7 +68,62 @@ const DashboardHistory = () => {
     }
   };
 
+  const restoreEntry = async (entry: HistoryEntry) => {
+    const { id, created_at, updated_at, ...fields } = entry.snapshot;
+    if (entry.action === "delete") {
+      await supabase.from(entry.table_name as any).insert({ ...entry.snapshot, id: entry.record_id } as any);
+    } else {
+      await supabase.from(entry.table_name as any).update(fields as any).eq("id", entry.record_id);
+    }
+  };
+
+  const runBulkUndo = async () => {
+    setBulkRunning(true);
+    // Restore newest-selected last so the final state is the oldest snapshot per record
+    const ordered = entries
+      .filter((e) => selected.has(e.id))
+      .sort((a, b) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime());
+    let ok = 0;
+    for (const entry of ordered) {
+      try {
+        await restoreEntry(entry);
+        ok++;
+      } catch (e) {
+        console.error("Bulk undo failed for", entry.id, e);
+      }
+    }
+    setBulkRunning(false);
+    setBulkOpen(false);
+    setSelected(new Set());
+    toast.success(`Restored ${ok} of ${ordered.length} changes`);
+    fetchHistory();
+  };
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
   const filtered = filterTable === "all" ? entries : entries.filter(e => e.table_name === filterTable);
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((e) => selected.has(e.id));
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((e) => next.delete(e.id));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((e) => next.add(e.id));
+        return next;
+      });
+    }
+  };
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
