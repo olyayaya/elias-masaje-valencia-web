@@ -122,6 +122,7 @@ const en: DashboardTranslations = {
     faq: "FAQ",
     testimonials: "Testimonials",
     history: "History",
+    carousels: "Carousels",
   },
   overview: {
     monthlyViews: "Monthly views",
