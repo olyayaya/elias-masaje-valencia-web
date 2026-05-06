@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { History, RotateCcw, ChevronDown, ChevronRight, Loader2, Clock, Trash2, Pencil } from "lucide-react";
+import { History, RotateCcw, ChevronDown, ChevronRight, Loader2, Clock, Trash2, Pencil, CheckSquare, Square } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import DashboardCard from "./DashboardCard";
 
 interface HistoryEntry {
@@ -32,6 +34,9 @@ const DashboardHistory = () => {
   const [restoring, setRestoring] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterTable, setFilterTable] = useState<string>("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkRunning, setBulkRunning] = useState(false);
 
   const fetchHistory = async () => {
     const { data } = await supabase
@@ -48,22 +53,73 @@ const DashboardHistory = () => {
   const restore = async (entry: HistoryEntry) => {
     setRestoring(entry.id);
     try {
-      const { id, created_at, updated_at, ...fields } = entry.snapshot;
-
-      if (entry.action === "delete") {
-        await supabase.from(entry.table_name as any).insert({ ...entry.snapshot, id: entry.record_id } as any);
-      } else {
-        await supabase.from(entry.table_name as any).update(fields as any).eq("id", entry.record_id);
-      }
+      await restoreEntry(entry);
+      toast.success("Restored to previous version");
       fetchHistory();
     } catch (err) {
       console.error("Restore failed:", err);
+      toast.error("Restore failed");
     } finally {
       setRestoring(null);
     }
   };
 
+  const restoreEntry = async (entry: HistoryEntry) => {
+    const { id, created_at, updated_at, ...fields } = entry.snapshot;
+    if (entry.action === "delete") {
+      await supabase.from(entry.table_name as any).insert({ ...entry.snapshot, id: entry.record_id } as any);
+    } else {
+      await supabase.from(entry.table_name as any).update(fields as any).eq("id", entry.record_id);
+    }
+  };
+
+  const runBulkUndo = async () => {
+    setBulkRunning(true);
+    // Restore newest-selected last so the final state is the oldest snapshot per record
+    const ordered = entries
+      .filter((e) => selected.has(e.id))
+      .sort((a, b) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime());
+    let ok = 0;
+    for (const entry of ordered) {
+      try {
+        await restoreEntry(entry);
+        ok++;
+      } catch (e) {
+        console.error("Bulk undo failed for", entry.id, e);
+      }
+    }
+    setBulkRunning(false);
+    setBulkOpen(false);
+    setSelected(new Set());
+    toast.success(`Restored ${ok} of ${ordered.length} changes`);
+    fetchHistory();
+  };
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
   const filtered = filterTable === "all" ? entries : entries.filter(e => e.table_name === filterTable);
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((e) => selected.has(e.id));
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((e) => next.delete(e.id));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((e) => next.add(e.id));
+        return next;
+      });
+    }
+  };
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
@@ -84,8 +140,28 @@ const DashboardHistory = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <p className="text-sm text-muted-foreground">{filtered.length} changes recorded</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">{filtered.length} changes recorded</p>
+          {filtered.length > 0 && (
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {allFilteredSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+              {allFilteredSelected ? "Deselect all" : "Select all"}
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2">
+          {selected.size > 0 && (
+            <button
+              onClick={() => setBulkOpen(true)}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity"
+            >
+              <RotateCcw size={12} />
+              Undo {selected.size} selected
+            </button>
+          )}
           <select
             value={filterTable}
             onChange={(e) => setFilterTable(e.target.value)}
@@ -118,26 +194,35 @@ const DashboardHistory = () => {
           <DashboardCard key={entry.id}>
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-3">
-                <button
-                  onClick={() => setExpandedId(isExpanded ? null : entry.id)}
-                  className="flex items-start gap-2 text-left flex-1 min-w-0"
-                >
-                  {isExpanded ? <ChevronDown size={14} className="mt-0.5 text-muted-foreground shrink-0" /> : <ChevronRight size={14} className="mt-0.5 text-muted-foreground shrink-0" />}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                        entry.action === "delete" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
-                      }`}>
-                        {entry.action === "delete" ? <Trash2 size={9} className="inline mr-0.5 -mt-px" /> : <Pencil size={9} className="inline mr-0.5 -mt-px" />}
-                        {entry.action}
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">
-                        {TABLE_LABELS[entry.table_name] || entry.table_name}
-                      </span>
+                <div className="flex items-start gap-2 flex-1 min-w-0">
+                  <button
+                    onClick={() => toggleSelect(entry.id)}
+                    className="mt-0.5 text-muted-foreground hover:text-foreground shrink-0"
+                    aria-label="Select for bulk undo"
+                  >
+                    {selected.has(entry.id) ? <CheckSquare size={14} /> : <Square size={14} />}
+                  </button>
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                    className="flex items-start gap-2 text-left flex-1 min-w-0"
+                  >
+                    {isExpanded ? <ChevronDown size={14} className="mt-0.5 text-muted-foreground shrink-0" /> : <ChevronRight size={14} className="mt-0.5 text-muted-foreground shrink-0" />}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                          entry.action === "delete" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+                        }`}>
+                          {entry.action === "delete" ? <Trash2 size={9} className="inline mr-0.5 -mt-px" /> : <Pencil size={9} className="inline mr-0.5 -mt-px" />}
+                          {entry.action}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">
+                          {TABLE_LABELS[entry.table_name] || entry.table_name}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-medium text-foreground mt-1 truncate">{itemName}</h4>
                     </div>
-                    <h4 className="text-sm font-medium text-foreground mt-1 truncate">{itemName}</h4>
-                  </div>
-                </button>
+                  </button>
+                </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                     <Clock size={10} />
@@ -169,6 +254,35 @@ const DashboardHistory = () => {
           </DashboardCard>
         );
       })}
+
+      <AlertDialog open={bulkOpen} onOpenChange={(o) => !o && setBulkOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Undo {selected.size} change{selected.size === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Each selected item will be restored to the snapshot shown in this row. Changes go live immediately. If multiple snapshots exist for the same record, the oldest selected one wins.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-64 overflow-auto space-y-1 text-xs border border-border rounded-lg p-3">
+            {entries.filter((e) => selected.has(e.id)).map((e) => {
+              const name = e.snapshot[DISPLAY_FIELD[e.table_name] || "id"] || e.record_id.slice(0, 8);
+              return (
+                <div key={e.id} className="flex items-center justify-between gap-2">
+                  <span className="truncate text-foreground">{name}</span>
+                  <span className="text-muted-foreground shrink-0">{TABLE_LABELS[e.table_name] || e.table_name} · {formatDate(e.changed_at)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkRunning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={runBulkUndo} disabled={bulkRunning}>
+              {bulkRunning ? <Loader2 size={14} className="animate-spin mr-1" /> : <RotateCcw size={14} className="mr-1" />}
+              Undo all selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
