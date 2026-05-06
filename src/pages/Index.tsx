@@ -66,8 +66,8 @@ const Index = () => {
           ],
           aggregateRating: {
             "@type": "AggregateRating",
-            ratingValue: "5.0",
-            reviewCount: "66",
+            ratingValue: sc.google_rating || "5.0",
+            reviewCount: sc.google_review_count || "66",
           },
           sameAs: ["https://instagram.com/elias_masaje"],
         },
