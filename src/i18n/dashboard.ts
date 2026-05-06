@@ -19,6 +19,7 @@ export interface DashboardTranslations {
     faq: string;
     testimonials: string;
     history: string;
+    carousels: string;
   };
   overview: {
     monthlyViews: string;
