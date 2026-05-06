@@ -25,7 +25,9 @@ const CircularImageCarousel = ({
   const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [dataMode, setDataMode] = useState<"normal" | "reduced" | "off">("normal");
+  const [nearViewport, setNearViewport] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Touch / drag tracking
   const dragStartX = useRef<number | null>(null);
@@ -87,6 +89,27 @@ const CircularImageCarousel = ({
     return () => conn?.removeEventListener?.("change", update);
   }, []);
 
+  // Only preload when the carousel is near the viewport (within 600px) — keeps off-screen
+  // carousels from grabbing bandwidth before the user scrolls anywhere near them.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setNearViewport(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) setNearViewport(true);
+        }
+      },
+      { rootMargin: "600px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   const total = images.length;
   // Duplicate first `visibleCols` images at the end for seamless looping
   const looped = total > 0 ? [...images, ...images.slice(0, visibleCols)] : [];
@@ -96,7 +119,7 @@ const CircularImageCarousel = ({
   // and any preloads in-flight from a previous index get aborted (img.src cleared) so the
   // browser can cancel the network request.
   useEffect(() => {
-    if (total === 0) return;
+    if (total === 0 || !nearViewport) return;
     const inFlight: HTMLImageElement[] = [];
     const debounce = setTimeout(() => {
       const normalized = ((index % total) + total) % total;
@@ -117,7 +140,7 @@ const CircularImageCarousel = ({
         if (!img.complete) img.src = "";
       }
     };
-  }, [images, index, visibleCols, total, dataMode]);
+  }, [images, index, visibleCols, total, dataMode, nearViewport]);
 
   // Immediately warm the image about to scroll into view (bypasses the 180ms debounce).
   // Skip on save-data / 2g — the regular preloader will load it once it's actually visible.
@@ -223,6 +246,7 @@ const CircularImageCarousel = ({
     <div ref={anim.ref} style={anim.style} className={className}>
       <div className="max-w-5xl mx-auto">
         <div
+          ref={containerRef}
           className="relative overflow-hidden md:rounded-2xl"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
@@ -252,8 +276,8 @@ const CircularImageCarousel = ({
                     alt={img.alt}
                     className="w-full h-full object-cover"
                     draggable={false}
-                    loading={i >= index && i < index + visibleCols + 1 ? "eager" : "lazy"}
-                    fetchPriority={i >= index && i < index + visibleCols ? "high" : "auto"}
+                    loading={nearViewport && i >= index && i < index + visibleCols + 1 ? "eager" : "lazy"}
+                    fetchPriority={nearViewport && i >= index && i < index + visibleCols ? "high" : "auto"}
                   />
                 </div>
               </div>
