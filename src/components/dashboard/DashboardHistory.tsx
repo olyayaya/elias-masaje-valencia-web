@@ -194,26 +194,35 @@ const DashboardHistory = () => {
           <DashboardCard key={entry.id}>
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-3">
-                <button
-                  onClick={() => setExpandedId(isExpanded ? null : entry.id)}
-                  className="flex items-start gap-2 text-left flex-1 min-w-0"
-                >
-                  {isExpanded ? <ChevronDown size={14} className="mt-0.5 text-muted-foreground shrink-0" /> : <ChevronRight size={14} className="mt-0.5 text-muted-foreground shrink-0" />}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                        entry.action === "delete" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
-                      }`}>
-                        {entry.action === "delete" ? <Trash2 size={9} className="inline mr-0.5 -mt-px" /> : <Pencil size={9} className="inline mr-0.5 -mt-px" />}
-                        {entry.action}
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">
-                        {TABLE_LABELS[entry.table_name] || entry.table_name}
-                      </span>
+                <div className="flex items-start gap-2 flex-1 min-w-0">
+                  <button
+                    onClick={() => toggleSelect(entry.id)}
+                    className="mt-0.5 text-muted-foreground hover:text-foreground shrink-0"
+                    aria-label="Select for bulk undo"
+                  >
+                    {selected.has(entry.id) ? <CheckSquare size={14} /> : <Square size={14} />}
+                  </button>
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                    className="flex items-start gap-2 text-left flex-1 min-w-0"
+                  >
+                    {isExpanded ? <ChevronDown size={14} className="mt-0.5 text-muted-foreground shrink-0" /> : <ChevronRight size={14} className="mt-0.5 text-muted-foreground shrink-0" />}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                          entry.action === "delete" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+                        }`}>
+                          {entry.action === "delete" ? <Trash2 size={9} className="inline mr-0.5 -mt-px" /> : <Pencil size={9} className="inline mr-0.5 -mt-px" />}
+                          {entry.action}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">
+                          {TABLE_LABELS[entry.table_name] || entry.table_name}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-medium text-foreground mt-1 truncate">{itemName}</h4>
                     </div>
-                    <h4 className="text-sm font-medium text-foreground mt-1 truncate">{itemName}</h4>
-                  </div>
-                </button>
+                  </button>
+                </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                     <Clock size={10} />
