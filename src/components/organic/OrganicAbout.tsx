@@ -156,18 +156,7 @@ const OrganicAbout = () => {
         </div>
 
         <div className="relative">
-          <CircularImageCarousel
-            images={[
-              { src: massageArm, alt: "Arm massage" },
-              { src: massageStones, alt: "Hot stone therapy" },
-              { src: massageBack, alt: "Back massage" },
-              { src: massageOil, alt: "Oil massage" },
-              { src: massageNeck, alt: "Neck massage" },
-              { src: massageWrist, alt: "Wrist massage" },
-              { src: massageFoot, alt: "Foot massage" },
-              { src: massageDeep, alt: "Deep tissue work" },
-            ]}
-          />
+          <CircularImageCarousel images={aboutCarouselImages} />
 
           {/* Bottom half-moon overlaying gallery image on mobile */}
           <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none md:hidden">
