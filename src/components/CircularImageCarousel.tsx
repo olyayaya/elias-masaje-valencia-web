@@ -64,6 +64,29 @@ const CircularImageCarousel = ({
     return () => mq.removeEventListener("change", update);
   }, []);
 
+  // Respect Save-Data and slow / metered connections via the Network Information API.
+  // - off: 2g/slow-2g or save-data → no proactive preload, only the visible slide
+  // - reduced: 3g → preload visible slides only, skip the look-ahead
+  // - normal: 4g/unknown → full visible + 1 look-ahead
+  useEffect(() => {
+    const conn: any = (navigator as any).connection
+      || (navigator as any).mozConnection
+      || (navigator as any).webkitConnection;
+    const update = () => {
+      if (!conn) { setDataMode("normal"); return; }
+      if (conn.saveData || conn.effectiveType === "slow-2g" || conn.effectiveType === "2g") {
+        setDataMode("off");
+      } else if (conn.effectiveType === "3g") {
+        setDataMode("reduced");
+      } else {
+        setDataMode("normal");
+      }
+    };
+    update();
+    conn?.addEventListener?.("change", update);
+    return () => conn?.removeEventListener?.("change", update);
+  }, []);
+
   const total = images.length;
   // Duplicate first `visibleCols` images at the end for seamless looping
   const looped = total > 0 ? [...images, ...images.slice(0, visibleCols)] : [];
