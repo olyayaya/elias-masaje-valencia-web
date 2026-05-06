@@ -53,17 +53,21 @@ const CircularImageCarousel = ({
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  // Preload all images
-  useEffect(() => {
-    images.forEach((img) => {
-      const i = new Image();
-      i.src = img.src;
-    });
-  }, [images]);
-
   const total = images.length;
   // Duplicate first `visibleCols` images at the end for seamless looping
   const looped = total > 0 ? [...images, ...images.slice(0, visibleCols)] : [];
+
+  // Eagerly preload only the currently-visible slides + the next batch about to scroll in.
+  // Everything else stays lazy (handled by <img loading="lazy" /> below).
+  useEffect(() => {
+    if (total === 0) return;
+    const normalized = ((index % total) + total) % total;
+    const preloadCount = visibleCols + 1; // current visible + next slide
+    for (let i = 0; i < preloadCount; i++) {
+      const img = new Image();
+      img.src = images[(normalized + i) % total].src;
+    }
+  }, [images, index, visibleCols, total]);
 
   const next = useCallback(() => setIndex((i) => i + 1), []);
   const prev = useCallback(() => setIndex((i) => i - 1), []);
