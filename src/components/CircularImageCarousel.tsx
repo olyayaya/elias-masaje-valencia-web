@@ -100,7 +100,11 @@ const CircularImageCarousel = ({
     const inFlight: HTMLImageElement[] = [];
     const debounce = setTimeout(() => {
       const normalized = ((index % total) + total) % total;
-      const preloadCount = visibleCols + 1; // current visible + next slide
+      // Tune look-ahead based on connection: off=visible only, reduced=visible only, normal=visible+1
+      const preloadCount =
+        dataMode === "off" ? 1
+        : dataMode === "reduced" ? visibleCols
+        : visibleCols + 1;
       for (let i = 0; i < preloadCount; i++) {
         const img = new Image();
         img.src = images[(normalized + i) % total].src;
@@ -109,25 +113,24 @@ const CircularImageCarousel = ({
     }, 180);
     return () => {
       clearTimeout(debounce);
-      // Cancel any preloads that did start by clearing their src — most browsers
-      // will abort the in-flight network request when src is reset.
       for (const img of inFlight) {
         if (!img.complete) img.src = "";
       }
     };
-  }, [images, index, visibleCols, total]);
+  }, [images, index, visibleCols, total, dataMode]);
 
-  // Immediately warm the image about to scroll into view (bypasses the 180ms debounce)
+  // Immediately warm the image about to scroll into view (bypasses the 180ms debounce).
+  // Skip on save-data / 2g — the regular preloader will load it once it's actually visible.
   const prefetchInDirection = useCallback(
     (dir: 1 | -1) => {
-      if (total === 0) return;
+      if (total === 0 || dataMode === "off") return;
       const normalized = ((index % total) + total) % total;
       const target = dir === 1
-        ? (normalized + visibleCols) % total       // first slide entering from the right
-        : (normalized - 1 + total) % total;        // slide entering from the left
+        ? (normalized + visibleCols) % total
+        : (normalized - 1 + total) % total;
       prefetch(images[target].src);
     },
-    [images, index, visibleCols, total, prefetch],
+    [images, index, visibleCols, total, prefetch, dataMode],
   );
 
   const next = useCallback(() => {
