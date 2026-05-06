@@ -145,7 +145,7 @@ const CircularImageCarousel = ({
             className="flex touch-pan-y select-none"
             style={{
               transform: `translateX(${translatePct}%)`,
-              transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+              transition: reducedMotion ? "none" : `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
               willChange: "transform",
             }}
             onPointerDown={onPointerDown}
