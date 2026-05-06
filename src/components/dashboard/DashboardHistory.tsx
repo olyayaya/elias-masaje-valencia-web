@@ -140,8 +140,28 @@ const DashboardHistory = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <p className="text-sm text-muted-foreground">{filtered.length} changes recorded</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">{filtered.length} changes recorded</p>
+          {filtered.length > 0 && (
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {allFilteredSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+              {allFilteredSelected ? "Deselect all" : "Select all"}
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2">
+          {selected.size > 0 && (
+            <button
+              onClick={() => setBulkOpen(true)}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity"
+            >
+              <RotateCcw size={12} />
+              Undo {selected.size} selected
+            </button>
+          )}
           <select
             value={filterTable}
             onChange={(e) => setFilterTable(e.target.value)}
