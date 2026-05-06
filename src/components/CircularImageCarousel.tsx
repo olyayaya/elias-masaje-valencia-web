@@ -1,176 +1,39 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useFadeIn } from "@/hooks/use-fade-in";
 
 interface CircularImageCarouselProps {
   images: { src: string; alt: string }[];
   className?: string;
+  /** Show prev/next arrows and dot indicators. Defaults to true. */
+  showControls?: boolean;
+  /** Autoplay interval in ms. Defaults to 4500. */
+  autoplayMs?: number;
 }
 
-const CYCLE_DURATION = 6000; // total time each image is shown (including crossfade)
-const FADE_TIME = 750; // single dissolve duration
-const COL_OFFSETS = [0, 800, 400];
-const FOCUS_DURATION = 10000;
+const TRANSITION_MS = 700;
 
-function preloadImage(src: string) {
-  const img = new Image();
-  img.src = src;
-}
-
-/**
- * Build `cols` sequences of length `len` from `images`,
- * guaranteeing that no two columns share the same image at the same index.
- */
-function buildSyncedSequences(
-  images: { src: string; alt: string }[],
-  cols: number,
-  len: number
-) {
-  const seqs: { src: string; alt: string }[][] = Array.from({ length: cols }, () => []);
-
-  for (let i = 0; i < len; i++) {
-    const usedAtThisIndex = new Set<string>();
-    for (let c = 0; c < cols; c++) {
-      const candidates = images.filter((img) => !usedAtThisIndex.has(img.src));
-      const pick =
-        candidates.length > 0
-          ? candidates[Math.floor(Math.random() * candidates.length)]
-          : images[Math.floor(Math.random() * images.length)];
-      seqs[c].push(pick);
-      usedAtThisIndex.add(pick.src);
-    }
-  }
-
-  return seqs;
-}
-
-const DissolveCell = ({
+const CircularImageCarousel = ({
   images,
-  delay,
-  focused,
-  colIndex,
-  onImageChange,
-  getActiveImages,
-}: {
-  images: { src: string; alt: string }[];
-  delay: number;
-  focused: boolean;
-  colIndex: number;
-  onImageChange: (col: number, srcs: string[]) => void;
-  getActiveImages: (excludeCol: number) => Set<string>;
-}) => {
-  const [current, setCurrent] = useState(0);
-  const [next, setNext] = useState(1);
-  const [fading, setFading] = useState(false);
-  const [started, setStarted] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
-
-  useEffect(() => {
-    onImageChange(colIndex, [images[0]?.src ?? ""]);
-  }, [colIndex, images, onImageChange]);
-
-  const pickNext = useCallback(
-    (afterIndex: number) => {
-      const active = getActiveImages(colIndex);
-      for (let offset = 1; offset <= images.length; offset++) {
-        const idx = (afterIndex + offset) % images.length;
-        if (!active.has(images[idx].src)) return idx;
-      }
-      return (afterIndex + 1) % images.length;
-    },
-    [images, colIndex, getActiveImages]
-  );
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setStarted(true);
-      onImageChange(colIndex, [images[current].src]);
-    }, delay);
-    return () => clearTimeout(t);
-  }, [delay, colIndex, current, images, onImageChange]);
-
-  useEffect(() => {
-    if (!started) return;
-    const holdTimer = setTimeout(() => {
-      const nextIdx = pickNext(current);
-      // Preload next image before triggering crossfade
-      preloadImage(images[nextIdx].src);
-      setNext(nextIdx);
-      onImageChange(colIndex, [images[current].src, images[nextIdx].src]);
-      setFading(true);
-    }, CYCLE_DURATION - FADE_TIME);
-    return () => clearTimeout(holdTimer);
-  }, [current, started, pickNext, colIndex, images, onImageChange]);
-
-  useEffect(() => {
-    if (!fading) return;
-    const fadeTimer = setTimeout(() => {
-      setCurrent(next);
-      onImageChange(colIndex, [images[next].src]);
-      setFading(false);
-    }, FADE_TIME);
-    return () => clearTimeout(fadeTimer);
-  }, [fading, next, images, colIndex, onImageChange]);
-
-  const currentImg = images[current];
-  const nextImg = images[next];
-
-  return (
-    <div className="rounded-none md:rounded-2xl overflow-hidden w-full aspect-[9/8] md:aspect-[3/2] relative">
-      <img
-        src={currentImg.src}
-        alt={currentImg.alt}
-        className="absolute inset-0 w-full h-full object-cover"
-        loading="eager"
-        draggable={false}
-        onLoad={() => setImgLoaded(true)}
-        style={{
-          opacity: !started || !imgLoaded ? 0 : fading ? 0 : 1,
-          transition: `opacity ${FADE_TIME}ms ease-in-out`,
-          willChange: "opacity",
-        }}
-      />
-      <img
-        src={nextImg.src}
-        alt={nextImg.alt}
-        className="absolute inset-0 w-full h-full object-cover"
-        loading="lazy"
-        draggable={false}
-        style={{
-          opacity: fading ? 1 : 0,
-          transition: `opacity ${FADE_TIME}ms ease-in-out`,
-          willChange: "opacity",
-        }}
-      />
-      <div
-        className="absolute inset-0 pointer-events-none rounded-2xl"
-        style={{
-          backgroundColor: "hsl(var(--secondary))",
-          opacity: focused ? 0 : 1,
-          transition: "opacity 3000ms ease-in-out",
-        }}
-      />
-    </div>
-  );
-};
-
-const CircularImageCarousel = ({ images, className = "" }: CircularImageCarouselProps) => {
+  className = "",
+  showControls = true,
+  autoplayMs = 4500,
+}: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
-  const maxCols = 3;
-  const [mutedCol, setMutedCol] = useState(2);
   const [visibleCols, setVisibleCols] = useState(1);
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
 
-  // Preload all images up front so dissolves never wait on the network
-  useEffect(() => {
-    images.forEach((img) => preloadImage(img.src));
-  }, [images]);
+  // Touch / drag tracking
+  const dragStartX = useRef<number | null>(null);
+  const dragDelta = useRef(0);
 
-  // Track visible column count via matchMedia
+  // Responsive column count
   useEffect(() => {
     const lgMq = window.matchMedia("(min-width: 1024px)");
     const mdMq = window.matchMedia("(min-width: 768px)");
-    const update = () => {
-      setVisibleCols(lgMq.matches ? 3 : mdMq.matches ? 2 : 1);
-    };
+    const update = () => setVisibleCols(lgMq.matches ? 3 : mdMq.matches ? 2 : 1);
     update();
     lgMq.addEventListener("change", update);
     mdMq.addEventListener("change", update);
@@ -180,50 +43,162 @@ const CircularImageCarousel = ({ images, className = "" }: CircularImageCarousel
     };
   }, []);
 
-  // Track which image srcs each column is currently showing (includes both during crossfade)
-  const activeImagesRef = useRef<Map<number, string[]>>(new Map());
-
-  const handleImageChange = useCallback((col: number, srcs: string[]) => {
-    activeImagesRef.current.set(col, srcs);
-  }, []);
-
-  const getActiveImages = useCallback((excludeCol: number): Set<string> => {
-    const set = new Set<string>();
-    activeImagesRef.current.forEach((srcs, col) => {
-      if (col !== excludeCol) srcs.forEach((s) => set.add(s));
-    });
-    return set;
-  }, []);
-
+  // Preload all images
   useEffect(() => {
-    const interval = setInterval(() => {
-      setMutedCol((prev) => (prev + 1) % maxCols);
-    }, FOCUS_DURATION);
-    return () => clearInterval(interval);
-  }, [maxCols]);
-
-  const sequences = useMemo(() => {
-    return buildSyncedSequences(images, maxCols, images.length * 10);
+    images.forEach((img) => {
+      const i = new Image();
+      i.src = img.src;
+    });
   }, [images]);
+
+  const total = images.length;
+  // Duplicate first `visibleCols` images at the end for seamless looping
+  const looped = total > 0 ? [...images, ...images.slice(0, visibleCols)] : [];
+
+  const next = useCallback(() => setIndex((i) => i + 1), []);
+  const prev = useCallback(() => setIndex((i) => i - 1), []);
+
+  // Autoplay
+  useEffect(() => {
+    if (paused || total === 0) return;
+    const id = setInterval(next, autoplayMs);
+    return () => clearInterval(id);
+  }, [paused, autoplayMs, next, total]);
+
+  // Seamless loop reset: when we cross into the duplicated tail, snap back without animation
+  useEffect(() => {
+    if (index < total) return;
+    const t = setTimeout(() => {
+      const track = trackRef.current;
+      if (!track) return;
+      track.style.transition = "none";
+      setIndex(0);
+      // Force reflow then restore transition
+      void track.offsetWidth;
+      track.style.transition = "";
+    }, TRANSITION_MS);
+    return () => clearTimeout(t);
+  }, [index, total]);
+
+  // Negative index normalization (when user hits prev at 0)
+  useEffect(() => {
+    if (index >= 0) return;
+    const t = setTimeout(() => {
+      const track = trackRef.current;
+      if (!track) return;
+      track.style.transition = "none";
+      setIndex(total - 1);
+      void track.offsetWidth;
+      track.style.transition = "";
+    }, TRANSITION_MS);
+    return () => clearTimeout(t);
+  }, [index, total]);
+
+  const slidePct = 100 / visibleCols;
+  const translatePct = -(index * slidePct);
+
+  // Drag handlers
+  const onPointerDown = (e: React.PointerEvent) => {
+    dragStartX.current = e.clientX;
+    dragDelta.current = 0;
+    setPaused(true);
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (dragStartX.current === null) return;
+    dragDelta.current = e.clientX - dragStartX.current;
+  };
+  const onPointerUp = () => {
+    if (dragStartX.current === null) return;
+    const threshold = 50;
+    if (dragDelta.current > threshold) prev();
+    else if (dragDelta.current < -threshold) next();
+    dragStartX.current = null;
+    dragDelta.current = 0;
+    setPaused(false);
+  };
+
+  const activeDot = ((index % total) + total) % total;
+
+  if (total === 0) return null;
 
   return (
     <div ref={anim.ref} style={anim.style} className={className}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 md:gap-6 max-w-5xl mx-auto items-start">
-        {sequences.map((seq, col) => (
+      <div className="max-w-5xl mx-auto">
+        <div
+          className="relative overflow-hidden md:rounded-2xl"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
           <div
-            key={col}
-            className={col === 2 ? "hidden lg:block" : col === 1 ? "hidden md:block" : ""}
+            ref={trackRef}
+            className="flex touch-pan-y select-none"
+            style={{
+              transform: `translateX(${translatePct}%)`,
+              transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+              willChange: "transform",
+            }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
           >
-            <DissolveCell
-              images={seq}
-              delay={COL_OFFSETS[col]}
-              focused={visibleCols === 1 ? true : col !== mutedCol}
-              colIndex={col}
-              onImageChange={handleImageChange}
-              getActiveImages={getActiveImages}
-            />
+            {looped.map((img, i) => (
+              <div
+                key={`${img.src}-${i}`}
+                className="shrink-0 px-0 md:px-3"
+                style={{ width: `${slidePct}%` }}
+              >
+                <div className="rounded-none md:rounded-2xl overflow-hidden w-full aspect-[9/8] md:aspect-[3/2] bg-secondary">
+                  <img
+                    src={img.src}
+                    alt={img.alt}
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                    loading={i < visibleCols * 2 ? "eager" : "lazy"}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+
+          {showControls && total > visibleCols && (
+            <>
+              <button
+                type="button"
+                aria-label="Previous"
+                onClick={prev}
+                className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-full bg-background/70 backdrop-blur-sm text-foreground hover:bg-background transition-colors shadow-sm"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                type="button"
+                aria-label="Next"
+                onClick={next}
+                className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-full bg-background/70 backdrop-blur-sm text-foreground hover:bg-background transition-colors shadow-sm"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </>
+          )}
+        </div>
+
+        {showControls && total > 1 && (
+          <div className="flex justify-center gap-1.5 mt-4">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Go to slide ${i + 1}`}
+                onClick={() => setIndex(i)}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === activeDot ? "w-6 bg-foreground" : "w-1.5 bg-foreground/30 hover:bg-foreground/50"
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
