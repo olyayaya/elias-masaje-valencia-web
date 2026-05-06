@@ -32,6 +32,7 @@ const CATEGORIES: { id: string; label: string; pathHint?: string }[] = [
   { id: "about_page", label: "About Me — full page", pathHint: "Controls the content shown on /sobre-mi" },
   { id: "footer", label: "Footer" },
   { id: "location", label: "Location" },
+  { id: "reviews", label: "Reviews & Rating", pathHint: "Manually update the average rating and total review count shown on the homepage and in Google's structured data" },
   { id: "seo", label: "SEO & Crawlers" },
 ];
 
