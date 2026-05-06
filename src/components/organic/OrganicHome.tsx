@@ -47,6 +47,19 @@ const OrganicHome = () => {
   const dbFaqs = useDbFaqs();
   const dbTestimonials = useDbTestimonials();
   const { content: sc } = useSiteContent();
+  const customHomeCarousel = usePageImages("home_carousel");
+  const defaultHomeCarousel = [
+    { src: massageWrist, alt: "Wrist massage" },
+    { src: massageBack, alt: "Back massage" },
+    { src: massageNeck, alt: "Neck massage" },
+    { src: massageStones, alt: "Hot stone therapy" },
+    { src: massageShoulder, alt: "Shoulder massage" },
+    { src: massageDeep, alt: "Deep tissue work" },
+    { src: massageOil, alt: "Oil massage" },
+    { src: massageArm, alt: "Arm massage" },
+    { src: massageFoot, alt: "Foot massage" },
+  ];
+  const homeCarouselImages = customHomeCarousel.length > 0 ? customHomeCarousel : defaultHomeCarousel;
 
   /** Resolve a CSS color; returns "transparent" in dark-gradient mode for seamless bg */
   const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
