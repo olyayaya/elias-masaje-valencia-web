@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { History, RotateCcw, ChevronDown, ChevronRight, Loader2, Clock, Trash2, Pencil } from "lucide-react";
+import { History, RotateCcw, ChevronDown, ChevronRight, Loader2, Clock, Trash2, Pencil, CheckSquare, Square } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import DashboardCard from "./DashboardCard";
 
 interface HistoryEntry {
