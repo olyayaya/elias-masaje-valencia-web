@@ -47,6 +47,19 @@ const OrganicAbout = () => {
     : t.about.spaceParagraphs;
   const galleryTitle    = sc.about_gallery_title?.trim()  || t.about.gallery;
 
+  const customAboutCarousel = usePageImages("about_carousel");
+  const defaultAboutCarousel = [
+    { src: massageArm, alt: "Arm massage" },
+    { src: massageStones, alt: "Hot stone therapy" },
+    { src: massageBack, alt: "Back massage" },
+    { src: massageOil, alt: "Oil massage" },
+    { src: massageNeck, alt: "Neck massage" },
+    { src: massageWrist, alt: "Wrist massage" },
+    { src: massageFoot, alt: "Foot massage" },
+    { src: massageDeep, alt: "Deep tissue work" },
+  ];
+  const aboutCarouselImages = customAboutCarousel.length > 0 ? customAboutCarousel : defaultAboutCarousel;
+
   return (
     <div>
       {/* Hero — editorial intro with large portrait */}
