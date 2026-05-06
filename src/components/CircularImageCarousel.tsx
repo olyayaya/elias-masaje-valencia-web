@@ -89,6 +89,27 @@ const CircularImageCarousel = ({
     return () => conn?.removeEventListener?.("change", update);
   }, []);
 
+  // Only preload when the carousel is near the viewport (within 600px) — keeps off-screen
+  // carousels from grabbing bandwidth before the user scrolls anywhere near them.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setNearViewport(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) setNearViewport(true);
+        }
+      },
+      { rootMargin: "600px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   const total = images.length;
   // Duplicate first `visibleCols` images at the end for seamless looping
   const looped = total > 0 ? [...images, ...images.slice(0, visibleCols)] : [];
