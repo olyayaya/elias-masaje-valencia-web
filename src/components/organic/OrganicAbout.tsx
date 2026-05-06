@@ -12,6 +12,7 @@ import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
+import { usePageImages } from "@/hooks/use-page-images";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -45,6 +46,19 @@ const OrganicAbout = () => {
     ? splitParagraphs(sc.about_space_paragraphs)
     : t.about.spaceParagraphs;
   const galleryTitle    = sc.about_gallery_title?.trim()  || t.about.gallery;
+
+  const customAboutCarousel = usePageImages("about_carousel");
+  const defaultAboutCarousel = [
+    { src: massageArm, alt: "Arm massage" },
+    { src: massageStones, alt: "Hot stone therapy" },
+    { src: massageBack, alt: "Back massage" },
+    { src: massageOil, alt: "Oil massage" },
+    { src: massageNeck, alt: "Neck massage" },
+    { src: massageWrist, alt: "Wrist massage" },
+    { src: massageFoot, alt: "Foot massage" },
+    { src: massageDeep, alt: "Deep tissue work" },
+  ];
+  const aboutCarouselImages = customAboutCarousel.length > 0 ? customAboutCarousel : defaultAboutCarousel;
 
   return (
     <div>
@@ -142,18 +156,7 @@ const OrganicAbout = () => {
         </div>
 
         <div className="relative">
-          <CircularImageCarousel
-            images={[
-              { src: massageArm, alt: "Arm massage" },
-              { src: massageStones, alt: "Hot stone therapy" },
-              { src: massageBack, alt: "Back massage" },
-              { src: massageOil, alt: "Oil massage" },
-              { src: massageNeck, alt: "Neck massage" },
-              { src: massageWrist, alt: "Wrist massage" },
-              { src: massageFoot, alt: "Foot massage" },
-              { src: massageDeep, alt: "Deep tissue work" },
-            ]}
-          />
+          <CircularImageCarousel images={aboutCarouselImages} />
 
           {/* Bottom half-moon overlaying gallery image on mobile */}
           <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none md:hidden">

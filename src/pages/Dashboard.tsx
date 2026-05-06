@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe, ChevronDown, Sun, Moon, Sparkles
+  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe, ChevronDown, Sun, Moon, Sparkles, Images
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { Locale } from "@/i18n/types";
@@ -18,12 +18,14 @@ import DashboardTestimonials from "@/components/dashboard/DashboardTestimonials"
 import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
 import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
+import DashboardCarousels from "@/components/dashboard/DashboardCarousels";
 
 // Primary sections — always visible
 const primarySections = [
   { id: "overview", icon: Home },
   { id: "services", icon: LayoutDashboard },
   { id: "content", icon: PenLine },
+  { id: "carousels", icon: Images },
   { id: "faq", icon: HelpCircle },
   { id: "blog", icon: FileText },
   { id: "media", icon: Image },
@@ -59,6 +61,7 @@ const Dashboard = () => {
       case "overview": return <DashboardOverview onNavigate={navigateTo} />;
       case "services": return <DashboardServices />;
       case "content": return <DashboardSiteContent />;
+      case "carousels": return <DashboardCarousels />;
       case "promotions": return <DashboardPromotions />;
       case "blog": return <DashboardBlog />;
       case "seo": return <DashboardSEO />;

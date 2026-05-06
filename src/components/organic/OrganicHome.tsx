@@ -23,6 +23,7 @@ import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import CircularImage from "@/components/CircularImage";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
+import { usePageImages } from "@/hooks/use-page-images";
 import CurvedDivider from "@/components/CurvedDivider";
 import FaqAccordion from "@/components/FaqAccordion";
 import MapBlock from "@/components/MapBlock";
@@ -46,6 +47,19 @@ const OrganicHome = () => {
   const dbFaqs = useDbFaqs();
   const dbTestimonials = useDbTestimonials();
   const { content: sc } = useSiteContent();
+  const customHomeCarousel = usePageImages("home_carousel");
+  const defaultHomeCarousel = [
+    { src: massageWrist, alt: "Wrist massage" },
+    { src: massageBack, alt: "Back massage" },
+    { src: massageNeck, alt: "Neck massage" },
+    { src: massageStones, alt: "Hot stone therapy" },
+    { src: massageShoulder, alt: "Shoulder massage" },
+    { src: massageDeep, alt: "Deep tissue work" },
+    { src: massageOil, alt: "Oil massage" },
+    { src: massageArm, alt: "Arm massage" },
+    { src: massageFoot, alt: "Foot massage" },
+  ];
+  const homeCarouselImages = customHomeCarousel.length > 0 ? customHomeCarousel : defaultHomeCarousel;
 
   /** Resolve a CSS color; returns "transparent" in dark-gradient mode for seamless bg */
   const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
@@ -200,19 +214,7 @@ const OrganicHome = () => {
 
           {/* Circular image cluster — full bleed on mobile, padded on desktop */}
           <div className="-mx-6 md:mx-0">
-            <CircularImageCarousel
-              images={[
-                { src: massageWrist, alt: "Wrist massage" },
-                { src: massageBack, alt: "Back massage" },
-                { src: massageNeck, alt: "Neck massage" },
-                { src: massageStones, alt: "Hot stone therapy" },
-                { src: massageShoulder, alt: "Shoulder massage" },
-                { src: massageDeep, alt: "Deep tissue work" },
-                { src: massageOil, alt: "Oil massage" },
-                { src: massageArm, alt: "Arm massage" },
-                { src: massageFoot, alt: "Foot massage" },
-              ]}
-            />
+            <CircularImageCarousel images={homeCarouselImages} />
           </div>
         </div>
 

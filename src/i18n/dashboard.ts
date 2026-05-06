@@ -19,6 +19,7 @@ export interface DashboardTranslations {
     faq: string;
     testimonials: string;
     history: string;
+    carousels: string;
   };
   overview: {
     monthlyViews: string;
@@ -121,6 +122,7 @@ const en: DashboardTranslations = {
     faq: "FAQ",
     testimonials: "Testimonials",
     history: "History",
+    carousels: "Carousels",
   },
   overview: {
     monthlyViews: "Monthly views",
@@ -223,6 +225,7 @@ const es: DashboardTranslations = {
     faq: "Preguntas frecuentes",
     testimonials: "Testimonios",
     history: "Historial",
+    carousels: "Carruseles",
   },
   overview: {
     monthlyViews: "Visitas mensuales",
@@ -325,6 +328,7 @@ const ru: DashboardTranslations = {
     faq: "Вопросы и ответы",
     testimonials: "Отзывы",
     history: "История",
+    carousels: "Карусели",
   },
   overview: {
     monthlyViews: "Просмотров в месяц",

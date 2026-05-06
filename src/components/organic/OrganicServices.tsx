@@ -15,6 +15,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useDbServices, useDbPromotions, resolveField } from "@/hooks/use-db-content";
 
 import CircularImageCarousel from "@/components/CircularImageCarousel";
+import { usePageImages } from "@/hooks/use-page-images";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { WHATSAPP_URL } from "@/config/contact";
@@ -71,6 +72,20 @@ const OrganicServices = () => {
   const { content: sc } = useSiteContent();
   const dbServices = useDbServices();
   const dbPromotions = useDbPromotions();
+  const customCarousel = usePageImages("services_carousel");
+
+  const defaultCarousel = [
+    { src: massageArm, alt: "Arm massage" },
+    { src: massageDeep, alt: "Deep tissue work" },
+    { src: massageNeck, alt: "Neck massage" },
+    { src: massageOil, alt: "Oil massage" },
+    { src: massageShoulder, alt: "Shoulder massage" },
+    { src: massageStones, alt: "Hot stone therapy" },
+    { src: massageBack, alt: "Back massage" },
+    { src: massageWrist, alt: "Wrist massage" },
+    { src: massageFoot, alt: "Foot massage" },
+  ];
+  const carouselImages = customCarousel.length > 0 ? customCarousel : defaultCarousel;
 
   const langBadge = (p: { badge_text: string; badge_text_en: string; badge_text_ru: string }) => {
     if (locale === "en" && p.badge_text_en?.trim()) return p.badge_text_en;
@@ -153,19 +168,7 @@ const OrganicServices = () => {
 
         <div className={`${isDG ? 'bg-transparent' : 'bg-transparent md:bg-secondary'} px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden`}>
           <div className="max-w-5xl mx-auto">
-            <CircularImageCarousel
-              images={[
-                { src: massageArm, alt: "Arm massage" },
-                { src: massageDeep, alt: "Deep tissue work" },
-                { src: massageNeck, alt: "Neck massage" },
-                { src: massageOil, alt: "Oil massage" },
-                { src: massageShoulder, alt: "Shoulder massage" },
-                { src: massageStones, alt: "Hot stone therapy" },
-                { src: massageBack, alt: "Back massage" },
-                { src: massageWrist, alt: "Wrist massage" },
-                { src: massageFoot, alt: "Foot massage" },
-              ]}
-            />
+            <CircularImageCarousel images={carouselImages} />
           </div>
         </div>
 
