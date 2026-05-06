@@ -328,6 +328,7 @@ const ru: DashboardTranslations = {
     faq: "Вопросы и ответы",
     testimonials: "Отзывы",
     history: "История",
+    carousels: "Карусели",
   },
   overview: {
     monthlyViews: "Просмотров в месяц",
