@@ -140,7 +140,7 @@ const CircularImageCarousel = ({
         if (!img.complete) img.src = "";
       }
     };
-  }, [images, index, visibleCols, total, dataMode]);
+  }, [images, index, visibleCols, total, dataMode, nearViewport]);
 
   // Immediately warm the image about to scroll into view (bypasses the 180ms debounce).
   // Skip on save-data / 2g — the regular preloader will load it once it's actually visible.
