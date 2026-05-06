@@ -25,7 +25,9 @@ const CircularImageCarousel = ({
   const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [dataMode, setDataMode] = useState<"normal" | "reduced" | "off">("normal");
+  const [nearViewport, setNearViewport] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Touch / drag tracking
   const dragStartX = useRef<number | null>(null);
