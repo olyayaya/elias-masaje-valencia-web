@@ -246,6 +246,7 @@ const CircularImageCarousel = ({
     <div ref={anim.ref} style={anim.style} className={className}>
       <div className="max-w-5xl mx-auto">
         <div
+          ref={containerRef}
           className="relative overflow-hidden md:rounded-2xl"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
