@@ -34,6 +34,9 @@ const DashboardHistory = () => {
   const [restoring, setRestoring] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterTable, setFilterTable] = useState<string>("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkRunning, setBulkRunning] = useState(false);
 
   const fetchHistory = async () => {
     const { data } = await supabase
