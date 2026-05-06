@@ -32,6 +32,7 @@ const CATEGORIES: { id: string; label: string; pathHint?: string }[] = [
   { id: "about_page", label: "About Me — full page", pathHint: "Controls the content shown on /sobre-mi" },
   { id: "footer", label: "Footer" },
   { id: "location", label: "Location" },
+  { id: "reviews", label: "Reviews & Rating", pathHint: "Manually update the average rating and total review count shown on the homepage and in Google's structured data" },
   { id: "seo", label: "SEO & Crawlers" },
 ];
 
@@ -39,7 +40,7 @@ const langKey = (lang: Lang): "value_es" | "value_en" | "value_ru" =>
   lang === "es" ? "value_es" : lang === "en" ? "value_en" : "value_ru";
 
 // Locale-independent fields (technical configs) — always edit value_es regardless of selected language tab.
-const LOCALE_INDEPENDENT_KEYS = new Set(["robots_txt", "sitemap_config"]);
+const LOCALE_INDEPENDENT_KEYS = new Set(["robots_txt", "sitemap_config", "google_rating", "google_review_count"]);
 const isLocaleIndependent = (key: string) => LOCALE_INDEPENDENT_KEYS.has(key);
 
 const effectiveLangKey = (lang: Lang, key: string) =>
