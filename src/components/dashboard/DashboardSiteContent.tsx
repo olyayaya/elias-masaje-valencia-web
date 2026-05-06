@@ -427,7 +427,7 @@ const DashboardSiteContent = () => {
         return (
           <CategorySection
             key={cat.id} cat={cat} catItems={catItems} allItems={items} lang={lang}
-            drafts={drafts} setDrafts={setDrafts} saveItem={saveItem}
+            drafts={drafts} setDrafts={setDrafts} saveItem={requestSave}
             saving={saving} aiLoading={aiLoading} translateField={translateField}
             seoOptimize={seoOptimize} hasChanged={hasChanged}
             setPickerOpen={setPickerOpen} isMobile={isMobile}
@@ -443,6 +443,51 @@ const DashboardSiteContent = () => {
         }}
         currentUrl={pickerOpen ? drafts[pickerOpen] : undefined}
       />
+
+      <AlertDialog open={!!pendingSave} onOpenChange={(o) => !o && setPendingSave(null)}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Publish change to live site?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will go live immediately on eliasmas.es. Review the change below.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {pendingSave && (() => {
+            const col = effectiveLangKey(lang, pendingSave.content_key);
+            const before = (pendingSave as any)[col] ?? "";
+            const after = drafts[pendingSave.id] ?? "";
+            return (
+              <div className="space-y-3 my-2">
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{pendingSave.label}</span>
+                  {!isLocaleIndependent(pendingSave.content_key) && (
+                    <span className="ml-2 uppercase">· {lang}</span>
+                  )}
+                </div>
+                <div className="grid md:grid-cols-[1fr_auto_1fr] gap-3 items-start">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Before</p>
+                    <div className="bg-secondary rounded-lg p-3 text-sm whitespace-pre-wrap break-words max-h-48 overflow-auto">
+                      {before || <span className="italic text-muted-foreground">empty</span>}
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-muted-foreground hidden md:block mt-9" />
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-wider text-primary">After (live)</p>
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm whitespace-pre-wrap break-words max-h-48 overflow-auto">
+                      {after || <span className="italic text-muted-foreground">empty</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSave}>Publish to live site</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
