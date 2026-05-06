@@ -68,7 +68,15 @@ const OrganicHome = () => {
   
 
   const services = useMemo(() =>
-    dbServices?.map(s => ({ title: resolveField(s, "title", locale), description: resolveField(s, "description", locale), duration: s.duration, price: s.price })) ?? t.services.items,
+    dbServices?.map(s => ({
+      title: resolveField(s, "title", locale),
+      description: resolveField(s, "description", locale),
+      duration: resolveField(s, "duration", locale),
+      price: resolveField(s, "price", locale),
+      hidePrice: s.hide_price,
+      hideDuration: s.hide_duration,
+      hidePriceFrom: s.hide_price_from,
+    })) ?? t.services.items.map(s => ({ ...s, hidePrice: false, hideDuration: false, hidePriceFrom: false })),
     [dbServices, t.services.items, locale]
   );
 
