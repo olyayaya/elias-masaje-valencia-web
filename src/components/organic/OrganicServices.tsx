@@ -168,19 +168,7 @@ const OrganicServices = () => {
 
         <div className={`${isDG ? 'bg-transparent' : 'bg-transparent md:bg-secondary'} px-0 md:px-12 lg:px-20 py-0 md:py-20 overflow-hidden`}>
           <div className="max-w-5xl mx-auto">
-            <CircularImageCarousel
-              images={[
-                { src: massageArm, alt: "Arm massage" },
-                { src: massageDeep, alt: "Deep tissue work" },
-                { src: massageNeck, alt: "Neck massage" },
-                { src: massageOil, alt: "Oil massage" },
-                { src: massageShoulder, alt: "Shoulder massage" },
-                { src: massageStones, alt: "Hot stone therapy" },
-                { src: massageBack, alt: "Back massage" },
-                { src: massageWrist, alt: "Wrist massage" },
-                { src: massageFoot, alt: "Foot massage" },
-              ]}
-            />
+            <CircularImageCarousel images={carouselImages} />
           </div>
         </div>
 
