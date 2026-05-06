@@ -93,8 +93,27 @@ const CircularImageCarousel = ({
     };
   }, [images, index, visibleCols, total]);
 
-  const next = useCallback(() => setIndex((i) => i + 1), []);
-  const prev = useCallback(() => setIndex((i) => i - 1), []);
+  // Immediately warm the image about to scroll into view (bypasses the 180ms debounce)
+  const prefetchInDirection = useCallback(
+    (dir: 1 | -1) => {
+      if (total === 0) return;
+      const normalized = ((index % total) + total) % total;
+      const target = dir === 1
+        ? (normalized + visibleCols) % total       // first slide entering from the right
+        : (normalized - 1 + total) % total;        // slide entering from the left
+      prefetch(images[target].src);
+    },
+    [images, index, visibleCols, total, prefetch],
+  );
+
+  const next = useCallback(() => {
+    prefetchInDirection(1);
+    setIndex((i) => i + 1);
+  }, [prefetchInDirection]);
+  const prev = useCallback(() => {
+    prefetchInDirection(-1);
+    setIndex((i) => i - 1);
+  }, [prefetchInDirection]);
 
   // Autoplay — disabled when user prefers reduced motion
   useEffect(() => {
