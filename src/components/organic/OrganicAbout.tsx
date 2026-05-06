@@ -12,6 +12,7 @@ import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
+import { usePageImages } from "@/hooks/use-page-images";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { useTheme } from "@/contexts/ThemeContext";
