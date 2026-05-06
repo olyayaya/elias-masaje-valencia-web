@@ -230,9 +230,16 @@ export type Database = {
           description_en: string
           description_ru: string
           duration: string
+          duration_en: string
+          duration_ru: string
           hidden: boolean
+          hide_duration: boolean
+          hide_price: boolean
+          hide_price_from: boolean
           id: string
           price: string
+          price_en: string
+          price_ru: string
           sort_order: number
           title: string
           title_en: string
@@ -245,9 +252,16 @@ export type Database = {
           description_en?: string
           description_ru?: string
           duration: string
+          duration_en?: string
+          duration_ru?: string
           hidden?: boolean
+          hide_duration?: boolean
+          hide_price?: boolean
+          hide_price_from?: boolean
           id?: string
           price: string
+          price_en?: string
+          price_ru?: string
           sort_order?: number
           title: string
           title_en?: string
@@ -260,9 +274,16 @@ export type Database = {
           description_en?: string
           description_ru?: string
           duration?: string
+          duration_en?: string
+          duration_ru?: string
           hidden?: boolean
+          hide_duration?: boolean
+          hide_price?: boolean
+          hide_price_from?: boolean
           id?: string
           price?: string
+          price_en?: string
+          price_ru?: string
           sort_order?: number
           title?: string
           title_en?: string

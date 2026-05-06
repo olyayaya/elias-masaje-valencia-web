@@ -29,9 +29,10 @@ const PROMO_COLORS: Record<string, string> = {
   purple: "bg-purple-100 text-purple-800 border-purple-200",
 };
 
-const ServiceRow = ({ title, description, duration, price, bookLabel, index, badge, badgeColor }: {
+const ServiceRow = ({ title, description, duration, price, bookLabel, index, badge, badgeColor, hidePrice, hideDuration, hidePriceFrom }: {
   title: string; description: string; duration: string; price: string; bookLabel: string; index: number;
   badge?: string; badgeColor?: string;
+  hidePrice?: boolean; hideDuration?: boolean; hidePriceFrom?: boolean;
 }) => {
   const anim = useFadeIn(index * 0.08);
   const { t } = useI18n();
@@ -49,8 +50,10 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index, bad
         <p className="text-sm text-muted-foreground font-body leading-relaxed max-w-xl">{description}</p>
       </div>
       <div className="flex items-center gap-6 shrink-0">
-        <span className="text-sm font-body text-muted-foreground">{duration}</span>
-        <span className="text-sm font-body font-medium">{formatPrice(price, t)}</span>
+        {!hideDuration && duration && <span className="text-sm font-body text-muted-foreground">{duration}</span>}
+        {!hidePrice && price && (
+          <span className="text-sm font-body font-medium">{formatPrice(price, t, { hidePrefix: hidePriceFrom })}</span>
+        )}
         <a
           href={WHATSAPP_URL}
           target="_blank"
@@ -98,8 +101,11 @@ const OrganicServices = () => {
     return {
       title: resolveField(s, "title", locale),
       description: resolveField(s, "description", locale),
-      duration: s.duration,
-      price: s.price,
+      duration: resolveField(s, "duration", locale),
+      price: resolveField(s, "price", locale),
+      hidePrice: s.hide_price,
+      hideDuration: s.hide_duration,
+      hidePriceFrom: s.hide_price_from,
       badge: promo ? langBadge(promo) : undefined,
       badgeColor: promo?.badge_color,
     };

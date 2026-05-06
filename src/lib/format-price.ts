@@ -27,7 +27,11 @@ const PREFIX_PATTERNS = [
 
 const RANGE_PATTERN = /[\/–—-]/; // multi-tier price like "50€ / 70€" or "50€-70€"
 
-export function formatPrice(price: string | undefined | null, t: Translations): string {
+export function formatPrice(
+  price: string | undefined | null,
+  t: Translations,
+  options?: { hidePrefix?: boolean },
+): string {
   if (!price) return "";
   let body = price.trim();
   let hadPrefix = false;
@@ -39,6 +43,8 @@ export function formatPrice(price: string | undefined | null, t: Translations): 
       break;
     }
   }
+
+  if (options?.hidePrefix) return body;
 
   const isRange = RANGE_PATTERN.test(body);
   const needsPrefix = hadPrefix || isRange;
