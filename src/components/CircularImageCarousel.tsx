@@ -58,15 +58,29 @@ const CircularImageCarousel = ({
   const looped = total > 0 ? [...images, ...images.slice(0, visibleCols)] : [];
 
   // Eagerly preload only the currently-visible slides + the next batch about to scroll in.
-  // Everything else stays lazy (handled by <img loading="lazy" /> below).
+  // Debounced so rapid skipping doesn't kick off preloads for slides the user is flying past;
+  // and any preloads in-flight from a previous index get aborted (img.src cleared) so the
+  // browser can cancel the network request.
   useEffect(() => {
     if (total === 0) return;
-    const normalized = ((index % total) + total) % total;
-    const preloadCount = visibleCols + 1; // current visible + next slide
-    for (let i = 0; i < preloadCount; i++) {
-      const img = new Image();
-      img.src = images[(normalized + i) % total].src;
-    }
+    const inFlight: HTMLImageElement[] = [];
+    const debounce = setTimeout(() => {
+      const normalized = ((index % total) + total) % total;
+      const preloadCount = visibleCols + 1; // current visible + next slide
+      for (let i = 0; i < preloadCount; i++) {
+        const img = new Image();
+        img.src = images[(normalized + i) % total].src;
+        inFlight.push(img);
+      }
+    }, 180);
+    return () => {
+      clearTimeout(debounce);
+      // Cancel any preloads that did start by clearing their src — most browsers
+      // will abort the in-flight network request when src is reset.
+      for (const img of inFlight) {
+        if (!img.complete) img.src = "";
+      }
+    };
   }, [images, index, visibleCols, total]);
 
   const next = useCallback(() => setIndex((i) => i + 1), []);
