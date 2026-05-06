@@ -169,7 +169,8 @@ const CircularImageCarousel = ({
                     alt={img.alt}
                     className="w-full h-full object-cover"
                     draggable={false}
-                    loading={i < visibleCols * 2 ? "eager" : "lazy"}
+                    loading={i >= index && i < index + visibleCols + 1 ? "eager" : "lazy"}
+                    fetchPriority={i >= index && i < index + visibleCols ? "high" : "auto"}
                   />
                 </div>
               </div>
