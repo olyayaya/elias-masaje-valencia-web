@@ -1,10 +1,12 @@
 import OrganicHome from "@/components/organic/OrganicHome";
 import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
+import { useSiteContent } from "@/hooks/use-site-content";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 
 const Index = () => {
   const { locale } = useI18n();
+  const { content: sc } = useSiteContent();
 
   const title = locale === "es"
     ? "Elias Masaje — Masaje profesional en Valencia"
