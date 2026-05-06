@@ -279,7 +279,7 @@ const OrganicHome = () => {
         <div className="max-w-5xl mx-auto">
           <div ref={testimonialsTitle.ref} style={testimonialsTitle.style} className="text-center mb-4">
             <h2 className="font-display text-3xl md:text-4xl mb-2">{t.testimonials.title}</h2>
-            <p className="text-sm text-muted-foreground font-body mb-1">5.0 ★ — 66+ Google & TripAdvisor reviews</p>
+            <p className="text-sm text-muted-foreground font-body mb-1">{sc.google_rating || "5.0"} ★ — {sc.google_review_count || "66"}+ Google & TripAdvisor reviews</p>
             <div className="w-12 h-px bg-primary mx-auto mt-3" />
           </div>
         </div>
