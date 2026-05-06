@@ -29,6 +29,16 @@ const CircularImageCarousel = ({
   // Touch / drag tracking
   const dragStartX = useRef<number | null>(null);
   const dragDelta = useRef(0);
+  const swipeIntent = useRef<"none" | "next" | "prev">("none");
+
+  // De-duped immediate prefetch cache (kept across renders)
+  const prefetched = useRef<Set<string>>(new Set());
+  const prefetch = useCallback((src: string) => {
+    if (!src || prefetched.current.has(src)) return;
+    prefetched.current.add(src);
+    const img = new Image();
+    img.src = src;
+  }, []);
 
   // Responsive column count
   useEffect(() => {
@@ -83,8 +93,27 @@ const CircularImageCarousel = ({
     };
   }, [images, index, visibleCols, total]);
 
-  const next = useCallback(() => setIndex((i) => i + 1), []);
-  const prev = useCallback(() => setIndex((i) => i - 1), []);
+  // Immediately warm the image about to scroll into view (bypasses the 180ms debounce)
+  const prefetchInDirection = useCallback(
+    (dir: 1 | -1) => {
+      if (total === 0) return;
+      const normalized = ((index % total) + total) % total;
+      const target = dir === 1
+        ? (normalized + visibleCols) % total       // first slide entering from the right
+        : (normalized - 1 + total) % total;        // slide entering from the left
+      prefetch(images[target].src);
+    },
+    [images, index, visibleCols, total, prefetch],
+  );
+
+  const next = useCallback(() => {
+    prefetchInDirection(1);
+    setIndex((i) => i + 1);
+  }, [prefetchInDirection]);
+  const prev = useCallback(() => {
+    prefetchInDirection(-1);
+    setIndex((i) => i - 1);
+  }, [prefetchInDirection]);
 
   // Autoplay — disabled when user prefers reduced motion
   useEffect(() => {
@@ -129,12 +158,24 @@ const CircularImageCarousel = ({
   const onPointerDown = (e: React.PointerEvent) => {
     dragStartX.current = e.clientX;
     dragDelta.current = 0;
+    swipeIntent.current = "none";
     setPaused(true);
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (dragStartX.current === null) return;
     dragDelta.current = e.clientX - dragStartX.current;
+    // As soon as the swipe is decisive enough, prefetch the slide entering view
+    const intentThreshold = 16;
+    if (swipeIntent.current === "none" && Math.abs(dragDelta.current) > intentThreshold) {
+      if (dragDelta.current < 0) {
+        swipeIntent.current = "next";
+        prefetchInDirection(1);
+      } else {
+        swipeIntent.current = "prev";
+        prefetchInDirection(-1);
+      }
+    }
   };
   const onPointerUp = () => {
     if (dragStartX.current === null) return;
@@ -143,6 +184,7 @@ const CircularImageCarousel = ({
     else if (dragDelta.current < -threshold) next();
     dragStartX.current = null;
     dragDelta.current = 0;
+    swipeIntent.current = "none";
     setPaused(false);
   };
 
