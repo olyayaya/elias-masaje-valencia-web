@@ -5,9 +5,9 @@ import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
 import { resolveField } from "@/hooks/use-db-content";
 import { formatPrice } from "@/lib/format-price";
-import esT from "@/i18n/es";
-import enT from "@/i18n/en";
-import ruT from "@/i18n/ru";
+import { es as esT } from "@/i18n/es";
+import { en as enT } from "@/i18n/en";
+import { ru as ruT } from "@/i18n/ru";
 
 const T_BY_LANG = { es: esT, en: enT, ru: ruT } as const;
 
