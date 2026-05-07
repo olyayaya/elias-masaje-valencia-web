@@ -34,9 +34,21 @@ async function testGtm(id: string): Promise<TestResult> {
   }
 }
 
+function extractVerificationToken(metaName: string, raw: string): string {
+  const trimmed = raw.trim();
+  // Full <meta ... content="X" /> tag pasted
+  const metaMatch = trimmed.match(/content=["']([^"']+)["']/i);
+  if (metaMatch) return metaMatch[1].trim();
+  // Google HTML file reference: googleXXXXX.html  (Google's filename = google<token>.html)
+  if (metaName === "google-site-verification") {
+    const fileMatch = trimmed.match(/^google([a-z0-9]+)\.html$/i);
+    if (fileMatch) return fileMatch[1];
+  }
+  return trimmed;
+}
+
 async function testMetaTag(metaName: string, raw: string): Promise<TestResult> {
-  const match = raw.match(/content=["']([^"']+)["']/i);
-  const expected = (match ? match[1] : raw).trim();
+  const expected = extractVerificationToken(metaName, raw);
   if (!expected) return { ok: false, error: "Empty value" };
   try {
     const res = await fetch(SITE_URL, { headers: { "user-agent": "EliasMasaje-IntegrationTest/1.0" } });
