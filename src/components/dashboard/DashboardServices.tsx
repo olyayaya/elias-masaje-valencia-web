@@ -163,7 +163,39 @@ const DashboardServices = () => {
   );
 };
 
-/* -------- Single locale preview row (existing default) -------- */
+/* -------- Fallback helpers -------- */
+const FIELD_LABELS: Record<string, string> = {
+  title: "Title",
+  description: "Description",
+  duration: "Duration",
+  price: "Price",
+};
+
+/** True when this field will fall back to ES because the locale value is empty. */
+const isFallback = (s: Service, field: string, lang: Lang) =>
+  lang !== "es" && !((s as any)[langKey(field, lang)] as string | undefined)?.trim();
+
+/** Returns the list of fields that are currently using ES as fallback. */
+const missingFields = (s: Service, lang: Lang): string[] =>
+  ["title", "description", "duration", "price"].filter((f) => {
+    if (f === "duration" && s.hide_duration) return false;
+    if (f === "price" && s.hide_price) return false;
+    // Only flag if the ES base actually has a value to fall back to —
+    // truly empty fields aren't a "fallback", they're just empty.
+    if (!((s as any)[f] as string | undefined)?.trim()) return false;
+    return isFallback(s, f, lang);
+  });
+
+const FallbackTag = ({ reason }: { reason: string }) => (
+  <span
+    title={reason}
+    className="ml-1 text-[9px] uppercase tracking-wider px-1 py-0.5 bg-amber-100 text-amber-800 rounded align-middle"
+  >
+    ES
+  </span>
+);
+
+/* -------- Single locale preview row -------- */
 const SinglePreviewRow = ({
   service: s, lang, onEdit, onRemove, onToggleHidden,
 }: {
@@ -174,32 +206,47 @@ const SinglePreviewRow = ({
   const previewDesc = resolveField(s, "description", lang);
   const previewDuration = resolveField(s, "duration", lang);
   const previewPrice = resolveField(s, "price", lang);
-  const usingFallback = lang !== "es" && (
-    !langVal(s, "title", lang) || !langVal(s, "description", lang)
-  );
+  const missing = missingFields(s, lang);
+  const langTag = lang.toUpperCase();
+  const fbReason = (field: string) =>
+    `${FIELD_LABELS[field]} has no ${langTag} translation — showing Spanish (ES) value`;
 
   return (
     <div className={`flex items-start justify-between gap-4 ${s.hidden ? "opacity-50" : ""}`}>
       <div className="flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <h4 className="text-sm font-medium text-foreground">{previewTitle}</h4>
+          <h4 className="text-sm font-medium text-foreground">
+            {previewTitle}
+            {isFallback(s, "title", lang) && previewTitle && <FallbackTag reason={fbReason("title")} />}
+          </h4>
           {s.hidden && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">Hidden</span>}
           {s.hide_price && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No price</span>}
           {s.hide_duration && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No duration</span>}
           {s.hide_price_from && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No "from"</span>}
-          {usingFallback && <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">ES fallback</span>}
         </div>
-        <p className="text-xs text-muted-foreground mt-1">{previewDesc}</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {previewDesc}
+          {isFallback(s, "description", lang) && previewDesc && <FallbackTag reason={fbReason("description")} />}
+        </p>
         <div className="flex gap-4 mt-2">
           {!s.hide_duration && previewDuration && (
-            <span className="text-xs text-muted-foreground">{previewDuration}</span>
+            <span className="text-xs text-muted-foreground">
+              {previewDuration}
+              {isFallback(s, "duration", lang) && <FallbackTag reason={fbReason("duration")} />}
+            </span>
           )}
           {!s.hide_price && previewPrice && (
             <span className="text-xs font-medium text-foreground">
               {formatPrice(previewPrice, T_BY_LANG[lang], { hidePrefix: s.hide_price_from })}
+              {isFallback(s, "price", lang) && <FallbackTag reason={fbReason("price")} />}
             </span>
           )}
         </div>
+        {missing.length > 0 && (
+          <p className="text-[11px] text-amber-700 mt-2 leading-relaxed">
+            Missing {langTag} translation for: <span className="font-medium">{missing.map((f) => FIELD_LABELS[f]).join(", ")}</span>. Spanish values are shown instead.
+          </p>
+        )}
       </div>
       <RowActions hidden={s.hidden} onToggleHidden={onToggleHidden} onEdit={onEdit} onRemove={onRemove} />
     </div>
@@ -232,20 +279,42 @@ const CompareRow = ({
         const desc = resolveField(s, "description", l);
         const duration = resolveField(s, "duration", l);
         const price = resolveField(s, "price", l);
-        const fallback = l !== "es" && (!langVal(s, "title", l) || !langVal(s, "description", l));
+        const missing = missingFields(s, l);
+        const langTag = l.toUpperCase();
+        const fbReason = (field: string) =>
+          `${FIELD_LABELS[field]} has no ${langTag} translation — showing Spanish (ES) value`;
         return (
           <div key={l} className="rounded-lg border border-border bg-secondary/30 p-3">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2">
               <span className="text-[10px] font-semibold tracking-wider text-muted-foreground">{LANG_LABELS[l]}</span>
-              {fallback && <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded-full">ES fallback</span>}
+              {missing.length > 0 && (
+                <span
+                  title={`Missing ${langTag} translation for: ${missing.map((f) => FIELD_LABELS[f]).join(", ")}`}
+                  className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded-full"
+                >
+                  {missing.length} missing
+                </span>
+              )}
             </div>
-            <h4 className="text-sm font-medium text-foreground leading-snug">{title || <span className="italic text-muted-foreground">—</span>}</h4>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{desc || <span className="italic">—</span>}</p>
+            <h4 className="text-sm font-medium text-foreground leading-snug">
+              {title || <span className="italic text-muted-foreground">—</span>}
+              {isFallback(s, "title", l) && title && <FallbackTag reason={fbReason("title")} />}
+            </h4>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              {desc || <span className="italic">—</span>}
+              {isFallback(s, "description", l) && desc && <FallbackTag reason={fbReason("description")} />}
+            </p>
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-              {!s.hide_duration && duration && <span className="text-xs text-muted-foreground">{duration}</span>}
+              {!s.hide_duration && duration && (
+                <span className="text-xs text-muted-foreground">
+                  {duration}
+                  {isFallback(s, "duration", l) && <FallbackTag reason={fbReason("duration")} />}
+                </span>
+              )}
               {!s.hide_price && price && (
                 <span className="text-xs font-medium text-foreground">
                   {formatPrice(price, T_BY_LANG[l], { hidePrefix: s.hide_price_from })}
+                  {isFallback(s, "price", l) && <FallbackTag reason={fbReason("price")} />}
                 </span>
               )}
             </div>
