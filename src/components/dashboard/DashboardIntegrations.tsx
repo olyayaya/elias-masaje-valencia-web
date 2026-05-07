@@ -191,6 +191,34 @@ const DashboardIntegrations = () => {
         setValues(map);
         setOriginal(map);
         setLoading(false);
+
+        // Auto-verify saved verification meta tags (refresh stale results)
+        const cache = loadTestCache();
+        const STALE_MS = 10 * 60 * 1000; // 10 min
+        const verificationKeys = [
+          "integration_gsc_verification",
+          "integration_bing_verification",
+          "integration_yandex_verification",
+        ];
+        verificationKeys.forEach(async (k) => {
+          const v = (map[k] || "").trim();
+          if (!v) return;
+          const cached = cache[k];
+          if (cached && Date.now() - new Date(cached.testedAt).getTime() < STALE_MS) return;
+          try {
+            const { data: res, error } = await supabase.functions.invoke("test-integration", {
+              body: { kind: k, value: v },
+            });
+            const result: TestStatus = error
+              ? { ok: false, error: error.message, testedAt: new Date().toISOString() }
+              : { ok: !!res?.ok, error: res?.error, details: res?.details, testedAt: res?.testedAt || new Date().toISOString() };
+            setTests((prev) => {
+              const next = { ...prev, [k]: result };
+              saveTestCache(next);
+              return next;
+            });
+          } catch {/* ignore — manual Test still available */}
+        });
       });
   }, []);
 
