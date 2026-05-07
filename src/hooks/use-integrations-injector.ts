@@ -1,0 +1,77 @@
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+/**
+ * Reads integration codes from site_content (category = "integrations") and
+ * injects the matching tracking / verification tags into the document head.
+ *
+ * Mounted once at the app root so codes go live across every public page as
+ * soon as the user pastes them in the dashboard.
+ */
+export function useIntegrationsInjector() {
+  useEffect(() => {
+    let cleanup: Array<() => void> = [];
+
+    const inject = async () => {
+      const { data } = await supabase
+        .from("site_content")
+        .select("content_key, value_es")
+        .eq("category", "integrations");
+      if (!data) return;
+
+      const map: Record<string, string> = {};
+      data.forEach((r: any) => {
+        if (r.value_es?.trim()) map[r.content_key] = r.value_es.trim();
+      });
+
+      // Don't run analytics in the editor preview / dashboard
+      if (window.location.pathname.startsWith("/dashboard")) return;
+
+      // ── Google Analytics 4 ─────────────────────────────────────────────
+      const ga4 = map.integration_ga4_id;
+      if (ga4 && /^G-[A-Z0-9]+$/i.test(ga4)) {
+        const s1 = document.createElement("script");
+        s1.async = true;
+        s1.src = `https://www.googletagmanager.com/gtag/js?id=${ga4}`;
+        document.head.appendChild(s1);
+        const s2 = document.createElement("script");
+        s2.text = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${ga4}');`;
+        document.head.appendChild(s2);
+        cleanup.push(() => { s1.remove(); s2.remove(); });
+      }
+
+      // ── Google Tag Manager ─────────────────────────────────────────────
+      const gtm = map.integration_gtm_id;
+      if (gtm && /^GTM-[A-Z0-9]+$/i.test(gtm)) {
+        const s = document.createElement("script");
+        s.text = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtm}');`;
+        document.head.appendChild(s);
+        const noscript = document.createElement("noscript");
+        noscript.innerHTML = `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtm}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
+        document.body.prepend(noscript);
+        cleanup.push(() => { s.remove(); noscript.remove(); });
+      }
+
+      // ── Verification meta tags ─────────────────────────────────────────
+      const verifications: [string, string][] = [
+        ["google-site-verification", map.integration_gsc_verification],
+        ["msvalidate.01", map.integration_bing_verification],
+        ["yandex-verification", map.integration_yandex_verification],
+      ];
+      verifications.forEach(([name, content]) => {
+        if (!content) return;
+        // Strip a full <meta ... content="XYZ" .../> if user pasted the whole tag
+        const match = content.match(/content=["']([^"']+)["']/i);
+        const value = match ? match[1] : content;
+        const meta = document.createElement("meta");
+        meta.setAttribute("name", name);
+        meta.setAttribute("content", value);
+        document.head.appendChild(meta);
+        cleanup.push(() => meta.remove());
+      });
+    };
+
+    inject();
+    return () => { cleanup.forEach((fn) => fn()); };
+  }, []);
+}
