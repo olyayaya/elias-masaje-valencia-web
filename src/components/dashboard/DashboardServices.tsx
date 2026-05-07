@@ -207,23 +207,38 @@ const ServiceForm = ({
   const langTag = lang.toUpperCase();
   const placeholderHint = lang === "es" ? "" : ` (leave blank to inherit ES)`;
 
+  const resetBtn = (key: keyof Service, baseKey: keyof Service) =>
+    showTranslate ? (
+      <button
+        type="button"
+        onClick={() => setDraft({ ...draft, [key]: (draft[baseKey] as string) || "" })}
+        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-secondary"
+        title="Reset to Spanish value"
+      >
+        <RotateCcw size={12} /> Reset to ES
+      </button>
+    ) : null;
+
   return (
     <div className="space-y-4">
       {/* Title */}
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="text-xs font-medium text-muted-foreground">Title ({langTag})</label>
-          {showTranslate && (
-            <button
-              onClick={() => callAi("translate", "title")}
-              disabled={!!aiLoading}
-              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-secondary disabled:opacity-50"
-              title="Translate from Spanish"
-            >
-              {aiLoading === "translate-title" ? <Loader2 size={12} className="animate-spin" /> : <Languages size={12} />}
-              Translate from ES
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {resetBtn(titleKey, "title")}
+            {showTranslate && (
+              <button
+                onClick={() => callAi("translate", "title")}
+                disabled={!!aiLoading}
+                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-secondary disabled:opacity-50"
+                title="Translate from Spanish"
+              >
+                {aiLoading === "translate-title" ? <Loader2 size={12} className="animate-spin" /> : <Languages size={12} />}
+                Translate from ES
+              </button>
+            )}
+          </div>
         </div>
         <input
           value={(draft[titleKey] as string) || ""}
@@ -236,7 +251,10 @@ const ServiceForm = ({
       {/* Duration & Price (per-language) */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Duration ({langTag})</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium text-muted-foreground">Duration ({langTag})</label>
+            {resetBtn(durationKey, "duration")}
+          </div>
           <input
             value={(draft[durationKey] as string) || ""}
             onChange={(e) => setDraft({ ...draft, [durationKey]: e.target.value })}
@@ -245,7 +263,10 @@ const ServiceForm = ({
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Price ({langTag})</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium text-muted-foreground">Price ({langTag})</label>
+            {resetBtn(priceKey, "price")}
+          </div>
           <input
             value={(draft[priceKey] as string) || ""}
             onChange={(e) => setDraft({ ...draft, [priceKey]: e.target.value })}
@@ -260,6 +281,7 @@ const ServiceForm = ({
         <div className="flex items-center justify-between mb-1">
           <label className="text-xs font-medium text-muted-foreground">Description ({langTag})</label>
           <div className="flex items-center gap-1">
+            {resetBtn(descKey, "description")}
             {showTranslate && (
               <button
                 onClick={() => callAi("translate", "description")}
