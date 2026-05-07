@@ -3,6 +3,13 @@ import { Plus, Pencil, Trash2, Save, X, Loader2, Languages, Search, EyeOff, Eye,
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
+import { resolveField } from "@/hooks/use-db-content";
+import { formatPrice } from "@/lib/format-price";
+import esT from "@/i18n/es";
+import enT from "@/i18n/en";
+import ruT from "@/i18n/ru";
+
+const T_BY_LANG = { es: esT, en: enT, ru: ruT } as const;
 
 interface Service {
   id: string;
