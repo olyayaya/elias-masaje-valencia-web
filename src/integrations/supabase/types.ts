@@ -107,6 +107,36 @@ export type Database = {
         }
         Relationships: []
       }
+      conversion_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: string
+          locale: string
+          location: string
+          metadata: Json
+          page_path: string
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: string
+          locale?: string
+          location?: string
+          metadata?: Json
+          page_path?: string
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: string
+          locale?: string
+          location?: string
+          metadata?: Json
+          page_path?: string
+        }
+        Relationships: []
+      }
       faqs: {
         Row: {
           answer: string
