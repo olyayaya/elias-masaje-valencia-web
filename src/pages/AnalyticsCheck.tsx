@@ -102,7 +102,8 @@ const StatusIcon = ({ s }: { s: Status }) => {
 };
 
 export default function AnalyticsCheck() {
-  const { lang } = useI18n();
+  const { locale } = useI18n();
+  const lang = locale;
   const t = COPY[(lang as keyof typeof COPY)] || COPY.es;
   const [ga4Id, setGa4Id] = useState<string | null>(null);
   const [gtmId, setGtmId] = useState<string | null>(null);
@@ -110,7 +111,14 @@ export default function AnalyticsCheck() {
   const [gtmChecks, setGtmChecks] = useState<CheckRow[]>([]);
   const [tick, setTick] = useState(0);
 
-  useHead({ title: t.title, description: t.subtitle, noindex: true });
+  useHead({ title: t.title, description: t.subtitle });
+  useEffect(() => {
+    const m = document.createElement("meta");
+    m.name = "robots";
+    m.content = "noindex,nofollow";
+    document.head.appendChild(m);
+    return () => { m.remove(); };
+  }, []);
 
   // Load IDs once
   useEffect(() => {
