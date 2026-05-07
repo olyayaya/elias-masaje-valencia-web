@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe, ChevronDown, Sun, Moon, Sparkles, Images, Plug
+  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe, ChevronDown, Sun, Moon, Sparkles, Images, Plug, TrendingUp
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { Locale } from "@/i18n/types";
@@ -20,6 +20,7 @@ import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
 import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
 import DashboardCarousels from "@/components/dashboard/DashboardCarousels";
 import DashboardIntegrations from "@/components/dashboard/DashboardIntegrations";
+import DashboardAttribution from "@/components/dashboard/DashboardAttribution";
 
 // Primary sections — always visible
 const primarySections = [
@@ -36,6 +37,7 @@ const primarySections = [
 // Secondary sections — collapsible
 const secondarySections = [
   { id: "promotions", icon: Tag },
+  { id: "attribution", icon: TrendingUp },
   { id: "seo", icon: Search },
   { id: "integrations", icon: Plug },
   { id: "history", icon: History },
@@ -68,6 +70,7 @@ const Dashboard = () => {
       case "blog": return <DashboardBlog />;
       case "seo": return <DashboardSEO />;
       case "integrations": return <DashboardIntegrations />;
+      case "attribution": return <DashboardAttribution />;
       case "media": return <DashboardMedia />;
       case "faq": return <DashboardFAQ />;
       case "testimonials": return <DashboardTestimonials />;

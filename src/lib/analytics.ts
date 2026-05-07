@@ -1,46 +1,53 @@
+import { supabase } from "@/integrations/supabase/client";
+
 /**
- * Lightweight GA4 event helper.
- * Pushes to dataLayer (works for both GA4 direct and GTM) and falls back to
- * gtag() when available. Safe no-op if neither is loaded.
+ * Lightweight analytics helper.
+ * 1. Pushes events to GA4 (via gtag) and GTM (via dataLayer).
+ * 2. Mirrors conversion events into our own `conversion_events` table so the
+ *    dashboard can show attribution counts immediately without GA4 Data API.
  */
 type EventParams = Record<string, string | number | boolean | undefined>;
 
-export function trackEvent(eventName: string, params: EventParams = {}) {
+function pushToGa(eventName: string, params: EventParams) {
   try {
     const w = window as unknown as {
       gtag?: (cmd: string, name: string, params?: EventParams) => void;
       dataLayer?: unknown[];
     };
-    // GTM / GA4 dataLayer push (preferred — works with either)
-    if (Array.isArray(w.dataLayer)) {
-      w.dataLayer.push({ event: eventName, ...params });
-    }
-    // Direct gtag (when GA4 is loaded without GTM)
-    if (typeof w.gtag === "function") {
-      w.gtag("event", eventName, params);
-    }
+    if (Array.isArray(w.dataLayer)) w.dataLayer.push({ event: eventName, ...params });
+    if (typeof w.gtag === "function") w.gtag("event", eventName, params);
   } catch {
     /* analytics must never break the UI */
   }
 }
 
-/** Conversion: user clicked a WhatsApp booking CTA. */
-export function trackWhatsAppClick(location: string, extra: EventParams = {}) {
-  trackEvent("whatsapp_click", {
+function logToDb(eventName: string, location: string, extra: EventParams) {
+  // Skip dashboard / preview noise
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard")) return;
+  // Fire-and-forget — don't block navigation
+  void supabase.from("conversion_events").insert({
+    event_name: eventName,
     location,
-    method: "WhatsApp",
-    ...extra,
-  });
-  // Also fire the GA4 standard "generate_lead" event for conversion reports
-  trackEvent("generate_lead", {
-    location,
-    method: "WhatsApp",
-    ...extra,
+    metadata: extra as Record<string, unknown>,
+    page_path: typeof window !== "undefined" ? window.location.pathname + window.location.search : "",
+    locale: typeof document !== "undefined" ? document.documentElement.lang || "" : "",
   });
 }
 
-/** Conversion: contact form submitted. */
+export function trackEvent(eventName: string, params: EventParams = {}) {
+  pushToGa(eventName, params);
+}
+
+/** Conversion: user clicked a WhatsApp booking CTA. */
+export function trackWhatsAppClick(location: string, extra: EventParams = {}) {
+  pushToGa("whatsapp_click", { location, method: "WhatsApp", ...extra });
+  pushToGa("generate_lead", { location, method: "WhatsApp", ...extra });
+  logToDb("whatsapp_click", location, extra);
+}
+
+/** Conversion: contact form / contact-page CTA submitted. */
 export function trackContactSubmit(location: string, extra: EventParams = {}) {
-  trackEvent("contact_submit", { location, ...extra });
-  trackEvent("generate_lead", { location, method: "form", ...extra });
+  pushToGa("contact_submit", { location, ...extra });
+  pushToGa("generate_lead", { location, method: "form", ...extra });
+  logToDb("contact_submit", location, extra);
 }
