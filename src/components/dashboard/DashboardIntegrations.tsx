@@ -1,7 +1,28 @@
 import { useEffect, useState } from "react";
-import { Save, Loader2, ExternalLink, CheckCircle2, Circle, Eye, EyeOff, Languages } from "lucide-react";
+import { Save, Loader2, ExternalLink, CheckCircle2, Circle, Eye, EyeOff, Languages, Activity, AlertCircle } from "lucide-react";
 import DashboardCard from "./DashboardCard";
 import { supabase } from "@/integrations/supabase/client";
+
+type TestStatus = { ok: boolean; error?: string; details?: string; testedAt: string };
+const TEST_CACHE_KEY = "integration_test_results_v1";
+
+const loadTestCache = (): Record<string, TestStatus> => {
+  try { return JSON.parse(localStorage.getItem(TEST_CACHE_KEY) || "{}"); } catch { return {}; }
+};
+const saveTestCache = (m: Record<string, TestStatus>) => {
+  try { localStorage.setItem(TEST_CACHE_KEY, JSON.stringify(m)); } catch {}
+};
+
+const formatRelative = (iso: string, lang: "en" | "ru") => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return lang === "en" ? "just now" : "только что";
+  if (m < 60) return lang === "en" ? `${m} min ago` : `${m} мин назад`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return lang === "en" ? `${h}h ago` : `${h} ч назад`;
+  const d = Math.floor(h / 24);
+  return lang === "en" ? `${d}d ago` : `${d} дн назад`;
+};
 
 type DocLang = "en" | "ru";
 
@@ -154,6 +175,8 @@ const DashboardIntegrations = () => {
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [docLang, setDocLang] = useState<DocLang>("en");
   const [reveal, setReveal] = useState<Record<string, boolean>>({});
+  const [testing, setTesting] = useState<string | null>(null);
+  const [tests, setTests] = useState<Record<string, TestStatus>>(loadTestCache);
 
   useEffect(() => {
     supabase
@@ -178,6 +201,25 @@ const DashboardIntegrations = () => {
       .eq("content_key", key);
     setOriginal({ ...original, [key]: v });
     setSavingKey(null);
+  };
+
+  const runTest = async (key: string) => {
+    const v = (values[key] || "").trim();
+    if (!v) return;
+    setTesting(key);
+    try {
+      const { data, error } = await supabase.functions.invoke("test-integration", {
+        body: { kind: key, value: v },
+      });
+      const result: TestStatus = error
+        ? { ok: false, error: error.message, testedAt: new Date().toISOString() }
+        : { ok: !!data?.ok, error: data?.error, details: data?.details, testedAt: data?.testedAt || new Date().toISOString() };
+      const next = { ...tests, [key]: result };
+      setTests(next);
+      saveTestCache(next);
+    } finally {
+      setTesting(null);
+    }
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
@@ -216,6 +258,8 @@ const DashboardIntegrations = () => {
         const valid = !f.validate || f.validate(value);
         const isSecret = !!f.secret;
         const showSecret = reveal[f.key];
+        const test = tests[f.key];
+        const isTesting = testing === f.key;
 
         return (
           <DashboardCard key={f.key}>
@@ -281,7 +325,37 @@ const DashboardIntegrations = () => {
                   {savingKey === f.key ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                   {docLang === "en" ? "Save" : "Сохранить"}
                 </button>
+                <button
+                  onClick={() => runTest(f.key)}
+                  disabled={!value.trim() || !valid || isTesting || dirty}
+                  title={dirty ? (docLang === "en" ? "Save first, then test" : "Сначала сохраните, затем тест") : ""}
+                  className="flex items-center gap-2 px-3 py-2 border border-border text-foreground text-sm rounded-lg hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isTesting ? <Loader2 size={14} className="animate-spin" /> : <Activity size={14} />}
+                  {docLang === "en" ? "Test" : "Тест"}
+                </button>
               </div>
+              {test && (
+                <div className={`flex items-start gap-2 text-[11px] rounded-md px-2.5 py-2 border ${
+                  test.ok ? "border-green-500/30 bg-green-500/5 text-green-700 dark:text-green-400"
+                          : "border-destructive/40 bg-destructive/5 text-destructive"
+                }`}>
+                  {test.ok ? <CheckCircle2 size={12} className="mt-0.5 shrink-0" /> : <AlertCircle size={12} className="mt-0.5 shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">
+                        {test.ok
+                          ? (docLang === "en" ? "Live & responding" : "Активно и отвечает")
+                          : (docLang === "en" ? "Check failed" : "Ошибка проверки")}
+                      </span>
+                      <span className="text-muted-foreground">· {docLang === "en" ? "tested" : "проверено"} {formatRelative(test.testedAt, docLang)}</span>
+                    </div>
+                    {(test.error || test.details) && (
+                      <p className="mt-0.5 break-words opacity-90">{test.error || test.details}</p>
+                    )}
+                  </div>
+                </div>
+              )}
               {!valid && (
                 <p className="text-[11px] text-destructive">
                   {docLang === "en"
