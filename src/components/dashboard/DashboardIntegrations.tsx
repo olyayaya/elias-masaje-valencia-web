@@ -1,0 +1,300 @@
+import { useEffect, useState } from "react";
+import { Save, Loader2, ExternalLink, CheckCircle2, Circle, Eye, EyeOff, Languages } from "lucide-react";
+import DashboardCard from "./DashboardCard";
+import { supabase } from "@/integrations/supabase/client";
+
+type DocLang = "en" | "ru";
+
+interface Field {
+  key: string;
+  label: string;
+  placeholder: string;
+  validate?: (v: string) => boolean;
+  secret?: boolean;
+  docs: { url: string; label: string };
+  instructions: Record<DocLang, string[]>;
+}
+
+const FIELDS: Field[] = [
+  {
+    key: "integration_ga4_id",
+    label: "Google Analytics 4 — Measurement ID",
+    placeholder: "G-XXXXXXXXXX",
+    validate: (v) => !v || /^G-[A-Z0-9]+$/i.test(v.trim()),
+    docs: { url: "https://analytics.google.com/", label: "analytics.google.com" },
+    instructions: {
+      en: [
+        "Go to analytics.google.com and sign in with your Google Workspace / Gmail account.",
+        "Click Admin (gear icon, bottom left) → Create → Property.",
+        "Enter property name (e.g. \"Elias Masaje\"), set timezone Europe/Madrid and currency EUR.",
+        "Choose \"Web\" platform, enter https://eliasmas.es as the website URL.",
+        "Copy the Measurement ID (starts with G-) and paste it below.",
+      ],
+      ru: [
+        "Откройте analytics.google.com и войдите под Google Workspace / Gmail аккаунтом.",
+        "Нажмите Admin (шестерёнка, слева внизу) → Create → Property.",
+        "Введите название (например \"Elias Masaje\"), часовой пояс Europe/Madrid, валюта EUR.",
+        "Выберите платформу «Web», укажите URL сайта https://eliasmas.es.",
+        "Скопируйте Measurement ID (начинается с G-) и вставьте его ниже.",
+      ],
+    },
+  },
+  {
+    key: "integration_gtm_id",
+    label: "Google Tag Manager — Container ID",
+    placeholder: "GTM-XXXXXXX",
+    validate: (v) => !v || /^GTM-[A-Z0-9]+$/i.test(v.trim()),
+    docs: { url: "https://tagmanager.google.com/", label: "tagmanager.google.com" },
+    instructions: {
+      en: [
+        "Open tagmanager.google.com and sign in.",
+        "Click Create Account → enter account & container name (e.g. \"eliasmas.es\").",
+        "Choose Web as the target platform and accept the Terms.",
+        "On the install screen copy the GTM-XXXXXXX container ID and paste it below.",
+        "Tags inside the container will load automatically — no further code is needed.",
+      ],
+      ru: [
+        "Откройте tagmanager.google.com и войдите.",
+        "Нажмите Create Account → укажите название аккаунта и контейнера (например \"eliasmas.es\").",
+        "Выберите платформу Web и примите условия использования.",
+        "На экране установки скопируйте ID контейнера GTM-XXXXXXX и вставьте ниже.",
+        "Теги внутри контейнера подключатся автоматически — менять код сайта не нужно.",
+      ],
+    },
+  },
+  {
+    key: "integration_gsc_verification",
+    label: "Google Search Console — Verification code",
+    placeholder: "<meta name=\"google-site-verification\" content=\"…\" />  or just the code",
+    docs: { url: "https://search.google.com/search-console", label: "search.google.com/search-console" },
+    instructions: {
+      en: [
+        "Open search.google.com/search-console and sign in.",
+        "Click Add property → choose URL prefix → enter https://eliasmas.es.",
+        "Pick verification method \"HTML tag\" and copy the full <meta> tag (or just the content value).",
+        "Paste it below and Save — the tag will appear in the site head automatically.",
+        "Return to Search Console and click Verify.",
+      ],
+      ru: [
+        "Откройте search.google.com/search-console и войдите.",
+        "Нажмите Add property → URL prefix → введите https://eliasmas.es.",
+        "Выберите способ подтверждения «HTML tag» и скопируйте весь <meta>-тег (или только значение content).",
+        "Вставьте его ниже и сохраните — тег автоматически появится в <head> сайта.",
+        "Вернитесь в Search Console и нажмите Verify.",
+      ],
+    },
+  },
+  {
+    key: "integration_bing_verification",
+    label: "Bing Webmaster — Verification code",
+    placeholder: "<meta name=\"msvalidate.01\" content=\"…\" />  or just the code",
+    docs: { url: "https://www.bing.com/webmasters", label: "bing.com/webmasters" },
+    instructions: {
+      en: [
+        "Open bing.com/webmasters and sign in.",
+        "Add your site or import directly from Google Search Console.",
+        "Choose verification method \"Meta tag\" and copy the tag.",
+        "Paste it below and Save.",
+      ],
+      ru: [
+        "Откройте bing.com/webmasters и войдите.",
+        "Добавьте сайт или импортируйте его из Google Search Console.",
+        "Выберите способ подтверждения «Meta tag» и скопируйте тег.",
+        "Вставьте его ниже и сохраните.",
+      ],
+    },
+  },
+  {
+    key: "integration_yandex_verification",
+    label: "Yandex Webmaster — Verification code",
+    placeholder: "<meta name=\"yandex-verification\" content=\"…\" />  or just the code",
+    docs: { url: "https://webmaster.yandex.com/", label: "webmaster.yandex.com" },
+    instructions: {
+      en: [
+        "Open webmaster.yandex.com and sign in with your Yandex account.",
+        "Click + Add site and enter https://eliasmas.es.",
+        "Choose Meta tag verification and copy the tag.",
+        "Paste it below and Save, then click Check in Yandex.",
+      ],
+      ru: [
+        "Откройте webmaster.yandex.com и войдите в Яндекс-аккаунт.",
+        "Нажмите + Добавить сайт и укажите https://eliasmas.es.",
+        "Выберите подтверждение через Meta-тег и скопируйте его.",
+        "Вставьте тег ниже и сохраните, затем нажмите «Проверить» в Яндексе.",
+      ],
+    },
+  },
+  {
+    key: "integration_seo_api_key",
+    label: "SEO tool — API key (Ahrefs / SEMrush / Serpstat / etc.)",
+    placeholder: "Paste API key",
+    secret: true,
+    docs: { url: "https://ahrefs.com/api", label: "Provider docs" },
+    instructions: {
+      en: [
+        "Sign in to your SEO provider (Ahrefs, SEMrush, Serpstat, …).",
+        "Open API section of your account settings and generate a new API key.",
+        "Copy the key and paste it below — it stays private to your dashboard.",
+        "We'll use it later to pull live ranking data into this dashboard.",
+      ],
+      ru: [
+        "Войдите в свой SEO-сервис (Ahrefs, SEMrush, Serpstat, …).",
+        "В настройках аккаунта откройте раздел API и сгенерируйте новый ключ.",
+        "Скопируйте ключ и вставьте ниже — он виден только в вашей панели.",
+        "Позже мы используем его для загрузки данных о позициях в этот дашборд.",
+      ],
+    },
+  },
+];
+
+const DashboardIntegrations = () => {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [original, setOriginal] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [docLang, setDocLang] = useState<DocLang>("en");
+  const [reveal, setReveal] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    supabase
+      .from("site_content")
+      .select("content_key, value_es")
+      .eq("category", "integrations")
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        (data || []).forEach((r: any) => { map[r.content_key] = r.value_es || ""; });
+        setValues(map);
+        setOriginal(map);
+        setLoading(false);
+      });
+  }, []);
+
+  const save = async (key: string) => {
+    setSavingKey(key);
+    const v = (values[key] || "").trim();
+    await supabase
+      .from("site_content")
+      .update({ value_es: v, value_en: v, value_ru: v, updated_at: new Date().toISOString() })
+      .eq("content_key", key);
+    setOriginal({ ...original, [key]: v });
+    setSavingKey(null);
+  };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
+
+  return (
+    <div className="space-y-4">
+      <DashboardCard>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-medium text-foreground">Integrations / Интеграции</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Paste your Google Workspace tracking IDs and SEO codes. They go live on the public site immediately after saving.
+            </p>
+          </div>
+          <div className="flex items-center gap-1 bg-secondary p-0.5 rounded-lg">
+            <Languages size={13} className="text-muted-foreground mx-1.5" />
+            {(["en", "ru"] as DocLang[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => setDocLang(l)}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  docLang === l ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      </DashboardCard>
+
+      {FIELDS.map((f) => {
+        const value = values[f.key] || "";
+        const isConnected = !!original[f.key]?.trim();
+        const dirty = value !== (original[f.key] || "");
+        const valid = !f.validate || f.validate(value);
+        const isSecret = !!f.secret;
+        const showSecret = reveal[f.key];
+
+        return (
+          <DashboardCard key={f.key}>
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  {isConnected ? (
+                    <CheckCircle2 size={16} className="text-green-500 shrink-0" />
+                  ) : (
+                    <Circle size={16} className="text-muted-foreground/40 shrink-0" />
+                  )}
+                  <h4 className="text-sm font-medium text-foreground">{f.label}</h4>
+                  {isConnected && (
+                    <span className="text-[10px] px-2 py-0.5 bg-green-500/10 text-green-600 rounded-full">Connected</span>
+                  )}
+                </div>
+                <a
+                  href={f.docs.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink size={11} /> {f.docs.label}
+                </a>
+              </div>
+
+              <div className="rounded-lg bg-secondary/40 border border-border p-3">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+                  {docLang === "en" ? "How to get this" : "Как получить"}
+                </p>
+                <ol className="space-y-1.5 text-xs text-foreground list-decimal pl-4 leading-relaxed">
+                  {f.instructions[docLang].map((step, i) => (<li key={i}>{step}</li>))}
+                </ol>
+              </div>
+
+              <div className="flex gap-2 items-stretch">
+                <div className="relative flex-1">
+                  <input
+                    type={isSecret && !showSecret ? "password" : "text"}
+                    value={value}
+                    onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                    placeholder={f.placeholder}
+                    spellCheck={false}
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground font-mono ${
+                      valid ? "border-border" : "border-destructive"
+                    } ${isSecret ? "pr-10" : ""}`}
+                  />
+                  {isSecret && (
+                    <button
+                      type="button"
+                      onClick={() => setReveal({ ...reveal, [f.key]: !showSecret })}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => save(f.key)}
+                  disabled={!dirty || !valid || savingKey === f.key}
+                  className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {savingKey === f.key ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {docLang === "en" ? "Save" : "Сохранить"}
+                </button>
+              </div>
+              {!valid && (
+                <p className="text-[11px] text-destructive">
+                  {docLang === "en"
+                    ? `Format looks wrong — expected ${f.placeholder.split(" ")[0]}`
+                    : `Неверный формат — ожидается ${f.placeholder.split(" ")[0]}`}
+                </p>
+              )}
+            </div>
+          </DashboardCard>
+        );
+      })}
+    </div>
+  );
+};
+
+export default DashboardIntegrations;
