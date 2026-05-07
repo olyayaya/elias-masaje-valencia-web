@@ -47,6 +47,9 @@ const DashboardSEO = () => {
 
   return (
     <div className="space-y-6">
+      {/* Structured data preview — verifies OfferCatalog matches public site */}
+      <StructuredDataPreview />
+
       {/* Overview Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
