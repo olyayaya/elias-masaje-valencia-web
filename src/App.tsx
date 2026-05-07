@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Blog from "./pages/Blog";
 import BlogPostPage from "./pages/BlogPost";
+import AnalyticsCheck from "./pages/AnalyticsCheck";
 import ScrollToTop from "./components/ScrollToTop";
 import LocaleSync from "./components/LocaleSync";
 import LanguageSuggestionBanner from "./components/LanguageSuggestionBanner";
@@ -72,6 +73,7 @@ const App = () => (
             </Route>
 
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/analytics-check" element={<AnalyticsCheck />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

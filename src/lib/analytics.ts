@@ -25,13 +25,13 @@ function logToDb(eventName: string, location: string, extra: EventParams) {
   // Skip dashboard / preview noise
   if (typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard")) return;
   // Fire-and-forget — don't block navigation
-  void supabase.from("conversion_events").insert({
+  void supabase.from("conversion_events").insert([{
     event_name: eventName,
     location,
-    metadata: extra as Record<string, unknown>,
+    metadata: extra as any,
     page_path: typeof window !== "undefined" ? window.location.pathname + window.location.search : "",
     locale: typeof document !== "undefined" ? document.documentElement.lang || "" : "",
-  });
+  }]);
 }
 
 export function trackEvent(eventName: string, params: EventParams = {}) {
