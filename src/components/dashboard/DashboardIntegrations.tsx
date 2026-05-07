@@ -175,6 +175,8 @@ const DashboardIntegrations = () => {
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [docLang, setDocLang] = useState<DocLang>("en");
   const [reveal, setReveal] = useState<Record<string, boolean>>({});
+  const [testing, setTesting] = useState<string | null>(null);
+  const [tests, setTests] = useState<Record<string, TestStatus>>(loadTestCache);
 
   useEffect(() => {
     supabase
@@ -199,6 +201,25 @@ const DashboardIntegrations = () => {
       .eq("content_key", key);
     setOriginal({ ...original, [key]: v });
     setSavingKey(null);
+  };
+
+  const runTest = async (key: string) => {
+    const v = (values[key] || "").trim();
+    if (!v) return;
+    setTesting(key);
+    try {
+      const { data, error } = await supabase.functions.invoke("test-integration", {
+        body: { kind: key, value: v },
+      });
+      const result: TestStatus = error
+        ? { ok: false, error: error.message, testedAt: new Date().toISOString() }
+        : { ok: !!data?.ok, error: data?.error, details: data?.details, testedAt: data?.testedAt || new Date().toISOString() };
+      const next = { ...tests, [key]: result };
+      setTests(next);
+      saveTestCache(next);
+    } finally {
+      setTesting(null);
+    }
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
