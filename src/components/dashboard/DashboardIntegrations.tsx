@@ -258,6 +258,8 @@ const DashboardIntegrations = () => {
         const valid = !f.validate || f.validate(value);
         const isSecret = !!f.secret;
         const showSecret = reveal[f.key];
+        const test = tests[f.key];
+        const isTesting = testing === f.key;
 
         return (
           <DashboardCard key={f.key}>
