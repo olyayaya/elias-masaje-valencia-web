@@ -8,6 +8,7 @@ import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { useTheme } from "@/contexts/ThemeContext";
 import { WHATSAPP_PHONE, WHATSAPP_DEFAULT_MESSAGE, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/config/contact";
+import { trackWhatsAppClick, trackContactSubmit } from "@/lib/analytics";
 
 const ContactItem = ({ icon: Icon, title, children, index }: {
   icon: typeof MapPin; title: string; children: React.ReactNode; index: number;
@@ -81,6 +82,10 @@ const OrganicContact = () => {
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => {
+                    trackWhatsAppClick("contact_page_send_message");
+                    trackContactSubmit("contact_page_whatsapp");
+                  }}
                   className="inline-block mt-2 text-sm font-body bg-foreground text-background px-6 py-2.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
                 >
                   {t.contact.sendMessage}
@@ -127,6 +132,10 @@ const OrganicContact = () => {
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => {
+                      trackWhatsAppClick("contact_page_final_cta");
+                      trackContactSubmit("contact_page_final_cta");
+                    }}
                     className="inline-block text-sm font-body bg-foreground text-background px-10 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
                   >
                     {sc.final_cta_button || t.finalCta.cta}

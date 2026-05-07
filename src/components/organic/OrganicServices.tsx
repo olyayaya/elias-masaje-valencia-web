@@ -19,6 +19,7 @@ import { usePageImages } from "@/hooks/use-page-images";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { WHATSAPP_URL } from "@/config/contact";
+import { trackWhatsAppClick } from "@/lib/analytics";
 import { formatPrice } from "@/lib/format-price";
 
 const PROMO_COLORS: Record<string, string> = {
@@ -58,6 +59,7 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index, bad
           href={WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackWhatsAppClick("services_card", { service_name: title })}
           className="text-sm font-body border border-foreground/20 text-foreground px-5 py-2 rounded-full transition-all hover:bg-foreground hover:text-background"
         >
           {bookLabel}
@@ -209,6 +211,7 @@ const OrganicServices = () => {
                     href={WHATSAPP_URL}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackWhatsAppClick("services_final_cta")}
                     className="inline-block text-sm font-body px-10 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
                     style={{ backgroundColor: "hsl(var(--organic-dark-foreground))", color: "hsl(var(--organic-dark))" }}
                   >
