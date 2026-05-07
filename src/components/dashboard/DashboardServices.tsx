@@ -48,7 +48,7 @@ const DashboardServices = () => {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Service>>({});
   const [isNew, setIsNew] = useState(false);
-  const [lang, setLang] = useState<Lang>("es");
+  const [lang, setLang] = usePreviewLocale("es");
   const [compareMode, setCompareMode] = useState(false);
 
   const fetchServices = async () => {
