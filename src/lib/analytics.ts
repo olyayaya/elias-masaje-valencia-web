@@ -28,7 +28,7 @@ function logToDb(eventName: string, location: string, extra: EventParams) {
   void supabase.from("conversion_events").insert([{
     event_name: eventName,
     location,
-    metadata: extra as Record<string, unknown>,
+    metadata: extra as any,
     page_path: typeof window !== "undefined" ? window.location.pathname + window.location.search : "",
     locale: typeof document !== "undefined" ? document.documentElement.lang || "" : "",
   }]);
