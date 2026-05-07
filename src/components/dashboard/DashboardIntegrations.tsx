@@ -86,21 +86,23 @@ const FIELDS: Field[] = [
   {
     key: "integration_gsc_verification",
     label: "Google Search Console — Verification code",
-    placeholder: "<meta name=\"google-site-verification\" content=\"…\" />  or just the code",
+    placeholder: "<meta …/>, just the code, or googleXXXX.html",
     docs: { url: "https://search.google.com/search-console", label: "search.google.com/search-console" },
     instructions: {
       en: [
         "Open search.google.com/search-console and sign in.",
         "Click Add property → choose URL prefix → enter https://eliasmas.es.",
         "Pick verification method \"HTML tag\" and copy the full <meta> tag (or just the content value).",
-        "Paste it below and Save — the tag will appear in the site head automatically.",
+        "Or paste the HTML file reference (e.g. google1a2b3c.html) — we extract the token automatically.",
+        "Paste it below and Save — the tag appears in the site head; status auto-checks below.",
         "Return to Search Console and click Verify.",
       ],
       ru: [
         "Откройте search.google.com/search-console и войдите.",
         "Нажмите Add property → URL prefix → введите https://eliasmas.es.",
         "Выберите способ подтверждения «HTML tag» и скопируйте весь <meta>-тег (или только значение content).",
-        "Вставьте его ниже и сохраните — тег автоматически появится в <head> сайта.",
+        "Или вставьте имя HTML-файла (например google1a2b3c.html) — токен извлечётся автоматически.",
+        "Вставьте значение ниже и сохраните — тег автоматически появится в <head> сайта, статус проверится ниже.",
         "Вернитесь в Search Console и нажмите Verify.",
       ],
     },
