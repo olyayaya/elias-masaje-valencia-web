@@ -21,6 +21,7 @@ export interface DashboardTranslations {
     history: string;
     carousels: string;
     integrations: string;
+    attribution: string;
   };
   overview: {
     monthlyViews: string;
@@ -125,6 +126,7 @@ const en: DashboardTranslations = {
     history: "History",
     carousels: "Carousels",
     integrations: "Integrations",
+    attribution: "Attribution",
   },
   overview: {
     monthlyViews: "Monthly views",
@@ -229,6 +231,7 @@ const es: DashboardTranslations = {
     history: "Historial",
     carousels: "Carruseles",
     integrations: "Integraciones",
+    attribution: "Atribución",
   },
   overview: {
     monthlyViews: "Visitas mensuales",
@@ -333,6 +336,7 @@ const ru: DashboardTranslations = {
     history: "История",
     carousels: "Карусели",
     integrations: "Интеграции",
+    attribution: "Атрибуция",
   },
   overview: {
     monthlyViews: "Просмотров в месяц",
