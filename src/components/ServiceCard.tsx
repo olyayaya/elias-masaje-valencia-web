@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import { WHATSAPP_URL } from "@/config/contact";
+import { trackWhatsAppClick } from "@/lib/analytics";
 import { formatPrice } from "@/lib/format-price";
 
 interface ServiceCardProps {
@@ -50,6 +51,7 @@ const ServiceCard = ({ title, description, duration, price, index = 0 }: Service
         href={WHATSAPP_URL}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => trackWhatsAppClick("service_card", { service_name: title })}
         className="inline-block text-center text-sm font-body bg-primary text-primary-foreground px-5 py-2.5 rounded transition-opacity hover:opacity-90"
       >
         {t.services.bookBtn}

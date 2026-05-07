@@ -30,6 +30,7 @@ import MapBlock from "@/components/MapBlock";
 import OrganicShape from "@/components/organic/OrganicShape";
 import BenefitIcon from "@/components/BenefitIcon";
 import { WHATSAPP_URL } from "@/config/contact";
+import { trackWhatsAppClick } from "@/lib/analytics";
 
 const OrganicHome = () => {
   const { t, locale } = useI18n();
@@ -125,6 +126,7 @@ const OrganicHome = () => {
               href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClick("home_hero")}
               className="inline-block text-sm font-body bg-foreground text-background px-8 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
             >
               {sc.hero_cta || t.hero.cta}
@@ -206,6 +208,7 @@ const OrganicHome = () => {
                         href={WHATSAPP_URL}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={() => trackWhatsAppClick("home_service_card", { service_name: (s as any).title })}
                         className="text-sm font-body border border-foreground/20 text-foreground px-5 py-2 rounded-full transition-all hover:bg-foreground hover:text-background"
                       >
                         {t.services.bookBtn}
@@ -522,6 +525,7 @@ const OrganicHome = () => {
                     href={WHATSAPP_URL}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackWhatsAppClick("home_gift_card")}
                     className="inline-block text-sm font-body px-6 py-2.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
                     style={{ backgroundColor: "hsl(var(--organic-dark-foreground))", color: "hsl(var(--organic-dark))" }}
                   >
@@ -548,6 +552,7 @@ const OrganicHome = () => {
             href={WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackWhatsAppClick("home_final_cta")}
             className="inline-block text-sm font-body bg-foreground text-background px-10 py-4 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
           >
             {sc.final_cta_button || t.finalCta.cta}

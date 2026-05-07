@@ -1,6 +1,7 @@
 import { Gift } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { whatsappUrl } from "@/config/contact";
+import { trackWhatsAppClick } from "@/lib/analytics";
 
 const GIFT_WHATSAPP_URL = whatsappUrl("Hola, me gustaría información sobre tarjetas regalo");
 
@@ -19,6 +20,7 @@ const GiftCardHighlight = () => {
           href={GIFT_WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackWhatsAppClick("gift_card_highlight")}
           className="inline-block text-sm font-body bg-primary text-primary-foreground px-6 py-3 rounded transition-opacity hover:opacity-90"
         >
           {t.giftCard.cta}

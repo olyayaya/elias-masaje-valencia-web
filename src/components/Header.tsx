@@ -6,6 +6,7 @@ import { useI18n } from "@/i18n/context";
 import { useLocalePath } from "@/hooks/use-locale-path";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { WHATSAPP_URL } from "@/config/contact";
+import { trackWhatsAppClick } from "@/lib/analytics";
 
 const Header = () => {
   const [open, setOpen] = useState(false);
@@ -63,6 +64,7 @@ const Header = () => {
               href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackWhatsAppClick("header_desktop")}
               className="text-sm font-body bg-primary text-primary-foreground px-5 py-2 rounded transition-opacity hover:opacity-90"
             >
               {t.nav.book}
@@ -105,6 +107,7 @@ const Header = () => {
               href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => { setOpen(false); trackWhatsAppClick("header_mobile"); }}
               className="block mt-3 text-center text-sm font-body bg-primary text-primary-foreground px-5 py-2.5 rounded"
             >
               {t.nav.bookWhatsApp}

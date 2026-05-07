@@ -17,6 +17,7 @@ import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { useTheme } from "@/contexts/ThemeContext";
 import { WHATSAPP_URL } from "@/config/contact";
+import { trackWhatsAppClick } from "@/lib/analytics";
 
 /** Splits a long-form text field into paragraphs on blank lines, keeping single newlines as soft breaks. */
 const splitParagraphs = (raw: string): string[] =>
@@ -188,6 +189,7 @@ const OrganicAbout = () => {
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick("about_final_cta")}
                 className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-primary text-primary-foreground font-body text-sm tracking-wide hover:opacity-90 transition-opacity"
               >
                 {t.finalCta.cta}
