@@ -325,7 +325,37 @@ const DashboardIntegrations = () => {
                   {savingKey === f.key ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                   {docLang === "en" ? "Save" : "Сохранить"}
                 </button>
+                <button
+                  onClick={() => runTest(f.key)}
+                  disabled={!value.trim() || !valid || isTesting || dirty}
+                  title={dirty ? (docLang === "en" ? "Save first, then test" : "Сначала сохраните, затем тест") : ""}
+                  className="flex items-center gap-2 px-3 py-2 border border-border text-foreground text-sm rounded-lg hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isTesting ? <Loader2 size={14} className="animate-spin" /> : <Activity size={14} />}
+                  {docLang === "en" ? "Test" : "Тест"}
+                </button>
               </div>
+              {test && (
+                <div className={`flex items-start gap-2 text-[11px] rounded-md px-2.5 py-2 border ${
+                  test.ok ? "border-green-500/30 bg-green-500/5 text-green-700 dark:text-green-400"
+                          : "border-destructive/40 bg-destructive/5 text-destructive"
+                }`}>
+                  {test.ok ? <CheckCircle2 size={12} className="mt-0.5 shrink-0" /> : <AlertCircle size={12} className="mt-0.5 shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">
+                        {test.ok
+                          ? (docLang === "en" ? "Live & responding" : "Активно и отвечает")
+                          : (docLang === "en" ? "Check failed" : "Ошибка проверки")}
+                      </span>
+                      <span className="text-muted-foreground">· {docLang === "en" ? "tested" : "проверено"} {formatRelative(test.testedAt, docLang)}</span>
+                    </div>
+                    {(test.error || test.details) && (
+                      <p className="mt-0.5 break-words opacity-90">{test.error || test.details}</p>
+                    )}
+                  </div>
+                </div>
+              )}
               {!valid && (
                 <p className="text-[11px] text-destructive">
                   {docLang === "en"
