@@ -67,6 +67,7 @@ const Dashboard = () => {
       case "promotions": return <DashboardPromotions />;
       case "blog": return <DashboardBlog />;
       case "seo": return <DashboardSEO />;
+      case "integrations": return <DashboardIntegrations />;
       case "media": return <DashboardMedia />;
       case "faq": return <DashboardFAQ />;
       case "testimonials": return <DashboardTestimonials />;
