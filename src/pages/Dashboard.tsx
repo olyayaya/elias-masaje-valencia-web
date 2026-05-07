@@ -19,6 +19,7 @@ import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
 import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
 import DashboardCarousels from "@/components/dashboard/DashboardCarousels";
+import DashboardIntegrations from "@/components/dashboard/DashboardIntegrations";
 
 // Primary sections — always visible
 const primarySections = [
