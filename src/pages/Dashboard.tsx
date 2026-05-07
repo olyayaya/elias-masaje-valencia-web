@@ -37,6 +37,7 @@ const primarySections = [
 const secondarySections = [
   { id: "promotions", icon: Tag },
   { id: "seo", icon: Search },
+  { id: "integrations", icon: Plug },
   { id: "history", icon: History },
 ] as const;
 
