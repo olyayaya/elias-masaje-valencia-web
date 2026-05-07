@@ -111,9 +111,10 @@ const DashboardServices = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-4">
-          <p className="text-sm text-muted-foreground">{services.length} services · editing in</p>
+        <div className="flex items-center gap-4 flex-wrap">
+          <p className="text-sm text-muted-foreground">{services.length} services · editing & previewing in</p>
           <LanguageTabs active={lang} onChange={setLang} />
+          <span className="text-[11px] text-muted-foreground/70">Switch to instantly preview ES / EN / RU</span>
         </div>
         <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 transition-colors">
           <Plus size={14} /> Add service
@@ -126,7 +127,15 @@ const DashboardServices = () => {
         </DashboardCard>
       )}
 
-      {services.map((s) => (
+      {services.map((s) => {
+        const previewTitle = resolveField(s, "title", lang);
+        const previewDesc = resolveField(s, "description", lang);
+        const previewDuration = resolveField(s, "duration", lang);
+        const previewPrice = resolveField(s, "price", lang);
+        const usingFallback = lang !== "es" && (
+          !langVal(s, "title", lang) || !langVal(s, "description", lang)
+        );
+        return (
         <DashboardCard key={s.id}>
           {editing === s.id && !isNew ? (
             <ServiceForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} saving={saving} lang={lang} />
@@ -134,19 +143,22 @@ const DashboardServices = () => {
             <div className={`flex items-start justify-between gap-4 ${s.hidden ? "opacity-50" : ""}`}>
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-sm font-medium text-foreground">{langVal(s, "title", lang) || s.title}</h4>
+                  <h4 className="text-sm font-medium text-foreground">{previewTitle}</h4>
                   {s.hidden && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">Hidden</span>}
                   {s.hide_price && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No price</span>}
                   {s.hide_duration && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No duration</span>}
                   {s.hide_price_from && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No "from"</span>}
+                  {usingFallback && <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">ES fallback</span>}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{langVal(s, "description", lang) || s.description}</p>
+                <p className="text-xs text-muted-foreground mt-1">{previewDesc}</p>
                 <div className="flex gap-4 mt-2">
-                  {!s.hide_duration && (
-                    <span className="text-xs text-muted-foreground">{langVal(s, "duration", lang) || s.duration}</span>
+                  {!s.hide_duration && previewDuration && (
+                    <span className="text-xs text-muted-foreground">{previewDuration}</span>
                   )}
-                  {!s.hide_price && (
-                    <span className="text-xs font-medium text-foreground">{langVal(s, "price", lang) || s.price}</span>
+                  {!s.hide_price && previewPrice && (
+                    <span className="text-xs font-medium text-foreground">
+                      {formatPrice(previewPrice, T_BY_LANG[lang], { hidePrefix: s.hide_price_from })}
+                    </span>
                   )}
                 </div>
               </div>
@@ -160,7 +172,8 @@ const DashboardServices = () => {
             </div>
           )}
         </DashboardCard>
-      ))}
+        );
+      })}
     </div>
   );
 };
