@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Save, X, Loader2, Languages, Search, EyeOff, Eye, RotateCcw } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, Loader2, Languages, Search, EyeOff, Eye, RotateCcw, Columns3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
@@ -49,6 +49,7 @@ const DashboardServices = () => {
   const [draft, setDraft] = useState<Partial<Service>>({});
   const [isNew, setIsNew] = useState(false);
   const [lang, setLang] = useState<Lang>("es");
+  const [compareMode, setCompareMode] = useState(false);
 
   const fetchServices = async () => {
     const { data } = await supabase
@@ -116,9 +117,22 @@ const DashboardServices = () => {
           <LanguageTabs active={lang} onChange={setLang} />
           <span className="text-[11px] text-muted-foreground/70">Switch to instantly preview ES / EN / RU</span>
         </div>
-        <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 transition-colors">
-          <Plus size={14} /> Add service
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCompareMode(!compareMode)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border transition-colors ${
+              compareMode
+                ? "bg-foreground text-background border-foreground"
+                : "border-border text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
+            title="Compare ES, EN and RU side-by-side"
+          >
+            <Columns3 size={13} /> Compare locales
+          </button>
+          <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 transition-colors">
+            <Plus size={14} /> Add service
+          </button>
+        </div>
       </div>
 
       {isNew && editing && (
@@ -127,56 +141,131 @@ const DashboardServices = () => {
         </DashboardCard>
       )}
 
-      {services.map((s) => {
-        const previewTitle = resolveField(s, "title", lang);
-        const previewDesc = resolveField(s, "description", lang);
-        const previewDuration = resolveField(s, "duration", lang);
-        const previewPrice = resolveField(s, "price", lang);
-        const usingFallback = lang !== "es" && (
-          !langVal(s, "title", lang) || !langVal(s, "description", lang)
-        );
-        return (
+      {services.map((s) => (
         <DashboardCard key={s.id}>
           {editing === s.id && !isNew ? (
             <ServiceForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} saving={saving} lang={lang} />
+          ) : compareMode ? (
+            <CompareRow service={s} onEdit={() => startEdit(s)} onRemove={() => remove(s.id)} onToggleHidden={async () => { await supabase.from("services").update({ hidden: !s.hidden }).eq("id", s.id); fetchServices(); }} />
           ) : (
-            <div className={`flex items-start justify-between gap-4 ${s.hidden ? "opacity-50" : ""}`}>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-sm font-medium text-foreground">{previewTitle}</h4>
-                  {s.hidden && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">Hidden</span>}
-                  {s.hide_price && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No price</span>}
-                  {s.hide_duration && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No duration</span>}
-                  {s.hide_price_from && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No "from"</span>}
-                  {usingFallback && <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">ES fallback</span>}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{previewDesc}</p>
-                <div className="flex gap-4 mt-2">
-                  {!s.hide_duration && previewDuration && (
-                    <span className="text-xs text-muted-foreground">{previewDuration}</span>
-                  )}
-                  {!s.hide_price && previewPrice && (
-                    <span className="text-xs font-medium text-foreground">
-                      {formatPrice(previewPrice, T_BY_LANG[lang], { hidePrefix: s.hide_price_from })}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-1">
-                <button onClick={async () => { await supabase.from("services").update({ hidden: !s.hidden }).eq("id", s.id); fetchServices(); }} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary" title={s.hidden ? "Show on site" : "Hide from site"}>
-                  {s.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-                <button onClick={() => startEdit(s)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary"><Pencil size={14} /></button>
-                <button onClick={() => remove(s.id)} className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-secondary"><Trash2 size={14} /></button>
-              </div>
-            </div>
+            <SinglePreviewRow
+              service={s}
+              lang={lang}
+              onEdit={() => startEdit(s)}
+              onRemove={() => remove(s.id)}
+              onToggleHidden={async () => { await supabase.from("services").update({ hidden: !s.hidden }).eq("id", s.id); fetchServices(); }}
+            />
           )}
         </DashboardCard>
-        );
-      })}
+      ))}
     </div>
   );
 };
+
+/* -------- Single locale preview row (existing default) -------- */
+const SinglePreviewRow = ({
+  service: s, lang, onEdit, onRemove, onToggleHidden,
+}: {
+  service: Service; lang: Lang;
+  onEdit: () => void; onRemove: () => void; onToggleHidden: () => void;
+}) => {
+  const previewTitle = resolveField(s, "title", lang);
+  const previewDesc = resolveField(s, "description", lang);
+  const previewDuration = resolveField(s, "duration", lang);
+  const previewPrice = resolveField(s, "price", lang);
+  const usingFallback = lang !== "es" && (
+    !langVal(s, "title", lang) || !langVal(s, "description", lang)
+  );
+
+  return (
+    <div className={`flex items-start justify-between gap-4 ${s.hidden ? "opacity-50" : ""}`}>
+      <div className="flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h4 className="text-sm font-medium text-foreground">{previewTitle}</h4>
+          {s.hidden && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">Hidden</span>}
+          {s.hide_price && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No price</span>}
+          {s.hide_duration && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No duration</span>}
+          {s.hide_price_from && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No "from"</span>}
+          {usingFallback && <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">ES fallback</span>}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">{previewDesc}</p>
+        <div className="flex gap-4 mt-2">
+          {!s.hide_duration && previewDuration && (
+            <span className="text-xs text-muted-foreground">{previewDuration}</span>
+          )}
+          {!s.hide_price && previewPrice && (
+            <span className="text-xs font-medium text-foreground">
+              {formatPrice(previewPrice, T_BY_LANG[lang], { hidePrefix: s.hide_price_from })}
+            </span>
+          )}
+        </div>
+      </div>
+      <RowActions hidden={s.hidden} onToggleHidden={onToggleHidden} onEdit={onEdit} onRemove={onRemove} />
+    </div>
+  );
+};
+
+/* -------- Side-by-side ES / EN / RU compare row -------- */
+const COMPARE_LANGS: Lang[] = ["es", "en", "ru"];
+const LANG_LABELS: Record<Lang, string> = { es: "ES", en: "EN", ru: "RU" };
+
+const CompareRow = ({
+  service: s, onEdit, onRemove, onToggleHidden,
+}: {
+  service: Service;
+  onEdit: () => void; onRemove: () => void; onToggleHidden: () => void;
+}) => (
+  <div className={`${s.hidden ? "opacity-50" : ""}`}>
+    <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        {s.hidden && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">Hidden</span>}
+        {s.hide_price && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No price</span>}
+        {s.hide_duration && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No duration</span>}
+        {s.hide_price_from && <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">No "from"</span>}
+      </div>
+      <RowActions hidden={s.hidden} onToggleHidden={onToggleHidden} onEdit={onEdit} onRemove={onRemove} />
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {COMPARE_LANGS.map((l) => {
+        const title = resolveField(s, "title", l);
+        const desc = resolveField(s, "description", l);
+        const duration = resolveField(s, "duration", l);
+        const price = resolveField(s, "price", l);
+        const fallback = l !== "es" && (!langVal(s, "title", l) || !langVal(s, "description", l));
+        return (
+          <div key={l} className="rounded-lg border border-border bg-secondary/30 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-semibold tracking-wider text-muted-foreground">{LANG_LABELS[l]}</span>
+              {fallback && <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded-full">ES fallback</span>}
+            </div>
+            <h4 className="text-sm font-medium text-foreground leading-snug">{title || <span className="italic text-muted-foreground">—</span>}</h4>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{desc || <span className="italic">—</span>}</p>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+              {!s.hide_duration && duration && <span className="text-xs text-muted-foreground">{duration}</span>}
+              {!s.hide_price && price && (
+                <span className="text-xs font-medium text-foreground">
+                  {formatPrice(price, T_BY_LANG[l], { hidePrefix: s.hide_price_from })}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const RowActions = ({
+  hidden, onToggleHidden, onEdit, onRemove,
+}: { hidden: boolean; onToggleHidden: () => void; onEdit: () => void; onRemove: () => void }) => (
+  <div className="flex gap-1 shrink-0">
+    <button onClick={onToggleHidden} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary" title={hidden ? "Show on site" : "Hide from site"}>
+      {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+    </button>
+    <button onClick={onEdit} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary"><Pencil size={14} /></button>
+    <button onClick={onRemove} className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-secondary"><Trash2 size={14} /></button>
+  </div>
+);
 
 const inputClass =
   "w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground";
