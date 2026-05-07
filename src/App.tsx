@@ -18,8 +18,14 @@ import ScrollToTop from "./components/ScrollToTop";
 import LocaleSync from "./components/LocaleSync";
 import LanguageSuggestionBanner from "./components/LanguageSuggestionBanner";
 import { PageTracker } from "./components/PageTracker";
+import { useIntegrationsInjector } from "./hooks/use-integrations-injector";
 
 const queryClient = new QueryClient();
+
+const IntegrationsLoader = () => {
+  useIntegrationsInjector();
+  return null;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -33,6 +39,7 @@ const App = () => (
           <LocaleSync />
           <LanguageSuggestionBanner />
           <PageTracker />
+          <IntegrationsLoader />
           <Routes>
             {/* Spanish (default — no prefix) */}
             <Route element={<Layout />}>
