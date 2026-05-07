@@ -71,9 +71,13 @@ export function useIntegrationsInjector() {
       ];
       verifications.forEach(([name, content]) => {
         if (!content) return;
-        // Strip a full <meta ... content="XYZ" .../> if user pasted the whole tag
-        const match = content.match(/content=["']([^"']+)["']/i);
-        const value = match ? match[1] : content;
+        // 1) Full <meta ... content="X" /> pasted
+        const metaMatch = content.match(/content=["']([^"']+)["']/i);
+        let value = metaMatch ? metaMatch[1] : content.trim();
+        // 2) Google HTML-file reference: googleXXXX.html → use XXXX as token
+        if (name === "google-site-verification" && /^google[a-z0-9]+\.html$/i.test(value)) {
+          value = value.replace(/^google/i, "").replace(/\.html$/i, "");
+        }
         const meta = document.createElement("meta");
         meta.setAttribute("name", name);
         meta.setAttribute("content", value);
