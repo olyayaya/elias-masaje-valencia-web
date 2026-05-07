@@ -1,8 +1,25 @@
 import { Link } from "react-router-dom";
+import { Facebook, Instagram } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { useLocalePath } from "@/hooks/use-locale-path";
 import { INSTAGRAM_HANDLE } from "@/config/contact";
+
+// Brand glyphs not included in lucide
+const GoogleIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+    <path d="M21.6 12.227c0-.708-.064-1.388-.182-2.04H12v3.86h5.385a4.6 4.6 0 0 1-1.996 3.018v2.51h3.232c1.89-1.74 2.98-4.305 2.98-7.348z"/>
+    <path d="M12 22c2.7 0 4.964-.895 6.62-2.425l-3.23-2.51c-.896.6-2.04.957-3.39.957-2.605 0-4.81-1.76-5.598-4.124H3.064v2.59A9.997 9.997 0 0 0 12 22z"/>
+    <path d="M6.402 13.898A6.005 6.005 0 0 1 6.09 12c0-.66.114-1.3.312-1.898V7.512H3.064A9.996 9.996 0 0 0 2 12c0 1.614.387 3.14 1.064 4.488l3.338-2.59z"/>
+    <path d="M12 5.977c1.47 0 2.788.505 3.825 1.498l2.868-2.868C16.96 2.99 14.696 2 12 2A9.997 9.997 0 0 0 3.064 7.512l3.338 2.59C7.19 7.737 9.395 5.977 12 5.977z"/>
+  </svg>
+);
+
+const TripAdvisorIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+    <path d="M12 7.5c-2.21 0-4.27.61-6.04 1.66H2l1.78 1.94A4.5 4.5 0 0 0 7 18.5c1.27 0 2.42-.53 3.24-1.38L12 19l1.76-1.88c.82.85 1.97 1.38 3.24 1.38a4.5 4.5 0 0 0 3.22-7.4L22 9.16h-3.96A11.97 11.97 0 0 0 12 7.5zM7 10.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm10 0a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zM7 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
+  </svg>
+);
 
 const Footer = () => {
   const { t } = useI18n();
