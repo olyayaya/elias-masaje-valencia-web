@@ -305,6 +305,17 @@ const DashboardIntegrations = () => {
                   {isConnected && (
                     <span className="text-[10px] px-2 py-0.5 bg-green-500/10 text-green-600 rounded-full">Connected</span>
                   )}
+                  {isConnected && f.key.endsWith("_verification") && test && (
+                    test.ok ? (
+                      <span className="text-[10px] px-2 py-0.5 bg-green-500/15 text-green-700 dark:text-green-400 rounded-full">
+                        {docLang === "en" ? "Confirmed live" : "Подтверждено"}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-2 py-0.5 bg-destructive/10 text-destructive rounded-full">
+                        {docLang === "en" ? "Not confirmed" : "Не подтверждено"}
+                      </span>
+                    )
+                  )}
                 </div>
                 <a
                   href={f.docs.url}
