@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CheckCircle2, Circle, ExternalLink, Search, MapPin, Star, TrendingUp, Eye, MousePointerClick, Globe } from "lucide-react";
 import DashboardCard from "./DashboardCard";
+import StructuredDataPreview from "./StructuredDataPreview";
 
 const keywordSuggestions = [
   { keyword: "masaje Valencia", volume: "High", difficulty: "Medium" },
@@ -46,6 +47,9 @@ const DashboardSEO = () => {
 
   return (
     <div className="space-y-6">
+      {/* Structured data preview — verifies OfferCatalog matches public site */}
+      <StructuredDataPreview />
+
       {/* Overview Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
