@@ -47,8 +47,21 @@ const ServiciosPage = () => {
           },
         };
         if (!s.hide_price && localizedPrice) {
-          offer.price = localizedPrice.replace(/[^0-9.,]/g, "");
-          offer.priceCurrency = "EUR";
+          const numeric = localizedPrice.replace(/[^0-9.,]/g, "").replace(",", ".");
+          if (numeric) {
+            if (s.hide_price_from) {
+              // Exact price — no "from" prefix shown publicly
+              offer.price = numeric;
+              offer.priceCurrency = "EUR";
+            } else {
+              // "From" pricing — expose as a minimum price specification
+              offer.priceSpecification = {
+                "@type": "PriceSpecification",
+                priceCurrency: "EUR",
+                minPrice: numeric,
+              };
+            }
+          }
         }
         return offer;
       }),
