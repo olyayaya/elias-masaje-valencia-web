@@ -228,6 +228,7 @@ const es: DashboardTranslations = {
     testimonials: "Testimonios",
     history: "Historial",
     carousels: "Carruseles",
+    integrations: "Integraciones",
   },
   overview: {
     monthlyViews: "Visitas mensuales",
