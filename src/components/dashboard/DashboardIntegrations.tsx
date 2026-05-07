@@ -1,7 +1,28 @@
 import { useEffect, useState } from "react";
-import { Save, Loader2, ExternalLink, CheckCircle2, Circle, Eye, EyeOff, Languages } from "lucide-react";
+import { Save, Loader2, ExternalLink, CheckCircle2, Circle, Eye, EyeOff, Languages, Activity, AlertCircle } from "lucide-react";
 import DashboardCard from "./DashboardCard";
 import { supabase } from "@/integrations/supabase/client";
+
+type TestStatus = { ok: boolean; error?: string; details?: string; testedAt: string };
+const TEST_CACHE_KEY = "integration_test_results_v1";
+
+const loadTestCache = (): Record<string, TestStatus> => {
+  try { return JSON.parse(localStorage.getItem(TEST_CACHE_KEY) || "{}"); } catch { return {}; }
+};
+const saveTestCache = (m: Record<string, TestStatus>) => {
+  try { localStorage.setItem(TEST_CACHE_KEY, JSON.stringify(m)); } catch {}
+};
+
+const formatRelative = (iso: string, lang: "en" | "ru") => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return lang === "en" ? "just now" : "только что";
+  if (m < 60) return lang === "en" ? `${m} min ago` : `${m} мин назад`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return lang === "en" ? `${h}h ago` : `${h} ч назад`;
+  const d = Math.floor(h / 24);
+  return lang === "en" ? `${d}d ago` : `${d} дн назад`;
+};
 
 type DocLang = "en" | "ru";
 
