@@ -59,6 +59,31 @@ const Footer = () => {
               <a href={`https://instagram.com/${(sc.contact_instagram || INSTAGRAM_HANDLE).replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
                 {sc.contact_instagram || INSTAGRAM_HANDLE}
               </a>
+              {(() => {
+                const socials: { href: string; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [];
+                const ig = sc.contact_instagram || INSTAGRAM_HANDLE;
+                if (ig) socials.push({ href: `https://instagram.com/${ig.replace("@", "")}`, label: "Instagram", Icon: ({ className }) => <Instagram className={className} /> });
+                if (sc.contact_facebook_url) socials.push({ href: sc.contact_facebook_url, label: "Facebook", Icon: ({ className }) => <Facebook className={className} /> });
+                if (sc.contact_google_url) socials.push({ href: sc.contact_google_url, label: "Google", Icon: GoogleIcon });
+                if (sc.contact_tripadvisor_url) socials.push({ href: sc.contact_tripadvisor_url, label: "TripAdvisor", Icon: TripAdvisorIcon });
+                if (!socials.length) return null;
+                return (
+                  <div className="flex items-center gap-3 mt-3">
+                    {socials.map(({ href, label, Icon }) => (
+                      <a
+                        key={label}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={label}
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                      >
+                        <Icon className="w-4 h-4" />
+                      </a>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
