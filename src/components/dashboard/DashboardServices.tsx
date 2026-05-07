@@ -49,6 +49,7 @@ const DashboardServices = () => {
   const [draft, setDraft] = useState<Partial<Service>>({});
   const [isNew, setIsNew] = useState(false);
   const [lang, setLang] = useState<Lang>("es");
+  const [compareMode, setCompareMode] = useState(false);
 
   const fetchServices = async () => {
     const { data } = await supabase
