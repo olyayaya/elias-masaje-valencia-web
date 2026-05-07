@@ -29,25 +29,21 @@ const RANGE_PATTERN = /[\/–—-]/; // multi-tier price like "50€ / 70€" or
 
 export function formatPrice(
   price: string | undefined | null,
-  t: Translations,
-  options?: { hidePrefix?: boolean },
+  _t: Translations,
+  _options?: { hidePrefix?: boolean },
 ): string {
   if (!price) return "";
   let body = price.trim();
-  let hadPrefix = false;
 
+  // Always strip any leading "from"-style prefix in any language.
+  // The "from / desde / от" prefix is intentionally never rendered on the
+  // public site — prices are shown as-is.
   for (const re of PREFIX_PATTERNS) {
     if (re.test(body)) {
       body = body.replace(re, "");
-      hadPrefix = true;
       break;
     }
   }
 
-  if (options?.hidePrefix) return body;
-
-  const isRange = RANGE_PATTERN.test(body);
-  const needsPrefix = hadPrefix || isRange;
-
-  return needsPrefix ? `${t.services.priceFrom} ${body}` : body;
+  return body;
 }
