@@ -124,6 +124,7 @@ const en: DashboardTranslations = {
     testimonials: "Testimonials",
     history: "History",
     carousels: "Carousels",
+    integrations: "Integrations",
   },
   overview: {
     monthlyViews: "Monthly views",
