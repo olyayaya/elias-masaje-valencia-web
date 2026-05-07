@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CheckCircle2, Circle, ExternalLink, Search, MapPin, Star, TrendingUp, Eye, MousePointerClick, Globe } from "lucide-react";
 import DashboardCard from "./DashboardCard";
+import StructuredDataPreview from "./StructuredDataPreview";
 
 const keywordSuggestions = [
   { keyword: "masaje Valencia", volume: "High", difficulty: "Medium" },
