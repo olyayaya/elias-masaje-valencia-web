@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, Save, X, Loader2, Languages, Search, EyeOff, Eye,
 import { supabase } from "@/integrations/supabase/client";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
+import { usePreviewLocale } from "@/hooks/use-preview-locale";
 import { resolveField } from "@/hooks/use-db-content";
 import { formatPrice } from "@/lib/format-price";
 import { es as esT } from "@/i18n/es";
@@ -48,7 +49,7 @@ const DashboardServices = () => {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Service>>({});
   const [isNew, setIsNew] = useState(false);
-  const [lang, setLang] = useState<Lang>("es");
+  const [lang, setLang] = usePreviewLocale("es");
   const [compareMode, setCompareMode] = useState(false);
 
   const fetchServices = async () => {
