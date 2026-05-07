@@ -86,21 +86,23 @@ const FIELDS: Field[] = [
   {
     key: "integration_gsc_verification",
     label: "Google Search Console — Verification code",
-    placeholder: "<meta name=\"google-site-verification\" content=\"…\" />  or just the code",
+    placeholder: "<meta …/>, just the code, or googleXXXX.html",
     docs: { url: "https://search.google.com/search-console", label: "search.google.com/search-console" },
     instructions: {
       en: [
         "Open search.google.com/search-console and sign in.",
         "Click Add property → choose URL prefix → enter https://eliasmas.es.",
         "Pick verification method \"HTML tag\" and copy the full <meta> tag (or just the content value).",
-        "Paste it below and Save — the tag will appear in the site head automatically.",
+        "Or paste the HTML file reference (e.g. google1a2b3c.html) — we extract the token automatically.",
+        "Paste it below and Save — the tag appears in the site head; status auto-checks below.",
         "Return to Search Console and click Verify.",
       ],
       ru: [
         "Откройте search.google.com/search-console и войдите.",
         "Нажмите Add property → URL prefix → введите https://eliasmas.es.",
         "Выберите способ подтверждения «HTML tag» и скопируйте весь <meta>-тег (или только значение content).",
-        "Вставьте его ниже и сохраните — тег автоматически появится в <head> сайта.",
+        "Или вставьте имя HTML-файла (например google1a2b3c.html) — токен извлечётся автоматически.",
+        "Вставьте значение ниже и сохраните — тег автоматически появится в <head> сайта, статус проверится ниже.",
         "Вернитесь в Search Console и нажмите Verify.",
       ],
     },
@@ -189,6 +191,34 @@ const DashboardIntegrations = () => {
         setValues(map);
         setOriginal(map);
         setLoading(false);
+
+        // Auto-verify saved verification meta tags (refresh stale results)
+        const cache = loadTestCache();
+        const STALE_MS = 10 * 60 * 1000; // 10 min
+        const verificationKeys = [
+          "integration_gsc_verification",
+          "integration_bing_verification",
+          "integration_yandex_verification",
+        ];
+        verificationKeys.forEach(async (k) => {
+          const v = (map[k] || "").trim();
+          if (!v) return;
+          const cached = cache[k];
+          if (cached && Date.now() - new Date(cached.testedAt).getTime() < STALE_MS) return;
+          try {
+            const { data: res, error } = await supabase.functions.invoke("test-integration", {
+              body: { kind: k, value: v },
+            });
+            const result: TestStatus = error
+              ? { ok: false, error: error.message, testedAt: new Date().toISOString() }
+              : { ok: !!res?.ok, error: res?.error, details: res?.details, testedAt: res?.testedAt || new Date().toISOString() };
+            setTests((prev) => {
+              const next = { ...prev, [k]: result };
+              saveTestCache(next);
+              return next;
+            });
+          } catch {/* ignore — manual Test still available */}
+        });
       });
   }, []);
 
@@ -274,6 +304,17 @@ const DashboardIntegrations = () => {
                   <h4 className="text-sm font-medium text-foreground">{f.label}</h4>
                   {isConnected && (
                     <span className="text-[10px] px-2 py-0.5 bg-green-500/10 text-green-600 rounded-full">Connected</span>
+                  )}
+                  {isConnected && f.key.endsWith("_verification") && test && (
+                    test.ok ? (
+                      <span className="text-[10px] px-2 py-0.5 bg-green-500/15 text-green-700 dark:text-green-400 rounded-full">
+                        {docLang === "en" ? "Confirmed live" : "Подтверждено"}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-2 py-0.5 bg-destructive/10 text-destructive rounded-full">
+                        {docLang === "en" ? "Not confirmed" : "Не подтверждено"}
+                      </span>
+                    )
                   )}
                 </div>
                 <a
