@@ -239,12 +239,23 @@ const DashboardIntegrations = () => {
       .from("site_content")
       .update({ value_es: v, value_en: v, value_ru: v, updated_at: new Date().toISOString() })
       .eq("content_key", key);
-    setOriginal({ ...original, [key]: v });
+    setOriginal((prev) => ({ ...prev, [key]: v }));
     setSavingKey(null);
+    // Auto re-test so the live status badge updates without reload.
+    // Verification metas need a beat for the injector / cached HTML to refresh.
+    if (v) {
+      const delay = key.endsWith("_verification") ? 1500 : 200;
+      setTimeout(() => { runTest(key, v); }, delay);
+    } else {
+      // Cleared value → drop stale test result
+      setTests((prev) => {
+        const next = { ...prev }; delete next[key]; saveTestCache(next); return next;
+      });
+    }
   };
 
-  const runTest = async (key: string) => {
-    const v = (values[key] || "").trim();
+  const runTest = async (key: string, override?: string) => {
+    const v = (override ?? values[key] ?? "").trim();
     if (!v) return;
     setTesting(key);
     try {
@@ -254,9 +265,11 @@ const DashboardIntegrations = () => {
       const result: TestStatus = error
         ? { ok: false, error: error.message, testedAt: new Date().toISOString() }
         : { ok: !!data?.ok, error: data?.error, details: data?.details, testedAt: data?.testedAt || new Date().toISOString() };
-      const next = { ...tests, [key]: result };
-      setTests(next);
-      saveTestCache(next);
+      setTests((prev) => {
+        const next = { ...prev, [key]: result };
+        saveTestCache(next);
+        return next;
+      });
     } finally {
       setTesting(null);
     }
