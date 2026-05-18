@@ -254,8 +254,8 @@ const DashboardIntegrations = () => {
     }
   };
 
-  const runTest = async (key: string) => {
-    const v = (values[key] || "").trim();
+  const runTest = async (key: string, override?: string) => {
+    const v = (override ?? values[key] ?? "").trim();
     if (!v) return;
     setTesting(key);
     try {
