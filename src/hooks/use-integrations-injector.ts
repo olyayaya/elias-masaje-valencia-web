@@ -66,8 +66,7 @@ export function useIntegrationsInjector() {
       // ── Verification meta tags ─────────────────────────────────────────
       const verifications: [string, string][] = [
         ["google-site-verification", map.integration_gsc_verification],
-        ["msvalidate.01", map.integration_bing_verification],
-        ["yandex-verification", map.integration_yandex_verification],
+        ["google-site-verification", map.integration_google_workspace_verification],
       ];
       verifications.forEach(([name, content]) => {
         if (!content) return;
