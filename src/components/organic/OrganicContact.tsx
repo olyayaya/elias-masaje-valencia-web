@@ -28,7 +28,7 @@ const ContactItem = ({ icon: Icon, title, children, index }: {
 };
 
 const OrganicContact = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { content: sc } = useSiteContent();
   const { mode } = useTheme();
   const isDG = mode === "dark-gradient";
