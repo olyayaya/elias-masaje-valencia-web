@@ -110,7 +110,7 @@ const OrganicContact = () => {
               </ContactItem>
 
               {(sc.integration_tripadvisor_url || sc.contact_tripadvisor_url) && (
-                <ContactItem icon={TripAdvisorIcon} title="TripAdvisor" index={4}>
+                <ContactItem icon={TripAdvisorIcon as any} title="TripAdvisor" index={4}>
                   <a
                     href={sc.integration_tripadvisor_url || sc.contact_tripadvisor_url}
                     target="_blank"
