@@ -104,8 +104,8 @@ Deno.serve(async (req) => {
       case "integration_ga4_id": result = await testGa4(value); break;
       case "integration_gtm_id": result = await testGtm(value); break;
       case "integration_gsc_verification": result = await testMetaTag("google-site-verification", value); break;
-      case "integration_bing_verification": result = await testMetaTag("msvalidate.01", value); break;
-      case "integration_yandex_verification": result = await testMetaTag("yandex-verification", value); break;
+      case "integration_google_workspace_verification": result = await testMetaTag("google-site-verification", value); break;
+      case "integration_tripadvisor_url": result = await testTripadvisorUrl(value); break;
       case "integration_seo_api_key": result = testSeoKey(value); break;
       default: result = { ok: false, error: `Unknown integration: ${kind}` };
     }
