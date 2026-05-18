@@ -65,7 +65,8 @@ const Footer = () => {
                 if (ig) socials.push({ href: `https://instagram.com/${ig.replace("@", "")}`, label: "Instagram", Icon: ({ className }) => <Instagram className={className} /> });
                 if (sc.contact_facebook_url) socials.push({ href: sc.contact_facebook_url, label: "Facebook", Icon: ({ className }) => <Facebook className={className} /> });
                 if (sc.contact_google_url) socials.push({ href: sc.contact_google_url, label: "Google", Icon: GoogleIcon });
-                if (sc.contact_tripadvisor_url) socials.push({ href: sc.contact_tripadvisor_url, label: "TripAdvisor", Icon: TripAdvisorIcon });
+                const tripUrl = sc.integration_tripadvisor_url || sc.contact_tripadvisor_url;
+                if (tripUrl) socials.push({ href: tripUrl, label: "TripAdvisor", Icon: TripAdvisorIcon });
                 if (!socials.length) return null;
                 return (
                   <div className="flex items-center gap-3 mt-3">
