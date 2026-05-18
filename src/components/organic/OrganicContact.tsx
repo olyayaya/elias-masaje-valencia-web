@@ -102,6 +102,19 @@ const OrganicContact = () => {
                   {sc.contact_instagram || INSTAGRAM_HANDLE}
                 </a>
               </ContactItem>
+
+              {(sc.integration_tripadvisor_url || sc.contact_tripadvisor_url) && (
+                <ContactItem icon={TripAdvisorIcon} title="TripAdvisor" index={4}>
+                  <a
+                    href={sc.integration_tripadvisor_url || sc.contact_tripadvisor_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary font-body hover:opacity-80 transition-opacity border-b border-primary/30 pb-0.5"
+                  >
+                    {locale === "ru" ? "Читать отзывы" : locale === "es" ? "Ver reseñas" : "Read reviews"}
+                  </a>
+                </ContactItem>
+              )}
             </div>
 
             {/* Map */}
