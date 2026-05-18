@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save, Loader2, ExternalLink, CheckCircle2, Circle, Eye, EyeOff, Languages, Activity, AlertCircle } from "lucide-react";
+import { Save, Loader2, ExternalLink, CheckCircle2, Circle, Eye, EyeOff, Languages, Activity, AlertCircle, RefreshCw } from "lucide-react";
 import DashboardCard from "./DashboardCard";
 import { supabase } from "@/integrations/supabase/client";
 
