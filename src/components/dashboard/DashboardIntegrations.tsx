@@ -299,19 +299,30 @@ const DashboardIntegrations = () => {
               Paste your Google Workspace tracking IDs and SEO codes. They go live on the public site immediately after saving.
             </p>
           </div>
-          <div className="flex items-center gap-1 bg-secondary p-0.5 rounded-lg">
-            <Languages size={13} className="text-muted-foreground mx-1.5" />
-            {(["en", "ru"] as DocLang[]).map((l) => (
-              <button
-                key={l}
-                onClick={() => setDocLang(l)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  docLang === l ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={refreshAll}
+              disabled={refreshingAll || !Object.values(original).some((v) => v?.trim())}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border rounded-lg text-foreground hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+              title={docLang === "en" ? "Re-test every saved integration" : "Перепроверить все сохранённые интеграции"}
+            >
+              {refreshingAll ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+              {docLang === "en" ? "Refresh all" : "Обновить все"}
+            </button>
+            <div className="flex items-center gap-1 bg-secondary p-0.5 rounded-lg">
+              <Languages size={13} className="text-muted-foreground mx-1.5" />
+              {(["en", "ru"] as DocLang[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setDocLang(l)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    docLang === l ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </DashboardCard>
