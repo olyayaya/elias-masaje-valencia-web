@@ -208,8 +208,7 @@ const DashboardIntegrations = () => {
         const STALE_MS = 10 * 60 * 1000; // 10 min
         const verificationKeys = [
           "integration_gsc_verification",
-          "integration_bing_verification",
-          "integration_yandex_verification",
+          "integration_google_workspace_verification",
         ];
         verificationKeys.forEach(async (k) => {
           const v = (map[k] || "").trim();
