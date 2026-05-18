@@ -265,9 +265,11 @@ const DashboardIntegrations = () => {
       const result: TestStatus = error
         ? { ok: false, error: error.message, testedAt: new Date().toISOString() }
         : { ok: !!data?.ok, error: data?.error, details: data?.details, testedAt: data?.testedAt || new Date().toISOString() };
-      const next = { ...tests, [key]: result };
-      setTests(next);
-      saveTestCache(next);
+      setTests((prev) => {
+        const next = { ...prev, [key]: result };
+        saveTestCache(next);
+        return next;
+      });
     } finally {
       setTesting(null);
     }
