@@ -275,6 +275,18 @@ const DashboardIntegrations = () => {
     }
   };
 
+  const [refreshingAll, setRefreshingAll] = useState(false);
+  const refreshAll = async () => {
+    const keys = FIELDS.map((f) => f.key).filter((k) => (original[k] || "").trim());
+    if (!keys.length) return;
+    setRefreshingAll(true);
+    try {
+      await Promise.all(keys.map((k) => runTest(k, original[k])));
+    } finally {
+      setRefreshingAll(false);
+    }
+  };
+
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   return (
