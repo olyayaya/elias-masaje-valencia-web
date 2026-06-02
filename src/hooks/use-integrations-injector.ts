@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export function useIntegrationsInjector() {
   useEffect(() => {
-    let cleanup: Array<() => void> = [];
+    const cleanup: Array<() => void> = [];
 
     const inject = async () => {
       const { data } = await supabase
@@ -20,7 +20,7 @@ export function useIntegrationsInjector() {
       if (!data) return;
 
       const map: Record<string, string> = {};
-      data.forEach((r: any) => {
+      data.forEach((r: { content_key: string; value_es: string | null }) => {
         if (r.value_es?.trim()) map[r.content_key] = r.value_es.trim();
       });
 

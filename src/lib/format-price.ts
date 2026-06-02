@@ -25,7 +25,7 @@ const PREFIX_PATTERNS = [
   /^\s*от\s+/i,
 ];
 
-const RANGE_PATTERN = /[\/–—-]/; // multi-tier price like "50€ / 70€" or "50€-70€"
+const RANGE_PATTERN = /[/–—-]/; // multi-tier price like "50€ / 70€" or "50€-70€"
 
 export function formatPrice(
   price: string | undefined | null,

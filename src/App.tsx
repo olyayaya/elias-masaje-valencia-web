@@ -1,6 +1,8 @@
+import { lazy, Suspense } from "react";
 import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,15 +14,25 @@ import ServiciosPage from "./pages/Servicios";
 import SobreMiPage from "./pages/SobreMi";
 import ContactoPage from "./pages/Contacto";
 import NotFound from "./pages/NotFound";
-import Dashboard from "./pages/Dashboard";
-import Blog from "./pages/Blog";
-import BlogPostPage from "./pages/BlogPost";
-import AnalyticsCheck from "./pages/AnalyticsCheck";
 import ScrollToTop from "./components/ScrollToTop";
 import LocaleSync from "./components/LocaleSync";
 import LanguageSuggestionBanner from "./components/LanguageSuggestionBanner";
 import { PageTracker } from "./components/PageTracker";
 import { useIntegrationsInjector } from "./hooks/use-integrations-injector";
+
+// Heavy routes are lazy-loaded so their bundles (especially the dashboard's
+// TipTap + editor components, and the analytics check page's recharts use)
+// don't ship to first-paint of the public site.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPostPage = lazy(() => import("./pages/BlogPost"));
+const AnalyticsCheck = lazy(() => import("./pages/AnalyticsCheck"));
+
+const RouteFallback = () => (
+  <div className="flex justify-center items-center min-h-[40vh]">
+    <Loader2 className="animate-spin text-muted-foreground" size={20} />
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,41 +73,43 @@ const App = () => (
           <LanguageSuggestionBanner />
           <PageTracker />
           <IntegrationsLoader />
-          <Routes>
-            {/* Spanish (default — no prefix) */}
-            <Route element={<Layout />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/servicios" element={<ServiciosPage />} />
-              <Route path="/sobre-mi" element={<SobreMiPage />} />
-              <Route path="/contacto" element={<ContactoPage />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:slug" element={<BlogPostPage />} />
-            </Route>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              {/* Spanish (default — no prefix) */}
+              <Route element={<Layout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/servicios" element={<ServiciosPage />} />
+                <Route path="/sobre-mi" element={<SobreMiPage />} />
+                <Route path="/contacto" element={<ContactoPage />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogPostPage />} />
+              </Route>
 
-            {/* English */}
-            <Route element={<Layout />}>
-              <Route path="/en" element={<Index />} />
-              <Route path="/en/services" element={<ServiciosPage />} />
-              <Route path="/en/about" element={<SobreMiPage />} />
-              <Route path="/en/contact" element={<ContactoPage />} />
-              <Route path="/en/blog" element={<Blog />} />
-              <Route path="/en/blog/:slug" element={<BlogPostPage />} />
-            </Route>
+              {/* English */}
+              <Route element={<Layout />}>
+                <Route path="/en" element={<Index />} />
+                <Route path="/en/services" element={<ServiciosPage />} />
+                <Route path="/en/about" element={<SobreMiPage />} />
+                <Route path="/en/contact" element={<ContactoPage />} />
+                <Route path="/en/blog" element={<Blog />} />
+                <Route path="/en/blog/:slug" element={<BlogPostPage />} />
+              </Route>
 
-            {/* Russian */}
-            <Route element={<Layout />}>
-              <Route path="/ru" element={<Index />} />
-              <Route path="/ru/uslugi" element={<ServiciosPage />} />
-              <Route path="/ru/about" element={<SobreMiPage />} />
-              <Route path="/ru/contact" element={<ContactoPage />} />
-              <Route path="/ru/blog" element={<Blog />} />
-              <Route path="/ru/blog/:slug" element={<BlogPostPage />} />
-            </Route>
+              {/* Russian */}
+              <Route element={<Layout />}>
+                <Route path="/ru" element={<Index />} />
+                <Route path="/ru/uslugi" element={<ServiciosPage />} />
+                <Route path="/ru/about" element={<SobreMiPage />} />
+                <Route path="/ru/contact" element={<ContactoPage />} />
+                <Route path="/ru/blog" element={<Blog />} />
+                <Route path="/ru/blog/:slug" element={<BlogPostPage />} />
+              </Route>
 
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/analytics-check" element={<AnalyticsCheck />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/analytics-check" element={<AnalyticsCheck />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </ThemeProvider>
       </I18nProvider>
