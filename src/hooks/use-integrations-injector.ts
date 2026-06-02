@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useConsent } from "@/hooks/use-consent";
 
 /**
  * Reads integration codes from site_content (category = "integrations") and
@@ -7,8 +8,20 @@ import { supabase } from "@/integrations/supabase/client";
  *
  * Mounted once at the app root so codes go live across every public page as
  * soon as the user pastes them in the dashboard.
+ *
+ * Consent gating:
+ *  - GA4 + GTM (tracking) are injected only when the visitor has granted
+ *    "analytics" consent via ConsentBanner.
+ *  - Verification meta tags (Search Console, Google Workspace) are not
+ *    tracking and always inject.
+ *
+ * The static GA4 tag in index.html stays loaded but runs in Google Consent
+ * Mode v2 default-denied until the banner publishes an update.
  */
 export function useIntegrationsInjector() {
+  const consent = useConsent();
+  const analyticsGranted = !!consent?.categories.analytics;
+
   useEffect(() => {
     const cleanup: Array<() => void> = [];
 
@@ -29,7 +42,7 @@ export function useIntegrationsInjector() {
 
       // ── Google Analytics 4 ─────────────────────────────────────────────
       const ga4 = map.integration_ga4_id;
-      if (ga4 && /^G-[A-Z0-9]+$/i.test(ga4)) {
+      if (analyticsGranted && ga4 && /^G-[A-Z0-9]+$/i.test(ga4)) {
         const s1 = document.createElement("script");
         s1.async = true;
         s1.src = `https://www.googletagmanager.com/gtag/js?id=${ga4}`;
@@ -42,7 +55,7 @@ export function useIntegrationsInjector() {
 
       // ── Google Tag Manager ─────────────────────────────────────────────
       const gtm = map.integration_gtm_id;
-      if (gtm && /^GTM-[A-Z0-9]+$/i.test(gtm)) {
+      if (analyticsGranted && gtm && /^GTM-[A-Z0-9]+$/i.test(gtm)) {
         const s = document.createElement("script");
         s.text = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtm}');`;
         document.head.appendChild(s);
@@ -63,7 +76,7 @@ export function useIntegrationsInjector() {
         cleanup.push(() => s.remove());
       }
 
-      // ── Verification meta tags ─────────────────────────────────────────
+      // ── Verification meta tags (not tracking — always inject) ──────────
       const verifications: [string, string][] = [
         ["google-site-verification", map.integration_gsc_verification],
         ["google-site-verification", map.integration_google_workspace_verification],
@@ -87,5 +100,5 @@ export function useIntegrationsInjector() {
 
     inject();
     return () => { cleanup.forEach((fn) => fn()); };
-  }, []);
+  }, [analyticsGranted]);
 }

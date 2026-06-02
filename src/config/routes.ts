@@ -1,16 +1,17 @@
 import { Locale } from "@/i18n/types";
 
-export type PageId = "home" | "services" | "about" | "contact" | "blog" | "blogPost";
+export type PageId = "home" | "services" | "about" | "contact" | "blog" | "blogPost" | "privacy";
 
 export const BASE_URL = "https://eliasmas.es";
 
 export const ROUTE_MAP: Record<PageId, Record<Locale, string>> = {
-  home:     { es: "/",          en: "/en",            ru: "/ru" },
-  services: { es: "/servicios", en: "/en/services",   ru: "/ru/uslugi" },
-  about:    { es: "/sobre-mi",  en: "/en/about",      ru: "/ru/about" },
-  contact:  { es: "/contacto",  en: "/en/contact",    ru: "/ru/contact" },
-  blog:     { es: "/blog",      en: "/en/blog",       ru: "/ru/blog" },
-  blogPost: { es: "/blog/:slug", en: "/en/blog/:slug", ru: "/ru/blog/:slug" },
+  home:     { es: "/",            en: "/en",            ru: "/ru" },
+  services: { es: "/servicios",   en: "/en/services",   ru: "/ru/uslugi" },
+  about:    { es: "/sobre-mi",    en: "/en/about",      ru: "/ru/about" },
+  contact:  { es: "/contacto",    en: "/en/contact",    ru: "/ru/contact" },
+  blog:     { es: "/blog",        en: "/en/blog",       ru: "/ru/blog" },
+  blogPost: { es: "/blog/:slug",  en: "/en/blog/:slug", ru: "/ru/blog/:slug" },
+  privacy:  { es: "/privacidad",  en: "/en/privacy",    ru: "/ru/privacy" },
 };
 
 export function getLocaleFromPath(pathname: string): Locale {

@@ -13,10 +13,12 @@ import Index from "./pages/Index";
 import ServiciosPage from "./pages/Servicios";
 import SobreMiPage from "./pages/SobreMi";
 import ContactoPage from "./pages/Contacto";
+import PrivacidadPage from "./pages/Privacidad";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
 import LocaleSync from "./components/LocaleSync";
 import LanguageSuggestionBanner from "./components/LanguageSuggestionBanner";
+import ConsentBanner from "./components/ConsentBanner";
 import { PageTracker } from "./components/PageTracker";
 import { useIntegrationsInjector } from "./hooks/use-integrations-injector";
 
@@ -71,6 +73,7 @@ const App = () => (
           <ScrollToTop />
           <LocaleSync />
           <LanguageSuggestionBanner />
+          <ConsentBanner />
           <PageTracker />
           <IntegrationsLoader />
           <Suspense fallback={<RouteFallback />}>
@@ -83,6 +86,7 @@ const App = () => (
                 <Route path="/contacto" element={<ContactoPage />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/:slug" element={<BlogPostPage />} />
+                <Route path="/privacidad" element={<PrivacidadPage />} />
               </Route>
 
               {/* English */}
@@ -93,6 +97,7 @@ const App = () => (
                 <Route path="/en/contact" element={<ContactoPage />} />
                 <Route path="/en/blog" element={<Blog />} />
                 <Route path="/en/blog/:slug" element={<BlogPostPage />} />
+                <Route path="/en/privacy" element={<PrivacidadPage />} />
               </Route>
 
               {/* Russian */}
@@ -103,6 +108,7 @@ const App = () => (
                 <Route path="/ru/contact" element={<ContactoPage />} />
                 <Route path="/ru/blog" element={<Blog />} />
                 <Route path="/ru/blog/:slug" element={<BlogPostPage />} />
+                <Route path="/ru/privacy" element={<PrivacidadPage />} />
               </Route>
 
               <Route path="/dashboard" element={<Dashboard />} />

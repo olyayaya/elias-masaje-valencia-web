@@ -94,4 +94,29 @@ export interface Translations {
     openMaps: string;
     whatsappBook: string;
   };
+  cookies: {
+    banner: {
+      body: string;
+      accept: string;
+      reject: string;
+      preferences: string;
+      policyLink: string;
+    };
+    panel: {
+      title: string;
+      description: string;
+      save: string;
+      cancel: string;
+      alwaysOn: string;
+      necessary: { title: string; body: string };
+      preferences: { title: string; body: string };
+      analytics: { title: string; body: string };
+      marketing: { title: string; body: string };
+    };
+    privacy: {
+      pageTitle: string;
+      heading: string;
+      placeholder: string;
+    };
+  };
 }

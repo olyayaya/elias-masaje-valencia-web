@@ -129,4 +129,41 @@ export const en: Translations = {
     openMaps: "Open in maps app",
     whatsappBook: "Book via WhatsApp",
   },
+  cookies: {
+    banner: {
+      body: "We use first- and third-party cookies to improve our services and to analyse site usage. You can accept them all, reject them, or configure your preferences.",
+      accept: "Accept",
+      reject: "Reject",
+      preferences: "Manage preferences",
+      policyLink: "Cookie policy",
+    },
+    panel: {
+      title: "Cookie preferences",
+      description: "Choose which cookies you allow. Functional cookies are essential and always enabled.",
+      save: "Save preferences",
+      cancel: "Cancel",
+      alwaysOn: "Always on",
+      necessary: {
+        title: "Functional",
+        body: "Required for the site to work: language, navigation, basic security.",
+      },
+      preferences: {
+        title: "Preferences",
+        body: "Remember user choices such as theme or suggested language.",
+      },
+      analytics: {
+        title: "Analytics",
+        body: "Help us understand how the site is used (Google Analytics) without identifying you personally.",
+      },
+      marketing: {
+        title: "Marketing",
+        body: "Used to measure campaigns and show relevant content on other sites. Not used by default today.",
+      },
+    },
+    privacy: {
+      pageTitle: "Cookie & Privacy Policy — Elias Masaje",
+      heading: "Cookie & Privacy Policy",
+      placeholder: "This page will hold the full cookie policy and privacy notice. Final text is pending legal review.",
+    },
+  },
 };

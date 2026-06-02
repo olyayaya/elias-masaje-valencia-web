@@ -31,11 +31,26 @@
     <!-- Google Search Console Verification -->
     <meta name="google-site-verification" content="BWN9En6_AKv8XwuccqzPCPkCeRgfGjTsCzQwK_7ju0o" />
 
-    <!-- Google tag (gtag.js) - Google Analytics 4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSHT52SP9E"></script>
+    <!-- Google Consent Mode v2 — defaults to denied so GA4 runs in cookieless
+         ping mode until ConsentBanner publishes a decision. Must come before
+         the gtag.js loader so the defaults are queued first. -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+      gtag('consent', 'default', {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied',
+        functionality_storage: 'granted',
+        personalization_storage: 'denied',
+        security_storage: 'granted',
+        wait_for_update: 500
+      });
+    </script>
+    <!-- Google tag (gtag.js) - Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSHT52SP9E"></script>
+    <script>
       gtag('js', new Date());
       gtag('config', 'G-FSHT52SP9E', {
         'custom_map': {'dimension1': 'language'}

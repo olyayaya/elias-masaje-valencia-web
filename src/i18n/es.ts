@@ -129,4 +129,41 @@ export const es: Translations = {
     openMaps: "Abrir en aplicación de mapas",
     whatsappBook: "Reservar por WhatsApp",
   },
+  cookies: {
+    banner: {
+      body: "Utilizamos cookies propias y de terceros para mejorar nuestros servicios y analizar el uso del sitio. Puedes aceptarlas todas, rechazarlas o configurar tus preferencias.",
+      accept: "Aceptar",
+      reject: "Denegar",
+      preferences: "Ver preferencias",
+      policyLink: "Política de cookies",
+    },
+    panel: {
+      title: "Preferencias de cookies",
+      description: "Elige qué cookies quieres permitir. Las funcionales son necesarias y siempre están activas.",
+      save: "Guardar preferencias",
+      cancel: "Cancelar",
+      alwaysOn: "Siempre activa",
+      necessary: {
+        title: "Funcionales",
+        body: "Imprescindibles para el funcionamiento del sitio: idioma, navegación y seguridad básica.",
+      },
+      preferences: {
+        title: "Preferencias",
+        body: "Permiten recordar elecciones del usuario, como el tema o el idioma sugerido.",
+      },
+      analytics: {
+        title: "Estadísticas",
+        body: "Nos ayudan a entender cómo se usa el sitio (Google Analytics) sin identificarte personalmente.",
+      },
+      marketing: {
+        title: "Marketing",
+        body: "Se usan para medir campañas y mostrar contenido relevante en otros sitios. Hoy no las usamos por defecto.",
+      },
+    },
+    privacy: {
+      pageTitle: "Política de cookies y privacidad — Elias Masaje",
+      heading: "Política de cookies y privacidad",
+      placeholder: "Esta página recoge la política de cookies y el aviso legal completos. El texto definitivo está pendiente de revisión legal.",
+    },
+  },
 };
