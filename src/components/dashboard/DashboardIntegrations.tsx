@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Save, Loader2, ExternalLink, CheckCircle2, Circle, Eye, EyeOff, Languages, Activity, AlertCircle, RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import DashboardCard from "./DashboardCard";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/query-keys";
 
 type TestStatus = { ok: boolean; error?: string; details?: string; testedAt: string };
 const TEST_CACHE_KEY = "integration_test_results_v1";
@@ -190,6 +192,7 @@ const DashboardIntegrations = () => {
   const [reveal, setReveal] = useState<Record<string, boolean>>({});
   const [testing, setTesting] = useState<string | null>(null);
   const [tests, setTests] = useState<Record<string, TestStatus>>(loadTestCache);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     supabase
@@ -241,6 +244,7 @@ const DashboardIntegrations = () => {
       .eq("content_key", key);
     setOriginal((prev) => ({ ...prev, [key]: v }));
     setSavingKey(null);
+    queryClient.invalidateQueries({ queryKey: queryKeys.siteContent });
     // Auto re-test so the live status badge updates without reload.
     // Verification metas need a beat for the injector / cached HTML to refresh.
     if (v) {

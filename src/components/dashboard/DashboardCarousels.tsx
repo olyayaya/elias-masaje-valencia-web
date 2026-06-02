@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/query-keys";
 import DashboardCard from "./DashboardCard";
 import ImagePicker from "./ImagePicker";
 import { Input } from "@/components/ui/input";
@@ -190,11 +192,15 @@ const CollectionSection = ({
 const DashboardCarousels = () => {
   const [images, setImages] = useState<PageImage[]>([]);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   const fetchAll = async () => {
     const { data } = await supabase.from("page_images").select("*").order("sort_order", { ascending: true });
     if (data) setImages(data as PageImage[]);
     setLoading(false);
+    // Public hooks key by collection — invalidate the whole prefix so every
+    // carousel on the site refetches after any add / move / delete.
+    queryClient.invalidateQueries({ queryKey: queryKeys.pageImagesAll });
   };
 
   useEffect(() => {

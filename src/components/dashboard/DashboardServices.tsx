@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Plus, Pencil, Trash2, Save, X, Loader2, Languages, Search, EyeOff, Eye, RotateCcw, Columns3 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/query-keys";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
 import { usePreviewLocale } from "@/hooks/use-preview-locale";
@@ -51,6 +53,10 @@ const DashboardServices = () => {
   const [isNew, setIsNew] = useState(false);
   const [lang, setLang] = usePreviewLocale("es");
   const [compareMode, setCompareMode] = useState(false);
+  const queryClient = useQueryClient();
+
+  const invalidatePublic = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.services });
 
   const fetchServices = async () => {
     const { data } = await supabase
@@ -98,6 +104,7 @@ const DashboardServices = () => {
     }
     setEditing(null); setIsNew(false); setSaving(false);
     fetchServices();
+    invalidatePublic();
   };
 
   const cancel = () => { setEditing(null); setIsNew(false); };
@@ -106,6 +113,7 @@ const DashboardServices = () => {
     if (!confirm("Delete this service?")) return;
     await supabase.from("services").delete().eq("id", id);
     fetchServices();
+    invalidatePublic();
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
@@ -147,14 +155,14 @@ const DashboardServices = () => {
           {editing === s.id && !isNew ? (
             <ServiceForm draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} saving={saving} lang={lang} />
           ) : compareMode ? (
-            <CompareRow service={s} onEdit={() => startEdit(s)} onRemove={() => remove(s.id)} onToggleHidden={async () => { await supabase.from("services").update({ hidden: !s.hidden }).eq("id", s.id); fetchServices(); }} />
+            <CompareRow service={s} onEdit={() => startEdit(s)} onRemove={() => remove(s.id)} onToggleHidden={async () => { await supabase.from("services").update({ hidden: !s.hidden }).eq("id", s.id); fetchServices(); invalidatePublic(); }} />
           ) : (
             <SinglePreviewRow
               service={s}
               lang={lang}
               onEdit={() => startEdit(s)}
               onRemove={() => remove(s.id)}
-              onToggleHidden={async () => { await supabase.from("services").update({ hidden: !s.hidden }).eq("id", s.id); fetchServices(); }}
+              onToggleHidden={async () => { await supabase.from("services").update({ hidden: !s.hidden }).eq("id", s.id); fetchServices(); invalidatePublic(); }}
             />
           )}
         </DashboardCard>

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Plus, Pencil, Trash2, Save, X, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/query-keys";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
 
@@ -23,6 +25,10 @@ const DashboardFAQ = () => {
   const [draft, setDraft] = useState<Partial<FAQItem>>({});
   const [isNew, setIsNew] = useState(false);
   const [lang, setLang] = useState<Lang>("es");
+  const queryClient = useQueryClient();
+
+  const invalidatePublic = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.faqs });
 
   const fetchFaqs = async () => {
     const { data } = await supabase.from("faqs").select("*").order("sort_order", { ascending: true });
@@ -55,6 +61,7 @@ const DashboardFAQ = () => {
     }
     setEditing(null); setIsNew(false); setSaving(false);
     fetchFaqs();
+    invalidatePublic();
   };
 
   const cancel = () => { setEditing(null); setIsNew(false); };
@@ -62,6 +69,7 @@ const DashboardFAQ = () => {
   const remove = async (id: string) => {
     await supabase.from("faqs").delete().eq("id", id);
     fetchFaqs();
+    invalidatePublic();
   };
 
   const moveUp = async (index: number) => {
@@ -73,6 +81,7 @@ const DashboardFAQ = () => {
       supabase.from("faqs").update({ sort_order: index }).eq("id", arr[index].id),
     ]);
     fetchFaqs();
+    invalidatePublic();
   };
 
   const moveDown = async (index: number) => {
@@ -84,6 +93,7 @@ const DashboardFAQ = () => {
       supabase.from("faqs").update({ sort_order: index + 1 }).eq("id", arr[index + 1].id),
     ]);
     fetchFaqs();
+    invalidatePublic();
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;

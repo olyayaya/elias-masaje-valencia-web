@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Plus, Pencil, Trash2, Save, Star, Loader2, Eye, EyeOff } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/query-keys";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
 
@@ -23,6 +25,10 @@ const DashboardTestimonials = () => {
   const [draft, setDraft] = useState<Partial<Testimonial>>({});
   const [isNew, setIsNew] = useState(false);
   const [lang, setLang] = useState<Lang>("es");
+  const queryClient = useQueryClient();
+
+  const invalidatePublic = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.testimonials });
 
   const fetchTestimonials = async () => {
     const { data } = await supabase.from("testimonials").select("*").order("created_at", { ascending: false });
@@ -53,6 +59,7 @@ const DashboardTestimonials = () => {
     }
     setEditing(null); setIsNew(false); setSaving(false);
     fetchTestimonials();
+    invalidatePublic();
   };
 
   const cancel = () => { setEditing(null); setIsNew(false); };
@@ -60,6 +67,7 @@ const DashboardTestimonials = () => {
   const remove = async (id: string) => {
     await supabase.from("testimonials").delete().eq("id", id);
     fetchTestimonials();
+    invalidatePublic();
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
@@ -102,7 +110,7 @@ const DashboardTestimonials = () => {
                 <p className="text-xs text-muted-foreground italic">"{langVal(t, "quote", lang) || t.quote}"</p>
               </div>
               <div className="flex gap-1">
-                <button onClick={async () => { await supabase.from("testimonials").update({ hidden: !t.hidden }).eq("id", t.id); fetchTestimonials(); }} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary" title={t.hidden ? "Show on site" : "Hide from site"}>
+                <button onClick={async () => { await supabase.from("testimonials").update({ hidden: !t.hidden }).eq("id", t.id); fetchTestimonials(); invalidatePublic(); }} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary" title={t.hidden ? "Show on site" : "Hide from site"}>
                   {t.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
                 <button onClick={() => startEdit(t)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary"><Pencil size={14} /></button>

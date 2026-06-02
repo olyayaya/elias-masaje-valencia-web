@@ -11,7 +11,9 @@ import {
   Save, Trash2, Pencil, Sparkles, X, Loader2, Wand2, Lightbulb,
   Eye, EyeOff, RotateCcw, ImageIcon, Languages, FolderOpen,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/query-keys";
 import DashboardCard from "./DashboardCard";
 import ImagePicker from "./ImagePicker";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
@@ -235,6 +237,10 @@ const DashboardBlog = () => {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<BlogPost | null>(null);
   const [lang, setLang] = useState<Lang>("es");
+  const queryClient = useQueryClient();
+
+  const invalidatePublic = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.blogPosts });
 
   const fetchPosts = async () => {
     const { data } = await supabase.from("blog_posts").select("*").order("created_at", { ascending: false });
@@ -299,11 +305,13 @@ const DashboardBlog = () => {
     }
     setEditing(null); setDraft(null); setSaving(false);
     fetchPosts();
+    invalidatePublic();
   };
 
   const remove = async (id: string) => {
     await supabase.from("blog_posts").delete().eq("id", id);
     fetchPosts();
+    invalidatePublic();
   };
 
   const toggleKeyword = (kw: string) => {
@@ -360,7 +368,7 @@ const DashboardBlog = () => {
               </div>
             </div>
             <div className="flex gap-1">
-              <button onClick={async () => { await supabase.from("blog_posts").update({ hidden: !p.hidden }).eq("id", p.id); fetchPosts(); }} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted" title={p.hidden ? "Show on site" : "Hide from site"}>
+              <button onClick={async () => { await supabase.from("blog_posts").update({ hidden: !p.hidden }).eq("id", p.id); fetchPosts(); invalidatePublic(); }} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted" title={p.hidden ? "Show on site" : "Hide from site"}>
                 {p.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
               <button onClick={() => startEdit(p)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted"><Pencil size={14} /></button>

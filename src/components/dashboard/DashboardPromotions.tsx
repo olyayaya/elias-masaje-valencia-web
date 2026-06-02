@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/query-keys";
 import DashboardCard from "./DashboardCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,6 +90,10 @@ const DashboardPromotions = () => {
   const [badgeTextRu, setBadgeTextRu] = useState("");
   const [badgeColor, setBadgeColor] = useState("amber");
   const [duration, setDuration] = useState("14");
+  const queryClient = useQueryClient();
+
+  const invalidatePublic = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.promotions });
 
   const fetchAll = async () => {
     setLoading(true);
@@ -179,6 +185,7 @@ const DashboardPromotions = () => {
         toast.success(pt.promotionUpdated);
         resetForm();
         fetchAll();
+        invalidatePublic();
       }
     } else {
       const { error } = await supabase.from("promotions").insert({
@@ -196,6 +203,7 @@ const DashboardPromotions = () => {
         toast.success(pt.promotionCreated);
         resetForm();
         fetchAll();
+        invalidatePublic();
       }
     }
     setSaving(false);
@@ -205,11 +213,13 @@ const DashboardPromotions = () => {
     await supabase.from("promotions").delete().eq("id", id);
     toast.success(pt.promotionRemoved);
     fetchAll();
+    invalidatePublic();
   };
 
   const toggleActive = async (p: Promotion) => {
     await supabase.from("promotions").update({ active: !p.active }).eq("id", p.id);
     fetchAll();
+    invalidatePublic();
   };
 
   const resetForm = () => {

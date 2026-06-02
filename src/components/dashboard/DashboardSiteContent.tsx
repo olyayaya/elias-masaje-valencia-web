@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/query-keys";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
@@ -309,6 +311,7 @@ const DashboardSiteContent = () => {
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
 
   const fetchContent = async () => {
     setLoading(true);
@@ -358,6 +361,7 @@ const DashboardSiteContent = () => {
       setItems((prev) =>
         prev.map((r) => r.id === item.id ? { ...r, [targetCol]: drafts[item.id] } : r)
       );
+      queryClient.invalidateQueries({ queryKey: queryKeys.siteContent });
     }
     setSaving(null);
   };
