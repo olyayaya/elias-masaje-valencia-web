@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import type { Lang } from "@/components/dashboard/LanguageTabs";
 
 /**
- * Persists the editor's preview locale per browser user + per project.
- * Scoped to VITE_SUPABASE_PROJECT_ID so different Lovable projects keep
+ * Persists the editor's preview locale per browser user + per Supabase project.
+ * Scoped to VITE_SUPABASE_PROJECT_ID so multiple Supabase environments keep
  * independent preferences in the same browser.
  */
 const VALID: Lang[] = ["es", "en", "ru"];

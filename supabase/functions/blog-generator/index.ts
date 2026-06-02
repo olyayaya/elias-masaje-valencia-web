@@ -1,6 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+// AI gateway used by both blog-generator and ai-content-helper. URL is kept
+// as-is until we migrate to a direct provider (see FINDINGS.md); the env var
+// is still named LOVABLE_API_KEY in Supabase secrets, so we keep both names
+// for backwards compatibility while the rename rolls out.
+const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +47,7 @@ Deno.serve(async (req) => {
 
   try {
     const { action, topic, language = "es", source_title, source_content, source_meta } = await req.json();
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    const apiKey = Deno.env.get("AI_GATEWAY_KEY") ?? Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "API key not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -255,7 +259,7 @@ Return the translated post.`,
     if (tools) body.tools = tools;
     if (tool_choice) body.tool_choice = tool_choice;
 
-    const response = await fetch(LOVABLE_API_URL, {
+    const response = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
