@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { Locale, Translations } from "./types";
 import { es } from "./es";
 import { en } from "./en";
@@ -22,15 +22,20 @@ interface I18nContextType {
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
 export const I18nProvider = ({ children }: { children: ReactNode }) => {
-  const [locale, setLocaleState] = useState<Locale>(detectInitialLocale);
+  const [locale, setLocale] = useState<Locale>(detectInitialLocale);
 
-  const setLocale = useCallback((l: Locale) => {
-    setLocaleState(l);
-    document.documentElement.lang = l;
-  }, []);
+  // Keep <html lang> in sync on every locale change — including the initial
+  // render when someone deep-links to /en or /ru and index.html still says
+  // lang="es". Previously the lang attribute only updated after setLocale
+  // was called explicitly, which never happened on first paint.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
+  const setLocaleStable = useCallback((l: Locale) => setLocale(l), []);
 
   return (
-    <I18nContext.Provider value={{ locale, t: translationsMap[locale], setLocale }}>
+    <I18nContext.Provider value={{ locale, t: translationsMap[locale], setLocale: setLocaleStable }}>
       {children}
     </I18nContext.Provider>
   );
