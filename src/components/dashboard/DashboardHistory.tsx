@@ -1,9 +1,20 @@
 import { useState, useEffect } from "react";
 import { History, RotateCcw, ChevronDown, ChevronRight, Loader2, Clock, Trash2, Pencil, CheckSquare, Square } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/query-keys";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import DashboardCard from "./DashboardCard";
+
+// Map history table_name → React Query key so a restore invalidates the
+// public site read for the same table.
+const TABLE_TO_QUERY_KEY: Record<string, readonly unknown[]> = {
+  services: queryKeys.services,
+  faqs: queryKeys.faqs,
+  testimonials: queryKeys.testimonials,
+  blog_posts: queryKeys.blogPosts,
+};
 
 interface HistoryEntry {
   id: string;
@@ -37,6 +48,12 @@ const DashboardHistory = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
+  const queryClient = useQueryClient();
+
+  const invalidateFor = (tableName: string) => {
+    const key = TABLE_TO_QUERY_KEY[tableName];
+    if (key) queryClient.invalidateQueries({ queryKey: key as readonly unknown[] });
+  };
 
   const fetchHistory = async () => {
     const { data } = await supabase
@@ -71,6 +88,7 @@ const DashboardHistory = () => {
     } else {
       await supabase.from(entry.table_name as any).update(fields as any).eq("id", entry.record_id);
     }
+    invalidateFor(entry.table_name);
   };
 
   const runBulkUndo = async () => {
