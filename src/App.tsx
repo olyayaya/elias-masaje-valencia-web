@@ -1,5 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { toast } from "sonner";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,7 +22,26 @@ import LanguageSuggestionBanner from "./components/LanguageSuggestionBanner";
 import { PageTracker } from "./components/PageTracker";
 import { useIntegrationsInjector } from "./hooks/use-integrations-injector";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // 30s freshness window — edits in the dashboard propagate on next
+      // window-focus or after this elapses without re-fetching on every render.
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: true,
+      retry: 1,
+    },
+  },
+  // Surface query errors so a failed fetch is visible instead of silently
+  // rendering an empty UI. Mutation errors are toasted at the call site.
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (import.meta.env.DEV) console.error("[query]", error);
+      toast.error(error instanceof Error ? error.message : "Failed to load content");
+    },
+  }),
+});
 
 const IntegrationsLoader = () => {
   useIntegrationsInjector();

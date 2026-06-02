@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { isBefore, isAfter } from "date-fns";
+import { queryKeys } from "@/lib/query-keys";
 
 export interface DbService {
   id: string;
@@ -43,62 +45,6 @@ export interface DbTestimonial {
   quote_ru: string;
 }
 
-type SiteLang = "es" | "en" | "ru";
-
-const langField = (base: string, lang: SiteLang): string =>
-  lang === "es" ? base : `${base}_${lang}`;
-
-/** Resolve a translated field, falling back to ES (base) */
-export const resolveField = (record: Record<string, any>, base: string, lang: SiteLang): string => {
-  if (lang === "es") return record[base] ?? "";
-  const val = record[langField(base, lang)];
-  return val && val.trim() ? val : record[base] ?? "";
-};
-
-export function useDbServices() {
-  const [services, setServices] = useState<DbService[] | null>(null);
-
-  useEffect(() => {
-    supabase
-      .from("services")
-      .select("*")
-      .eq("hidden", false)
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => { if (data?.length) setServices(data as DbService[]); });
-  }, []);
-
-  return services;
-}
-
-export function useDbFaqs() {
-  const [faqs, setFaqs] = useState<DbFaq[] | null>(null);
-
-  useEffect(() => {
-    supabase
-      .from("faqs")
-      .select("*")
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => { if (data?.length) setFaqs(data as DbFaq[]); });
-  }, []);
-
-  return faqs;
-}
-
-export function useDbTestimonials() {
-  const [testimonials, setTestimonials] = useState<DbTestimonial[] | null>(null);
-
-  useEffect(() => {
-    supabase
-      .from("testimonials")
-      .select("*")
-      .eq("hidden", false)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => { if (data?.length) setTestimonials(data as DbTestimonial[]); });
-  }, []);
-
-  return testimonials;
-}
-
 export interface DbPromotion {
   id: string;
   service_id: string;
@@ -111,24 +57,97 @@ export interface DbPromotion {
   active: boolean;
 }
 
-export function useDbPromotions() {
-  const [promotions, setPromotions] = useState<DbPromotion[] | null>(null);
+type SiteLang = "es" | "en" | "ru";
 
-  useEffect(() => {
-    supabase
-      .from("promotions")
-      .select("*")
-      .eq("active", true)
-      .then(({ data }) => {
-        if (data) {
-          const now = new Date();
-          const active = (data as DbPromotion[]).filter(
-            (p) => isBefore(new Date(p.starts_at), now) && isAfter(new Date(p.ends_at), now)
-          );
-          setPromotions(active);
-        }
-      });
-  }, []);
+const langField = (base: string, lang: SiteLang): string =>
+  lang === "es" ? base : `${base}_${lang}`;
 
-  return promotions;
+/** Resolve a translated field, falling back to ES (base) when the locale value is empty. */
+export const resolveField = (record: Record<string, unknown>, base: string, lang: SiteLang): string => {
+  if (lang === "es") return (record[base] as string | undefined) ?? "";
+  const val = record[langField(base, lang)] as string | undefined;
+  return val && val.trim() ? val : ((record[base] as string | undefined) ?? "");
+};
+
+/**
+ * Public hook return type for the content fetchers.
+ *
+ *   null  → query is still loading (initial fetch hasn't resolved).
+ *   []    → loaded; the table genuinely has no rows.
+ *   [...] → loaded with data.
+ *
+ * Callers that want "fall back to static defaults when empty" must check
+ * `data && data.length > 0`, *not* `data?.map(...) ?? defaults` — the latter
+ * only triggers the fallback while loading, never for a real empty result.
+ */
+type Loaded<T> = T[] | null;
+
+export function useDbServices(): Loaded<DbService> {
+  const { data } = useQuery({
+    queryKey: queryKeys.services,
+    queryFn: async (): Promise<DbService[]> => {
+      const { data, error } = await supabase
+        .from("services")
+        .select("*")
+        .eq("hidden", false)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as DbService[];
+    },
+  });
+  return data ?? null;
+}
+
+export function useDbFaqs(): Loaded<DbFaq> {
+  const { data } = useQuery({
+    queryKey: queryKeys.faqs,
+    queryFn: async (): Promise<DbFaq[]> => {
+      const { data, error } = await supabase
+        .from("faqs")
+        .select("*")
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as DbFaq[];
+    },
+  });
+  return data ?? null;
+}
+
+export function useDbTestimonials(): Loaded<DbTestimonial> {
+  const { data } = useQuery({
+    queryKey: queryKeys.testimonials,
+    queryFn: async (): Promise<DbTestimonial[]> => {
+      const { data, error } = await supabase
+        .from("testimonials")
+        .select("*")
+        .eq("hidden", false)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as DbTestimonial[];
+    },
+  });
+  return data ?? null;
+}
+
+export function useDbPromotions(): Loaded<DbPromotion> {
+  const { data } = useQuery({
+    queryKey: queryKeys.promotions,
+    queryFn: async (): Promise<DbPromotion[]> => {
+      const { data, error } = await supabase
+        .from("promotions")
+        .select("*")
+        .eq("active", true);
+      if (error) throw error;
+      return (data ?? []) as DbPromotion[];
+    },
+  });
+  // Date filter is applied at render time so promotions auto-expire mid-session
+  // without needing a re-fetch.
+  return useMemo(() => {
+    if (!data) return null;
+    const now = new Date();
+    return data.filter(
+      (p) => isBefore(new Date(p.starts_at), now) && isAfter(new Date(p.ends_at), now),
+    );
+  }, [data]);
 }

@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/context";
 import { useLocalePath } from "@/hooks/use-locale-path";
 import { Calendar, ArrowRight, Loader2 } from "lucide-react";
 import { useHead } from "@/hooks/use-head";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
+import { queryKeys } from "@/lib/query-keys";
 
 interface BlogPost {
   id: string;
@@ -33,23 +34,20 @@ const langField = (field: string, locale: string) => {
 const Blog = () => {
   const { locale } = useI18n();
   const lp = useLocalePath();
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
+  const { data: posts = [], isPending: loading } = useQuery({
+    queryKey: queryKeys.blogPosts,
+    queryFn: async (): Promise<BlogPost[]> => {
+      const { data, error } = await supabase
         .from("blog_posts")
         .select("*")
         .eq("status", "published")
         .eq("hidden", false)
         .lte("published_at", new Date().toISOString())
         .order("published_at", { ascending: false });
-      if (data) setPosts(data as unknown as BlogPost[]);
-      setLoading(false);
-    };
-    load();
-  }, []);
+      if (error) throw error;
+      return (data ?? []) as unknown as BlogPost[];
+    },
+  });
 
   const getField = (post: BlogPost, field: string): string => {
     const key = langField(field, locale) as keyof BlogPost;

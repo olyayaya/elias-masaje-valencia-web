@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/context";
 import { useLocalePath } from "@/hooks/use-locale-path";
 import { Calendar, ChevronLeft, Loader2 } from "lucide-react";
 import { useHead } from "@/hooks/use-head";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
+import { queryKeys } from "@/lib/query-keys";
 
 interface Post {
   id: string;
@@ -34,39 +35,34 @@ const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
   const { locale } = useI18n();
   const lp = useLocalePath();
-  const [post, setPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      if (!slug) return;
-
-      let { data } = await supabase
+  const { data: post = null, isPending: loading } = useQuery({
+    queryKey: queryKeys.blogPost(slug ?? ""),
+    enabled: !!slug,
+    queryFn: async (): Promise<Post | null> => {
+      const nowIso = new Date().toISOString();
+      const bySlug = await supabase
         .from("blog_posts")
         .select("*")
-        .eq("slug", slug)
+        .eq("slug", slug!)
         .eq("status", "published")
         .eq("hidden", false)
-        .lte("published_at", new Date().toISOString())
+        .lte("published_at", nowIso)
         .maybeSingle();
+      if (bySlug.error) throw bySlug.error;
+      if (bySlug.data) return bySlug.data as unknown as Post;
 
-      if (!data) {
-        const res = await supabase
-          .from("blog_posts")
-          .select("*")
-          .eq("id", slug)
-          .eq("status", "published")
-          .eq("hidden", false)
-          .lte("published_at", new Date().toISOString())
-          .maybeSingle();
-        data = res.data;
-      }
-
-      if (data) setPost(data as unknown as Post);
-      setLoading(false);
-    };
-    load();
-  }, [slug]);
+      const byId = await supabase
+        .from("blog_posts")
+        .select("*")
+        .eq("id", slug!)
+        .eq("status", "published")
+        .eq("hidden", false)
+        .lte("published_at", nowIso)
+        .maybeSingle();
+      if (byId.error) throw byId.error;
+      return byId.data ? (byId.data as unknown as Post) : null;
+    },
+  });
 
   const getField = (p: Post, field: string): string => {
     const key = langField(field, locale) as keyof Post;
