@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
+import { isLocaleIndependentKey } from "@/lib/site-content-meta";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
@@ -42,9 +43,10 @@ const CATEGORIES: { id: string; label: string; pathHint?: string }[] = [
 const langKey = (lang: Lang): "value_es" | "value_en" | "value_ru" =>
   lang === "es" ? "value_es" : lang === "en" ? "value_en" : "value_ru";
 
-// Locale-independent fields (technical configs) — always edit value_es regardless of selected language tab.
-const LOCALE_INDEPENDENT_KEYS = new Set(["robots_txt", "sitemap_config", "google_rating", "google_review_count"]);
-const isLocaleIndependent = (key: string) => LOCALE_INDEPENDENT_KEYS.has(key);
+// Locale-independent fields (technical configs, URLs, ratings, handles,
+// integration IDs) live in src/lib/site-content-meta.ts so the dashboard
+// editor and the public-site hook agree on the same set.
+const isLocaleIndependent = isLocaleIndependentKey;
 
 const effectiveLangKey = (lang: Lang, key: string) =>
   isLocaleIndependent(key) ? "value_es" : langKey(lang);
