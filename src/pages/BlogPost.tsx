@@ -6,6 +6,7 @@ import { useLocalePath } from "@/hooks/use-locale-path";
 import { Calendar, ChevronLeft, Loader2 } from "lucide-react";
 import { useHead } from "@/hooks/use-head";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
+import DOMPurify from "dompurify";
 
 interface Post {
   id: string;
