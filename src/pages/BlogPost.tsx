@@ -6,6 +6,7 @@ import { useLocalePath } from "@/hooks/use-locale-path";
 import { Calendar, ChevronLeft, Loader2 } from "lucide-react";
 import { useHead } from "@/hooks/use-head";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
+import DOMPurify from "dompurify";
 
 interface Post {
   id: string;
@@ -182,7 +183,10 @@ const BlogPost = () => {
             prose-strong:text-foreground
             prose-li:text-muted-foreground
             prose-blockquote:border-primary/30 prose-blockquote:text-muted-foreground"
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content, {
+            ALLOWED_TAGS: ["p","h1","h2","h3","h4","strong","em","u","a","ul","ol","li","blockquote","br","hr","img","figure","figcaption","code","pre"],
+            ALLOWED_ATTR: ["href","title","target","rel","src","alt","width","height"],
+          }) }}
         />
 
         {(() => {
