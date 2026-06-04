@@ -179,23 +179,28 @@ components that export both a component and constants (e.g.
 
 ---
 
-## Host-side / deploy decisions for you to make
+## Host-side / deploy
 
-1. **Which host?** Both safe defaults are now shipped:
-   - `public/_redirects` → works on Netlify and Cloudflare Pages.
-   - `vercel.json` → works on Vercel.
-   Tell me which one is live and I'll delete the other.
+Host is **Netlify**. The deploy config now lives in two places:
 
-2. **Cache headers** — once you pick a host, set:
-   - `/index.html` → `Cache-Control: no-cache` (so favicon `?v=` busts
-     work and new bundle hashes deploy cleanly).
-   - `/assets/*` → `Cache-Control: public, max-age=31536000, immutable`
-     (Vite already fingerprints these).
-   On Netlify this goes in `netlify.toml`; on Vercel it's automatic.
+- `public/_redirects` — the SPA fallback (`/*  /index.html  200`). Vite
+  ships it into `dist/` at build time.
+- `netlify.toml` — build settings + cache headers:
+  - `/index.html` → `Cache-Control: no-cache` (so favicon `?v=` busts
+    work and new bundle hashes deploy cleanly).
+  - `/assets/*` → `Cache-Control: public, max-age=31536000, immutable`
+    (Vite already fingerprints these).
 
-3. **Custom domain HTTPS / HSTS** — confirm `eliasmas.es` has HSTS
-   enabled at the CDN level (Netlify and Vercel both do this by
-   default; just verify).
+Still on you to verify:
+
+1. **Custom domain HTTPS / HSTS** — confirm `eliasmas.es` has HSTS
+   enabled in the Netlify dashboard (Domain → HTTPS → "Force HTTPS"
+   is on by default; HSTS is a separate toggle).
+
+2. **Netlify build settings vs. dashboard** — `netlify.toml` declares
+   `command = "npm run build"` and `publish = "dist"`. If the Netlify
+   dashboard already had different settings, the toml wins on next
+   deploy. Worth a glance.
 
 ---
 
