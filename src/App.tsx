@@ -15,6 +15,8 @@ import Dashboard from "./pages/Dashboard";
 import Blog from "./pages/Blog";
 import BlogPostPage from "./pages/BlogPost";
 import AnalyticsCheck from "./pages/AnalyticsCheck";
+import Auth from "./pages/Auth";
+import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
 import LocaleSync from "./components/LocaleSync";
 import LanguageSuggestionBanner from "./components/LanguageSuggestionBanner";
@@ -72,8 +74,9 @@ const App = () => (
               <Route path="/ru/blog/:slug" element={<BlogPostPage />} />
             </Route>
 
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/analytics-check" element={<AnalyticsCheck />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/analytics-check" element={<ProtectedRoute><AnalyticsCheck /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
