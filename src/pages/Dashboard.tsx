@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe, ChevronDown, Sun, Moon, Sparkles, Images, Plug, TrendingUp
+  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe, ChevronDown, Sun, Moon, Sparkles, Images, Plug, TrendingUp, LogOut
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { Locale } from "@/i18n/types";
 import { useDashboardT } from "@/i18n/dashboard";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import DashboardServices from "@/components/dashboard/DashboardServices";
@@ -54,6 +55,7 @@ const Dashboard = () => {
   const { locale, setLocale } = useI18n();
   const dt = useDashboardT(locale);
   const { mode, toggleMode } = useTheme();
+  const { signOut } = useAuth();
 
   const navigateTo = (section: string) => {
     setActive(section);
@@ -180,6 +182,13 @@ const Dashboard = () => {
             <ChevronLeft size={16} />
             {dt.backToSite}
           </Link>
+          <button
+            onClick={() => signOut()}
+            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <LogOut size={16} />
+            {dt.auth.signOut}
+          </button>
         </div>
       </aside>
 

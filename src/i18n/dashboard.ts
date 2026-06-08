@@ -8,6 +8,17 @@ export interface DashboardTranslations {
   tipText: string;
   backToSite: string;
   siteManager: string;
+  auth: {
+    title: string;
+    subtitle: string;
+    email: string;
+    password: string;
+    signIn: string;
+    signingIn: string;
+    signOut: string;
+    invalidCredentials: string;
+    genericError: string;
+  };
   sections: {
     overview: string;
     services: string;
@@ -113,6 +124,17 @@ const en: DashboardTranslations = {
   tipText: "Use the Blog section to generate SEO-optimized posts with AI — it writes in your brand voice and targets Valencia search terms automatically.",
   backToSite: "Back to site",
   siteManager: "Site Manager",
+  auth: {
+    title: "Site Manager",
+    subtitle: "Sign in to manage your site",
+    email: "Email",
+    password: "Password",
+    signIn: "Sign in",
+    signingIn: "Signing in…",
+    signOut: "Sign out",
+    invalidCredentials: "Incorrect email or password",
+    genericError: "Could not sign in. Please try again.",
+  },
   sections: {
     overview: "Overview",
     services: "Services",
@@ -218,6 +240,17 @@ const es: DashboardTranslations = {
   tipText: "Usa la sección de Blog para generar posts optimizados para SEO con IA — escribe con la voz de tu marca y se dirige a términos de búsqueda de Valencia automáticamente.",
   backToSite: "Volver al sitio",
   siteManager: "Gestor del sitio",
+  auth: {
+    title: "Gestor del sitio",
+    subtitle: "Inicia sesión para gestionar tu sitio",
+    email: "Correo electrónico",
+    password: "Contraseña",
+    signIn: "Iniciar sesión",
+    signingIn: "Iniciando sesión…",
+    signOut: "Cerrar sesión",
+    invalidCredentials: "Correo o contraseña incorrectos",
+    genericError: "No se pudo iniciar sesión. Inténtalo de nuevo.",
+  },
   sections: {
     overview: "Inicio",
     services: "Servicios",
@@ -323,6 +356,17 @@ const ru: DashboardTranslations = {
   tipText: "Используйте раздел Блог для создания SEO-оптимизированных постов с помощью ИИ — он пишет в стиле вашего бренда и автоматически нацеливается на поисковые запросы Валенсии.",
   backToSite: "Вернуться на сайт",
   siteManager: "Менеджер сайта",
+  auth: {
+    title: "Менеджер сайта",
+    subtitle: "Войдите, чтобы управлять сайтом",
+    email: "Эл. почта",
+    password: "Пароль",
+    signIn: "Войти",
+    signingIn: "Вход…",
+    signOut: "Выйти",
+    invalidCredentials: "Неверная почта или пароль",
+    genericError: "Не удалось войти. Попробуйте ещё раз.",
+  },
   sections: {
     overview: "Обзор",
     services: "Услуги",

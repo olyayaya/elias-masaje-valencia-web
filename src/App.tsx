@@ -8,6 +8,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "./i18n/context";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import RequireAuth from "./components/RequireAuth";
+import Login from "./pages/Login";
 import Layout from "./components/Layout";
 import Index from "./pages/Index";
 import ServiciosPage from "./pages/Servicios";
@@ -67,6 +70,7 @@ const App = () => (
     <TooltipProvider>
       <I18nProvider>
       <ThemeProvider>
+      <AuthProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -111,12 +115,21 @@ const App = () => (
                 <Route path="/ru/privacy" element={<PrivacidadPage />} />
               </Route>
 
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <RequireAuth>
+                    <Dashboard />
+                  </RequireAuth>
+                }
+              />
               <Route path="/analytics-check" element={<AnalyticsCheck />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
+      </AuthProvider>
       </ThemeProvider>
       </I18nProvider>
     </TooltipProvider>
