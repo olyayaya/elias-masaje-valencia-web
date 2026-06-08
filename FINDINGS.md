@@ -7,56 +7,80 @@ from you. Code-level fixes are already on the branch as separate commits.
 
 ---
 
-## 🔴 CRITICAL — security items (NOT changed in this pass)
+## 🔴 CRITICAL — security items
 
-These were left untouched on purpose, per your instruction to flag-only and
-handle authentication deliberately as its own task.
+Both deferred CRITICAL items are now **RESOLVED** on `audit-and-cleanup`.
 
-### 1. Wide-open RLS on every public table
+> ⚠️ **One thing to confirm before applying RLS to the live DB — project routing.**
+> The committed `.env` (and the anon JWT inside it) point to Supabase project
+> **`ukjljyrejfkyurebksqz`**, which is where the real content lives. The project
+> referenced as "live" elsewhere, **`cmragiefvcbvsyzgtwhe`** ("eliasmas"), is
+> currently **empty** (no tables / migrations / buckets). Apply the RLS migration
+> and create the owner user on **whichever project Netlify's `VITE_SUPABASE_URL`
+> / `VITE_SUPABASE_PUBLISHABLE_KEY` actually point to** — verify that in the
+> Netlify dashboard. The code and migration are project-agnostic; only the
+> "where to apply / where to create the user" target depends on this.
 
-`supabase/migrations/20260324141513_b869da95-…sql` (and follow-ups) ship
-this pattern on **every** table — `services`, `faqs`, `testimonials`,
-`promotions`, `site_content`, `page_images`, `blog_posts`,
-`content_history`, `conversion_events`:
+### 1. Wide-open RLS on every public table — ✅ RESOLVED
 
-```sql
-CREATE POLICY "<table> are publicly writable"  ON public.<table> FOR INSERT WITH CHECK (true);
-CREATE POLICY "<table> are publicly updatable" ON public.<table> FOR UPDATE USING (true);
-CREATE POLICY "<table> are publicly deletable" ON public.<table> FOR DELETE USING (true);
-```
+**Was:** `services`, `faqs`, `testimonials`, `promotions`, `site_content`,
+`page_images`, `blog_posts`, `content_history`, `conversion_events` all shipped
+`FOR INSERT/UPDATE/DELETE … (true)` policies — anyone with the anon key (shipped
+to every browser) could insert/update/delete every row in the CMS.
 
-**Anyone with the anon key (which is committed to `.env` and shipped to
-every browser visiting the site) can insert, update, and delete every row
-in your CMS.** That includes the entire blog, services, testimonials,
-prices, integration credentials and promotion content.
+**Fix:** new migration
+`supabase/migrations/20260608223603_rls_lockdown_auth_write.sql` rewrites the
+policies (atomic, single transaction — public reads never break mid-apply):
 
-**Severity: critical.** This is the single biggest risk in the codebase.
+| Table | anon (public) | authenticated owner |
+| --- | --- | --- |
+| `services`, `faqs`, `testimonials`, `promotions`, `site_content`, `page_images`, `blog_posts` | SELECT | SELECT + INSERT/UPDATE/DELETE |
+| `content_history` | — (none) | SELECT only¹ |
+| `conversion_events` | INSERT only² | SELECT |
+| storage bucket `media` | SELECT (read) | SELECT + INSERT + DELETE |
 
-**Recommended fix (separate task):**
-1. Add Supabase auth (email-magic-link or password) and gate the
-   `/dashboard` route behind a session check.
-2. Rewrite the policies as:
-   ```sql
-   CREATE POLICY "<table> editable by authenticated users"
-     ON public.<table> FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-   -- and identical UPDATE / DELETE policies
-   ```
-3. Keep the SELECT policy public (`USING (true)`) so the unauthenticated
-   public site can still read.
-4. For `content_history` and `conversion_events`, lock SELECT to
-   authenticated too (these contain user-edit history and analytics data).
+¹ `content_history` rows are written by the existing `log_content_change()`
+trigger, which is `SECURITY DEFINER` and bypasses RLS — so no INSERT policy is
+needed and the edit log keeps recording.
+² `conversion_events` must stay anon-INSERT because the **public** site logs
+WhatsApp/contact conversions write-only (`src/lib/analytics.ts`). SELECT is
+authenticated-only so visitors can't read everyone's conversion data.
 
-I can do this as a follow-up commit once you confirm the auth flow you
-want (e.g., a single shared admin login vs. multi-user).
+**To apply** (on the live project — see the routing note above):
+- Supabase CLI: `supabase db push` (preferred — keeps migration history), **or**
+- Supabase dashboard → SQL Editor → paste the migration file's contents → Run.
 
-### 2. `/dashboard` route is unauthenticated
+### 2. `/dashboard` route is unauthenticated — ✅ RESOLVED
 
-`src/App.tsx` mounts `/dashboard` with no guard. Anyone who guesses or
-discovers the URL gets the CMS UI. Because RLS is also open, they get
-real write access through the UI even without auth.
+**Was:** `src/App.tsx` mounted `/dashboard` with no guard; anyone with the URL
+got the CMS UI (and, with open RLS, real write access).
 
-Fix is paired with item #1 — add a `<RequireAuth>` wrapper around the
-`/dashboard` route.
+**Fix:** Supabase email/password auth, single owner account:
+- `src/contexts/AuthContext.tsx` — session state via `getSession()` +
+  `onAuthStateChange`.
+- `src/components/RequireAuth.tsx` — wraps `/dashboard`; shows a spinner while
+  the session resolves, redirects unauthenticated users to `/login` (preserving
+  the attempted path).
+- `src/pages/Login.tsx` — email/password login screen (i18n es/en/ru),
+  redirects back to the dashboard on success.
+- Sign-out button added to the dashboard sidebar.
+- No credentials are hardcoded. Public (non-dashboard) routes are untouched.
+  Note: `/en/dashboard` and `/ru/dashboard` are **not** routes (they 404 →
+  NotFound); the dashboard switches locale internally, so only `/dashboard`
+  needs the gate.
+
+**Create the owner user** (do this on the live Supabase project — see routing
+note above; the site has no public sign-up, so create it manually):
+1. Supabase dashboard → **Authentication → Users → Add user → Create new user**.
+2. Enter the owner's email + a strong password.
+3. Tick **"Auto Confirm User"** (otherwise the account stays unconfirmed and
+   can't sign in, since no confirmation email flow is wired up).
+4. Visit `/dashboard` → you'll be redirected to `/login` → sign in with those
+   credentials.
+
+To rotate the password later: same Users screen → the user → **Reset password**
+(or send a recovery email). To add a second editor, just add another user —
+every authenticated user has full write access by design.
 
 ### 3. `.env` is committed to the repo
 
@@ -215,7 +239,8 @@ Still on you to verify:
 | 5 — i18n | 1 | sync `<html lang>` on first paint; lock array parity in tests |
 | 6 — dashboard | 1 | history-restore invalidates public queries |
 | 7 — stability | 1 | lazy-load heavy routes; clean trivial lint |
-| 8 — consent | (this commit) | full GDPR banner + Consent Mode v2 + privacy page |
+| 8 — consent | 1 | full GDPR banner + Consent Mode v2 + privacy page |
+| 9 — security | 2 | Supabase auth gate on /dashboard + RLS lockdown (anon read-only) |
 
 Baseline at start of audit: `npm run lint` 71 problems, build 1,264 kB
 main bundle, 8 tests passing with 1 unhandled rejection.
