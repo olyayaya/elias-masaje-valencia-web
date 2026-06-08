@@ -11,15 +11,20 @@ from you. Code-level fixes are already on the branch as separate commits.
 
 Both deferred CRITICAL items are now **RESOLVED** on `audit-and-cleanup`.
 
-> ⚠️ **One thing to confirm before applying RLS to the live DB — project routing.**
-> The committed `.env` (and the anon JWT inside it) point to Supabase project
-> **`ukjljyrejfkyurebksqz`**, which is where the real content lives. The project
-> referenced as "live" elsewhere, **`cmragiefvcbvsyzgtwhe`** ("eliasmas"), is
-> currently **empty** (no tables / migrations / buckets). Apply the RLS migration
-> and create the owner user on **whichever project Netlify's `VITE_SUPABASE_URL`
-> / `VITE_SUPABASE_PUBLISHABLE_KEY` actually point to** — verify that in the
-> Netlify dashboard. The code and migration are project-agnostic; only the
-> "where to apply / where to create the user" target depends on this.
+> ✅ **Project routing — RESOLVED (Path A, 2026-06-09).**
+> The live project is **`cmragiefvcbvsyzgtwhe`** ("eliasmas") — confirmed:
+> Netlify's `VITE_SUPABASE_URL` points there. It started **empty**, so the whole
+> repo migration set was (re)applied to it and RLS was locked down **directly**
+> (it's reachable via our Supabase tooling). The old Lovable-Cloud project
+> `ukjljyrejfkyurebksqz` (in the previously-committed `.env`, not in our account)
+> is being retired; its real content still needs to be exported and imported —
+> see **"Data migration from Lovable"** below. `.env` is now repointed to
+> `cmragiefvcbvsyzgtwhe`.
+>
+> **State of `cmragiefvcbvsyzgtwhe` right now:** full schema (9 tables + `media`
+> bucket), RLS locked down, but only the migrations' **seed rows** (3 services,
+> 4 FAQs, 3 testimonials, 1 blog post, 39 site_content keys). Elias's real
+> content lands here once the Lovable export is imported.
 
 ### 1. Wide-open RLS on every public table — ✅ RESOLVED
 
@@ -37,7 +42,7 @@ policies (atomic, single transaction — public reads never break mid-apply):
 | `services`, `faqs`, `testimonials`, `promotions`, `site_content`, `page_images`, `blog_posts` | SELECT | SELECT + INSERT/UPDATE/DELETE |
 | `content_history` | — (none) | SELECT only¹ |
 | `conversion_events` | INSERT only² | SELECT |
-| storage bucket `media` | SELECT (read) | SELECT + INSERT + DELETE |
+| storage bucket `media` | object URLs only³ | SELECT (list) + INSERT + DELETE |
 
 ¹ `content_history` rows are written by the existing `log_content_change()`
 trigger, which is `SECURITY DEFINER` and bypasses RLS — so no INSERT policy is
@@ -45,10 +50,29 @@ needed and the edit log keeps recording.
 ² `conversion_events` must stay anon-INSERT because the **public** site logs
 WhatsApp/contact conversions write-only (`src/lib/analytics.ts`). SELECT is
 authenticated-only so visitors can't read everyone's conversion data.
+³ A follow-up migration
+`supabase/migrations/20260608223604_rls_hardening.sql` tightened the `media`
+bucket: client-side **listing** is now authenticated-only, and the
+`log_content_change()` trigger function is no longer callable as an RPC. Public
+image *display* is unaffected — the bucket is public, so images are served via
+the public CDN URL (`getPublicUrl`), which bypasses RLS.
 
-**To apply** (on the live project — see the routing note above):
-- Supabase CLI: `supabase db push` (preferred — keeps migration history), **or**
-- Supabase dashboard → SQL Editor → paste the migration file's contents → Run.
+**Applied to `cmragiefvcbvsyzgtwhe`** directly via migrations (2026-06-09) — all
+18 repo migrations + the lockdown + the hardening migration. Verified as the
+`anon` role: content reads succeed, writes are rejected with an RLS error, and
+`conversion_events` inserts still work. A fresh project can be reproduced with
+`supabase db push`.
+
+**Remaining advisor notes (all benign / by-design):**
+- `rls_policy_always_true` on the authenticated write policies — intentional:
+  single-owner CMS, every authenticated user *is* the owner.
+- `public_bucket_allows_listing` on `media` — listing is now authenticated-only;
+  the warning persists only because the bucket is public *and* has a list policy
+  (the dashboard's media browser needs `.list()`). Closing it fully would mean a
+  private bucket + signed URLs, which is out of scope for this pass.
+- `rls_auto_enable()` SECURITY DEFINER — a Supabase platform event-trigger that
+  auto-enables RLS on new tables; returns `event_trigger`, so it can't be called
+  via RPC. Left as-is.
 
 ### 2. `/dashboard` route is unauthenticated — ✅ RESOLVED
 
@@ -69,9 +93,10 @@ got the CMS UI (and, with open RLS, real write access).
   NotFound); the dashboard switches locale internally, so only `/dashboard`
   needs the gate.
 
-**Create the owner user** (do this on the live Supabase project — see routing
-note above; the site has no public sign-up, so create it manually):
-1. Supabase dashboard → **Authentication → Users → Add user → Create new user**.
+**Create the owner user** — on project **`cmragiefvcbvsyzgtwhe`** (the live one).
+The site has no public sign-up, so create it manually:
+1. Supabase dashboard → project **eliasmas** (`cmragiefvcbvsyzgtwhe`) →
+   **Authentication → Users → Add user → Create new user**.
 2. Enter the owner's email + a strong password.
 3. Tick **"Auto Confirm User"** (otherwise the account stays unconfirmed and
    can't sign in, since no confirmation email flow is wired up).
@@ -88,10 +113,24 @@ every authenticated user has full write access by design.
 itself is public by design (it's the publishable key, RLS is what makes
 it safe — see #1), so this isn't a leak per se, but:
 
-- `.gitignore` is now updated to ignore future `.env` changes.
+- `.env` is now repointed from `ukjljyrejfkyurebksqz` → **`cmragiefvcbvsyzgtwhe`**
+  (project id, URL, and anon key). Confirm Netlify's
+  `VITE_SUPABASE_PUBLISHABLE_KEY` env var equals `cmragiefvcbvsyzgtwhe`'s anon
+  key (the one now in `.env`) — if Netlify still holds the old project's key,
+  the live site will fail to reach the DB.
 - `.env.example` was added.
-- You may want to rotate the project just to wipe history if anything
-  ever ends up in `.env` that *isn't* meant to be public.
+- The old `ukjljyrejfkyurebksqz` anon key is now dead weight in git history;
+  it's harmless (RLS-protected, different project) but you can ignore it.
+
+### Data migration from Lovable (`ukjljyrejfkyurebksqz` → `cmragiefvcbvsyzgtwhe`)
+
+`cmragiefvcbvsyzgtwhe` currently holds only seed data. Elias's real content
+lives in the Lovable-Cloud project `ukjljyrejfkyurebksqz`, which is **not** in
+our Supabase account — so it must be exported from the Lovable side. Step-by-step
+export instructions and the import plan are in the hand-off message; once an
+export file or connection string is available, content tables are imported in
+FK-safe order (`services` → `promotions`, then the rest) and `media` bucket
+files re-uploaded.
 
 ---
 
@@ -240,7 +279,7 @@ Still on you to verify:
 | 6 — dashboard | 1 | history-restore invalidates public queries |
 | 7 — stability | 1 | lazy-load heavy routes; clean trivial lint |
 | 8 — consent | 1 | full GDPR banner + Consent Mode v2 + privacy page |
-| 9 — security | 2 | Supabase auth gate on /dashboard + RLS lockdown (anon read-only) |
+| 9 — security | 4 | auth gate on /dashboard; RLS lockdown + hardening; schema rebuilt in live project `cmragiefvcbvsyzgtwhe`; `.env` repointed |
 
 Baseline at start of audit: `npm run lint` 71 problems, build 1,264 kB
 main bundle, 8 tests passing with 1 unhandled rejection.
