@@ -79,33 +79,57 @@ the public CDN URL (`getPublicUrl`), which bypasses RLS.
 **Was:** `src/App.tsx` mounted `/dashboard` with no guard; anyone with the URL
 got the CMS UI (and, with open RLS, real write access).
 
-**Fix:** Supabase email/password auth, single owner account:
+**Fix:** Supabase **magic-link** auth (passwordless), single owner account, with
+a persistent session — per the client meeting (2026-06-09): no password, no 2FA,
+stay logged in until explicit sign-out.
 - `src/contexts/AuthContext.tsx` — session state via `getSession()` +
-  `onAuthStateChange`.
+  `onAuthStateChange`; `signInWithMagicLink(email)` calls
+  `signInWithOtp({ shouldCreateUser: false })` so **only the pre-created owner**
+  can sign in (no self-signup), and the link returns to `/dashboard`.
+- `src/integrations/supabase/client.ts` — `persistSession: true`,
+  `autoRefreshToken: true`, `storage: localStorage` → the session survives
+  reloads/restarts and auto-refreshes indefinitely; there is **no idle timeout**.
+  The token only ends on explicit **Sign out**. (`detectSessionInUrl` defaults
+  to `true`, so the magic-link token is exchanged for a session on arrival.)
 - `src/components/RequireAuth.tsx` — wraps `/dashboard`; shows a spinner while
   the session resolves, redirects unauthenticated users to `/login` (preserving
   the attempted path).
-- `src/pages/Login.tsx` — email/password login screen (i18n es/en/ru),
-  redirects back to the dashboard on success.
-- Sign-out button added to the dashboard sidebar.
+- `src/pages/Login.tsx` — email-only screen (i18n es/en/ru): enter email →
+  "Check your email" → click the link → land signed-in on the dashboard. The
+  confirmation is identical whether or not the address has access (no
+  email-enumeration leak).
+- Sign-out button in the dashboard sidebar.
 - No credentials are hardcoded. Public (non-dashboard) routes are untouched.
   Note: `/en/dashboard` and `/ru/dashboard` are **not** routes (they 404 →
   NotFound); the dashboard switches locale internally, so only `/dashboard`
   needs the gate.
 
-**Create the owner user** — on project **`cmragiefvcbvsyzgtwhe`** (the live one).
-The site has no public sign-up, so create it manually:
+**Create the owner (client's) user** — on project **`cmragiefvcbvsyzgtwhe`**:
 1. Supabase dashboard → project **eliasmas** (`cmragiefvcbvsyzgtwhe`) →
    **Authentication → Users → Add user → Create new user**.
-2. Enter the owner's email + a strong password.
-3. Tick **"Auto Confirm User"** (otherwise the account stays unconfirmed and
-   can't sign in, since no confirmation email flow is wired up).
-4. Visit `/dashboard` → you'll be redirected to `/login` → sign in with those
-   credentials.
+2. Enter the **client's email** + any password (it's never used for login, but
+   the form requires one) and tick **"Auto Confirm User"**.
+   *(Alternatively: "Send magic link" / invite from the same screen — that also
+   creates + confirms the user.)*
 
-To rotate the password later: same Users screen → the user → **Reset password**
-(or send a recovery email). To add a second editor, just add another user —
-every authenticated user has full write access by design.
+**Required Supabase Auth config for magic links to work:**
+3. **Authentication → URL Configuration** → set **Site URL** to the production
+   URL (e.g. `https://eliasmas.netlify.app` or the custom domain) and add to
+   **Redirect URLs**: `https://eliasmas.netlify.app/dashboard`, the custom
+   domain's `/dashboard`, and `http://localhost:5173/dashboard` for local dev.
+   (The link's redirect must be an allowed URL or Supabase rejects it.)
+4. **Authentication → Providers → Email** must be enabled (it is by default).
+
+**How the client signs in:** go to `/dashboard` → redirected to `/login` →
+type his email → **Send sign-in link** → open the email **on the same
+computer/browser** → he lands in the dashboard and stays logged in. Repeat only
+if he ever clicks **Sign out**. To add a second editor, create another user the
+same way — every authenticated user has full write access by design.
+
+> ✉️ **Email deliverability:** Supabase's built-in SMTP is rate-limited and
+> meant for testing — fine for a single owner logging in occasionally, but if
+> links are slow/missing, configure a custom SMTP under **Authentication →
+> Emails → SMTP Settings**. Flagging, not blocking.
 
 ### 3. `.env` is committed to the repo
 
@@ -136,19 +160,52 @@ files re-uploaded.
 
 ## 🟡 MEDIUM — non-security items
 
-### 4. AI gateway still routes through `ai.gateway.lovable.dev`
+### 4. AI features — client wants them OFF (⚠️ awaiting your confirm to flip)
 
-Per your "option (a)" decision, the URL is kept so the AI features keep
-working. Both edge functions now use renamed constants (`AI_GATEWAY_URL`
-/ `AI_GATEWAY_KEY`) and accept `AI_GATEWAY_KEY` *or* the legacy
-`LOVABLE_API_KEY` from Supabase secrets. When you're ready to migrate
-to a direct provider (Anthropic / OpenAI / Gemini), the surface is small:
+**Client decision (2026-06-09):** does **not** want the AI blog/content agent.
+Goal: nothing should call the paid Lovable AI gateway. Code stays (not deleted).
 
-- `supabase/functions/ai-content-helper/index.ts`
-- `supabase/functions/blog-generator/index.ts`
+**Current state on the live project — already effectively off.** The paid
+gateway (`ai.gateway.lovable.dev`) is only reachable through two edge functions,
+`ai-content-helper` and `blog-generator`, and **neither is deployed on
+`cmragiefvcbvsyzgtwhe`** (`list_edge_functions` → empty), nor is the
+`AI_GATEWAY_KEY` / `LOVABLE_API_KEY` secret set there. So today, clicking an AI
+button in the dashboard just fails with "function not found" — **no paid call is
+ever made.** Nothing to switch off server-side.
 
-Both expect an OpenAI-shaped chat-completions endpoint. Swap the URL,
-keep the same tool-calling schema, and bump the model id.
+**What's left is cosmetic** — the dashboard still *shows* AI buttons that now
+error. Call sites (all `supabase.functions.invoke("ai-content-helper" |
+"blog-generator", …)`):
+- `DashboardBlog.tsx` (blog generation — lines ~80, 100, 494, 538)
+- `DashboardPromotions.tsx` (badge ideas — ~122)
+- `DashboardServices.tsx` (~379)
+- `DashboardSiteContent.tsx` (~376, 398)
+
+**Recommended (reversible) disable — pending your OK:** add a single
+`AI_ENABLED = false` constant (or `VITE_AI_ENABLED` env flag) and hide those
+buttons behind it, leaving all logic intact. Flip to `true` to restore. I have
+**not** made this change yet — say the word and I'll do it as one small commit.
+(Note: `test-integration` is **not** AI — it's the GA4/GTM checker — and is
+unaffected.)
+
+To migrate to a real provider later (Anthropic / OpenAI / Gemini) instead of
+disabling: both functions expect an OpenAI-shaped chat-completions endpoint —
+swap `AI_GATEWAY_URL`, keep the tool-calling schema, bump the model id.
+
+### Price "from / desde / от" prefix — ✅ FIXED (2026-06-09)
+
+**Was:** when the admin entered a price like "Desde 50€" / "From €50" / "от 50€",
+the public site showed just "50€" — the prefix never rendered. `formatPrice()`
+in `src/lib/format-price.ts` stripped any leading prefix but then **ignored the
+`hidePrefix` option and never re-emitted it**, even though the dashboard toggle
+("Hide the from/desde/от prefix"), the `services.hide_price_from` column, and the
+`priceFrom` i18n labels (`desde`/`from`/`от`) all already existed and were wired
+through `OrganicServices` / `OrganicHome` / the dashboard preview.
+
+**Fix:** `formatPrice()` now re-emits the prefix in the **active locale** when the
+admin typed one OR the price is a range ("50€ / 70€" → "from 50€ / 70€"), unless
+the per-service toggle hides it. So ES shows "desde 50 €", EN "from 50 €", RU
+"от 50 €". Only `src/lib/format-price.ts` changed — no schema or UI change needed.
 
 ### 5. `use-integrations-injector` won't react to GA4/GTM ID edits mid-session
 
@@ -280,6 +337,7 @@ Still on you to verify:
 | 7 — stability | 1 | lazy-load heavy routes; clean trivial lint |
 | 8 — consent | 1 | full GDPR banner + Consent Mode v2 + privacy page |
 | 9 — security | 4 | auth gate on /dashboard; RLS lockdown + hardening; schema rebuilt in live project `cmragiefvcbvsyzgtwhe`; `.env` repointed |
+| 10 — go-live | (pending push) | magic-link auth + persistent session; price "from/desde/от" prefix fix; AI-off flagged; data import (awaiting export) |
 
 Baseline at start of audit: `npm run lint` 71 problems, build 1,264 kB
 main bundle, 8 tests passing with 1 unhandled rejection.
