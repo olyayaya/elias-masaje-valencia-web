@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { format, addDays, isAfter, isBefore, differenceInDays } from "date-fns";
 import { useI18n } from "@/i18n/context";
 import { useDashboardT } from "@/i18n/dashboard";
+import { AI_ENABLED } from "@/config/features";
 
 interface Service {
   id: string;
@@ -116,6 +117,7 @@ const DashboardPromotions = () => {
   };
 
   const suggestBadges = async () => {
+    if (!AI_ENABLED) return;
     setSuggestLoading(true);
     try {
       const serviceNames = services.map((s) => s.title).join(", ");
@@ -264,7 +266,7 @@ const DashboardPromotions = () => {
         >
           <div className="space-y-4">
             {/* AI Suggestions — only for new */}
-            {!editingId && (
+            {AI_ENABLED && !editingId && (
               <div className="flex items-center gap-2 flex-wrap">
                 <Button variant="outline" size="sm" onClick={suggestBadges} disabled={suggestLoading} className="gap-2">
                   {suggestLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}

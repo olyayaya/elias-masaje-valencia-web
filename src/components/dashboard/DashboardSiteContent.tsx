@@ -16,6 +16,7 @@ import { Save, Loader2, Sparkles, ChevronRight, Search, Languages, ImageIcon, Ar
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AI_ENABLED } from "@/config/features";
 
 interface SiteContentRow {
   id: string;
@@ -200,7 +201,7 @@ const CategorySection = ({
                   )}
                 </div>
                 <div className="flex gap-1.5 shrink-0">
-                  {!localeIndep && (
+                  {AI_ENABLED && !localeIndep && (
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -369,6 +370,7 @@ const DashboardSiteContent = () => {
   };
 
   const translateField = async (item: SiteContentRow) => {
+    if (!AI_ENABLED) return;
     if (lang === "es") return;
     setAiLoading(`translate-${item.id}`);
     try {
@@ -388,6 +390,7 @@ const DashboardSiteContent = () => {
   };
 
   const seoOptimize = async (item: SiteContentRow) => {
+    if (!AI_ENABLED) return;
     const currentText = drafts[item.id] ?? "";
     if (!currentText.trim()) {
       toast.info("Enter some text first");

@@ -8,6 +8,7 @@ import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
 import { usePreviewLocale } from "@/hooks/use-preview-locale";
 import { resolveField } from "@/hooks/use-db-content";
 import { formatPrice } from "@/lib/format-price";
+import { AI_ENABLED } from "@/config/features";
 import { es as esT } from "@/i18n/es";
 import { en as enT } from "@/i18n/en";
 import { ru as ruT } from "@/i18n/ru";
@@ -365,6 +366,7 @@ const ServiceForm = ({
   const [aiLoading, setAiLoading] = useState<string | null>(null);
 
   const callAi = async (action: "translate" | "seo_optimize", field: "title" | "description") => {
+    if (!AI_ENABLED) return;
     const targetKey = field === "title" ? titleKey : descKey;
     const baseKey = field === "title" ? "title" : "description";
     const currentVal = (draft[targetKey] as string) || "";
@@ -414,7 +416,7 @@ const ServiceForm = ({
           <label className="text-xs font-medium text-muted-foreground">Title ({langTag})</label>
           <div className="flex items-center gap-1">
             {resetBtn(titleKey, "title")}
-            {showTranslate && (
+            {AI_ENABLED && showTranslate && (
               <button
                 onClick={() => callAi("translate", "title")}
                 disabled={!!aiLoading}
@@ -469,7 +471,7 @@ const ServiceForm = ({
           <label className="text-xs font-medium text-muted-foreground">Description ({langTag})</label>
           <div className="flex items-center gap-1">
             {resetBtn(descKey, "description")}
-            {showTranslate && (
+            {AI_ENABLED && showTranslate && (
               <button
                 onClick={() => callAi("translate", "description")}
                 disabled={!!aiLoading}
@@ -480,15 +482,17 @@ const ServiceForm = ({
                 Translate from ES
               </button>
             )}
-            <button
-              onClick={() => callAi("seo_optimize", "description")}
-              disabled={!!aiLoading}
-              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-secondary disabled:opacity-50"
-              title="Optimize for SEO"
-            >
-              {aiLoading === "seo_optimize-description" ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
-              SEO optimize
-            </button>
+            {AI_ENABLED && (
+              <button
+                onClick={() => callAi("seo_optimize", "description")}
+                disabled={!!aiLoading}
+                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-secondary disabled:opacity-50"
+                title="Optimize for SEO"
+              >
+                {aiLoading === "seo_optimize-description" ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+                SEO optimize
+              </button>
+            )}
           </div>
         </div>
         <textarea

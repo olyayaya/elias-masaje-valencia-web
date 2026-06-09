@@ -17,6 +17,7 @@ import { queryKeys } from "@/lib/query-keys";
 import DashboardCard from "./DashboardCard";
 import ImagePicker from "./ImagePicker";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
+import { AI_ENABLED } from "@/config/features";
 import { toast } from "sonner";
 
 interface BlogPost {
@@ -75,6 +76,7 @@ const AIGeneratePanel = ({ onGenerated, lang }: {
   const langLabel = lang === "es" ? "Spanish" : lang === "en" ? "English" : "Russian";
 
   const suggestTopics = async () => {
+    if (!AI_ENABLED) return;
     setStep("suggesting");
     try {
       const { data, error } = await supabase.functions.invoke("blog-generator", {
@@ -95,6 +97,7 @@ const AIGeneratePanel = ({ onGenerated, lang }: {
   };
 
   const generatePost = async (topic: string) => {
+    if (!AI_ENABLED) return;
     setStep("generating");
     try {
       const { data, error } = await supabase.functions.invoke("blog-generator", {
@@ -346,7 +349,7 @@ const DashboardBlog = () => {
         </button>
       </div>
 
-      <AIGeneratePanel onGenerated={handleAIGenerated} lang={lang} />
+      {AI_ENABLED && <AIGeneratePanel onGenerated={handleAIGenerated} lang={lang} />}
 
       {posts.map((p) => (
         <DashboardCard key={p.id}>
@@ -488,6 +491,7 @@ const BlogEditor = ({
   }, [editor]);
 
   const regenerateContent = async () => {
+    if (!AI_ENABLED) return;
     const title = (draft[titleKey] as string) || "massage wellness";
     setRegenerating(true);
     try {
@@ -558,6 +562,7 @@ const BlogEditor = ({
   };
 
   const translateFromSource = async (srcLang: Lang) => {
+    if (!AI_ENABLED) return;
     setTranslating(true);
     try {
       const updated = await translateOne(srcLang, lang, draft);
@@ -593,6 +598,7 @@ const BlogEditor = ({
   };
 
   const translateToAll = async () => {
+    if (!AI_ENABLED) return;
     setGeneratingAll(true);
     let updated = draft;
     const targets: Lang[] = allLangs.filter((l) => l !== "es");
@@ -643,7 +649,7 @@ const BlogEditor = ({
       </div>
 
       {/* Cross-language generation banner — only when current lang is empty and another has content */}
-      {sourceLang && (
+      {AI_ENABLED && sourceLang && (
         <DashboardCard>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex-1">
@@ -667,7 +673,7 @@ const BlogEditor = ({
       )}
 
       {/* Generate all languages button — only on ES tab when Spanish content exists AND not all translations done yet */}
-      {lang === "es" && !currentIsEmpty && !allLanguagesGenerated && (
+      {AI_ENABLED && lang === "es" && !currentIsEmpty && !allLanguagesGenerated && (
         <DashboardCard>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex-1">
@@ -698,8 +704,10 @@ const BlogEditor = ({
           </div>
           <LanguageTabs active={lang} onChange={setLang} contentStatus={contentStatus} />
         </div>
-        {currentIsEmpty && lang !== "es" ? (
-          /* Don't show empty editor — prompt to generate */
+        {AI_ENABLED && currentIsEmpty && lang !== "es" ? (
+          /* With AI on, don't show an empty editor — prompt to generate instead.
+             With AI off, fall through to the editor so the admin can type the
+             EN/RU version manually. */
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Languages size={24} className="text-muted-foreground/40 mb-3" />
             <p className="text-sm text-muted-foreground mb-1">No {langLabels[lang]} content yet</p>
@@ -794,11 +802,13 @@ const BlogEditor = ({
                     <AlignRight size={14} />
                   </ToolbarBtn>
 
-                  <ToolbarSep />
+                  {AI_ENABLED && <ToolbarSep />}
 
-                  <ToolbarBtn onClick={regenerateContent} active={false} title="Regenerate content with AI">
-                    {regenerating ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
-                  </ToolbarBtn>
+                  {AI_ENABLED && (
+                    <ToolbarBtn onClick={regenerateContent} active={false} title="Regenerate content with AI">
+                      {regenerating ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                    </ToolbarBtn>
+                  )}
                 </div>
                 {/* ── Editor ── */}
                 <EditorContent

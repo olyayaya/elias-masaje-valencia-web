@@ -160,37 +160,37 @@ files re-uploaded.
 
 ## 🟡 MEDIUM — non-security items
 
-### 4. AI features — client wants them OFF (⚠️ awaiting your confirm to flip)
+### 4. AI features — DISABLED per client (✅ done 2026-06-09)
 
-**Client decision (2026-06-09):** does **not** want the AI blog/content agent.
-Goal: nothing should call the paid Lovable AI gateway. Code stays (not deleted).
+**Client decision:** does **not** want the AI blog/content agent. Goal: nothing
+calls the paid Lovable AI gateway. Code is **kept**, not deleted.
 
-**Current state on the live project — already effectively off.** The paid
-gateway (`ai.gateway.lovable.dev`) is only reachable through two edge functions,
-`ai-content-helper` and `blog-generator`, and **neither is deployed on
-`cmragiefvcbvsyzgtwhe`** (`list_edge_functions` → empty), nor is the
-`AI_GATEWAY_KEY` / `LOVABLE_API_KEY` secret set there. So today, clicking an AI
-button in the dashboard just fails with "function not found" — **no paid call is
-ever made.** Nothing to switch off server-side.
+**Disabled via a single flag** `src/config/features.ts` → `AI_ENABLED = false`.
+Every AI call site is gated two ways:
+- **UI hidden** — all AI buttons are wrapped in `{AI_ENABLED && …}`: badge
+  suggestions (`DashboardPromotions`), translate/SEO on services
+  (`DashboardServices`) and site content (`DashboardSiteContent`), and the whole
+  blog generator panel + per-language "generate/translate" banners + the
+  toolbar "regenerate" button (`DashboardBlog`).
+- **Handlers guarded** — each handler that calls
+  `supabase.functions.invoke("ai-content-helper" | "blog-generator", …)`
+  early-returns when `!AI_ENABLED`, so even a missed button can't reach the
+  gateway.
+- **Blog manual-edit fix** — the blog editor used to hide the editor for an
+  empty EN/RU tab and tell the admin to "generate from Spanish". With AI off it
+  now falls through to an editable field so EN/RU can be written **manually**.
 
-**What's left is cosmetic** — the dashboard still *shows* AI buttons that now
-error. Call sites (all `supabase.functions.invoke("ai-content-helper" |
-"blog-generator", …)`):
-- `DashboardBlog.tsx` (blog generation — lines ~80, 100, 494, 538)
-- `DashboardPromotions.tsx` (badge ideas — ~122)
-- `DashboardServices.tsx` (~379)
-- `DashboardSiteContent.tsx` (~376, 398)
+**Belt-and-suspenders:** the gateway was already unreachable on
+`cmragiefvcbvsyzgtwhe` anyway — the `ai-content-helper` / `blog-generator` edge
+functions aren't deployed there and no `AI_GATEWAY_KEY` secret is set. So there
+is **no paid usage** from the new project regardless.
 
-**Recommended (reversible) disable — pending your OK:** add a single
-`AI_ENABLED = false` constant (or `VITE_AI_ENABLED` env flag) and hide those
-buttons behind it, leaving all logic intact. Flip to `true` to restore. I have
-**not** made this change yet — say the word and I'll do it as one small commit.
-(Note: `test-integration` is **not** AI — it's the GA4/GTM checker — and is
-unaffected.)
-
-To migrate to a real provider later (Anthropic / OpenAI / Gemini) instead of
-disabling: both functions expect an OpenAI-shaped chat-completions endpoint —
-swap `AI_GATEWAY_URL`, keep the tool-calling schema, bump the model id.
+To **re-enable** later: flip `AI_ENABLED` to `true`, deploy the two edge
+functions, and set the `AI_GATEWAY_KEY` secret. (`test-integration` is **not**
+AI — it's the GA4/GTM checker — and is untouched.) To move to a real provider
+(Anthropic / OpenAI / Gemini): both functions expect an OpenAI-shaped
+chat-completions endpoint — swap `AI_GATEWAY_URL`, keep the tool-calling schema,
+bump the model id.
 
 ### Price "from / desde / от" prefix — ✅ FIXED (2026-06-09)
 
