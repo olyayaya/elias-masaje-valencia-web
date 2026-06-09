@@ -9,9 +9,32 @@ from you. Code-level fixes are already on the branch as separate commits.
 
 ## 🔴 CRITICAL — security items
 
-Both deferred CRITICAL items are now **RESOLVED** on `audit-and-cleanup`.
+Auth (item #2) is resolved in code. RLS (item #1) ⚠️ **see reversal note below** —
+the lockdown was applied to `cmragiefvcbvsyzgtwhe`, but we have since reverted to
+the Lovable DB, where RLS is **still wide-open**.
 
-> ✅ **Project routing — RESOLVED (Path A, 2026-06-09).**
+> 🔄 **REVERSED (2026-06-09, later same day).** Decision changed: keep using the
+> existing **Lovable** project **`ukjljyrejfkyurebksqz`** (it already holds the
+> real content) instead of migrating to `cmragiefvcbvsyzgtwhe`. `.env` is
+> repointed back to `ukjljyrejfkyurebksqz`.
+>
+> **⚠️ Security consequence:** the RLS lockdown + hardening were applied to
+> `cmragiefvcbvsyzgtwhe`, **not** to the Lovable DB. So on `ukjljyrejfkyurebksqz`
+> the original CRITICAL #1 is **still open** — anyone with the anon key (shipped
+> in every browser) can INSERT/UPDATE/DELETE all content. The client-side auth
+> gate hides the dashboard UI, but does **not** stop direct API writes with the
+> anon key. To actually close it, the lockdown SQL must be run in **Lovable's SQL
+> editor** (we can't reach that project via our tooling) — and the owner user +
+> magic-link redirect URLs must be set up on the Lovable project's Auth first, or
+> locking writes to `authenticated` will break the dashboard's ability to save.
+> The migration files
+> (`20260608223603_rls_lockdown_auth_write.sql`, `…223604_rls_hardening.sql`)
+> still apply as-is. Data import + image migration are now **moot** (data already
+> lives in the Lovable DB). The `cmragiefvcbvsyzgtwhe` work is preserved and can
+> be re-adopted by repointing `.env` again.
+
+> ✅ **Project routing — RESOLVED (Path A, 2026-06-09) — superseded by the
+> reversal above.**
 > The live project is **`cmragiefvcbvsyzgtwhe`** ("eliasmas") — confirmed:
 > Netlify's `VITE_SUPABASE_URL` points there. It started **empty**, so the whole
 > repo migration set was (re)applied to it and RLS was locked down **directly**
