@@ -8,7 +8,11 @@ interface AuthContextType {
   user: User | null;
   /** True until the initial session lookup resolves — gate redirects on this. */
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  /**
+   * Send a magic sign-in link to `email`. Only an already-created user can sign
+   * in (shouldCreateUser: false) — there is no public self-signup.
+   */
+  signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -42,8 +46,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const signInWithMagicLink = async (email: string) => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        // Land back on the dashboard; supabase-js (detectSessionInUrl) exchanges
+        // the link's token for a session on arrival.
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+        // Only an existing user (the owner) can sign in — no self-signup.
+        shouldCreateUser: false,
+      },
+    });
     return { error: error?.message ?? null };
   };
 
@@ -52,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signInWithMagicLink, signOut }}>
       {children}
     </AuthContext.Provider>
   );
