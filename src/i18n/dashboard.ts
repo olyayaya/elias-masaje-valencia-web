@@ -12,11 +12,11 @@ export interface DashboardTranslations {
     title: string;
     subtitle: string;
     email: string;
-    sendLink: string;
-    sendingLink: string;
-    linkSentTitle: string;
-    linkSentBody: string;
+    password: string;
+    signIn: string;
+    signingIn: string;
     signOut: string;
+    invalidCredentials: string;
     genericError: string;
   };
   sections: {
@@ -126,14 +126,14 @@ const en: DashboardTranslations = {
   siteManager: "Site Manager",
   auth: {
     title: "Site Manager",
-    subtitle: "Enter your email and we'll send you a sign-in link",
+    subtitle: "Sign in to manage your site",
     email: "Email",
-    sendLink: "Send sign-in link",
-    sendingLink: "Sending…",
-    linkSentTitle: "Check your email",
-    linkSentBody: "If that address has access, a sign-in link is on its way. Open it on this device to continue.",
+    password: "Password",
+    signIn: "Sign in",
+    signingIn: "Signing in…",
     signOut: "Sign out",
-    genericError: "Could not send the link. Please try again.",
+    invalidCredentials: "Incorrect email or password",
+    genericError: "Could not sign in. Please try again.",
   },
   sections: {
     overview: "Overview",
@@ -242,14 +242,14 @@ const es: DashboardTranslations = {
   siteManager: "Gestor del sitio",
   auth: {
     title: "Gestor del sitio",
-    subtitle: "Introduce tu correo y te enviaremos un enlace de acceso",
+    subtitle: "Inicia sesión para gestionar tu sitio",
     email: "Correo electrónico",
-    sendLink: "Enviar enlace de acceso",
-    sendingLink: "Enviando…",
-    linkSentTitle: "Revisa tu correo",
-    linkSentBody: "Si esa dirección tiene acceso, te llegará un enlace de acceso. Ábrelo en este dispositivo para continuar.",
+    password: "Contraseña",
+    signIn: "Iniciar sesión",
+    signingIn: "Iniciando sesión…",
     signOut: "Cerrar sesión",
-    genericError: "No se pudo enviar el enlace. Inténtalo de nuevo.",
+    invalidCredentials: "Correo o contraseña incorrectos",
+    genericError: "No se pudo iniciar sesión. Inténtalo de nuevo.",
   },
   sections: {
     overview: "Inicio",
@@ -358,14 +358,14 @@ const ru: DashboardTranslations = {
   siteManager: "Менеджер сайта",
   auth: {
     title: "Менеджер сайта",
-    subtitle: "Введите эл. почту — мы пришлём ссылку для входа",
+    subtitle: "Войдите, чтобы управлять сайтом",
     email: "Эл. почта",
-    sendLink: "Отправить ссылку для входа",
-    sendingLink: "Отправка…",
-    linkSentTitle: "Проверьте почту",
-    linkSentBody: "Если у этого адреса есть доступ, ссылка для входа уже в пути. Откройте её на этом устройстве, чтобы продолжить.",
+    password: "Пароль",
+    signIn: "Войти",
+    signingIn: "Вход…",
     signOut: "Выйти",
-    genericError: "Не удалось отправить ссылку. Попробуйте ещё раз.",
+    invalidCredentials: "Неверная почта или пароль",
+    genericError: "Не удалось войти. Попробуйте ещё раз.",
   },
   sections: {
     overview: "Обзор",

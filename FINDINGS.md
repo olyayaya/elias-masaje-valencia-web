@@ -102,57 +102,42 @@ the public CDN URL (`getPublicUrl`), which bypasses RLS.
 **Was:** `src/App.tsx` mounted `/dashboard` with no guard; anyone with the URL
 got the CMS UI (and, with open RLS, real write access).
 
-**Fix:** Supabase **magic-link** auth (passwordless), single owner account, with
-a persistent session — per the client meeting (2026-06-09): no password, no 2FA,
-stay logged in until explicit sign-out.
+**Fix:** Supabase **email + password** auth, single owner account, persistent
+session. (We briefly switched to magic-link per the client meeting, then reverted
+to password on 2026-06-12 for a simpler launch — magic-link needs redirect-URL
+config on the project's Auth, which isn't reliably reachable on the Lovable DB.)
 - `src/contexts/AuthContext.tsx` — session state via `getSession()` +
-  `onAuthStateChange`; `signInWithMagicLink(email)` calls
-  `signInWithOtp({ shouldCreateUser: false })` so **only the pre-created owner**
-  can sign in (no self-signup), and the link returns to `/dashboard`.
+  `onAuthStateChange`; `signIn(email, password)` calls `signInWithPassword`.
 - `src/integrations/supabase/client.ts` — `persistSession: true`,
   `autoRefreshToken: true`, `storage: localStorage` → the session survives
-  reloads/restarts and auto-refreshes indefinitely; there is **no idle timeout**.
-  The token only ends on explicit **Sign out**. (`detectSessionInUrl` defaults
-  to `true`, so the magic-link token is exchanged for a session on arrival.)
+  reloads/restarts and auto-refreshes; there is **no idle timeout**. The token
+  only ends on explicit **Sign out**.
 - `src/components/RequireAuth.tsx` — wraps `/dashboard`; shows a spinner while
   the session resolves, redirects unauthenticated users to `/login` (preserving
   the attempted path).
-- `src/pages/Login.tsx` — email-only screen (i18n es/en/ru): enter email →
-  "Check your email" → click the link → land signed-in on the dashboard. The
-  confirmation is identical whether or not the address has access (no
-  email-enumeration leak).
+- `src/pages/Login.tsx` — email + password screen (i18n es/en/ru); redirects
+  back to the attempted route on success, shows "Incorrect email or password"
+  on failure.
 - Sign-out button in the dashboard sidebar.
 - No credentials are hardcoded. Public (non-dashboard) routes are untouched.
   Note: `/en/dashboard` and `/ru/dashboard` are **not** routes (they 404 →
   NotFound); the dashboard switches locale internally, so only `/dashboard`
   needs the gate.
 
-**Create the owner (client's) user** — on project **`cmragiefvcbvsyzgtwhe`**:
-1. Supabase dashboard → project **eliasmas** (`cmragiefvcbvsyzgtwhe`) →
-   **Authentication → Users → Add user → Create new user**.
-2. Enter the **client's email** + any password (it's never used for login, but
-   the form requires one) and tick **"Auto Confirm User"**.
-   *(Alternatively: "Send magic link" / invite from the same screen — that also
-   creates + confirms the user.)*
+**Create the owner (client's) user** — on the **live** project's Auth (currently
+the Lovable DB **`ukjljyrejfkyurebksqz`**; or `cmragiefvcbvsyzgtwhe` if/when we
+migrate back):
+1. Open the project's Supabase Auth → **Authentication → Users → Add user →
+   Create new user**.
+2. Enter the **client's email + a password**, and tick **"Auto Confirm User"**
+   (otherwise the account stays unconfirmed and can't sign in).
+3. Visit `/dashboard` → redirected to `/login` → sign in with that email +
+   password. The session then persists until **Sign out**.
 
-**Required Supabase Auth config for magic links to work:**
-3. **Authentication → URL Configuration** → set **Site URL** to the production
-   URL (e.g. `https://eliasmas.netlify.app` or the custom domain) and add to
-   **Redirect URLs**: `https://eliasmas.netlify.app/dashboard`, the custom
-   domain's `/dashboard`, and `http://localhost:5173/dashboard` for local dev.
-   (The link's redirect must be an allowed URL or Supabase rejects it.)
-4. **Authentication → Providers → Email** must be enabled (it is by default).
-
-**How the client signs in:** go to `/dashboard` → redirected to `/login` →
-type his email → **Send sign-in link** → open the email **on the same
-computer/browser** → he lands in the dashboard and stays logged in. Repeat only
-if he ever clicks **Sign out**. To add a second editor, create another user the
-same way — every authenticated user has full write access by design.
-
-> ✉️ **Email deliverability:** Supabase's built-in SMTP is rate-limited and
-> meant for testing — fine for a single owner logging in occasionally, but if
-> links are slow/missing, configure a custom SMTP under **Authentication →
-> Emails → SMTP Settings**. Flagging, not blocking.
+To rotate the password later: same Users screen → the user → **Reset password**.
+To add a second editor, create another user the same way — every authenticated
+user has full write access by design. No URL/redirect config is needed for
+password login.
 
 ### 3. `.env` is committed to the repo
 
