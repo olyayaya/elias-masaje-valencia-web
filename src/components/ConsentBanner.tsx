@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { Cookie, X, Shield } from "lucide-react";
 import { useI18n } from "@/i18n/context";
@@ -60,7 +61,12 @@ const ConsentBanner = () => {
 
   const c = t.cookies;
 
-  return (
+  // Render through a portal on <body> with the critical positioning as inline
+  // styles. This keeps the banner out of any ancestor stacking context /
+  // transform / overflow clip (a `position: fixed` element trapped by an
+  // ancestor containing block was rendering off-screen/invisible), and inline
+  // styles can't be overridden by any CSS layer.
+  return createPortal(
     <>
       {/* Compact banner */}
       {view === "banner" && (
@@ -68,7 +74,8 @@ const ConsentBanner = () => {
           role="dialog"
           aria-live="polite"
           aria-label={c.panel.title}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[70] w-[calc(100%-2rem)] max-w-2xl"
+          className="w-[calc(100%-2rem)] max-w-2xl"
+          style={{ position: "fixed", bottom: "1rem", left: "50%", transform: "translateX(-50%)", zIndex: 70 }}
         >
           <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-lg p-4 md:p-5">
             <div className="flex items-start gap-3">
@@ -116,7 +123,8 @@ const ConsentBanner = () => {
           role="dialog"
           aria-modal="true"
           aria-label={c.panel.title}
-          className="fixed inset-0 z-[80] flex items-end md:items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"
+          className="flex items-end md:items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"
+          style={{ position: "fixed", inset: 0, zIndex: 80 }}
           onClick={(e) => { if (e.target === e.currentTarget) closePanel(); }}
         >
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -182,7 +190,8 @@ const ConsentBanner = () => {
           </div>
         </div>
       )}
-    </>
+    </>,
+    document.body,
   );
 };
 
