@@ -8,6 +8,7 @@ import {
   ConsentCategories,
   DEFAULT_CONSENT,
   getConsent,
+  onOpenConsentSettings,
   setConsent,
 } from "@/lib/consent";
 
@@ -30,6 +31,12 @@ const ConsentBanner = () => {
 
   useEffect(() => {
     if (getConsent() === null) setView("banner");
+    // A "Cookie preferences" link (e.g. in the footer) re-opens the granular
+    // panel even after a decision, seeded with the saved choice.
+    return onOpenConsentSettings(() => {
+      setDraft(getConsent()?.categories ?? DEFAULT_CONSENT);
+      setView("panel");
+    });
   }, []);
 
   const acceptAll = () => {
@@ -44,6 +51,10 @@ const ConsentBanner = () => {
     setConsent(draft);
     setView("hidden");
   };
+  // Closing the panel returns to the banner only if no decision exists yet
+  // (i.e. it was opened from the first-visit banner); otherwise hide it — the
+  // visitor reopened it from the footer after already choosing.
+  const closePanel = () => setView(getConsent() ? "hidden" : "banner");
 
   if (view === "hidden") return null;
 
@@ -106,7 +117,7 @@ const ConsentBanner = () => {
           aria-modal="true"
           aria-label={c.panel.title}
           className="fixed inset-0 z-[80] flex items-end md:items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setView("banner"); }}
+          onClick={(e) => { if (e.target === e.currentTarget) closePanel(); }}
         >
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-3 p-5 border-b border-border">
@@ -118,7 +129,7 @@ const ConsentBanner = () => {
                 </div>
               </div>
               <button
-                onClick={() => setView("banner")}
+                onClick={closePanel}
                 aria-label={c.panel.cancel}
                 className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary"
               >
@@ -156,7 +167,7 @@ const ConsentBanner = () => {
 
             <div className="flex justify-end gap-2 p-5 border-t border-border">
               <button
-                onClick={() => setView("banner")}
+                onClick={closePanel}
                 className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary transition-colors"
               >
                 {c.panel.cancel}

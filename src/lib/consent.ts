@@ -25,6 +25,7 @@ export interface ConsentState {
 export const CONSENT_VERSION = 1;
 const STORAGE_KEY = `cookie-consent-v${CONSENT_VERSION}`;
 const CONSENT_EVENT = "cookie-consent-changed";
+const OPEN_EVENT = "cookie-consent-open";
 
 /** Default: everything off except necessary. Used to seed the granular dialog. */
 export const DEFAULT_CONSENT: ConsentCategories = {
@@ -77,6 +78,22 @@ export function clearConsent(): void {
     /* ignore */
   }
   window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: null }));
+}
+
+/**
+ * Re-open the cookie preferences panel (e.g. from a "Cookie preferences" footer
+ * link) so a visitor who already chose can review or withdraw consent — even
+ * though the banner itself stays hidden after a decision.
+ */
+export function openConsentSettings(): void {
+  window.dispatchEvent(new CustomEvent(OPEN_EVENT));
+}
+
+/** Subscribe to "open settings" requests. Returns an unsubscribe fn. */
+export function onOpenConsentSettings(cb: () => void): () => void {
+  const handler = () => cb();
+  window.addEventListener(OPEN_EVENT, handler);
+  return () => window.removeEventListener(OPEN_EVENT, handler);
 }
 
 /** Subscribe to consent changes. Returns an unsubscribe fn. */

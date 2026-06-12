@@ -4,6 +4,7 @@ import { useI18n } from "@/i18n/context";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { useLocalePath } from "@/hooks/use-locale-path";
 import { INSTAGRAM_HANDLE } from "@/config/contact";
+import { openConsentSettings } from "@/lib/consent";
 
 // Brand glyphs not included in lucide
 const GoogleIcon = ({ className }: { className?: string }) => (
@@ -88,8 +89,20 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        <div className="mt-16 pt-8 border-t border-border text-center text-xs text-muted-foreground font-body">
-          © {new Date().getFullYear()} Elias Masaje. {t.footer.rights}
+        <div className="mt-16 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center text-xs text-muted-foreground font-body">
+          <span>© {new Date().getFullYear()} Elias Masaje. {t.footer.rights}</span>
+          <span className="hidden sm:inline" aria-hidden="true">·</span>
+          <Link to={lp("privacy")} className="hover:text-foreground transition-colors">
+            {t.cookies.privacy.heading}
+          </Link>
+          <span className="hidden sm:inline" aria-hidden="true">·</span>
+          <button
+            type="button"
+            onClick={openConsentSettings}
+            className="hover:text-foreground transition-colors"
+          >
+            {t.cookies.panel.title}
+          </button>
         </div>
       </div>
     </footer>
