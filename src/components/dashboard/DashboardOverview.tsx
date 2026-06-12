@@ -4,9 +4,10 @@ import { useDashboardT } from "@/i18n/dashboard";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, PenLine,
-  TrendingUp, Eye, Globe, Star, ArrowUpRight, Tag
+  ArrowUpRight, Tag
 } from "lucide-react";
 import DashboardCard from "./DashboardCard";
+import Ga4Stats from "./Ga4Stats";
 
 interface Counts {
   services: number;
@@ -40,7 +41,7 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
       ]);
 
       const blogData = blog.data || [];
-      const activePromos = (promos.data || []).filter((p: any) => new Date(p.ends_at) > new Date());
+      const activePromos = (promos.data || []).filter((p: { ends_at: string }) => new Date(p.ends_at) > new Date());
       setCounts({
         services: services.count || 0,
         blog: blogData.length,
@@ -119,13 +120,6 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
     },
   ];
 
-  const mockStats = [
-    { label: o.monthlyViews, value: "1,240", icon: Eye, trend: "+12%" },
-    { label: o.googleRanking, value: "Top 5", icon: TrendingUp, trend: "masaje Valencia" },
-    { label: o.reviews, value: "66+", icon: Star, trend: "5.0 avg" },
-    { label: o.languages, value: "3", icon: Globe, trend: "ES · EN · RU" },
-  ];
-
   return (
     <div className="space-y-8">
       <div>
@@ -133,18 +127,7 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
         <p className="text-sm text-muted-foreground">{dt.siteOverview}</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {mockStats.map((s) => (
-          <div key={s.label} className="bg-card rounded-xl border border-border p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <s.icon size={14} className="text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">{s.label}</span>
-            </div>
-            <p className="text-xl font-semibold text-foreground">{s.value}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{s.trend}</p>
-          </div>
-        ))}
-      </div>
+      <Ga4Stats days={30} />
 
       <div>
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">{dt.manageYourSite}</h2>

@@ -19,6 +19,17 @@ export interface DashboardTranslations {
     invalidCredentials: string;
     genericError: string;
   };
+  ga4: {
+    pageViews: string;
+    visitors: string;
+    sessions: string;
+    avgSession: string;
+    last: string; // "Last {days} days"
+    connectTitle: string;
+    connectBody: string;
+    loadError: string;
+    searchConsoleNote: string;
+  };
   sections: {
     overview: string;
     services: string;
@@ -134,6 +145,17 @@ const en: DashboardTranslations = {
     signOut: "Sign out",
     invalidCredentials: "Incorrect email or password",
     genericError: "Could not sign in. Please try again.",
+  },
+  ga4: {
+    pageViews: "Page views",
+    visitors: "Visitors",
+    sessions: "Sessions",
+    avgSession: "Avg. session",
+    last: "Last {days} days",
+    connectTitle: "Connect Google Analytics",
+    connectBody: "Live traffic will appear here once GA4 is connected. Setup steps are in the project notes.",
+    loadError: "Couldn't load Google Analytics data — check the GA4 setup.",
+    searchConsoleNote: "Search-query data (impressions, clicks, position) comes from Google Search Console, which isn't connected yet.",
   },
   sections: {
     overview: "Overview",
@@ -251,6 +273,17 @@ const es: DashboardTranslations = {
     invalidCredentials: "Correo o contraseña incorrectos",
     genericError: "No se pudo iniciar sesión. Inténtalo de nuevo.",
   },
+  ga4: {
+    pageViews: "Páginas vistas",
+    visitors: "Visitantes",
+    sessions: "Sesiones",
+    avgSession: "Sesión media",
+    last: "Últimos {days} días",
+    connectTitle: "Conecta Google Analytics",
+    connectBody: "El tráfico en vivo aparecerá aquí cuando se conecte GA4. Los pasos están en las notas del proyecto.",
+    loadError: "No se pudieron cargar los datos de Google Analytics — revisa la configuración de GA4.",
+    searchConsoleNote: "Los datos de búsqueda (impresiones, clics, posición) provienen de Google Search Console, que aún no está conectado.",
+  },
   sections: {
     overview: "Inicio",
     services: "Servicios",
@@ -366,6 +399,17 @@ const ru: DashboardTranslations = {
     signOut: "Выйти",
     invalidCredentials: "Неверная почта или пароль",
     genericError: "Не удалось войти. Попробуйте ещё раз.",
+  },
+  ga4: {
+    pageViews: "Просмотры",
+    visitors: "Посетители",
+    sessions: "Сессии",
+    avgSession: "Ср. сессия",
+    last: "Последние {days} дн.",
+    connectTitle: "Подключите Google Analytics",
+    connectBody: "Живая статистика появится здесь после подключения GA4. Шаги настройки — в заметках проекта.",
+    loadError: "Не удалось загрузить данные Google Analytics — проверьте настройку GA4.",
+    searchConsoleNote: "Данные поиска (показы, клики, позиция) поступают из Google Search Console, который пока не подключён.",
   },
   sections: {
     overview: "Обзор",

@@ -8,6 +8,12 @@
   publish = "dist"
   command = "npm run build"
 
+# Serverless functions (e.g. ga4-report — live Google Analytics metrics for the
+# dashboard). Reachable at /.netlify/functions/<name>.
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
 # index.html must not be cached — it's the entry point that references the
 # fingerprinted /assets/* chunks and the favicon ?v= cache-buster.
 [[headers]]

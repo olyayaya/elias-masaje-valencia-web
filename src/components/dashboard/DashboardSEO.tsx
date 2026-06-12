@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { CheckCircle2, Circle, ExternalLink, Search, MapPin, Star, TrendingUp, Eye, MousePointerClick, Globe } from "lucide-react";
+import { CheckCircle2, Circle, ExternalLink, Search, MapPin, Star } from "lucide-react";
 import DashboardCard from "./DashboardCard";
 import StructuredDataPreview from "./StructuredDataPreview";
+import Ga4Stats from "./Ga4Stats";
+import { useI18n } from "@/i18n/context";
+import { useDashboardT } from "@/i18n/dashboard";
 
 const keywordSuggestions = [
   { keyword: "masaje Valencia", volume: "High", difficulty: "Medium" },
@@ -35,6 +38,8 @@ const gmaTips = [
 ];
 
 const DashboardSEO = () => {
+  const { locale } = useI18n();
+  const dt = useDashboardT(locale);
   const [checklist, setChecklist] = useState(localSeoChecklist);
 
   const toggle = (id: string) => {
@@ -50,48 +55,12 @@ const DashboardSEO = () => {
       {/* Structured data preview — verifies OfferCatalog matches public site */}
       <StructuredDataPreview />
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Monthly Visits", value: "1,240", change: "+12%", icon: Eye, up: true },
-          { label: "Google Position", value: "#8", change: "↑ 3 spots", icon: TrendingUp, up: true },
-          { label: "Click-through Rate", value: "3.2%", change: "+0.4%", icon: MousePointerClick, up: true },
-          { label: "Google Reviews", value: "47", change: "+5 this month", icon: Star, up: true },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-card rounded-xl border border-border p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center">
-                <stat.icon size={14} className="text-muted-foreground" />
-              </div>
-            </div>
-            <p className="text-xl font-semibold text-foreground">{stat.value}</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{stat.label}</p>
-            <p className="text-[11px] text-green-500 mt-1">{stat.change}</p>
-          </div>
-        ))}
-      </div>
+      {/* Real Google Analytics traffic */}
+      <Ga4Stats days={30} />
 
-      {/* Top Search Queries */}
+      {/* Search-query data is Search Console, not GA — flagged honestly rather than faked. */}
       <DashboardCard title="Top Search Queries" description="How people find you on Google">
-        <div className="space-y-3">
-          {[
-            { query: "masaje valencia", impressions: 820, clicks: 28, position: 7.2 },
-            { query: "masajista valencia centro", impressions: 340, clicks: 18, position: 4.1 },
-            { query: "masaje descontracturante valencia", impressions: 210, clicks: 12, position: 5.8 },
-            { query: "masaje relajante valencia", impressions: 180, clicks: 8, position: 9.3 },
-            { query: "mejor masajista valencia", impressions: 150, clicks: 6, position: 11.4 },
-          ].map((q) => (
-            <div key={q.query} className="flex items-center justify-between py-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-foreground truncate">{q.query}</p>
-                <p className="text-[11px] text-muted-foreground">{q.impressions} impressions · {q.clicks} clicks</p>
-              </div>
-              <span className="text-xs font-medium text-muted-foreground bg-secondary px-2.5 py-1 rounded-full shrink-0 ml-3">
-                #{q.position.toFixed(0)}
-              </span>
-            </div>
-          ))}
-        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">{dt.ga4.searchConsoleNote}</p>
       </DashboardCard>
 
       {/* Keyword Suggestions */}

@@ -200,6 +200,41 @@ AI — it's the GA4/GTM checker — and is untouched.) To move to a real provide
 chat-completions endpoint — swap `AI_GATEWAY_URL`, keep the tool-calling schema,
 bump the model id.
 
+### Dashboard analytics — now REAL Google Analytics 4 (2026-06-12)
+
+**Was:** the Overview top-stat cards ("1,240 monthly views", "Top 5", "66+ reviews")
+and the entire SEO stats row + "Top Search Queries" table were **hardcoded fake**
+numbers. (The section count cards and the Attribution tab were already real.)
+
+**Now:** real GA4 via a **Netlify Function** (chosen because the live site runs on
+Netlify and the Supabase edge-function route isn't reachable on the Lovable DB):
+- `netlify/functions/ga4-report.mjs` — signs the service-account JWT with
+  `node:crypto`, exchanges it for a token, calls the **GA4 Data API** `runReport`
+  (page views, visitors, sessions, avg session + a by-day series). Zero deps.
+- `src/hooks/use-ga4.ts` + `src/components/dashboard/Ga4Stats.tsx` — fetch
+  `/.netlify/functions/ga4-report` and render real cards in **Overview** and
+  **SEO**. Until GA4 is configured it shows a "Connect Google Analytics" notice —
+  **never invented numbers**. `netlify.toml` declares the functions dir.
+- SEO's fake "Top Search Queries" is replaced with an honest note: that data is
+  **Google Search Console** (a different API), not GA — not yet connected.
+  Likewise "Google position / reviews" would need Search Console / Business
+  Profile APIs. Keyword suggestions / checklist / tips remain as static tools.
+
+**Setup required to light it up** (until then, the dashboard shows the connect
+notice — no fakes):
+1. **Google Cloud** → a project → **enable the "Google Analytics Data API"** →
+   **IAM & Admin → Service Accounts → Create** → on it, **Keys → Add key → JSON**
+   (downloads the key file).
+2. **GA4** → Admin → **Property Access Management** → add the service account's
+   email as **Viewer**.
+3. Get the **numeric property ID**: GA4 Admin → **Property Settings** → the
+   number near the top (e.g. `456789123`). This is **not** the `G-XXXX`
+   measurement id.
+4. **Netlify** → Site configuration → Environment variables → add:
+   - `GA4_PROPERTY_ID` = the numeric id
+   - `GA4_SERVICE_ACCOUNT` = the **entire** JSON key file contents (paste as-is)
+5. **Clear cache and deploy** → the real numbers appear.
+
 ### Price "from / desde / от" prefix — ✅ FIXED (2026-06-09)
 
 **Was:** when the admin entered a price like "Desde 50€" / "From €50" / "от 50€",
