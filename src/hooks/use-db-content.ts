@@ -63,10 +63,11 @@ const langField = (base: string, lang: SiteLang): string =>
   lang === "es" ? base : `${base}_${lang}`;
 
 /** Resolve a translated field, falling back to ES (base) when the locale value is empty. */
-export const resolveField = (record: Record<string, unknown>, base: string, lang: SiteLang): string => {
-  if (lang === "es") return (record[base] as string | undefined) ?? "";
-  const val = record[langField(base, lang)] as string | undefined;
-  return val && val.trim() ? val : ((record[base] as string | undefined) ?? "");
+export const resolveField = (record: object, base: string, lang: SiteLang): string => {
+  const r = record as Record<string, unknown>;
+  if (lang === "es") return (r[base] as string | undefined) ?? "";
+  const val = r[langField(base, lang)] as string | undefined;
+  return val && val.trim() ? val : ((r[base] as string | undefined) ?? "");
 };
 
 /**

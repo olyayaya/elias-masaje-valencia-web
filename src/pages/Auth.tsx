@@ -5,10 +5,12 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
+type Mode = "signin" | "signup" | "forgot";
+
 const Auth = () => {
   const navigate = useNavigate();
   const { user, isAdmin, loading } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -29,6 +31,13 @@ const Auth = () => {
         });
         if (error) throw error;
         toast.success("Account created. Check your email if confirmation is required.");
+      } else if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success("If that email is registered, a reset link is on its way.");
+        setMode("signin");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -40,14 +49,22 @@ const Auth = () => {
     }
   };
 
+  const title =
+    mode === "signin" ? "Sign in to manage your site"
+    : mode === "signup" ? "Create your admin account"
+    : "Reset your password";
+
+  const cta =
+    mode === "signin" ? "Sign in"
+    : mode === "signup" ? "Create account"
+    : "Send reset link";
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-6">
       <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-8 shadow-sm">
         <div className="mb-6 text-center">
           <h1 className="text-xl font-semibold text-foreground">Elias Masaje</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            {mode === "signin" ? "Sign in to manage your site" : "Create your admin account"}
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">{title}</p>
         </div>
 
         <form onSubmit={submit} className="space-y-3">
@@ -61,33 +78,45 @@ const Auth = () => {
               className="w-full mt-1 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-foreground"
             />
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Password</label>
-            <input
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full mt-1 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-foreground"
-            />
-          </div>
+          {mode !== "forgot" && (
+            <div>
+              <label className="text-xs text-muted-foreground">Password</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full mt-1 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-foreground"
+              />
+            </div>
+          )}
           <button
             type="submit"
             disabled={submitting}
             className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium bg-foreground text-background rounded-lg hover:opacity-90 disabled:opacity-50 transition"
           >
             {submitting && <Loader2 size={14} className="animate-spin" />}
-            {mode === "signin" ? "Sign in" : "Create account"}
+            {cta}
           </button>
         </form>
 
-        <button
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="w-full mt-4 text-xs text-muted-foreground hover:text-foreground"
-        >
-          {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
-        </button>
+        <div className="mt-4 space-y-2 text-center">
+          {mode === "signin" && (
+            <button
+              onClick={() => setMode("forgot")}
+              className="block w-full text-xs text-muted-foreground hover:text-foreground"
+            >
+              Forgot your password?
+            </button>
+          )}
+          <button
+            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+            className="block w-full text-xs text-muted-foreground hover:text-foreground"
+          >
+            {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
+          </button>
+        </div>
 
         <div className="mt-6 text-center">
           <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">
