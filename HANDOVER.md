@@ -6,6 +6,19 @@ This document is the single source of truth for taking over the **Elias Masaje**
 
 ---
 
+## Diagrams
+
+The following Mermaid (`.mmd`) diagrams accompany this document and render in any Markdown viewer that supports Mermaid (GitHub, VS Code with the Mermaid extension, Obsidian, etc.):
+
+- **`Architecture_Overview.mmd`** — system-wide view: browser → Lovable hosting/CDN → Lovable Cloud (Auth, Data API, Postgres, Storage, Edge Functions) → AI Gateway and third-party services.
+- **`Data_Model_RLS.mmd`** — all `public` tables, the `user_roles` + `has_role()` RLS pattern, foreign keys, audit trail via `content_history`, and the `media` storage bucket.
+- **`Auth_Flow.mmd`** — admin password-reset and dashboard authorization sequence (`/auth` → email → `/reset-password` → `has_role` check → `/dashboard`).
+- **`Edge_Functions_Flow.mmd`** — which clients invoke which edge functions, and how each function talks to the database and the AI Gateway.
+
+---
+
+
+
 ## 1. Product overview
 
 A trilingual (ES / EN / RU) marketing website for **Elias Masaje**, a massage therapist in Valencia, Spain, with:
