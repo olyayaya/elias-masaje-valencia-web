@@ -107,12 +107,12 @@ const OrganicHome = () => {
             loading="eager"
             fetchPriority="high"
           />
-          <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-background/80 via-background/50 to-transparent" />
+          <div className={`absolute inset-0 animate-hero-breathe bg-gradient-to-r md:from-background/80 md:via-background/50 md:to-transparent ${mode === "light" ? "from-background/85 via-background/55 to-transparent" : "from-background/95 via-background/80 to-background/40"}`} />
           <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-primary/20 via-primary/8 to-transparent" />
         </div>
 
         <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 pt-40 md:pt-20 pb-[18vh] md:pb-[20vh]">
-            <div className="max-w-xl" ref={heroText.ref} style={heroText.style}>
+            <div className="max-w-xl" ref={heroText.ref} style={{ ...heroText.style, textShadow: "0 2px 18px hsl(var(--background) / 0.65)" }}>
             <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/70 mb-6">
               {t.hero.tagline}
             </p>
