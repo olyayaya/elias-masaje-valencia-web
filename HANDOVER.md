@@ -14,6 +14,7 @@ The following Mermaid (`.mmd`) diagrams accompany this document and render in an
 - **`Data_Model_RLS.mmd`** — all `public` tables, the `user_roles` + `has_role()` RLS pattern, foreign keys, audit trail via `content_history`, and the `media` storage bucket.
 - **`Auth_Flow.mmd`** — admin password-reset and dashboard authorization sequence (`/auth` → email → `/reset-password` → `has_role` check → `/dashboard`).
 - **`Edge_Functions_Flow.mmd`** — which clients invoke which edge functions, and how each function talks to the database and the AI Gateway.
+- **`WhatsApp_Booking_Flow.mmd`** + **`docs/whatsapp-booking-flow.md`** — end-to-end lead flow from CTA click → GA4/GTM/`conversion_events` → WhatsApp chat with Elias, including message templates, `trackWhatsAppClick` API, canonical `location` IDs, and RLS on the leads table.
 
 ---
 
