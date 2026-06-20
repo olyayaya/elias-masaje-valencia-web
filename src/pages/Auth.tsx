@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -60,7 +60,7 @@ const Auth = () => {
     : "Send reset link";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 py-10">
       <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-8 shadow-sm">
         <div className="mb-6 text-center">
           <h1 className="text-xl font-semibold text-foreground">Elias Masaje</h1>
@@ -122,6 +122,28 @@ const Auth = () => {
           <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">
             ← Back to site
           </Link>
+        </div>
+      </div>
+
+      <div className="w-full max-w-sm mt-4 bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex items-start gap-3">
+          <HelpCircle size={18} className="mt-0.5 text-muted-foreground shrink-0" />
+          <div>
+            <h2 className="text-sm font-medium text-foreground">Admin access guide</h2>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Your admin account was created without a password. To enter the dashboard for the first time:
+            </p>
+            <ol className="mt-3 space-y-2 text-xs text-muted-foreground list-decimal list-inside leading-relaxed">
+              <li>Enter your admin email above.</li>
+              <li>Click <strong className="text-foreground">Forgot your password?</strong></li>
+              <li>Open the reset email and click the link.</li>
+              <li>On the reset page, choose a new password.</li>
+              <li>You will be signed in and taken to the dashboard.</li>
+            </ol>
+            <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+              If a reset link says it is invalid or expired, request a fresh one from this page.
+            </p>
+          </div>
         </div>
       </div>
     </div>
