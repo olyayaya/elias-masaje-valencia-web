@@ -124,6 +124,28 @@ const Auth = () => {
           </Link>
         </div>
       </div>
+
+      <div className="w-full max-w-sm mt-4 bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex items-start gap-3">
+          <HelpCircle size={18} className="mt-0.5 text-muted-foreground shrink-0" />
+          <div>
+            <h2 className="text-sm font-medium text-foreground">Admin access guide</h2>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Your admin account was created without a password. To enter the dashboard for the first time:
+            </p>
+            <ol className="mt-3 space-y-2 text-xs text-muted-foreground list-decimal list-inside leading-relaxed">
+              <li>Enter your admin email above.</li>
+              <li>Click <strong className="text-foreground">Forgot your password?</strong></li>
+              <li>Open the reset email and click the link.</li>
+              <li>On the reset page, choose a new password.</li>
+              <li>You will be signed in and taken to the dashboard.</li>
+            </ol>
+            <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+              If a reset link says it is invalid or expired, request a fresh one from this page.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
