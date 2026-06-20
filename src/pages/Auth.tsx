@@ -60,7 +60,7 @@ const Auth = () => {
     : "Send reset link";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 py-10">
       <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-8 shadow-sm">
         <div className="mb-6 text-center">
           <h1 className="text-xl font-semibold text-foreground">Elias Masaje</h1>
