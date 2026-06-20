@@ -11,13 +11,13 @@
     {
       "src": "/__l5e/assets-v1/e04dc58a-5b95-417c-9e60-793e4d6ecc3f/favicon.png",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     },
     {
       "src": "/__l5e/assets-v1/e04dc58a-5b95-417c-9e60-793e4d6ecc3f/favicon.png",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ]
