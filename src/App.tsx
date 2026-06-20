@@ -8,9 +8,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "./i18n/context";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { AuthProvider } from "./contexts/AuthContext";
-import RequireAuth from "./components/RequireAuth";
-import Login from "./pages/Login";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Auth from "./pages/Auth";
 import Layout from "./components/Layout";
 import Index from "./pages/Index";
 import ServiciosPage from "./pages/Servicios";
@@ -70,7 +69,6 @@ const App = () => (
     <TooltipProvider>
       <I18nProvider>
       <ThemeProvider>
-      <AuthProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -115,21 +113,27 @@ const App = () => (
                 <Route path="/ru/privacy" element={<PrivacidadPage />} />
               </Route>
 
-              <Route path="/login" element={<Login />} />
+              <Route path="/auth" element={<Auth />} />
               <Route
                 path="/dashboard"
                 element={
-                  <RequireAuth>
+                  <ProtectedRoute>
                     <Dashboard />
-                  </RequireAuth>
+                  </ProtectedRoute>
                 }
               />
-              <Route path="/analytics-check" element={<AnalyticsCheck />} />
+              <Route
+                path="/analytics-check"
+                element={
+                  <ProtectedRoute>
+                    <AnalyticsCheck />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
-      </AuthProvider>
       </ThemeProvider>
       </I18nProvider>
     </TooltipProvider>

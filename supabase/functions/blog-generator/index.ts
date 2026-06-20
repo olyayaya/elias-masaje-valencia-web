@@ -1,10 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// AI gateway used by both blog-generator and ai-content-helper. URL is kept
-// as-is until we migrate to a direct provider (see FINDINGS.md); the env var
-// is still named LOVABLE_API_KEY in Supabase secrets, so we keep both names
-// for backwards compatibility while the rename rolls out.
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,14 +43,44 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Require admin authentication
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const token = authHeader.replace("Bearer ", "");
+  const sbAuth = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+  const { data: claims, error: claimsErr } = await sbAuth.auth.getClaims(token);
+  if (claimsErr || !claims?.claims?.sub) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const { data: role } = await sbAuth
+    .from("user_roles").select("role")
+    .eq("user_id", claims.claims.sub).eq("role", "admin").maybeSingle();
+  if (!role) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const { action, topic, language = "es", source_title, source_content, source_meta } = await req.json();
-    const apiKey = Deno.env.get("AI_GATEWAY_KEY") ?? Deno.env.get("LOVABLE_API_KEY");
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "API key not configured" }), {
+      console.error("LOVABLE_API_KEY not configured");
+      return new Response(JSON.stringify({ error: "AI service is not configured." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     const langName = LANG_NAMES[language] || "Spanish";
 
@@ -259,7 +287,7 @@ Return the translated post.`,
     if (tools) body.tools = tools;
     if (tool_choice) body.tool_choice = tool_choice;
 
-    const response = await fetch(AI_GATEWAY_URL, {
+    const response = await fetch(LOVABLE_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -324,7 +352,7 @@ Return the translated post.`,
     }
   } catch (error) {
     console.error("blog-generator error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: "Internal server error." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

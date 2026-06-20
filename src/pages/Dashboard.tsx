@@ -7,7 +7,7 @@ import { useI18n } from "@/i18n/context";
 import { Locale } from "@/i18n/types";
 import { useDashboardT } from "@/i18n/dashboard";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import DashboardServices from "@/components/dashboard/DashboardServices";
@@ -55,7 +55,6 @@ const Dashboard = () => {
   const { locale, setLocale } = useI18n();
   const dt = useDashboardT(locale);
   const { mode, toggleMode } = useTheme();
-  const { signOut } = useAuth();
 
   const navigateTo = (section: string) => {
     setActive(section);
@@ -183,7 +182,7 @@ const Dashboard = () => {
             {dt.backToSite}
           </Link>
           <button
-            onClick={() => signOut()}
+            onClick={() => supabase.auth.signOut()}
             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <LogOut size={16} />

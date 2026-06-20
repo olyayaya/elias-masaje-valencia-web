@@ -9,6 +9,34 @@ from you. Code-level fixes are already on the branch as separate commits.
 
 ## 🔴 CRITICAL — security items
 
+> 🔁 **SUPERSEDED (2026-06-20) — adopted Lovable's security as canonical.**
+> We discovered Lovable had independently built the **same** auth/RLS feature on
+> `main`, more robustly, and **already applied it to the live DB**. On
+> `june2026core` we have now **adopted Lovable's system and removed our parallel
+> one**. Net state:
+> - **Auth code:** `src/pages/Auth.tsx` (`/auth`, sign-in **+ sign-up**),
+>   `src/hooks/use-auth.ts` (`{ user, session, isAdmin, loading }`),
+>   `src/components/ProtectedRoute.tsx` (redirects to `/auth`; "Access denied" if
+>   not admin). `/dashboard` and `/analytics-check` are wrapped in
+>   `ProtectedRoute`. Dashboard sign-out calls `supabase.auth.signOut()`.
+>   *(Our `AuthContext.tsx` / `RequireAuth.tsx` / `Login.tsx` were deleted.)*
+> - **RLS:** role-based via migration
+>   `supabase/migrations/20260604224744_*.sql` — an `app_role` enum +
+>   `user_roles` table + `has_role()`; **only users with the `admin` role can
+>   write** content tables + storage; SELECT stays public; `conversion_events`
+>   keeps anon INSERT; a trigger makes the **first signed-up user an admin**.
+>   *(Our `20260608223603/223604` lockdown migrations were deleted.)*
+> - **Owner setup is now self-service:** go to **`/auth` → "Need an account? Sign
+>   up"** with the client's email + password. The **first** account created
+>   becomes admin automatically (bootstrap trigger), then it lands on
+>   `/dashboard`. No manual Supabase Users step needed. (Disable further signups
+>   after, or rely on the fact that only the first user becomes admin.)
+> - **Bonus:** also adopted Lovable's **DOMPurify** sanitization of blog HTML
+>   (`BlogPost.tsx`) — an XSS fix.
+>
+> The original write-ups below describe **our** (now-removed) approach; kept for
+> history.
+
 Auth (item #2) is resolved in code. RLS (item #1) ⚠️ **see reversal note below** —
 the lockdown was applied to `cmragiefvcbvsyzgtwhe`, but we have since reverted to
 the Lovable DB, where RLS is **still wide-open**.
