@@ -10,6 +10,7 @@ This document is the single source of truth for taking over the **Elias Masaje**
 
 The following Mermaid (`.mmd`) diagrams accompany this document and render in any Markdown viewer that supports Mermaid (GitHub, VS Code with the Mermaid extension, Obsidian, etc.):
 
+- **`Traffic_Routing_Diagram.mmd`** — how a visitor typing `eliasmas.es` is routed through DNS and Lovable's CDN to the React frontend, and where backend requests (auth, database, storage, edge functions, AI) go.
 - **`Architecture_Overview.mmd`** — system-wide view: browser → Lovable hosting/CDN → Lovable Cloud (Auth, Data API, Postgres, Storage, Edge Functions) → AI Gateway and third-party services.
 - **`Data_Model_RLS.mmd`** — all `public` tables, the `user_roles` + `has_role()` RLS pattern, foreign keys, audit trail via `content_history`, and the `media` storage bucket.
 - **`Auth_Flow.mmd`** — admin password-reset and dashboard authorization sequence (`/auth` → email → `/reset-password` → `has_role` check → `/dashboard`).
