@@ -34,6 +34,12 @@ A trilingual (ES / EN / RU) marketing website for **Elias Masaje**, a massage th
 - Lovable subdomain: https://elias-masaje-valencia-web.lovable.app
 - Lovable project preview / editor: opened via the Lovable workspace.
 
+**Domain & DNS**
+- `eliasmas.es` is the custom domain connected to the Lovable project.
+- Public DNS A records for `@` (root) and `www` point to `185.158.133.1`, routing visitor traffic to Lovable's CDN.
+- Lovable automatically verifies domain ownership and provisions SSL for both `eliasmas.es` and `www.eliasmas.es`.
+- The underlying Lovable URL (`elias-masaje-valencia-web.lovable.app`) remains the fallback origin and is used for the preview environment.
+
 ---
 
 ## 2. Tech stack
