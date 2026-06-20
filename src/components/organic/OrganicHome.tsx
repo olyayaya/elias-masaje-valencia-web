@@ -112,7 +112,7 @@ const OrganicHome = () => {
         </div>
 
         <div className="relative z-10 w-full px-6 md:px-12 lg:px-20 pt-40 md:pt-20 pb-[18vh] md:pb-[20vh]">
-            <div className="max-w-xl md:[text-shadow:none]" ref={heroText.ref} style={{ ...heroText.style, textShadow: "0 2px 18px hsl(var(--background) / 0.65)" }}>
+            <div className="max-w-xl" ref={heroText.ref} style={{ ...heroText.style, textShadow: "0 2px 18px hsl(var(--background) / 0.65)" }}>
             <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/70 mb-6">
               {t.hero.tagline}
             </p>
