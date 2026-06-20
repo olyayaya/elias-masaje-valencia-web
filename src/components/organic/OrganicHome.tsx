@@ -107,7 +107,7 @@ const OrganicHome = () => {
             loading="eager"
             fetchPriority="high"
           />
-          <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-background/95 via-background/80 to-background/40 md:from-background/80 md:via-background/50 md:to-transparent" />
+          <div className={`absolute inset-0 animate-hero-breathe bg-gradient-to-r md:from-background/80 md:via-background/50 md:to-transparent ${mode === "light" ? "from-background/85 via-background/55 to-transparent" : "from-background/95 via-background/80 to-background/40"}`} />
           <div className="absolute inset-0 animate-hero-breathe bg-gradient-to-r from-primary/20 via-primary/8 to-transparent" />
         </div>
 
