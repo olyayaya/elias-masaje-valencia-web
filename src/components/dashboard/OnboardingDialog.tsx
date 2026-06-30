@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/i18n/context";
 import { WHATSAPP_PHONE } from "@/config/contact";
-import { CheckCircle2, MessageCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, MessageCircle, Loader2, Copy, Check } from "lucide-react";
 
 type Locale = "es" | "en" | "ru";
 
