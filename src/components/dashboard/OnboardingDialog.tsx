@@ -87,6 +87,8 @@ const T: Record<Locale, {
     saved: "Пароль обновлён",
     whatsappBtn: "Отправить шаги в мой WhatsApp",
     whatsappHint: "Откроет WhatsApp со сводкой, которую можно сохранить.",
+    copyBtn: "Копировать текст",
+    copiedBtn: "Скопировано",
     later: "Напомнить позже",
     errMatch: "Пароли не совпадают.",
     errLength: "Пароль должен содержать минимум 8 символов.",
