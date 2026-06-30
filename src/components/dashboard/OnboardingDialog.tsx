@@ -150,6 +150,7 @@ const OnboardingDialog = () => {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Decide whether to show the dialog based on user_metadata.
   useEffect(() => {
