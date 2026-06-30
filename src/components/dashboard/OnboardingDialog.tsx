@@ -96,7 +96,7 @@ const T: Record<Locale, {
   },
 };
 
-const buildWhatsAppMessage = (locale: Locale) => {
+const buildWhatsAppText = (locale: Locale): string => {
   const dashboard = `${window.location.origin}/dashboard`;
   const lines: Record<Locale, string[]> = {
     es: [
@@ -133,7 +133,11 @@ const buildWhatsAppMessage = (locale: Locale) => {
       "3. В панели управляются услуги, блог, акции и т.д.",
     ],
   };
-  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(lines[locale].join("\n"))}`;
+  return lines[locale].join("\n");
+};
+
+const buildWhatsAppMessage = (locale: Locale) => {
+  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(buildWhatsAppText(locale))}`;
 };
 
 const OnboardingDialog = () => {
