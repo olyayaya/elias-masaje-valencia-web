@@ -194,6 +194,16 @@ const OnboardingDialog = () => {
     setOpen(false);
   };
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(buildWhatsAppText((locale as Locale) ?? "es"));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // silently ignore clipboard errors
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v && !saving) setOpen(false); }}>
       <DialogContent className="sm:max-w-md">
