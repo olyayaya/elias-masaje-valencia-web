@@ -24,6 +24,8 @@ const T: Record<Locale, {
   saved: string;
   whatsappBtn: string;
   whatsappHint: string;
+  copyBtn: string;
+  copiedBtn: string;
   later: string;
   errMatch: string;
   errLength: string;
