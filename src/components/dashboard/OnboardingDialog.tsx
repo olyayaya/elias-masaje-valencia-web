@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/i18n/context";
 import { WHATSAPP_PHONE } from "@/config/contact";
-import { CheckCircle2, MessageCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, MessageCircle, Loader2, Copy, Check } from "lucide-react";
 
 type Locale = "es" | "en" | "ru";
 
@@ -24,6 +24,8 @@ const T: Record<Locale, {
   saved: string;
   whatsappBtn: string;
   whatsappHint: string;
+  copyBtn: string;
+  copiedBtn: string;
   later: string;
   errMatch: string;
   errLength: string;
@@ -43,6 +45,8 @@ const T: Record<Locale, {
     saved: "Contraseña actualizada",
     whatsappBtn: "Enviar pasos a mi WhatsApp",
     whatsappHint: "Abre WhatsApp con un resumen para guardarlo.",
+    copyBtn: "Copiar texto",
+    copiedBtn: "Copiado",
     later: "Recordármelo más tarde",
     errMatch: "Las contraseñas no coinciden.",
     errLength: "La contraseña debe tener al menos 8 caracteres.",
@@ -62,6 +66,8 @@ const T: Record<Locale, {
     saved: "Password updated",
     whatsappBtn: "Send steps to my WhatsApp",
     whatsappHint: "Opens WhatsApp with a summary you can keep for later.",
+    copyBtn: "Copy text",
+    copiedBtn: "Copied",
     later: "Remind me later",
     errMatch: "Passwords don't match.",
     errLength: "Password must be at least 8 characters.",
@@ -81,6 +87,8 @@ const T: Record<Locale, {
     saved: "Пароль обновлён",
     whatsappBtn: "Отправить шаги в мой WhatsApp",
     whatsappHint: "Откроет WhatsApp со сводкой, которую можно сохранить.",
+    copyBtn: "Копировать текст",
+    copiedBtn: "Скопировано",
     later: "Напомнить позже",
     errMatch: "Пароли не совпадают.",
     errLength: "Пароль должен содержать минимум 8 символов.",
@@ -88,7 +96,7 @@ const T: Record<Locale, {
   },
 };
 
-const buildWhatsAppMessage = (locale: Locale) => {
+const buildWhatsAppText = (locale: Locale): string => {
   const dashboard = `${window.location.origin}/dashboard`;
   const lines: Record<Locale, string[]> = {
     es: [
@@ -125,7 +133,11 @@ const buildWhatsAppMessage = (locale: Locale) => {
       "3. В панели управляются услуги, блог, акции и т.д.",
     ],
   };
-  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(lines[locale].join("\n"))}`;
+  return lines[locale].join("\n");
+};
+
+const buildWhatsAppMessage = (locale: Locale) => {
+  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(buildWhatsAppText(locale))}`;
 };
 
 const OnboardingDialog = () => {
@@ -138,6 +150,7 @@ const OnboardingDialog = () => {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Decide whether to show the dialog based on user_metadata.
   useEffect(() => {
@@ -179,6 +192,16 @@ const OnboardingDialog = () => {
 
   const dismissForNow = async () => {
     setOpen(false);
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(buildWhatsAppText((locale as Locale) ?? "es"));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // silently ignore clipboard errors
+    }
   };
 
   return (
@@ -246,6 +269,15 @@ const OnboardingDialog = () => {
             <MessageCircle size={16} />
             {t.whatsappBtn}
           </a>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            className="w-full gap-2"
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+            {copied ? t.copiedBtn : t.copyBtn}
+          </Button>
           <p className="text-xs text-muted-foreground text-center">{t.whatsappHint}</p>
 
           {!done && (
