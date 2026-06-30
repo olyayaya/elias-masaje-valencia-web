@@ -101,6 +101,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
+      <OnboardingDialog />
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
