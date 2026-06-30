@@ -269,6 +269,15 @@ const OnboardingDialog = () => {
             <MessageCircle size={16} />
             {t.whatsappBtn}
           </a>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            className="w-full gap-2"
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+            {copied ? t.copiedBtn : t.copyBtn}
+          </Button>
           <p className="text-xs text-muted-foreground text-center">{t.whatsappHint}</p>
 
           {!done && (
