@@ -22,6 +22,7 @@ import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
 import DashboardCarousels from "@/components/dashboard/DashboardCarousels";
 import DashboardIntegrations from "@/components/dashboard/DashboardIntegrations";
 import DashboardAttribution from "@/components/dashboard/DashboardAttribution";
+import OnboardingDialog from "@/components/dashboard/OnboardingDialog";
 
 // Primary sections — always visible
 const primarySections = [
@@ -100,6 +101,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
+      <OnboardingDialog />
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
