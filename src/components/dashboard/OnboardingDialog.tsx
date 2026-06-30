@@ -66,6 +66,8 @@ const T: Record<Locale, {
     saved: "Password updated",
     whatsappBtn: "Send steps to my WhatsApp",
     whatsappHint: "Opens WhatsApp with a summary you can keep for later.",
+    copyBtn: "Copy text",
+    copiedBtn: "Copied",
     later: "Remind me later",
     errMatch: "Passwords don't match.",
     errLength: "Password must be at least 8 characters.",
