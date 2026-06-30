@@ -45,6 +45,8 @@ const T: Record<Locale, {
     saved: "Contraseña actualizada",
     whatsappBtn: "Enviar pasos a mi WhatsApp",
     whatsappHint: "Abre WhatsApp con un resumen para guardarlo.",
+    copyBtn: "Copiar texto",
+    copiedBtn: "Copiado",
     later: "Recordármelo más tarde",
     errMatch: "Las contraseñas no coinciden.",
     errLength: "La contraseña debe tener al menos 8 caracteres.",
