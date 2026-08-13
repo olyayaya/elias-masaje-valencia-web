@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { BASE_URL } from "@/config/routes";
+import { normalizePathname } from "@/lib/canonical-url";
 
 /** Absolute 1200x630 social preview used when a page has no specific image. */
 export const DEFAULT_OG_IMAGE = "https://eliasmas.es/og-image.jpg";
