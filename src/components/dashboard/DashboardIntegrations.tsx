@@ -350,10 +350,11 @@ const DashboardIntegrations = () => {
         const delay = key.endsWith("_verification") ? 1500 : 200;
         setTimeout(() => { runTest(key, v).catch(() => {}); }, delay);
       } else {
-        // Cleared value → drop stale test result
+        // Cleared value → drop stale test result and health history
         setTests((prev) => {
           const next = { ...prev }; delete next[key]; saveTestCache(next); return next;
         });
+        setHealth((prev) => clearHealth(prev, key));
       }
     } catch (e) {
       const msg = describeError(e);
@@ -375,6 +376,7 @@ const DashboardIntegrations = () => {
         saveTestCache(next);
         return next;
       });
+      noteHealth(key, false, msg);
       reportIntegrationFailure("save", key, msg, { rolledBackTo: lastGood ? "previous value" : "(empty)" });
       toast.error(
         docLang === "en"
