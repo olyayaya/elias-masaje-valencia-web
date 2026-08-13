@@ -3,6 +3,7 @@ import DashboardCard from "./DashboardCard";
 import StructuredDataPreview from "./StructuredDataPreview";
 import SeoTraffic from "./SeoTraffic";
 import SeoHealth from "./SeoHealth";
+import SearchConsolePanel from "./SearchConsolePanel";
 import { useI18n } from "@/i18n/context";
 import { useDashboardT } from "@/i18n/dashboard";
 
