@@ -1,6 +1,7 @@
 import { auth, defineMcp } from "@lovable.dev/mcp-js";
 import listBookingLeads from "./tools/list-booking-leads";
 import updateBookingLeadStatus from "./tools/update-booking-lead-status";
+import createWhatsappBookingRequest from "./tools/create-whatsapp-booking-request";
 import listServices from "./tools/list-services";
 import listBlogPosts from "./tools/list-blog-posts";
 import createBlogDraft from "./tools/create-blog-draft";
