@@ -80,6 +80,57 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_leads: {
+        Row: {
+          created_at: string
+          duration: string | null
+          id: string
+          locale: string | null
+          location: string | null
+          message: string
+          name: string
+          page_path: string | null
+          phone: string
+          preferred_time: string
+          price: string | null
+          service: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration?: string | null
+          id?: string
+          locale?: string | null
+          location?: string | null
+          message: string
+          name: string
+          page_path?: string | null
+          phone: string
+          preferred_time: string
+          price?: string | null
+          service: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration?: string | null
+          id?: string
+          locale?: string | null
+          location?: string | null
+          message?: string
+          name?: string
+          page_path?: string | null
+          phone?: string
+          preferred_time?: string
+          price?: string | null
+          service?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       content_history: {
         Row: {
           action: string
