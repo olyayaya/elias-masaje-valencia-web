@@ -4,6 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import DashboardCard from "./DashboardCard";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
+import IntegrationDiagnostics from "./IntegrationDiagnostics";
+import { logDiagnostic, describeError } from "@/lib/integration-diagnostics";
 
 type TestStatus = { ok: boolean; error?: string; details?: string; testedAt: string };
 const TEST_CACHE_KEY = "integration_test_results_v1";
