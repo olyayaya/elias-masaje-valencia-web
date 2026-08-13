@@ -29,7 +29,18 @@ interface HeadProps {
   locale?: string;
   jsonLd?: Record<string, any>;
   alternates?: { hreflang: string; href: string }[];
+  /** e.g. "noindex, follow" for utility pages that shouldn't be indexed. */
+  robots?: string;
+  /** Extra article:* Open Graph tags for editorial pages. */
+  article?: {
+    publishedTime?: string;
+    modifiedTime?: string;
+    author?: string;
+    section?: string;
+    tags?: string[];
+  };
 }
+
 
 /**
  * Manages document head elements (title, meta, canonical, hreflang, JSON-LD).
