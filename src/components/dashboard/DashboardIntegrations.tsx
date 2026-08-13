@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
 import IntegrationDiagnostics from "./IntegrationDiagnostics";
 import { logDiagnostic, describeError, DiagEntry } from "@/lib/integration-diagnostics";
+import { reportIntegrationFailure, addIntegrationBreadcrumb } from "@/lib/sentry";
 import { toast } from "sonner";
 
 type TestStatus = { ok: boolean; error?: string; details?: string; testedAt: string };
@@ -164,6 +165,32 @@ const FIELDS: Field[] = [
     },
   },
   {
+    key: "integration_sentry_dsn",
+    label: "Sentry — Error reporting DSN",
+    placeholder: "https://<key>@<org>.ingest.sentry.io/<projectId>",
+    secret: true,
+    validate: (v) => !v || /^https:\/\/[^@/]+@[^/]+\/\d+$/.test(v.trim()),
+    docs: { url: "https://sentry.io/signup/", label: "sentry.io" },
+    instructions: {
+      en: [
+        "Create a free account at sentry.io (Developer plan covers this site).",
+        "Create a new project → platform \"React\" → name it \"eliasmas.es\".",
+        "On the setup screen copy the DSN (https://…@…ingest.sentry.io/1234567).",
+        "Paste it below and Save — reporting starts immediately, no redeploy needed.",
+        "Crashes (blank screens) and failed Save/Test/Refresh requests are sent with full stack traces, tagged dashboard-integrations.",
+        "Open sentry.io → Issues to see them in real time.",
+      ],
+      ru: [
+        "Создайте бесплатный аккаунт на sentry.io (плана Developer достаточно).",
+        "Создайте новый проект → платформа \"React\" → название \"eliasmas.es\".",
+        "На экране установки скопируйте DSN (https://…@…ingest.sentry.io/1234567).",
+        "Вставьте его ниже и сохраните — отчёты начнут поступать сразу, без пересборки сайта.",
+        "Сбои (белый экран) и неудачные запросы Save/Test/Refresh отправляются со стек-трейсом и тегом dashboard-integrations.",
+        "Смотрите их в реальном времени на sentry.io → Issues.",
+      ],
+    },
+  },
+  {
     key: "integration_seo_api_key",
     label: "SEO tool — API key (Ahrefs / SEMrush / Serpstat / etc.)",
     placeholder: "Paste API key",
@@ -273,6 +300,7 @@ const DashboardIntegrations = () => {
       })
       .then(undefined, (e) => {
         setLoading(false);
+        reportIntegrationFailure("load", undefined, describeError(e));
         logDiagnostic({
           action: "load",
           label: "Integration settings",
@@ -340,6 +368,7 @@ const DashboardIntegrations = () => {
         saveTestCache(next);
         return next;
       });
+      reportIntegrationFailure("save", key, msg, { rolledBackTo: lastGood ? "previous value" : "(empty)" });
       toast.error(
         docLang === "en"
           ? `Save failed — ${labelFor(key)} restored to last saved value`
@@ -381,6 +410,11 @@ const DashboardIntegrations = () => {
       details: result.details,
       durationMs: Date.now() - started,
     });
+    if (!result.ok) {
+      reportIntegrationFailure(action, key, result.error || "Test failed", { details: result.details });
+    } else {
+      addIntegrationBreadcrumb(`${action} ok: ${labelFor(key)}`);
+    }
     setTests((prev) => {
       const next = { ...prev, [key]: result };
       saveTestCache(next);
@@ -404,6 +438,7 @@ const DashboardIntegrations = () => {
         durationMs: Date.now() - started,
       });
     } catch (e) {
+      reportIntegrationFailure("refresh", undefined, describeError(e));
       logDiagnostic({
         action: "refresh",
         label: "Refresh all",
