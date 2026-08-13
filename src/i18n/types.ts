@@ -20,6 +20,25 @@ export interface Translations {
     title: string;
     items: { title: string; description: string }[];
   };
+  booking: {
+    title: string;
+    subtitle: string;
+    serviceLabel: string;
+    durationLabel: string;
+    priceLabel: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    preferredLabel: string;
+    preferredPlaceholder: string;
+    previewLabel: string;
+    greeting: string;
+    closing: string;
+    copyBtn: string;
+    copied: string;
+    copyFailed: string;
+    openBtn: string;
+    note: string;
+  };
   services: {
     title: string;
     viewAll: string;
