@@ -175,7 +175,10 @@ export function useHead(props: HeadProps) {
     propsRef.current.ogImage,
     propsRef.current.ogImageAlt,
     propsRef.current.locale,
+    propsRef.current.robots,
+    articleStr,
     jsonLdStr,
     alternatesStr,
   ]);
+
 }
