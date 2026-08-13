@@ -120,8 +120,10 @@ export default function AnalyticsCheck() {
     return () => { m.remove(); };
   }, []);
 
-  // Load IDs once
+  // Load IDs once. GA4 can come from the connected Google Analytics
+  // connector or from the dashboard setting; GTM is dashboard-only.
   useEffect(() => {
+    const connectorGa4 = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY?.trim();
     supabase
       .from("site_content")
       .select("content_key, value_es")
@@ -130,7 +132,7 @@ export default function AnalyticsCheck() {
       .then(({ data }) => {
         const map: Record<string, string> = {};
         data?.forEach((r: any) => { if (r.value_es?.trim()) map[r.content_key] = r.value_es.trim(); });
-        const ga = map.integration_ga4_id;
+        const ga = connectorGa4 || map.integration_ga4_id;
         const gt = map.integration_gtm_id;
         setGa4Id(ga && /^G-[A-Z0-9]+$/i.test(ga) ? ga : null);
         setGtmId(gt && /^GTM-[A-Z0-9]+$/i.test(gt) ? gt : null);
