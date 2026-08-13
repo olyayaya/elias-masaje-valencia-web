@@ -23,9 +23,19 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Same-origin relative path to return to after auth (used by the OAuth
+  // consent flow so MCP clients land back on the approval screen).
+  const nextPath = (() => {
+    const raw = new URLSearchParams(window.location.search).get("next");
+    if (!raw) return null;
+    return raw.startsWith("/") && !raw.startsWith("//") ? raw : null;
+  })();
+
   useEffect(() => {
-    if (!loading && user && isAdmin) navigate("/dashboard", { replace: true });
-  }, [user, isAdmin, loading, navigate]);
+    if (loading || !user) return;
+    if (nextPath) navigate(nextPath, { replace: true });
+    else if (isAdmin) navigate("/dashboard", { replace: true });
+  }, [user, isAdmin, loading, navigate, nextPath]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +45,7 @@ const Auth = () => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+          options: { emailRedirectTo: `${window.location.origin}${nextPath ?? "/dashboard"}` },
         });
         if (error) throw error;
         toast.success("Account created. Check your email if confirmation is required.");
