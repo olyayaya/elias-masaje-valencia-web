@@ -540,6 +540,8 @@ const DashboardIntegrations = () => {
           </DashboardCard>
         );
       })}
+
+      <IntegrationDiagnostics lang={docLang} />
     </div>
   );
 };
