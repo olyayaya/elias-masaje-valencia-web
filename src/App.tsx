@@ -138,6 +138,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </AppErrorBoundary>
         </BrowserRouter>
       </ThemeProvider>
       </I18nProvider>
