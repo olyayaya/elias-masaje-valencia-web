@@ -242,9 +242,12 @@ const DashboardIntegrations = () => {
       .then(undefined, () => setLoading(false));
   }, []);
 
+  const labelFor = (key: string) => FIELDS.find((f) => f.key === key)?.label || key;
+
   const save = async (key: string) => {
     setSavingKey(key);
     const v = (values[key] || "").trim();
+    const started = Date.now();
     try {
       const { error } = await supabase
         .from("site_content")
@@ -253,6 +256,14 @@ const DashboardIntegrations = () => {
       if (error) throw error;
       setOriginal((prev) => ({ ...prev, [key]: v }));
       queryClient.invalidateQueries({ queryKey: queryKeys.siteContent });
+      logDiagnostic({
+        action: "save",
+        target: key,
+        label: labelFor(key),
+        ok: true,
+        details: v ? undefined : "Value cleared",
+        durationMs: Date.now() - started,
+      });
       // Auto re-test so the live status badge updates without reload.
       // Verification metas need a beat for the injector / cached HTML to refresh.
       if (v) {
@@ -265,7 +276,15 @@ const DashboardIntegrations = () => {
         });
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Save failed";
+      const msg = describeError(e);
+      logDiagnostic({
+        action: "save",
+        target: key,
+        label: labelFor(key),
+        ok: false,
+        error: msg,
+        durationMs: Date.now() - started,
+      });
       setTests((prev) => {
         const next = { ...prev, [key]: { ok: false, error: msg, testedAt: new Date().toISOString() } };
         saveTestCache(next);
@@ -276,10 +295,11 @@ const DashboardIntegrations = () => {
     }
   };
 
-  const runTest = async (key: string, override?: string) => {
+  const runTest = async (key: string, override?: string, action: "test" | "refresh" = "test") => {
     const v = (override ?? values[key] ?? "").trim();
     if (!v) return;
     setTesting(key);
+    const started = Date.now();
     let result: TestStatus;
     try {
       const { data, error } = await supabase.functions.invoke("test-integration", {
@@ -291,10 +311,19 @@ const DashboardIntegrations = () => {
     } catch (e) {
       result = {
         ok: false,
-        error: e instanceof Error ? e.message : "Test request failed",
+        error: describeError(e) || "Test request failed",
         testedAt: new Date().toISOString(),
       };
     }
+    logDiagnostic({
+      action,
+      target: key,
+      label: labelFor(key),
+      ok: result.ok,
+      error: result.error,
+      details: result.details,
+      durationMs: Date.now() - started,
+    });
     setTests((prev) => {
       const next = { ...prev, [key]: result };
       saveTestCache(next);
@@ -308,12 +337,28 @@ const DashboardIntegrations = () => {
     const keys = FIELDS.map((f) => f.key).filter((k) => (original[k] || "").trim());
     if (!keys.length) return;
     setRefreshingAll(true);
+    const started = Date.now();
     try {
-      await Promise.all(keys.map((k) => runTest(k, original[k]).catch(() => {})));
+      await Promise.all(keys.map((k) => runTest(k, original[k], "refresh").catch(() => {})));
+      logDiagnostic({
+        action: "refresh",
+        label: `${keys.length} ${keys.length === 1 ? "integration" : "integrations"}`,
+        ok: true,
+        durationMs: Date.now() - started,
+      });
+    } catch (e) {
+      logDiagnostic({
+        action: "refresh",
+        label: "Refresh all",
+        ok: false,
+        error: describeError(e),
+        durationMs: Date.now() - started,
+      });
     } finally {
       setRefreshingAll(false);
     }
   };
+
 
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
