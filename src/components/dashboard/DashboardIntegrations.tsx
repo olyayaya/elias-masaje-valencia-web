@@ -192,9 +192,13 @@ const DashboardIntegrations = () => {
   const [reveal, setReveal] = useState<Record<string, boolean>>({});
   const [testing, setTesting] = useState<string | null>(null);
   const [tests, setTests] = useState<Record<string, TestStatus>>(loadTestCache);
+  const [connectorGa4Id, setConnectorGa4Id] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    const connectorGa4 = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY?.trim() || null;
+    setConnectorGa4Id(connectorGa4);
+
     supabase
       .from("site_content")
       .select("content_key, value_es")
@@ -202,6 +206,8 @@ const DashboardIntegrations = () => {
       .then(({ data }) => {
         const map: Record<string, string> = {};
         (data || []).forEach((r: any) => { map[r.content_key] = r.value_es || ""; });
+        // The connected Google Analytics connector takes precedence for GA4.
+        if (connectorGa4) map.integration_ga4_id = connectorGa4;
         setValues(map);
         setOriginal(map);
         setLoading(false);
