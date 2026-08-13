@@ -4,6 +4,7 @@ import {
   LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe, ChevronDown, Sun, Moon, Sparkles, Images, Plug, TrendingUp, LogOut, Inbox,
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
+import { useHead } from "@/hooks/use-head";
 import { Locale } from "@/i18n/types";
 import { useDashboardT } from "@/i18n/dashboard";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -52,6 +53,8 @@ const allSectionIds = [...primarySections, ...secondarySections].map(s => s.id);
 const langLabels: Record<Locale, string> = { es: "ES", en: "EN", ru: "RU" };
 
 const Dashboard = () => {
+  // Private admin area: never indexed, never previewed on social.
+  useHead({ title: "Panel | Elias Masaje", robots: "noindex, nofollow", noSocial: true });
   const [active, setActive] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
