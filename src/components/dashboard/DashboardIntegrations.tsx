@@ -7,6 +7,8 @@ import { queryKeys } from "@/lib/query-keys";
 import IntegrationDiagnostics from "./IntegrationDiagnostics";
 import { logDiagnostic, describeError, DiagEntry } from "@/lib/integration-diagnostics";
 import { reportIntegrationFailure, addIntegrationBreadcrumb } from "@/lib/sentry";
+import IntegrationHealthBadge from "./IntegrationHealthBadge";
+import { HealthMap, loadHealth, recordHealth, clearHealth, healthLevel } from "@/lib/integration-health";
 import { toast } from "sonner";
 
 type TestStatus = { ok: boolean; error?: string; details?: string; testedAt: string };
@@ -223,6 +225,9 @@ const DashboardIntegrations = () => {
   const [testing, setTesting] = useState<string | null>(null);
   const [tests, setTests] = useState<Record<string, TestStatus>>(loadTestCache);
   const [connectorGa4Id, setConnectorGa4Id] = useState<string | null>(null);
+  const [health, setHealth] = useState<HealthMap>(loadHealth);
+  const noteHealth = (key: string, ok: boolean, error?: string, at?: string) =>
+    setHealth((prev) => recordHealth(prev, key, ok, error, at));
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -285,6 +290,7 @@ const DashboardIntegrations = () => {
               saveTestCache(next);
               return next;
             });
+            noteHealth(k, result.ok, result.error, result.testedAt);
           } catch (e) {
             logDiagnostic({
               action: "test",
@@ -295,6 +301,7 @@ const DashboardIntegrations = () => {
               details: "auto-verify on open",
               durationMs: Date.now() - started,
             });
+            noteHealth(k, false, describeError(e));
           }
         });
       })
@@ -343,10 +350,11 @@ const DashboardIntegrations = () => {
         const delay = key.endsWith("_verification") ? 1500 : 200;
         setTimeout(() => { runTest(key, v).catch(() => {}); }, delay);
       } else {
-        // Cleared value → drop stale test result
+        // Cleared value → drop stale test result and health history
         setTests((prev) => {
           const next = { ...prev }; delete next[key]; saveTestCache(next); return next;
         });
+        setHealth((prev) => clearHealth(prev, key));
       }
     } catch (e) {
       const msg = describeError(e);
@@ -368,6 +376,7 @@ const DashboardIntegrations = () => {
         saveTestCache(next);
         return next;
       });
+      noteHealth(key, false, msg);
       reportIntegrationFailure("save", key, msg, { rolledBackTo: lastGood ? "previous value" : "(empty)" });
       toast.error(
         docLang === "en"
@@ -420,6 +429,7 @@ const DashboardIntegrations = () => {
       saveTestCache(next);
       return next;
     });
+    noteHealth(key, result.ok, result.error, result.testedAt);
     setTesting(null);
   };
 
@@ -522,6 +532,28 @@ const DashboardIntegrations = () => {
             <p className="text-xs text-muted-foreground mt-1">
               Paste your Google Workspace tracking IDs and SEO codes. They go live on the public site immediately after saving.
             </p>
+            {(() => {
+              const active = FIELDS.filter((f) => (original[f.key] || "").trim());
+              const counts = active.reduce(
+                (acc, f) => { acc[healthLevel(health[f.key])] += 1; return acc; },
+                { healthy: 0, degraded: 0, failing: 0, unknown: 0 } as Record<string, number>
+              );
+              if (!active.length) return null;
+              return (
+                <div className="flex items-center gap-3 mt-2 text-[11px]">
+                  <span className="text-green-600 dark:text-green-400">● {counts.healthy} {docLang === "en" ? "healthy" : "стабильно"}</span>
+                  {counts.degraded > 0 && (
+                    <span className="text-amber-600 dark:text-amber-400">● {counts.degraded} {docLang === "en" ? "degraded" : "нестабильно"}</span>
+                  )}
+                  {counts.failing > 0 && (
+                    <span className="text-destructive">● {counts.failing} {docLang === "en" ? "failing" : "сбой"}</span>
+                  )}
+                  {counts.unknown > 0 && (
+                    <span className="text-muted-foreground">● {counts.unknown} {docLang === "en" ? "not checked" : "не проверено"}</span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button
@@ -585,7 +617,7 @@ const DashboardIntegrations = () => {
           <DashboardCard key={f.key}>
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {isConnected ? (
                     <CheckCircle2 size={16} className="text-green-500 shrink-0" />
                   ) : (
@@ -595,6 +627,7 @@ const DashboardIntegrations = () => {
                   {isConnected && (
                     <span className="text-[10px] px-2 py-0.5 bg-green-500/10 text-green-600 rounded-full">Connected</span>
                   )}
+                  {isConnected && <IntegrationHealthBadge health={health[f.key]} lang={docLang} />}
                   {f.key === "integration_ga4_id" && connectorGa4Id && (
                     <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full">Connector</span>
                   )}
