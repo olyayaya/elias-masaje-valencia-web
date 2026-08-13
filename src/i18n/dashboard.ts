@@ -44,6 +44,7 @@ export interface DashboardTranslations {
     carousels: string;
     integrations: string;
     attribution: string;
+    leads: string;
   };
   overview: {
     monthlyViews: string;
@@ -171,6 +172,7 @@ const en: DashboardTranslations = {
     carousels: "Carousels",
     integrations: "Integrations",
     attribution: "Attribution",
+    leads: "Booking leads",
   },
   overview: {
     monthlyViews: "Monthly views",
@@ -298,6 +300,7 @@ const es: DashboardTranslations = {
     carousels: "Carruseles",
     integrations: "Integraciones",
     attribution: "Atribución",
+    leads: "Solicitudes",
   },
   overview: {
     monthlyViews: "Visitas mensuales",
@@ -425,6 +428,7 @@ const ru: DashboardTranslations = {
     carousels: "Карусели",
     integrations: "Интеграции",
     attribution: "Атрибуция",
+    leads: "Заявки",
   },
   overview: {
     monthlyViews: "Просмотров в месяц",
