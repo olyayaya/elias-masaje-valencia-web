@@ -238,7 +238,8 @@ const DashboardIntegrations = () => {
             });
           } catch {/* ignore — manual Test still available */}
         });
-      });
+      })
+      .then(undefined, () => setLoading(false));
   }, []);
 
   const save = async (key: string) => {
