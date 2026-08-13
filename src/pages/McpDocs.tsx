@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { Check, Copy, ExternalLink, Lock, Wrench } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Lock, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { useHead } from "@/hooks/use-head";
+import { buildFullSpec, buildMcpJson, buildToolSchema, downloadJson } from "@/lib/mcp-spec";
+
 
 type ToolDoc = {
   name: string;
@@ -247,13 +249,36 @@ const McpDocs = () => {
           </div>
           <CodeBlock
             label="Configuración de cliente (mcp.json)"
-            code={JSON.stringify(
-              { mcpServers: { "elias-masaje-website": { type: "http", url: endpoint } } },
-              null,
-              2,
-            )}
+            code={JSON.stringify(buildMcpJson(endpoint), null, 2)}
           />
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                downloadJson("mcp.json", buildMcpJson(endpoint));
+                toast.success("mcp.json descargado");
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+            >
+              <Download size={14} /> Descargar mcp.json
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                downloadJson("elias-masaje-mcp-spec.json", buildFullSpec(endpoint, TOOLS));
+                toast.success("Especificación completa descargada");
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/20 transition-colors"
+            >
+              <Download size={14} /> Descargar especificación completa
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            La especificación completa incluye el endpoint, la configuración OAuth y el esquema JSON de entrada de
+            cada herramienta con un ejemplo de petición y respuesta — lista para compartir con otros sistemas.
+          </p>
         </section>
+
 
         <section className="rounded-2xl border border-border bg-card p-5 md:p-6 space-y-4">
           <h2 className="font-display text-xl text-foreground">Prueba rápida</h2>
@@ -310,7 +335,19 @@ const McpDocs = () => {
                 >
                   {tool.readOnly ? "solo lectura" : "escritura"}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    downloadJson(`${tool.name}.schema.json`, buildToolSchema(tool));
+                    toast.success(`${tool.name}.schema.json descargado`);
+                  }}
+                  aria-label={`Descargar esquema de ${tool.name}`}
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Download size={12} /> Esquema
+                </button>
               </div>
+
               <p className="text-sm text-muted-foreground">{tool.description}</p>
 
               <div className="overflow-x-auto">
