@@ -1,6 +1,8 @@
 import { useI18n } from "@/i18n/context";
 import { useHead } from "@/hooks/use-head";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
+import { buildLocalBusiness } from "@/lib/local-business";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 const PrivacidadPage = () => {
   const { locale, t } = useI18n();
@@ -15,6 +17,10 @@ const PrivacidadPage = () => {
     ogType: "article",
     locale,
     alternates: getAlternates("privacy"),
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@graph": [buildLocalBusiness(locale), buildBreadcrumbList("privacy", locale)],
+    },
   });
 
   return (

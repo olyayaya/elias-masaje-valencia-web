@@ -7,6 +7,8 @@ import { Calendar, ArrowRight, Loader2 } from "lucide-react";
 import { useHead } from "@/hooks/use-head";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 import { queryKeys } from "@/lib/query-keys";
+import { buildLocalBusiness } from "@/lib/local-business";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 interface BlogPost {
   id: string;
@@ -108,6 +110,10 @@ const Blog = () => {
     alternates: getAlternates("blog"),
     jsonLd: {
       "@context": "https://schema.org",
+      "@graph": [
+      buildLocalBusiness(locale),
+      buildBreadcrumbList("blog", locale),
+      {
       "@type": "CollectionPage",
       "@id": blogUrl,
       name: headings[locale],
@@ -126,6 +132,8 @@ const Blog = () => {
           })),
         },
       } : {}),
+      },
+      ],
     },
   });
 

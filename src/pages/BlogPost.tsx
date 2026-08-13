@@ -7,6 +7,7 @@ import { Calendar, ChevronLeft, Loader2 } from "lucide-react";
 import { useHead } from "@/hooks/use-head";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 import DOMPurify from "dompurify";
+import { buildLocalBusiness } from "@/lib/local-business";
 
 interface Post {
   id: string;
@@ -97,8 +98,7 @@ const BlogPost = () => {
   const postSlug = post ? (post.slug || post.id) : "";
   const postUrl = post ? `${BASE_URL}${ROUTE_MAP.blog[locale]}/${postSlug}` : "";
 
-  const jsonLd = post ? {
-    "@context": "https://schema.org",
+  const blogPosting = post ? {
     "@type": "BlogPosting",
     headline: title,
     description: metaDesc,
@@ -117,6 +117,10 @@ const BlogPost = () => {
       return kws?.length ? { keywords: kws.join(", ") } : {};
     })()),
   } : undefined;
+
+  const jsonLd = blogPosting
+    ? { "@context": "https://schema.org", "@graph": [buildLocalBusiness(locale), blogPosting] }
+    : undefined;
 
   // First inline image of the article makes a far better social preview than
   // the sitewide default; falls back to the default when the post has none.
