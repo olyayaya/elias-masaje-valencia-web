@@ -42,7 +42,7 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index, bad
     <div ref={anim.ref} style={anim.style} className="flex flex-col md:flex-row md:items-center justify-between py-8 gap-4">
       <div className="flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="font-display text-xl md:text-2xl mb-1.5">{title}</h3>
+          <h2 className="font-display text-xl md:text-2xl mb-1.5">{title}</h3>
           {badge && (
             <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border animate-[pulse_3s_cubic-bezier(0.4,0,0.6,1)_infinite] ${PROMO_COLORS[badgeColor || "amber"] ?? PROMO_COLORS.amber}`}>
               {badge}

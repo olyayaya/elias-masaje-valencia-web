@@ -26,7 +26,7 @@ const ContactItem = ({ icon: Icon, title, children, index }: {
         <Icon size={18} className="text-primary-strong" />
       </div>
       <div>
-        <h3 className="font-display text-lg mb-1.5">{title}</h3>
+        <h2 className="font-display text-lg mb-1.5">{title}</h2>
         {children}
       </div>
     </div>
