@@ -4,10 +4,40 @@ import { useI18n } from "@/i18n/context";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 import { buildBreadcrumbList } from "@/lib/breadcrumbs";
+import { useDbFaqs, resolveField } from "@/hooks/use-db-content";
+import { useMemo } from "react";
 
 const Index = () => {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const { content: sc } = useSiteContent();
+  const dbFaqs = useDbFaqs();
+
+  // Mirrors the FAQ list rendered on the homepage (DB entries, i18n fallback).
+  const faqItems = useMemo(
+    () =>
+      dbFaqs?.map((f) => ({
+        question: resolveField(f, "question", locale),
+        answer: resolveField(f, "answer", locale),
+      })) ?? t.faq.items,
+    [dbFaqs, t.faq.items, locale],
+  );
+
+  const faqPage = faqItems.length
+    ? {
+        "@type": "FAQPage",
+        "@id": `${BASE_URL}${ROUTE_MAP.home[locale]}#faq`,
+        mainEntity: faqItems
+          .filter((f) => f.question && f.answer)
+          .map((f) => ({
+            "@type": "Question",
+            name: f.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: f.answer.replace(/<[^>]*>/g, "").trim(),
+            },
+          })),
+      }
+    : null;
 
   const title = locale === "es"
     ? "Elias Masaje — Masaje profesional en Valencia"
@@ -89,6 +119,7 @@ const Index = () => {
           inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
         },
         buildBreadcrumbList("home", locale),
+        ...(faqPage && faqPage.mainEntity.length ? [faqPage] : []),
       ],
     },
   });
