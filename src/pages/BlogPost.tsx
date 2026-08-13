@@ -21,6 +21,7 @@ interface Post {
   meta_description_ru: string;
   slug: string;
   published_at: string;
+  updated_at?: string | null;
   seo_keywords: string[];
   seo_keywords_en: string[];
   seo_keywords_ru: string[];
