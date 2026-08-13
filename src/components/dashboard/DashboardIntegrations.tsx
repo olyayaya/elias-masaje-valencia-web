@@ -595,7 +595,7 @@ const DashboardIntegrations = () => {
           <DashboardCard key={f.key}>
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {isConnected ? (
                     <CheckCircle2 size={16} className="text-green-500 shrink-0" />
                   ) : (
@@ -605,6 +605,7 @@ const DashboardIntegrations = () => {
                   {isConnected && (
                     <span className="text-[10px] px-2 py-0.5 bg-green-500/10 text-green-600 rounded-full">Connected</span>
                   )}
+                  {isConnected && <IntegrationHealthBadge health={health[f.key]} lang={docLang} />}
                   {f.key === "integration_ga4_id" && connectorGa4Id && (
                     <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full">Connector</span>
                   )}
