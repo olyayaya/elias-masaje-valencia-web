@@ -25,6 +25,7 @@ const ContactoPage = () => {
     ogTitle: title,
     ogDescription: desc,
     ogType: "website",
+    locale,
     alternates: getAlternates("contact"),
     jsonLd: {
       "@context": "https://schema.org",

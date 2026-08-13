@@ -1,4 +1,18 @@
 import { useEffect, useRef } from "react";
+import { BASE_URL } from "@/config/routes";
+
+/** Absolute 1200x630 social preview used when a page has no specific image. */
+export const DEFAULT_OG_IMAGE =
+  "https://eliasmas.es/__l5e/assets-v1/52c700a9-5a53-4095-8439-728e463e0709/og-image-1200x630.png";
+
+const OG_LOCALE: Record<string, string> = { es: "es_ES", en: "en_US", ru: "ru_RU" };
+
+/** Crawlers need absolute https URLs; relative paths are resolved against BASE_URL. */
+function toAbsolute(url?: string) {
+  if (!url) return undefined;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+}
 
 interface HeadProps {
   title?: string;
@@ -7,6 +21,13 @@ interface HeadProps {
   ogTitle?: string;
   ogDescription?: string;
   ogType?: string;
+  /** Canonical page URL for og:url — defaults to `canonical`. */
+  ogUrl?: string;
+  /** Absolute or root-relative preview image (1200x630 recommended). */
+  ogImage?: string;
+  ogImageAlt?: string;
+  /** Page language, used for og:locale. */
+  locale?: string;
   jsonLd?: Record<string, any>;
   alternates?: { hreflang: string; href: string }[];
 }
@@ -23,7 +44,8 @@ export function useHead(props: HeadProps) {
   propsRef.current = props;
 
   useEffect(() => {
-    const { title, description, canonical, ogTitle, ogDescription, ogType, alternates } = propsRef.current;
+    const { title, description, canonical, ogTitle, ogDescription, ogType, ogUrl, ogImage, ogImageAlt, locale, alternates } =
+      propsRef.current;
     const prevTitle = document.title;
     const created: Element[] = [];
 
@@ -44,6 +66,26 @@ export function useHead(props: HeadProps) {
     if (ogTitle) setMeta("property", "og:title", ogTitle);
     if (ogDescription) setMeta("property", "og:description", ogDescription);
     if (ogType) setMeta("property", "og:type", ogType);
+
+    const socialTitle = ogTitle || title;
+    const socialDesc = ogDescription || description;
+    const socialUrl = toAbsolute(ogUrl || canonical);
+    const socialImage = toAbsolute(ogImage) || DEFAULT_OG_IMAGE;
+
+    setMeta("property", "og:site_name", "Elias Masaje");
+    if (locale) setMeta("property", "og:locale", OG_LOCALE[locale] || "es_ES");
+    if (socialUrl) setMeta("property", "og:url", socialUrl);
+    setMeta("property", "og:image", socialImage);
+    setMeta("property", "og:image:secure_url", socialImage);
+    setMeta("property", "og:image:width", "1200");
+    setMeta("property", "og:image:height", "630");
+    setMeta("property", "og:image:alt", ogImageAlt || socialTitle || "Elias Masaje");
+
+    setMeta("name", "twitter:card", "summary_large_image");
+    if (socialTitle) setMeta("name", "twitter:title", socialTitle);
+    if (socialDesc) setMeta("name", "twitter:description", socialDesc);
+    setMeta("name", "twitter:image", socialImage);
+    setMeta("name", "twitter:image:alt", ogImageAlt || socialTitle || "Elias Masaje");
 
     let linkEl: HTMLLinkElement | null = null;
     if (canonical) {
@@ -93,6 +135,10 @@ export function useHead(props: HeadProps) {
     propsRef.current.ogTitle,
     propsRef.current.ogDescription,
     propsRef.current.ogType,
+    propsRef.current.ogUrl,
+    propsRef.current.ogImage,
+    propsRef.current.ogImageAlt,
+    propsRef.current.locale,
     jsonLdStr,
     alternatesStr,
   ]);

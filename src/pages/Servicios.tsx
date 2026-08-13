@@ -87,6 +87,7 @@ const ServiciosPage = () => {
     ogTitle: title,
     ogDescription: metaDesc,
     ogType: "website",
+    locale,
     alternates: getAlternates("services"),
     jsonLd: localBusiness,
   });
