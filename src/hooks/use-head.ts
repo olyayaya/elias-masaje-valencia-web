@@ -31,6 +31,8 @@ interface HeadProps {
   alternates?: { hreflang: string; href: string }[];
   /** e.g. "noindex, follow" for utility pages that shouldn't be indexed. */
   robots?: string;
+  /** Private pages (login, dashboard): skip all Open Graph / Twitter tags. */
+  noSocial?: boolean;
   /** Extra article:* Open Graph tags for editorial pages. */
   article?: {
     publishedTime?: string;
@@ -56,7 +58,7 @@ export function useHead(props: HeadProps) {
   propsRef.current = props;
 
   useEffect(() => {
-    const { title, description, canonical, ogTitle, ogDescription, ogType, ogUrl, ogImage, ogImageAlt, locale, alternates, robots, article } =
+    const { title, description, canonical, ogTitle, ogDescription, ogType, ogUrl, ogImage, ogImageAlt, locale, alternates, robots, article, noSocial } =
       propsRef.current;
 
     const prevTitle = document.title;
@@ -76,37 +78,39 @@ export function useHead(props: HeadProps) {
     };
 
     if (description) setMeta("name", "description", description);
-    if (ogTitle) setMeta("property", "og:title", ogTitle);
-    if (ogDescription) setMeta("property", "og:description", ogDescription);
-    if (ogType) setMeta("property", "og:type", ogType);
+    if (!noSocial) {
+      if (ogTitle) setMeta("property", "og:title", ogTitle);
+      if (ogDescription) setMeta("property", "og:description", ogDescription);
+      if (ogType) setMeta("property", "og:type", ogType);
 
-    const socialTitle = ogTitle || title;
-    const socialDesc = ogDescription || description;
-    const socialUrl = toAbsolute(ogUrl || canonical);
-    const socialImage = toAbsolute(ogImage) || DEFAULT_OG_IMAGE;
+      const socialTitle = ogTitle || title;
+      const socialDesc = ogDescription || description;
+      const socialUrl = toAbsolute(ogUrl || canonical);
+      const socialImage = toAbsolute(ogImage) || DEFAULT_OG_IMAGE;
 
-    setMeta("property", "og:site_name", "Elias Masaje");
-    if (locale) setMeta("property", "og:locale", OG_LOCALE[locale] || "es_ES");
-    if (socialUrl) setMeta("property", "og:url", socialUrl);
-    setMeta("property", "og:image", socialImage);
-    setMeta("property", "og:image:secure_url", socialImage);
-    setMeta(
-      "property",
-      "og:image:type",
-      /\.png(\?|$)/i.test(socialImage) ? "image/png" : /\.webp(\?|$)/i.test(socialImage) ? "image/webp" : "image/jpeg",
-    );
-    // Only advertise dimensions for the known 1200x630 default asset.
-    if (socialImage === DEFAULT_OG_IMAGE) {
-      setMeta("property", "og:image:width", "1200");
-      setMeta("property", "og:image:height", "630");
+      setMeta("property", "og:site_name", "Elias Masaje");
+      if (locale) setMeta("property", "og:locale", OG_LOCALE[locale] || "es_ES");
+      if (socialUrl) setMeta("property", "og:url", socialUrl);
+      setMeta("property", "og:image", socialImage);
+      setMeta("property", "og:image:secure_url", socialImage);
+      setMeta(
+        "property",
+        "og:image:type",
+        /\.png(\?|$)/i.test(socialImage) ? "image/png" : /\.webp(\?|$)/i.test(socialImage) ? "image/webp" : "image/jpeg",
+      );
+      // Only advertise dimensions for the known 1200x630 default asset.
+      if (socialImage === DEFAULT_OG_IMAGE) {
+        setMeta("property", "og:image:width", "1200");
+        setMeta("property", "og:image:height", "630");
+      }
+      setMeta("property", "og:image:alt", ogImageAlt || socialTitle || "Elias Masaje");
+
+      setMeta("name", "twitter:card", "summary_large_image");
+      if (socialTitle) setMeta("name", "twitter:title", socialTitle);
+      if (socialDesc) setMeta("name", "twitter:description", socialDesc);
+      setMeta("name", "twitter:image", socialImage);
+      setMeta("name", "twitter:image:alt", ogImageAlt || socialTitle || "Elias Masaje");
     }
-    setMeta("property", "og:image:alt", ogImageAlt || socialTitle || "Elias Masaje");
-
-    setMeta("name", "twitter:card", "summary_large_image");
-    if (socialTitle) setMeta("name", "twitter:title", socialTitle);
-    if (socialDesc) setMeta("name", "twitter:description", socialDesc);
-    setMeta("name", "twitter:image", socialImage);
-    setMeta("name", "twitter:image:alt", ogImageAlt || socialTitle || "Elias Masaje");
 
     if (robots) setMeta("name", "robots", robots);
 
