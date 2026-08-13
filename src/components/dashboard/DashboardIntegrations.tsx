@@ -414,8 +414,8 @@ const DashboardIntegrations = () => {
                 </ol>
               </div>
 
-              <div className="flex gap-2 items-stretch">
-                <div className="relative flex-1">
+              <div className="flex flex-wrap gap-2 items-stretch">
+                <div className="relative flex-1 min-w-[12rem] basis-full sm:basis-0">
                   <input
                     type={isSecret && !showSecret ? "password" : "text"}
                     value={value}
