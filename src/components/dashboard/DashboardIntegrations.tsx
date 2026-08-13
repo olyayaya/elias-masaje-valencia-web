@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
 import IntegrationDiagnostics from "./IntegrationDiagnostics";
 import { logDiagnostic, describeError } from "@/lib/integration-diagnostics";
+import { toast } from "sonner";
 
 type TestStatus = { ok: boolean; error?: string; details?: string; testedAt: string };
 const TEST_CACHE_KEY = "integration_test_results_v1";
@@ -289,11 +290,15 @@ const DashboardIntegrations = () => {
     const v = (values[key] || "").trim();
     const started = Date.now();
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("site_content")
         .update({ value_es: v, value_en: v, value_ru: v, updated_at: new Date().toISOString() })
-        .eq("content_key", key);
+        .eq("content_key", key)
+        .select("content_key, value_es");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("No settings row was updated — the value was not saved.");
+      }
       setOriginal((prev) => ({ ...prev, [key]: v }));
       queryClient.invalidateQueries({ queryKey: queryKeys.siteContent });
       logDiagnostic({
