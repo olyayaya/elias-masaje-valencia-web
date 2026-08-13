@@ -93,8 +93,11 @@ export function useHead(props: HeadProps) {
       "og:image:type",
       /\.png(\?|$)/i.test(socialImage) ? "image/png" : /\.webp(\?|$)/i.test(socialImage) ? "image/webp" : "image/jpeg",
     );
-    setMeta("property", "og:image:width", "1200");
-    setMeta("property", "og:image:height", "630");
+    // Only advertise dimensions for the known 1200x630 default asset.
+    if (socialImage === DEFAULT_OG_IMAGE) {
+      setMeta("property", "og:image:width", "1200");
+      setMeta("property", "og:image:height", "630");
+    }
     setMeta("property", "og:image:alt", ogImageAlt || socialTitle || "Elias Masaje");
 
     setMeta("name", "twitter:card", "summary_large_image");
@@ -102,6 +105,23 @@ export function useHead(props: HeadProps) {
     if (socialDesc) setMeta("name", "twitter:description", socialDesc);
     setMeta("name", "twitter:image", socialImage);
     setMeta("name", "twitter:image:alt", ogImageAlt || socialTitle || "Elias Masaje");
+
+    if (robots) setMeta("name", "robots", robots);
+
+    if (article) {
+      if (article.publishedTime) setMeta("property", "article:published_time", article.publishedTime);
+      if (article.modifiedTime) setMeta("property", "article:modified_time", article.modifiedTime);
+      if (article.author) setMeta("property", "article:author", article.author);
+      if (article.section) setMeta("property", "article:section", article.section);
+      article.tags?.slice(0, 6).forEach((tag) => {
+        const el = document.createElement("meta");
+        el.setAttribute("property", "article:tag");
+        el.setAttribute("content", tag);
+        document.head.appendChild(el);
+        created.push(el);
+      });
+    }
+
 
     let linkEl: HTMLLinkElement | null = null;
     if (canonical) {
