@@ -19,6 +19,7 @@ import ContactoPage from "./pages/Contacto";
 import PrivacidadPage from "./pages/Privacidad";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 import CanonicalRedirect from "./components/CanonicalRedirect";
 import LocaleSync from "./components/LocaleSync";
 import LanguageSuggestionBanner from "./components/LanguageSuggestionBanner";
@@ -81,6 +82,7 @@ const App = () => (
           <ConsentBanner />
           <PageTracker />
           <IntegrationsLoader />
+          <AppErrorBoundary>
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               {/* Spanish (default — no prefix) */}
@@ -137,6 +139,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </AppErrorBoundary>
         </BrowserRouter>
       </ThemeProvider>
       </I18nProvider>
