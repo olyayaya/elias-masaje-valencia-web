@@ -47,6 +47,8 @@ const Index = () => {
           description: desc,
           url: BASE_URL,
           telephone: "+34698968007",
+          image: `${BASE_URL}/og-image.jpg`,
+          logo: `${BASE_URL}/icon-512.png`,
           address: {
             "@type": "PostalAddress",
             streetAddress: "Calle de la Paz 18",
@@ -60,6 +62,11 @@ const Index = () => {
             latitude: 39.4699,
             longitude: -0.3763,
           },
+          areaServed: { "@type": "City", name: "Valencia" },
+          hasMap: "https://maps.google.com/?q=Calle+de+la+Paz+18,+46002+Valencia",
+          currenciesAccepted: "EUR",
+          paymentAccepted: "Cash, Bizum",
+          availableLanguage: ["es", "en", "ru"],
           priceRange: "€€",
           openingHoursSpecification: [
             { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], opens: "10:00", closes: "20:00" },
