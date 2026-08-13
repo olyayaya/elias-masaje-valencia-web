@@ -20,8 +20,12 @@ const DashboardSEO = () => {
 
   return (
     <div className="space-y-6">
+      {/* Real Google search data via the connected Search Console account */}
+      <SearchConsolePanel />
+
       {/* Real first-party traffic measured on the live site */}
       <SeoTraffic />
+
 
       {/* Live technical SEO checks against the running site + saved settings */}
       <SeoHealth />
