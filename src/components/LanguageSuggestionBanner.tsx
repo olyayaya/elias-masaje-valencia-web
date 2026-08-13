@@ -64,29 +64,30 @@ const LanguageSuggestionBanner = () => {
   const msg = messages[suggested];
 
   return (
-    <div
+    <aside
+      aria-label={msg.cta}
       className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[60] max-w-md w-[calc(100%-2rem)] transition-all duration-300 ${
         visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
       }`}
     >
       <div className="flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border rounded-xl px-4 py-3 shadow-lg">
-        <Globe size={18} className="text-primary-strong shrink-0" />
+        <Globe size={18} aria-hidden="true" className="text-primary-strong shrink-0" />
         <p className="text-sm font-body text-muted-foreground flex-1">{msg.text}</p>
         <button
           onClick={switchLang}
-          className="text-sm font-body font-medium text-primary-strong hover:underline whitespace-nowrap"
+          className="text-sm font-body font-medium text-primary-strong hover:underline whitespace-nowrap min-h-11 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {msg.cta}
         </button>
         <button
           onClick={dismiss}
-          className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+          className="text-muted-foreground hover:text-foreground transition-colors shrink-0 min-h-11 min-w-11 flex items-center justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Dismiss"
         >
-          <X size={16} />
+          <X size={16} aria-hidden="true" />
         </button>
       </div>
-    </div>
+    </aside>
   );
 };
 
