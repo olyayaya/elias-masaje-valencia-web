@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsent } from "@/hooks/use-consent";
+import { initSentry, cacheSentryDsn } from "@/lib/sentry";
 
 /**
  * Reads integration codes from site_content (category = "integrations") and
@@ -36,6 +37,13 @@ export function useIntegrationsInjector() {
       data.forEach((r: { content_key: string; value_es: string | null }) => {
         if (r.value_es?.trim()) map[r.content_key] = r.value_es.trim();
       });
+
+      // ── Sentry error reporting ─────────────────────────────────────────
+      // Not tracking / no PII — always initialised, including on /dashboard,
+      // so integration failures and blank-screen crashes are reported.
+      const sentryDsn = map.integration_sentry_dsn || null;
+      cacheSentryDsn(sentryDsn);
+      initSentry(sentryDsn);
 
       // Don't run analytics in the editor preview / dashboard
       if (window.location.pathname.startsWith("/dashboard")) return;
