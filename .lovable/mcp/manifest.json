@@ -75,6 +75,45 @@
         "outputSchema": null
       },
       {
+        "name": "create_whatsapp_booking_request",
+        "title": "Create WhatsApp booking request",
+        "description": "Build a ready-to-send WhatsApp booking request message for an existing booking lead: returns the localized message text, a wa.me link to the client (and a fallback link to the business number), and the resulting lead status. Optionally marks the lead as contacted.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "leadId": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The booking lead id to build the WhatsApp request from."
+            },
+            "locale": {
+              "type": "string",
+              "description": "Message language: es, en or ru. Defaults to the lead's own locale."
+            },
+            "note": {
+              "type": "string",
+              "description": "Extra line appended to the message, e.g. an alternative time proposal."
+            },
+            "markContacted": {
+              "type": "boolean",
+              "description": "Set the lead status to 'contacted' after building the message (default true)."
+            }
+          },
+          "required": [
+            "leadId"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
         "name": "list_services",
         "title": "List massage services",
         "description": "List the massage services published on the Elias Masaje website, including duration, price and translations (ES/EN/RU).",
