@@ -13,7 +13,7 @@ export default defineConfig(() => ({
       overlay: false,
     },
   },
-  plugins: [react(), faviconVersion(__dirname)],
+  plugins: [react(), faviconVersion(__dirname), mcpPlugin()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
