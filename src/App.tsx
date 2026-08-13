@@ -35,6 +35,7 @@ const Blog = lazy(() => import("./pages/Blog"));
 const BlogPostPage = lazy(() => import("./pages/BlogPost"));
 const AnalyticsCheck = lazy(() => import("./pages/AnalyticsCheck"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
+const McpDocs = lazy(() => import("./pages/McpDocs"));
 
 const RouteFallback = () => (
   <div className="flex justify-center items-center min-h-[40vh]">
@@ -135,6 +136,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <AnalyticsCheck />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mcp-docs"
+                element={
+                  <ProtectedRoute>
+                    <McpDocs />
                   </ProtectedRoute>
                 }
               />
