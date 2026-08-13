@@ -19,6 +19,7 @@ import ContactoPage from "./pages/Contacto";
 import PrivacidadPage from "./pages/Privacidad";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
+import CanonicalRedirect from "./components/CanonicalRedirect";
 import LocaleSync from "./components/LocaleSync";
 import LanguageSuggestionBanner from "./components/LanguageSuggestionBanner";
 import ConsentBanner from "./components/ConsentBanner";
@@ -73,6 +74,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <CanonicalRedirect />
           <ScrollToTop />
           <LocaleSync />
           <LanguageSuggestionBanner />
