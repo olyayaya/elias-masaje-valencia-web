@@ -124,6 +124,7 @@ const BlogPost = () => {
     ogTitle: title || undefined,
     ogDescription: metaDesc || undefined,
     ogType: post ? "article" : undefined,
+    locale,
     alternates: postSlug ? getAlternates("blogPost", { slug: postSlug }) : undefined,
     jsonLd,
   });

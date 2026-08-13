@@ -27,6 +27,7 @@ const Index = () => {
     ogTitle: title,
     ogDescription: desc,
     ogType: "website",
+    locale,
     alternates: getAlternates("home"),
     jsonLd: {
       "@context": "https://schema.org",

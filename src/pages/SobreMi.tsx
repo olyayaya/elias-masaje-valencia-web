@@ -30,6 +30,7 @@ const SobreMiPage = () => {
     ogTitle: title,
     ogDescription: desc,
     ogType: "profile",
+    locale,
     alternates: getAlternates("about"),
     jsonLd: {
       "@context": "https://schema.org",

@@ -13,6 +13,7 @@ const PrivacidadPage = () => {
     ogTitle: c.pageTitle,
     ogDescription: c.placeholder,
     ogType: "article",
+    locale,
     alternates: getAlternates("privacy"),
   });
 

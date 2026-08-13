@@ -104,6 +104,7 @@ const Blog = () => {
     ogTitle: title,
     ogDescription: desc,
     ogType: "website",
+    locale,
     alternates: getAlternates("blog"),
     jsonLd: {
       "@context": "https://schema.org",
