@@ -88,7 +88,7 @@ const TOOLS: ToolDoc[] = [
       note: "Tengo hueco el jueves a las 17:00.",
     },
   },
-
+  {
     name: "list_services",
     title: "List massage services",
     description: "List the massage services published on the site, with duration, price and ES/EN/RU translations.",
