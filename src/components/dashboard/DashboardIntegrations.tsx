@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save, Loader2, ExternalLink, CheckCircle2, Circle, Eye, EyeOff, Languages, Activity, AlertCircle, RefreshCw } from "lucide-react";
+import { Save, Loader2, ExternalLink, CheckCircle2, Circle, Eye, EyeOff, Languages, Activity, AlertCircle, RefreshCw, RotateCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import DashboardCard from "./DashboardCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -451,6 +451,24 @@ const DashboardIntegrations = () => {
     }
   };
 
+  /** Most recently failed integration that still has a saved value. */
+  const lastFailedKey = (() => {
+    let key: string | null = null;
+    let at = 0;
+    Object.entries(tests).forEach(([k, t]) => {
+      if (t.ok) return;
+      if (!(original[k] || "").trim()) return;
+      const ts = new Date(t.testedAt).getTime();
+      if (ts >= at) { at = ts; key = k; }
+    });
+    return key as string | null;
+  })();
+
+  const retryLastFailed = async () => {
+    if (!lastFailedKey) return;
+    await runTest(lastFailedKey, original[lastFailedKey], "test");
+  };
+
   const retryDiagnostic = async (entry: DiagEntry) => {
     if (entry.action === "load") return reloadSettings();
     if (!entry.target) return refreshAll();
@@ -479,6 +497,26 @@ const DashboardIntegrations = () => {
             >
               {refreshingAll ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
               {docLang === "en" ? "Refresh all" : "Обновить все"}
+            </button>
+            <button
+              onClick={retryLastFailed}
+              disabled={!lastFailedKey || testing === lastFailedKey || refreshingAll}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-destructive/40 rounded-lg text-destructive hover:bg-destructive/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground"
+              title={
+                lastFailedKey
+                  ? docLang === "en"
+                    ? `Re-run the last failed check (${labelFor(lastFailedKey)}) with saved settings`
+                    : `Перепроверить последнюю неудачную проверку (${labelFor(lastFailedKey)}) с сохранёнными настройками`
+                  : docLang === "en"
+                    ? "No failed checks"
+                    : "Нет неудачных проверок"
+              }
+            >
+              {testing === lastFailedKey ? <Loader2 size={13} className="animate-spin" /> : <RotateCw size={13} />}
+              {docLang === "en" ? "Re-test failed" : "Перепроверить сбой"}
+              {lastFailedKey && (
+                <span className="hidden sm:inline max-w-[10rem] truncate opacity-70">· {labelFor(lastFailedKey)}</span>
+              )}
             </button>
             <div className="flex items-center gap-1 bg-secondary p-0.5 rounded-lg">
               <Languages size={13} className="text-muted-foreground mx-1.5" />
