@@ -119,7 +119,14 @@ const BlogPost = () => {
   } : undefined;
 
   const jsonLd = blogPosting
-    ? { "@context": "https://schema.org", "@graph": [buildLocalBusiness(locale), blogPosting] }
+    ? {
+        "@context": "https://schema.org",
+        "@graph": [
+          buildLocalBusiness(locale),
+          buildBreadcrumbList("blog", locale, [{ name: title, url: postUrl }]),
+          blogPosting,
+        ],
+      }
     : undefined;
 
   // First inline image of the article makes a far better social preview than
