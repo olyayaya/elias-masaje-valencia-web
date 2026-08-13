@@ -225,6 +225,9 @@ const DashboardIntegrations = () => {
   const [testing, setTesting] = useState<string | null>(null);
   const [tests, setTests] = useState<Record<string, TestStatus>>(loadTestCache);
   const [connectorGa4Id, setConnectorGa4Id] = useState<string | null>(null);
+  const [health, setHealth] = useState<HealthMap>(loadHealth);
+  const noteHealth = (key: string, ok: boolean, error?: string, at?: string) =>
+    setHealth((prev) => recordHealth(prev, key, ok, error, at));
   const queryClient = useQueryClient();
 
   useEffect(() => {
