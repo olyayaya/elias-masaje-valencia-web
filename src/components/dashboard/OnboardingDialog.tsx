@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -96,14 +96,18 @@ const T: Record<Locale, {
   },
 };
 
-const buildWhatsAppText = (locale: Locale): string => {
+/** Falls back to Spanish for any locale we do not translate. */
+const resolveLocale = (value: unknown): Locale =>
+  value === "en" || value === "ru" || value === "es" ? value : "es";
+
+const buildWhatsAppText = (locale: Locale, email: string): string => {
   const dashboard = `${window.location.origin}/dashboard`;
   const lines: Record<Locale, string[]> = {
     es: [
       "🌿 Elias Masaje — Acceso de administrador",
       "",
       `Panel: ${dashboard}`,
-      "Email: elias.massagess@gmail.com",
+      `Email: ${email}`,
       "",
       "Próximos pasos:",
       "1. Inicia sesión y cambia tu contraseña temporal.",
@@ -114,7 +118,7 @@ const buildWhatsAppText = (locale: Locale): string => {
       "🌿 Elias Masaje — Admin access",
       "",
       `Dashboard: ${dashboard}`,
-      "Email: elias.massagess@gmail.com",
+      `Email: ${email}`,
       "",
       "Next steps:",
       "1. Sign in and replace your temporary password.",
@@ -125,7 +129,7 @@ const buildWhatsAppText = (locale: Locale): string => {
       "🌿 Elias Masaje — Доступ администратора",
       "",
       `Панель: ${dashboard}`,
-      "Email: elias.massagess@gmail.com",
+      `Email: ${email}`,
       "",
       "Следующие шаги:",
       "1. Войдите и смените временный пароль.",
@@ -136,13 +140,13 @@ const buildWhatsAppText = (locale: Locale): string => {
   return lines[locale].join("\n");
 };
 
-const buildWhatsAppMessage = (locale: Locale) => {
-  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(buildWhatsAppText(locale))}`;
-};
+const buildWhatsAppLink = (text: string) =>
+  `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(text)}`;
 
 const OnboardingDialog = () => {
   const { locale } = useI18n();
-  const t = T[(locale as Locale) ?? "es"];
+  const lang = resolveLocale(locale);
+  const t = T[lang];
 
   const [open, setOpen] = useState(false);
   const [pwd, setPwd] = useState("");
@@ -151,12 +155,18 @@ const OnboardingDialog = () => {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [email, setEmail] = useState("");
+
+  // Single source of truth: the WhatsApp link and the copy button share this text,
+  // and it re-renders whenever the selected language changes.
+  const whatsappText = useMemo(() => buildWhatsAppText(lang, email || "—"), [lang, email]);
 
   // Decide whether to show the dialog based on user_metadata.
   useEffect(() => {
     let cancelled = false;
     supabase.auth.getUser().then(({ data }) => {
       if (cancelled) return;
+      setEmail(data?.user?.email ?? "");
       if (data?.user?.user_metadata?.needs_onboarding === true) {
         setOpen(true);
       }
@@ -196,7 +206,7 @@ const OnboardingDialog = () => {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(buildWhatsAppText((locale as Locale) ?? "es"));
+      await navigator.clipboard.writeText(whatsappText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -261,7 +271,7 @@ const OnboardingDialog = () => {
 
         <div className="border-t border-border pt-3 mt-1 space-y-2">
           <a
-            href={buildWhatsAppMessage((locale as Locale) ?? "es")}
+            href={buildWhatsAppLink(whatsappText)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm rounded-md bg-[#25D366] text-white hover:opacity-90 transition-opacity"
