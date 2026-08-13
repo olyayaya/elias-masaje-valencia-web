@@ -2,8 +2,7 @@ import { useEffect, useRef } from "react";
 import { BASE_URL } from "@/config/routes";
 
 /** Absolute 1200x630 social preview used when a page has no specific image. */
-export const DEFAULT_OG_IMAGE =
-  "https://eliasmas.es/__l5e/assets-v1/52c700a9-5a53-4095-8439-728e463e0709/og-image-1200x630.png";
+export const DEFAULT_OG_IMAGE = "https://eliasmas.es/og-image.jpg";
 
 const OG_LOCALE: Record<string, string> = { es: "es_ES", en: "en_US", ru: "ru_RU" };
 
