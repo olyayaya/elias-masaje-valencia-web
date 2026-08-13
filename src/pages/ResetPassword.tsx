@@ -3,8 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useHead } from "@/hooks/use-head";
 
 const ResetPassword = () => {
+  useHead({
+    title: "Restablecer contraseña | Elias Masaje",
+    description: "Restablece la contraseña de tu cuenta de administración.",
+    robots: "noindex, nofollow",
+    noSocial: true,
+  });
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
   const [password, setPassword] = useState("");
