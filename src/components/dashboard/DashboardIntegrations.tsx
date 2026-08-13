@@ -361,6 +361,9 @@ const DashboardIntegrations = () => {
                   {isConnected && (
                     <span className="text-[10px] px-2 py-0.5 bg-green-500/10 text-green-600 rounded-full">Connected</span>
                   )}
+                  {f.key === "integration_ga4_id" && connectorGa4Id && (
+                    <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full">Connector</span>
+                  )}
                   {isConnected && f.key.endsWith("_verification") && test && (
                     test.ok ? (
                       <span className="text-[10px] px-2 py-0.5 bg-green-500/15 text-green-700 dark:text-green-400 rounded-full">
