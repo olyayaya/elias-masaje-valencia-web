@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.2",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://ukjljyrejfkyurebksqz.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "elias-masaje-website",
+      "version": "0.1.0",
+      "title": "Elias Masaje Website"
+    },
+    "tools": [
+      {
+        "name": "list_booking_leads",
+        "title": "List booking leads",
+        "description": "List WhatsApp booking leads captured on the Elias Masaje website, newest first. Optionally filter by status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "description": "Filter by lead status, e.g. new, contacted, booked, closed."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of leads to return (default 20, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_booking_lead_status",
+        "title": "Update booking lead status",
+        "description": "Update the pipeline status of one booking lead (for example mark it contacted or booked).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The booking lead id."
+            },
+            "status": {
+              "type": "string",
+              "description": "New status, e.g. new, contacted, booked, closed."
+            }
+          },
+          "required": [
+            "id",
+            "status"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_services",
+        "title": "List massage services",
+        "description": "List the massage services published on the Elias Masaje website, including duration, price and translations (ES/EN/RU).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "includeHidden": {
+              "type": "boolean",
+              "description": "Include services hidden from the public site (default false)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_blog_posts",
+        "title": "List blog posts",
+        "description": "List blog posts of the Elias Masaje website with status, slug and SEO metadata, newest first.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "description": "Filter by status, e.g. draft or published."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum posts to return (default 20, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_blog_draft",
+        "title": "Create blog draft",
+        "description": "Create a new blog post in draft status on the Elias Masaje website. The draft stays hidden until it is published from the dashboard.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Post title in Spanish."
+            },
+            "content": {
+              "type": "string",
+              "description": "Post body in Spanish (HTML or plain text)."
+            },
+            "metaDescription": {
+              "type": "string",
+              "description": "SEO meta description, ideally under 160 characters."
+            },
+            "keywords": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "SEO keywords for the post."
+            },
+            "slug": {
+              "type": "string",
+              "description": "URL slug; generated from the title when omitted."
+            }
+          },
+          "required": [
+            "title",
+            "content"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "conversion_stats",
+        "title": "Conversion stats",
+        "description": "Summarise website conversion events (WhatsApp clicks, booking submissions, form leads) for the last N days, grouped by event name and page.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "description": "How many days back to include (default 30, max 365)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
