@@ -290,6 +290,7 @@ const DashboardIntegrations = () => {
               saveTestCache(next);
               return next;
             });
+            noteHealth(k, result.ok, result.error, result.testedAt);
           } catch (e) {
             logDiagnostic({
               action: "test",
@@ -300,6 +301,7 @@ const DashboardIntegrations = () => {
               details: "auto-verify on open",
               durationMs: Date.now() - started,
             });
+            noteHealth(k, false, describeError(e));
           }
         });
       })
