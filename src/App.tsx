@@ -139,6 +139,14 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/mcp-docs"
+                element={
+                  <ProtectedRoute>
+                    <McpDocs />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
