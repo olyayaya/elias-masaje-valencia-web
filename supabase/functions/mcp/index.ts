@@ -114,15 +114,134 @@ var update_booking_lead_status_default = defineTool2({
   }
 });
 
-// src/lib/mcp/tools/list-services.ts
+// src/lib/mcp/tools/create-whatsapp-booking-request.ts
 import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.26.2";
 import { z as z3 } from "npm:zod@^3.25.76";
-var list_services_default = defineTool3({
+var BUSINESS_PHONE = "34698968007";
+var TEMPLATES = {
+  es: (v) => `Hola ${v.name}, soy Elias (Elias Masaje).
+
+He recibido tu solicitud de reserva:
+\u2022 Servicio: ${v.service}
+\u2022 Duraci\xF3n: ${v.duration}
+\u2022 Precio: ${v.price}
+\u2022 Horario preferido: ${v.preferred}
+
+\xBFTe viene bien confirmar esta cita?${v.note}
+
+Un saludo.`,
+  en: (v) => `Hi ${v.name}, this is Elias (Elias Masaje).
+
+I received your booking request:
+\u2022 Service: ${v.service}
+\u2022 Duration: ${v.duration}
+\u2022 Price: ${v.price}
+\u2022 Preferred time: ${v.preferred}
+
+Shall we confirm this appointment?${v.note}
+
+Best regards.`,
+  ru: (v) => `\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, ${v.name}! \u042D\u0442\u043E \u042D\u043B\u0438\u0430\u0441 (Elias Masaje).
+
+\u042F \u043F\u043E\u043B\u0443\u0447\u0438\u043B \u0432\u0430\u0448\u0443 \u0437\u0430\u044F\u0432\u043A\u0443 \u043D\u0430 \u0437\u0430\u043F\u0438\u0441\u044C:
+\u2022 \u0423\u0441\u043B\u0443\u0433\u0430: ${v.service}
+\u2022 \u0414\u043B\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C: ${v.duration}
+\u2022 \u0426\u0435\u043D\u0430: ${v.price}
+\u2022 \u0423\u0434\u043E\u0431\u043D\u043E\u0435 \u0432\u0440\u0435\u043C\u044F: ${v.preferred}
+
+\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u043C \u0437\u0430\u043F\u0438\u0441\u044C?${v.note}
+
+\u0421 \u0443\u0432\u0430\u0436\u0435\u043D\u0438\u0435\u043C.`
+};
+var NOT_SET = { es: "sin especificar", en: "not specified", ru: "\u043D\u0435 \u0443\u043A\u0430\u0437\u0430\u043D\u043E" };
+var digitsOnly = (phone) => phone.replace(/[^\d]/g, "");
+var create_whatsapp_booking_request_default = defineTool3({
+  name: "create_whatsapp_booking_request",
+  title: "Create WhatsApp booking request",
+  description: "Build a ready-to-send WhatsApp booking request message for an existing booking lead: returns the localized message text, a wa.me link to the client (and a fallback link to the business number), and the resulting lead status. Optionally marks the lead as contacted.",
+  inputSchema: {
+    leadId: z3.string().uuid().describe("The booking lead id to build the WhatsApp request from."),
+    locale: z3.string().optional().describe("Message language: es, en or ru. Defaults to the lead's own locale."),
+    note: z3.string().optional().describe("Extra line appended to the message, e.g. an alternative time proposal."),
+    markContacted: z3.boolean().optional().describe("Set the lead status to 'contacted' after building the message (default true).")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  handler: async ({ leadId, locale, note, markContacted }, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuthenticated;
+    const supabase = supabaseForUser(ctx);
+    const { data: lead, error } = await supabase.from("booking_leads").select("id, name, phone, service, duration, price, preferred_time, message, location, locale, status").eq("id", leadId).maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    if (!lead) return { content: [{ type: "text", text: `No booking lead found for id ${leadId}.` }], isError: true };
+    const lang = ["es", "en", "ru"].includes(locale ?? lead.locale) ? locale ?? lead.locale : "es";
+    const fallback = NOT_SET[lang];
+    const message = TEMPLATES[lang]({
+      name: lead.name ?? "",
+      service: lead.service ?? fallback,
+      duration: lead.duration ? `${lead.duration} min` : fallback,
+      price: lead.price ? `${lead.price} \u20AC` : fallback,
+      preferred: lead.preferred_time ?? fallback,
+      note: note ? `
+
+${note}` : ""
+    });
+    const clientPhone = lead.phone ? digitsOnly(lead.phone) : "";
+    const encoded = encodeURIComponent(message);
+    const clientLink = clientPhone ? `https://wa.me/${clientPhone}?text=${encoded}` : null;
+    const businessLink = `https://wa.me/${BUSINESS_PHONE}?text=${encoded}`;
+    let status = lead.status;
+    let statusUpdated = false;
+    if (markContacted !== false && lead.status !== "contacted" && lead.status !== "booked") {
+      const { data: updated, error: updateError } = await supabase.from("booking_leads").update({ status: "contacted", updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", leadId).select("status");
+      if (updateError) {
+        return {
+          content: [
+            { type: "text", text: `Message built, but the lead status could not be updated: ${updateError.message}` }
+          ],
+          isError: true
+        };
+      }
+      if (updated && updated.length > 0) {
+        status = updated[0].status;
+        statusUpdated = true;
+      }
+    }
+    const result = {
+      leadId: lead.id,
+      locale: lang,
+      clientName: lead.name,
+      clientPhone: lead.phone ?? null,
+      message,
+      whatsappLink: clientLink,
+      businessWhatsappLink: businessLink,
+      status,
+      statusUpdated,
+      followUp: status === "contacted" ? "Lead marked as contacted \u2014 follow up if there is no reply within 24h, then set status to booked or closed." : `Lead status is '${status}'. Use update_booking_lead_status to move it forward.`
+    };
+    return {
+      content: [
+        {
+          type: "text",
+          text: `${clientLink ? `Send: ${clientLink}
+
+` : "No client phone on this lead \u2014 use the business link.\n\n"}${message}
+
+Status: ${status}${statusUpdated ? " (updated)" : ""}`
+        }
+      ],
+      structuredContent: result
+    };
+  }
+});
+
+// src/lib/mcp/tools/list-services.ts
+import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.26.2";
+import { z as z4 } from "npm:zod@^3.25.76";
+var list_services_default = defineTool4({
   name: "list_services",
   title: "List massage services",
   description: "List the massage services published on the Elias Masaje website, including duration, price and translations (ES/EN/RU).",
   inputSchema: {
-    includeHidden: z3.boolean().optional().describe("Include services hidden from the public site (default false).")
+    includeHidden: z4.boolean().optional().describe("Include services hidden from the public site (default false).")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ includeHidden }, ctx) => {
@@ -140,15 +259,15 @@ var list_services_default = defineTool3({
 });
 
 // src/lib/mcp/tools/list-blog-posts.ts
-import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.26.2";
-import { z as z4 } from "npm:zod@^3.25.76";
-var list_blog_posts_default = defineTool4({
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.26.2";
+import { z as z5 } from "npm:zod@^3.25.76";
+var list_blog_posts_default = defineTool5({
   name: "list_blog_posts",
   title: "List blog posts",
   description: "List blog posts of the Elias Masaje website with status, slug and SEO metadata, newest first.",
   inputSchema: {
-    status: z4.string().optional().describe("Filter by status, e.g. draft or published."),
-    limit: z4.number().int().optional().describe("Maximum posts to return (default 20, max 100).")
+    status: z5.string().optional().describe("Filter by status, e.g. draft or published."),
+    limit: z5.number().int().optional().describe("Maximum posts to return (default 20, max 100).")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ status, limit }, ctx) => {
@@ -167,19 +286,19 @@ var list_blog_posts_default = defineTool4({
 });
 
 // src/lib/mcp/tools/create-blog-draft.ts
-import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.26.2";
-import { z as z5 } from "npm:zod@^3.25.76";
+import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.26.2";
+import { z as z6 } from "npm:zod@^3.25.76";
 var slugify = (value) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
-var create_blog_draft_default = defineTool5({
+var create_blog_draft_default = defineTool6({
   name: "create_blog_draft",
   title: "Create blog draft",
   description: "Create a new blog post in draft status on the Elias Masaje website. The draft stays hidden until it is published from the dashboard.",
   inputSchema: {
-    title: z5.string().describe("Post title in Spanish."),
-    content: z5.string().describe("Post body in Spanish (HTML or plain text)."),
-    metaDescription: z5.string().optional().describe("SEO meta description, ideally under 160 characters."),
-    keywords: z5.array(z5.string()).optional().describe("SEO keywords for the post."),
-    slug: z5.string().optional().describe("URL slug; generated from the title when omitted.")
+    title: z6.string().describe("Post title in Spanish."),
+    content: z6.string().describe("Post body in Spanish (HTML or plain text)."),
+    metaDescription: z6.string().optional().describe("SEO meta description, ideally under 160 characters."),
+    keywords: z6.array(z6.string()).optional().describe("SEO keywords for the post."),
+    slug: z6.string().optional().describe("URL slug; generated from the title when omitted.")
   },
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   handler: async ({ title, content, metaDescription, keywords, slug }, ctx) => {
@@ -206,14 +325,14 @@ var create_blog_draft_default = defineTool5({
 });
 
 // src/lib/mcp/tools/conversion-stats.ts
-import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.26.2";
-import { z as z6 } from "npm:zod@^3.25.76";
-var conversion_stats_default = defineTool6({
+import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.26.2";
+import { z as z7 } from "npm:zod@^3.25.76";
+var conversion_stats_default = defineTool7({
   name: "conversion_stats",
   title: "Conversion stats",
   description: "Summarise website conversion events (WhatsApp clicks, booking submissions, form leads) for the last N days, grouped by event name and page.",
   inputSchema: {
-    days: z6.number().int().optional().describe("How many days back to include (default 30, max 365).")
+    days: z7.number().int().optional().describe("How many days back to include (default 30, max 365).")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ days }, ctx) => {
@@ -253,6 +372,7 @@ var mcp_default = defineMcp({
   tools: [
     list_booking_leads_default,
     update_booking_lead_status_default,
+    create_whatsapp_booking_request_default,
     list_services_default,
     list_blog_posts_default,
     create_blog_draft_default,

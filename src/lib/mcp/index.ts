@@ -23,6 +23,7 @@ export default defineMcp({
   tools: [
     listBookingLeads,
     updateBookingLeadStatus,
+    createWhatsappBookingRequest,
     listServices,
     listBlogPosts,
     createBlogDraft,
