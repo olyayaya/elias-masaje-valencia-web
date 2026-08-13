@@ -41,14 +41,20 @@ const PRIORITY: Record<string, string> = {
   privacy: "0.3",
 };
 
-const staticEntries: SitemapEntry[] = Object.keys(ROUTE_MAP).flatMap((pageId) =>
-  LOCALES.map((loc) => ({
-    path: ROUTE_MAP[pageId][loc],
-    changefreq: pageId === "blog" ? ("weekly" as const) : ("monthly" as const),
-    priority: PRIORITY[pageId],
-    alternates: staticAlternates(pageId),
-  })),
-);
+function buildStaticEntries(blogLastmod?: string): SitemapEntry[] {
+  return Object.keys(ROUTE_MAP).flatMap((pageId) =>
+    LOCALES.map((loc) => ({
+      path: ROUTE_MAP[pageId][loc],
+      // Only the blog index has an authoritative, page-specific timestamp
+      // (the newest published post). Other pages get no <lastmod> rather
+      // than a misleading build-time date.
+      lastmod: pageId === "blog" ? blogLastmod : undefined,
+      changefreq: pageId === "blog" ? ("weekly" as const) : ("monthly" as const),
+      priority: PRIORITY[pageId],
+      alternates: staticAlternates(pageId),
+    })),
+  );
+}
 
 async function fetchBlogEntries(): Promise<SitemapEntry[]> {
   const url = process.env.VITE_SUPABASE_URL;
@@ -82,7 +88,7 @@ async function fetchBlogEntries(): Promise<SitemapEntry[]> {
       ];
       return LOCALES.map((loc) => ({
         path: `${ROUTE_MAP.blog[loc]}/${slug}`,
-        lastmod: stamp ? stamp.slice(0, 10) : undefined,
+        lastmod: toW3CDate(stamp),
         changefreq: "monthly" as const,
         priority: "0.6",
         alternates,
@@ -92,6 +98,12 @@ async function fetchBlogEntries(): Promise<SitemapEntry[]> {
     console.warn("sitemap: could not load blog posts —", (err as Error).message);
     return [];
   }
+}
+
+function toW3CDate(value: string | null | undefined) {
+  if (!value) return undefined;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString().replace(/\.\d{3}Z$/, "+00:00");
 }
 
 function escapeXml(value: string) {
@@ -124,6 +136,12 @@ function generateSitemap(entries: SitemapEntry[]) {
   ].join("\n");
 }
 
-const entries = [...staticEntries, ...(await fetchBlogEntries())];
+const blogEntries = await fetchBlogEntries();
+const newestBlogLastmod = blogEntries
+  .map((e) => e.lastmod)
+  .filter((v): v is string => Boolean(v))
+  .sort()
+  .pop();
+const entries = [...buildStaticEntries(newestBlogLastmod), ...blogEntries];
 writeFileSync(resolve("public/sitemap.xml"), generateSitemap(entries));
 console.log(`sitemap.xml written (${entries.length} entries)`);
