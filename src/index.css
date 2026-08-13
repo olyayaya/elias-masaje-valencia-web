@@ -19,12 +19,13 @@
 
     --primary: 34 28% 64%;
     --primary-foreground: 37 33% 95%;
+    --primary-strong: 34 34% 38%;
 
     --secondary: 34 22% 89%;
     --secondary-foreground: 30 6% 22%;
 
     --muted: 35 18% 91%;
-    --muted-foreground: 30 8% 46%;
+    --muted-foreground: 30 8% 40%;
 
     --accent: 34 28% 64%;
     --accent-foreground: 37 33% 95%;
@@ -78,6 +79,7 @@
 
     --primary: 36 28% 62%;
     --primary-foreground: 30 6% 11%;
+    --primary-strong: 36 34% 74%;
 
     --secondary: 30 5% 16%;
     --secondary-foreground: 36 16% 78%;
@@ -137,6 +139,7 @@
 
     --primary: 36 28% 62%;
     --primary-foreground: 30 6% 11%;
+    --primary-strong: 36 34% 74%;
 
     --secondary: 30 5% 16%;
     --secondary-foreground: 36 16% 78%;
