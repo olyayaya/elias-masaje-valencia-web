@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Activity, ChevronDown, ChevronUp, Trash2, CheckCircle2, XCircle, Copy } from "lucide-react";
+import { Activity, ChevronDown, ChevronUp, Trash2, CheckCircle2, XCircle, Copy, RotateCw, Loader2 } from "lucide-react";
 import DashboardCard from "./DashboardCard";
 import {
   DiagEntry,
@@ -20,12 +20,25 @@ const fmtTime = (iso: string) =>
 
 interface Props {
   lang: "en" | "ru";
+  /** Re-runs the request behind a failed entry. */
+  onRetry?: (entry: DiagEntry) => Promise<void> | void;
 }
 
-const IntegrationDiagnostics = ({ lang }: Props) => {
+const IntegrationDiagnostics = ({ lang, onRetry }: Props) => {
   const [entries, setEntries] = useState<DiagEntry[]>(readDiagnostics);
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  const retry = async (entry: DiagEntry) => {
+    if (!onRetry) return;
+    setRetryingId(entry.id);
+    try {
+      await onRetry(entry);
+    } finally {
+      setRetryingId(null);
+    }
+  };
 
   useEffect(() => subscribeDiagnostics(setEntries), []);
 
@@ -131,6 +144,22 @@ const IntegrationDiagnostics = ({ lang }: Props) => {
                         {fmtTime(e.at)} · {e.durationMs}ms
                       </span>
                     </div>
+                    {!e.ok && onRetry && (
+                      <div className="mt-1.5 pl-6">
+                        <button
+                          onClick={() => retry(e)}
+                          disabled={retryingId === e.id}
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-medium border border-border rounded-md text-foreground hover:bg-secondary disabled:opacity-40"
+                        >
+                          {retryingId === e.id ? (
+                            <Loader2 size={11} className="animate-spin" />
+                          ) : (
+                            <RotateCw size={11} />
+                          )}
+                          {lang === "en" ? "Retry" : "Повторить"}
+                        </button>
+                      </div>
+                    )}
                     {(e.error || e.details) && (
                       <div className="mt-1.5 pl-6 space-y-0.5">
                         {e.error && <p className="text-destructive break-words">{e.error}</p>}

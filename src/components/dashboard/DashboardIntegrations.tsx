@@ -5,7 +5,7 @@ import DashboardCard from "./DashboardCard";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
 import IntegrationDiagnostics from "./IntegrationDiagnostics";
-import { logDiagnostic, describeError } from "@/lib/integration-diagnostics";
+import { logDiagnostic, describeError, DiagEntry } from "@/lib/integration-diagnostics";
 import { toast } from "sonner";
 
 type TestStatus = { ok: boolean; error?: string; details?: string; testedAt: string };
@@ -418,6 +418,46 @@ const DashboardIntegrations = () => {
 
 
 
+  /** Re-run a failed diagnostics entry (Save / Test / Refresh / Load). */
+  const reloadSettings = async () => {
+    const started = Date.now();
+    try {
+      const { data, error } = await supabase
+        .from("site_content")
+        .select("content_key, value_es")
+        .eq("category", "integrations");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: any) => { map[r.content_key] = r.value_es || ""; });
+      if (connectorGa4Id) map.integration_ga4_id = connectorGa4Id;
+      setValues(map);
+      setOriginal(map);
+      logDiagnostic({
+        action: "load",
+        label: "Integration settings",
+        ok: true,
+        details: `${Object.keys(map).length} fields loaded · retry`,
+        durationMs: Date.now() - started,
+      });
+    } catch (e) {
+      logDiagnostic({
+        action: "load",
+        label: "Integration settings",
+        ok: false,
+        error: describeError(e),
+        details: "retry",
+        durationMs: Date.now() - started,
+      });
+    }
+  };
+
+  const retryDiagnostic = async (entry: DiagEntry) => {
+    if (entry.action === "load") return reloadSettings();
+    if (!entry.target) return refreshAll();
+    if (entry.action === "save") return save(entry.target);
+    return runTest(entry.target, original[entry.target], entry.action === "refresh" ? "refresh" : "test");
+  };
+
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   return (
@@ -596,7 +636,7 @@ const DashboardIntegrations = () => {
         );
       })}
 
-      <IntegrationDiagnostics lang={docLang} />
+      <IntegrationDiagnostics lang={docLang} onRetry={retryDiagnostic} />
     </div>
   );
 };
