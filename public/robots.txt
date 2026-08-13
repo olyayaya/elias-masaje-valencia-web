@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /reset-password
+Disallow: /analytics-check
+
+Sitemap: https://eliasmas.es/sitemap.xml
