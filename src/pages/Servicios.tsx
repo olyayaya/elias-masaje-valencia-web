@@ -3,14 +3,15 @@ import { useI18n } from "@/i18n/context";
 import { useDbServices, resolveField } from "@/hooks/use-db-content";
 import OrganicServices from "@/components/organic/OrganicServices";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 const ServiciosPage = () => {
   const { locale } = useI18n();
   const dbServices = useDbServices();
 
   const localBusiness = {
-    "@context": "https://schema.org",
     "@type": "HealthAndBeautyBusiness",
+    "@id": `${BASE_URL}/#localbusiness`,
     name: "Elias Masaje",
     url: BASE_URL,
     telephone: "+34698968007",
@@ -89,7 +90,10 @@ const ServiciosPage = () => {
     ogType: "website",
     locale,
     alternates: getAlternates("services"),
-    jsonLd: localBusiness,
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@graph": [localBusiness, buildBreadcrumbList("services", locale)],
+    },
   });
 
   return <OrganicServices />;

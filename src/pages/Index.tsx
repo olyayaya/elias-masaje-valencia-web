@@ -3,6 +3,7 @@ import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 const Index = () => {
   const { locale } = useI18n();
@@ -87,6 +88,7 @@ const Index = () => {
           publisher: { "@id": `${BASE_URL}/#organization` },
           inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
         },
+        buildBreadcrumbList("home", locale),
       ],
     },
   });

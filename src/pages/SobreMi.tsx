@@ -3,6 +3,7 @@ import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 const SobreMiPage = () => {
   const { locale } = useI18n();
@@ -75,6 +76,7 @@ const SobreMiPage = () => {
           about: { "@id": `${BASE_URL}/#person` },
           inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
         },
+        buildBreadcrumbList("about", locale),
       ],
     },
   });

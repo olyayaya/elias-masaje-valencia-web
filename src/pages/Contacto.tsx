@@ -2,6 +2,7 @@ import OrganicContact from "@/components/organic/OrganicContact";
 import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 const ContactoPage = () => {
   const { locale } = useI18n();
@@ -77,6 +78,7 @@ const ContactoPage = () => {
           isPartOf: { "@id": `${BASE_URL}/#website` },
           inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
         },
+        buildBreadcrumbList("contact", locale),
       ],
     },
   });
