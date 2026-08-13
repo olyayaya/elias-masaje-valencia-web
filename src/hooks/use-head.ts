@@ -129,8 +129,12 @@ export function useHead(props: HeadProps) {
     }
 
 
+    // Canonical: always self-referencing. Falls back to the current URL
+    // (origin + normalized pathname, no query/hash) so no page inherits a
+    // stale canonical from a previously rendered route.
     let linkEl: HTMLLinkElement | null = null;
-    if (canonical) {
+    {
+      const href = canonical || `${window.location.origin}${normalizePathname(window.location.pathname)}`;
       linkEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
       if (!linkEl) {
         linkEl = document.createElement("link");
@@ -138,8 +142,9 @@ export function useHead(props: HeadProps) {
         document.head.appendChild(linkEl);
         created.push(linkEl);
       }
-      linkEl.setAttribute("href", canonical);
+      linkEl.setAttribute("href", href);
     }
+
 
     // hreflang alternate links
     if (alternates?.length) {
