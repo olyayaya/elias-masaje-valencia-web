@@ -244,23 +244,34 @@ const DashboardIntegrations = () => {
   const save = async (key: string) => {
     setSavingKey(key);
     const v = (values[key] || "").trim();
-    await supabase
-      .from("site_content")
-      .update({ value_es: v, value_en: v, value_ru: v, updated_at: new Date().toISOString() })
-      .eq("content_key", key);
-    setOriginal((prev) => ({ ...prev, [key]: v }));
-    setSavingKey(null);
-    queryClient.invalidateQueries({ queryKey: queryKeys.siteContent });
-    // Auto re-test so the live status badge updates without reload.
-    // Verification metas need a beat for the injector / cached HTML to refresh.
-    if (v) {
-      const delay = key.endsWith("_verification") ? 1500 : 200;
-      setTimeout(() => { runTest(key, v); }, delay);
-    } else {
-      // Cleared value → drop stale test result
+    try {
+      const { error } = await supabase
+        .from("site_content")
+        .update({ value_es: v, value_en: v, value_ru: v, updated_at: new Date().toISOString() })
+        .eq("content_key", key);
+      if (error) throw error;
+      setOriginal((prev) => ({ ...prev, [key]: v }));
+      queryClient.invalidateQueries({ queryKey: queryKeys.siteContent });
+      // Auto re-test so the live status badge updates without reload.
+      // Verification metas need a beat for the injector / cached HTML to refresh.
+      if (v) {
+        const delay = key.endsWith("_verification") ? 1500 : 200;
+        setTimeout(() => { runTest(key, v).catch(() => {}); }, delay);
+      } else {
+        // Cleared value → drop stale test result
+        setTests((prev) => {
+          const next = { ...prev }; delete next[key]; saveTestCache(next); return next;
+        });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Save failed";
       setTests((prev) => {
-        const next = { ...prev }; delete next[key]; saveTestCache(next); return next;
+        const next = { ...prev, [key]: { ok: false, error: msg, testedAt: new Date().toISOString() } };
+        saveTestCache(next);
+        return next;
       });
+    } finally {
+      setSavingKey(null);
     }
   };
 
@@ -268,21 +279,27 @@ const DashboardIntegrations = () => {
     const v = (override ?? values[key] ?? "").trim();
     if (!v) return;
     setTesting(key);
+    let result: TestStatus;
     try {
       const { data, error } = await supabase.functions.invoke("test-integration", {
         body: { kind: key, value: v },
       });
-      const result: TestStatus = error
+      result = error
         ? { ok: false, error: error.message, testedAt: new Date().toISOString() }
         : { ok: !!data?.ok, error: data?.error, details: data?.details, testedAt: data?.testedAt || new Date().toISOString() };
-      setTests((prev) => {
-        const next = { ...prev, [key]: result };
-        saveTestCache(next);
-        return next;
-      });
-    } finally {
-      setTesting(null);
+    } catch (e) {
+      result = {
+        ok: false,
+        error: e instanceof Error ? e.message : "Test request failed",
+        testedAt: new Date().toISOString(),
+      };
     }
+    setTests((prev) => {
+      const next = { ...prev, [key]: result };
+      saveTestCache(next);
+      return next;
+    });
+    setTesting(null);
   };
 
   const [refreshingAll, setRefreshingAll] = useState(false);
@@ -291,11 +308,12 @@ const DashboardIntegrations = () => {
     if (!keys.length) return;
     setRefreshingAll(true);
     try {
-      await Promise.all(keys.map((k) => runTest(k, original[k])));
+      await Promise.all(keys.map((k) => runTest(k, original[k]).catch(() => {})));
     } finally {
       setRefreshingAll(false);
     }
   };
+
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
