@@ -11,7 +11,7 @@ const GiftCardHighlight = () => {
   return (
     <section className="section-padding bg-terracotta-light">
       <div className="container-narrow text-center">
-        <Gift size={32} className="mx-auto mb-4 text-primary" />
+        <Gift size={32} className="mx-auto mb-4 text-primary-strong" />
         <h2 className="font-display text-3xl md:text-4xl mb-4">{t.giftCard.title}</h2>
         <p className="text-sm text-muted-foreground font-body leading-relaxed mb-8 max-w-md mx-auto">
           {t.giftCard.description}

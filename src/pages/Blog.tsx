@@ -168,14 +168,14 @@ const Blog = () => {
                     <Calendar size={12} />
                     <time dateTime={post.published_at}>{formatDate(post.published_at)}</time>
                   </div>
-                  <h2 className="text-xl md:text-2xl font-display text-foreground mb-2 group-hover:text-primary transition-colors">
+                  <h2 className="text-xl md:text-2xl font-display text-foreground mb-2 group-hover:text-primary-strong transition-colors">
                     {title}
                   </h2>
                   <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-3">
                     {preview}
                   </p>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-xs font-medium text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
+                    <span className="text-xs font-medium text-primary-strong flex items-center gap-1 group-hover:gap-2 transition-all">
                       {locale === "es" ? "Leer más" : locale === "ru" ? "Читать далее" : "Read more"}
                       <ArrowRight size={12} />
                     </span>

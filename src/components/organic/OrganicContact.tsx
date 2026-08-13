@@ -23,10 +23,10 @@ const ContactItem = ({ icon: Icon, title, children, index }: {
   return (
     <div ref={anim.ref} style={anim.style} className="flex gap-5">
       <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "hsl(var(--accent) / 0.15)" }}>
-        <Icon size={18} className="text-primary" />
+        <Icon size={18} className="text-primary-strong" />
       </div>
       <div>
-        <h3 className="font-display text-lg mb-1.5">{title}</h3>
+        <h2 className="font-display text-lg mb-1.5">{title}</h2>
         {children}
       </div>
     </div>
@@ -69,7 +69,7 @@ const OrganicContact = () => {
               <ContactItem icon={MapPin} title={t.contact.address} index={0}>
                 <button
                   onClick={() => setShowMapPicker(true)}
-                  className="text-sm text-muted-foreground font-body text-left hover:text-primary transition-colors border-b border-transparent hover:border-primary/30 cursor-pointer"
+                  className="text-sm text-muted-foreground font-body text-left hover:text-primary-strong transition-colors border-b border-transparent hover:border-primary/30 cursor-pointer"
                 >
                   {sc.contact_address || t.contact.addressValue}
                 </button>
@@ -103,7 +103,7 @@ const OrganicContact = () => {
                   href={`https://instagram.com/${(sc.contact_instagram || INSTAGRAM_HANDLE).replace("@", "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-primary font-body hover:opacity-80 transition-opacity border-b border-primary/30 pb-0.5"
+                  className="text-sm text-primary-strong font-body hover:opacity-80 transition-opacity border-b border-primary/30 pb-0.5"
                 >
                   {sc.contact_instagram || INSTAGRAM_HANDLE}
                 </a>
@@ -115,7 +115,7 @@ const OrganicContact = () => {
                     href={sc.integration_tripadvisor_url || sc.contact_tripadvisor_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-primary font-body hover:opacity-80 transition-opacity border-b border-primary/30 pb-0.5"
+                    className="text-sm text-primary-strong font-body hover:opacity-80 transition-opacity border-b border-primary/30 pb-0.5"
                   >
                     {locale === "ru" ? "Читать отзывы" : locale === "es" ? "Ver reseñas" : "Read reviews"}
                   </a>

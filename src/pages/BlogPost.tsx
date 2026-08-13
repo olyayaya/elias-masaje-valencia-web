@@ -143,7 +143,7 @@ const BlogPost = () => {
         <p className="text-muted-foreground mb-4">
           {locale === "es" ? "Artículo no encontrado." : locale === "ru" ? "Статья не найдена." : "Article not found."}
         </p>
-        <Link to={lp("blog")} className="text-sm text-primary hover:underline">
+        <Link to={lp("blog")} className="text-sm text-primary-strong hover:underline">
           ← {locale === "es" ? "Volver al blog" : locale === "ru" ? "Назад к блогу" : "Back to blog"}
         </Link>
       </div>
@@ -180,7 +180,7 @@ const BlogPost = () => {
           className="prose prose-sm md:prose-base max-w-none text-foreground
             prose-headings:font-display prose-headings:text-foreground prose-headings:font-normal
             prose-p:text-muted-foreground prose-p:leading-relaxed
-            prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+            prose-a:text-primary-strong prose-a:no-underline hover:prose-a:underline
             prose-strong:text-foreground
             prose-li:text-muted-foreground
             prose-blockquote:border-primary/30 prose-blockquote:text-muted-foreground"
