@@ -532,6 +532,28 @@ const DashboardIntegrations = () => {
             <p className="text-xs text-muted-foreground mt-1">
               Paste your Google Workspace tracking IDs and SEO codes. They go live on the public site immediately after saving.
             </p>
+            {(() => {
+              const active = FIELDS.filter((f) => (original[f.key] || "").trim());
+              const counts = active.reduce(
+                (acc, f) => { acc[healthLevel(health[f.key])] += 1; return acc; },
+                { healthy: 0, degraded: 0, failing: 0, unknown: 0 } as Record<string, number>
+              );
+              if (!active.length) return null;
+              return (
+                <div className="flex items-center gap-3 mt-2 text-[11px]">
+                  <span className="text-green-600 dark:text-green-400">● {counts.healthy} {docLang === "en" ? "healthy" : "стабильно"}</span>
+                  {counts.degraded > 0 && (
+                    <span className="text-amber-600 dark:text-amber-400">● {counts.degraded} {docLang === "en" ? "degraded" : "нестабильно"}</span>
+                  )}
+                  {counts.failing > 0 && (
+                    <span className="text-destructive">● {counts.failing} {docLang === "en" ? "failing" : "сбой"}</span>
+                  )}
+                  {counts.unknown > 0 && (
+                    <span className="text-muted-foreground">● {counts.unknown} {docLang === "en" ? "not checked" : "не проверено"}</span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button
