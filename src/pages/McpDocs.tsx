@@ -335,7 +335,19 @@ const McpDocs = () => {
                 >
                   {tool.readOnly ? "solo lectura" : "escritura"}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    downloadJson(`${tool.name}.schema.json`, buildToolSchema(tool));
+                    toast.success(`${tool.name}.schema.json descargado`);
+                  }}
+                  aria-label={`Descargar esquema de ${tool.name}`}
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Download size={12} /> Esquema
+                </button>
               </div>
+
               <p className="text-sm text-muted-foreground">{tool.description}</p>
 
               <div className="overflow-x-auto">
