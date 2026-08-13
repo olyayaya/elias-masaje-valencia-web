@@ -50,6 +50,8 @@ interface HeadProps {
 export function useHead(props: HeadProps) {
   const jsonLdStr = props.jsonLd ? JSON.stringify(props.jsonLd) : "";
   const alternatesStr = props.alternates ? JSON.stringify(props.alternates) : "";
+  const articleStr = props.article ? JSON.stringify(props.article) : "";
+
   const propsRef = useRef(props);
   propsRef.current = props;
 
