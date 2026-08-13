@@ -8,6 +8,7 @@ import { useHead } from "@/hooks/use-head";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 import DOMPurify from "dompurify";
 import { buildLocalBusiness } from "@/lib/local-business";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 interface Post {
   id: string;
