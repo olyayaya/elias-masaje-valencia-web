@@ -403,9 +403,13 @@ const DashboardIntegrations = () => {
                     onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
                     placeholder={f.placeholder}
                     spellCheck={false}
+                    disabled={f.key === "integration_ga4_id" && !!connectorGa4Id}
+                    title={f.key === "integration_ga4_id" && connectorGa4Id
+                      ? (docLang === "en" ? "Managed by the Google Analytics connector" : "Управляется коннектором Google Analytics")
+                      : undefined}
                     className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground font-mono ${
                       valid ? "border-border" : "border-destructive"
-                    } ${isSecret ? "pr-10" : ""}`}
+                    } ${isSecret ? "pr-10" : ""} ${f.key === "integration_ga4_id" && connectorGa4Id ? "opacity-60 cursor-not-allowed" : ""}`}
                   />
                   {isSecret && (
                     <button
@@ -419,7 +423,10 @@ const DashboardIntegrations = () => {
                 </div>
                 <button
                   onClick={() => save(f.key)}
-                  disabled={!dirty || !valid || savingKey === f.key}
+                  disabled={!dirty || !valid || savingKey === f.key || (f.key === "integration_ga4_id" && !!connectorGa4Id)}
+                  title={f.key === "integration_ga4_id" && connectorGa4Id
+                    ? (docLang === "en" ? "Managed by the Google Analytics connector" : "Управляется коннектором Google Analytics")
+                    : undefined}
                   className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {savingKey === f.key ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
