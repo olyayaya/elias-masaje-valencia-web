@@ -427,6 +427,7 @@ const DashboardIntegrations = () => {
       saveTestCache(next);
       return next;
     });
+    noteHealth(key, result.ok, result.error, result.testedAt);
     setTesting(null);
   };
 
