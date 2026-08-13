@@ -81,6 +81,7 @@ const App = () => (
           <ConsentBanner />
           <PageTracker />
           <IntegrationsLoader />
+          <AppErrorBoundary>
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               {/* Spanish (default — no prefix) */}
