@@ -4,10 +4,18 @@ import { Loader2, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useHead } from "@/hooks/use-head";
 
 type Mode = "signin" | "signup" | "forgot";
 
 const Auth = () => {
+  // Private page: keep it out of search results and social previews.
+  useHead({
+    title: "Acceso | Elias Masaje",
+    description: "Área privada de administración de Elias Masaje.",
+    robots: "noindex, nofollow",
+    noSocial: true,
+  });
   const navigate = useNavigate();
   const { user, isAdmin, loading } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
