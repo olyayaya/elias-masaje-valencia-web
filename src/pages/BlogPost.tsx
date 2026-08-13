@@ -8,6 +8,7 @@ import { useHead } from "@/hooks/use-head";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 import DOMPurify from "dompurify";
 import { buildLocalBusiness } from "@/lib/local-business";
+import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 interface Post {
   id: string;
@@ -119,7 +120,14 @@ const BlogPost = () => {
   } : undefined;
 
   const jsonLd = blogPosting
-    ? { "@context": "https://schema.org", "@graph": [buildLocalBusiness(locale), blogPosting] }
+    ? {
+        "@context": "https://schema.org",
+        "@graph": [
+          buildLocalBusiness(locale),
+          buildBreadcrumbList("blog", locale, [{ name: title, url: postUrl }]),
+          blogPosting,
+        ],
+      }
     : undefined;
 
   // First inline image of the article makes a far better social preview than
