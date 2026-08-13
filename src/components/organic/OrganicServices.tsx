@@ -21,6 +21,7 @@ import OrganicShape from "@/components/organic/OrganicShape";
 import { WHATSAPP_URL } from "@/config/contact";
 import { trackWhatsAppClick } from "@/lib/analytics";
 import { formatPrice } from "@/lib/format-price";
+import BookingDialog from "@/components/BookingDialog";
 
 const PROMO_COLORS: Record<string, string> = {
   amber: "bg-amber-100 text-amber-800 border-amber-200",
@@ -55,15 +56,17 @@ const ServiceRow = ({ title, description, duration, price, bookLabel, index, bad
         {!hidePrice && price && (
           <span className="text-sm font-body font-medium">{formatPrice(price, t, { hidePrefix: hidePriceFrom })}</span>
         )}
-        <a
-          href={WHATSAPP_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => trackWhatsAppClick("services_card", { service_name: title })}
-          className="text-sm font-body border border-foreground/20 text-foreground px-5 py-2 rounded-full transition-all hover:bg-foreground hover:text-background"
-        >
-          {bookLabel}
-        </a>
+        <BookingDialog
+          service={title}
+          duration={duration}
+          price={price}
+          hidePrice={hidePrice}
+          hideDuration={hideDuration}
+          hidePriceFrom={hidePriceFrom}
+          location="services_card"
+          triggerLabel={bookLabel}
+          triggerClassName="text-sm font-body border border-foreground/20 text-foreground px-5 py-2 rounded-full transition-all hover:bg-foreground hover:text-background"
+        />
       </div>
     </div>
   );

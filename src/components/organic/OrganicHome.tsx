@@ -31,6 +31,7 @@ import OrganicShape from "@/components/organic/OrganicShape";
 import BenefitIcon from "@/components/BenefitIcon";
 import { WHATSAPP_URL } from "@/config/contact";
 import { trackWhatsAppClick } from "@/lib/analytics";
+import BookingDialog from "@/components/BookingDialog";
 
 const OrganicHome = () => {
   const { t, locale } = useI18n();
@@ -204,15 +205,17 @@ const OrganicHome = () => {
                       {!(s as any).hidePrice && s.price && (
                         <span className="text-sm font-body font-medium">{formatPrice(s.price, t, { hidePrefix: (s as any).hidePriceFrom })}</span>
                       )}
-                      <a
-                        href={WHATSAPP_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => trackWhatsAppClick("home_service_card", { service_name: (s as any).title })}
-                        className="text-sm font-body border border-foreground/20 text-foreground px-5 py-2 rounded-full transition-all hover:bg-foreground hover:text-background"
-                      >
-                        {t.services.bookBtn}
-                      </a>
+                      <BookingDialog
+                        service={s.title}
+                        duration={s.duration}
+                        price={s.price}
+                        hidePrice={(s as any).hidePrice}
+                        hideDuration={(s as any).hideDuration}
+                        hidePriceFrom={(s as any).hidePriceFrom}
+                        location="home_service_card"
+                        triggerLabel={t.services.bookBtn}
+                        triggerClassName="text-sm font-body border border-foreground/20 text-foreground px-5 py-2 rounded-full transition-all hover:bg-foreground hover:text-background"
+                      />
                     </div>
                   </div>
                 );
