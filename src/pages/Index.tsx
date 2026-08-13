@@ -4,6 +4,7 @@ import { useI18n } from "@/i18n/context";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 import { buildBreadcrumbList } from "@/lib/breadcrumbs";
+import { buildLocalBusiness, buildOrganization } from "@/lib/local-business";
 import { useDbFaqs, resolveField } from "@/hooks/use-db-content";
 import { useMemo } from "react";
 
