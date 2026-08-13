@@ -249,13 +249,36 @@ const McpDocs = () => {
           </div>
           <CodeBlock
             label="Configuración de cliente (mcp.json)"
-            code={JSON.stringify(
-              { mcpServers: { "elias-masaje-website": { type: "http", url: endpoint } } },
-              null,
-              2,
-            )}
+            code={JSON.stringify(buildMcpJson(endpoint), null, 2)}
           />
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                downloadJson("mcp.json", buildMcpJson(endpoint));
+                toast.success("mcp.json descargado");
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+            >
+              <Download size={14} /> Descargar mcp.json
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                downloadJson("elias-masaje-mcp-spec.json", buildFullSpec(endpoint, TOOLS));
+                toast.success("Especificación completa descargada");
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/20 transition-colors"
+            >
+              <Download size={14} /> Descargar especificación completa
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            La especificación completa incluye el endpoint, la configuración OAuth y el esquema JSON de entrada de
+            cada herramienta con un ejemplo de petición y respuesta — lista para compartir con otros sistemas.
+          </p>
         </section>
+
 
         <section className="rounded-2xl border border-border bg-card p-5 md:p-6 space-y-4">
           <h2 className="font-display text-xl text-foreground">Prueba rápida</h2>
