@@ -54,6 +54,41 @@ const TOOLS: ToolDoc[] = [
     example: { id: "00000000-0000-0000-0000-000000000000", status: "contacted" },
   },
   {
+    name: "create_whatsapp_booking_request",
+    title: "Create WhatsApp booking request",
+    description:
+      "Genera el mensaje de WhatsApp listo para enviar a partir de un lead (ES/EN/RU), devuelve el enlace wa.me y el estado del lead para el seguimiento. Marca el lead como contactado por defecto.",
+    readOnly: false,
+    input: [
+      { name: "leadId", type: "string (uuid)", required: true, description: "Lead de reserva de origen" },
+      { name: "locale", type: "string", required: false, description: "es | en | ru (por defecto, el del lead)" },
+      { name: "note", type: "string", required: false, description: "Línea extra, p. ej. proponer otra hora" },
+      {
+        name: "markContacted",
+        type: "boolean",
+        required: false,
+        description: "Marcar el lead como contactado (por defecto true)",
+      },
+    ],
+    output: `{
+  "leadId": "uuid",
+  "locale": "es",
+  "clientName": "Ana",
+  "clientPhone": "+34...",
+  "message": "Hola Ana, soy Elias…",
+  "whatsappLink": "https://wa.me/34...?text=…",
+  "businessWhatsappLink": "https://wa.me/34698968007?text=…",
+  "status": "contacted",
+  "statusUpdated": true,
+  "followUp": "Lead marked as contacted — follow up…"
+}`,
+    example: {
+      leadId: "00000000-0000-0000-0000-000000000000",
+      locale: "es",
+      note: "Tengo hueco el jueves a las 17:00.",
+    },
+  },
+
     name: "list_services",
     title: "List massage services",
     description: "List the massage services published on the site, with duration, price and ES/EN/RU translations.",
