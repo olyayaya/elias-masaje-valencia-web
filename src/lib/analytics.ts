@@ -39,12 +39,47 @@ export function trackEvent(eventName: string, params: EventParams = {}) {
   pushToGa(eventName, params);
 }
 
+/**
+ * First-touch acquisition data for the visit: UTM tags if present, otherwise
+ * the external referrer. Stored per session so a WhatsApp click made three
+ * pages later is still attributed to the campaign / search that brought them.
+ */
+function acquisition(): EventParams {
+  try {
+    const k = "em-acq";
+    const stored = sessionStorage.getItem(k);
+    if (stored) return JSON.parse(stored) as EventParams;
+
+    const q = new URLSearchParams(window.location.search);
+    const ref = document.referrer && !document.referrer.includes(window.location.host) ? document.referrer : "";
+    let refHost = "";
+    try { refHost = ref ? new URL(ref).hostname.replace(/^www\./, "") : ""; } catch { /* ignore */ }
+    const isSearch = /google|bing|yahoo|duckduckgo|yandex|ecosia/.test(refHost);
+
+    const acq: EventParams = {
+      traffic_source: q.get("utm_source") || (refHost ? refHost : "direct"),
+      traffic_medium:
+        q.get("utm_medium") ||
+        (q.get("gclid") ? "cpc" : isSearch ? "organic" : refHost ? "referral" : "none"),
+      traffic_campaign: q.get("utm_campaign") || (q.get("gclid") ? "google_ads" : "none"),
+      landing_page: window.location.pathname,
+    };
+    sessionStorage.setItem(k, JSON.stringify(acq));
+    return acq;
+  } catch {
+    return {};
+  }
+}
+
 /** Conversion: user clicked a WhatsApp booking CTA. */
 export function trackWhatsAppClick(location: string, extra: EventParams = {}) {
-  pushToGa("whatsapp_click", { location, method: "WhatsApp", ...extra });
-  pushToGa("generate_lead", { location, method: "WhatsApp", ...extra });
-  logToDb("whatsapp_click", location, extra);
+  const acq = acquisition();
+  const params = { location, method: "WhatsApp", ...acq, ...extra };
+  pushToGa("whatsapp_click", params);
+  pushToGa("generate_lead", { ...params, currency: "EUR", value: 1 });
+  logToDb("whatsapp_click", location, { ...acq, ...extra });
 }
+
 
 /** Conversion: contact form / contact-page CTA submitted. */
 export function trackContactSubmit(location: string, extra: EventParams = {}) {
