@@ -111,7 +111,7 @@ export default function AnalyticsCheck() {
   const [gtmChecks, setGtmChecks] = useState<CheckRow[]>([]);
   const [tick, setTick] = useState(0);
 
-  useHead({ title: t.title, description: t.subtitle });
+  useHead({ title: t.title, description: t.subtitle, robots: "noindex, nofollow" });
   useEffect(() => {
     const m = document.createElement("meta");
     m.name = "robots";

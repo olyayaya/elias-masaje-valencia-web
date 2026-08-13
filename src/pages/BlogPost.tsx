@@ -117,6 +117,12 @@ const BlogPost = () => {
     })()),
   } : undefined;
 
+  // First inline image of the article makes a far better social preview than
+  // the sitewide default; falls back to the default when the post has none.
+  const postImage = post
+    ? (getField(post, "content").match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || undefined)
+    : undefined;
+
   useHead({
     title: post ? `${title} | Elias Masaje` : undefined,
     description: metaDesc || undefined,
@@ -124,6 +130,17 @@ const BlogPost = () => {
     ogTitle: title || undefined,
     ogDescription: metaDesc || undefined,
     ogType: post ? "article" : undefined,
+    ogImage: postImage,
+    ogImageAlt: title || undefined,
+    article: post
+      ? {
+          publishedTime: post.published_at || undefined,
+          modifiedTime: post.updated_at || post.published_at || undefined,
+          author: "Elias Masaje",
+          section: "Blog",
+          tags: (locale === "en" ? post.seo_keywords_en : locale === "ru" ? post.seo_keywords_ru : post.seo_keywords) || undefined,
+        }
+      : undefined,
     locale,
     alternates: postSlug ? getAlternates("blogPost", { slug: postSlug }) : undefined,
     jsonLd,
