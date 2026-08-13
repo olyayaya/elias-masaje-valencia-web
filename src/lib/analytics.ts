@@ -24,14 +24,15 @@ function pushToGa(eventName: string, params: EventParams) {
 function logToDb(eventName: string, location: string, extra: EventParams) {
   // Skip dashboard / preview noise
   if (typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard")) return;
-  // Fire-and-forget — don't block navigation
-  void supabase.from("conversion_events").insert([{
+  // Fire-and-forget — don't block navigation. `.then()` is required: the
+  // Supabase query builder is lazy and never runs without it.
+  supabase.from("conversion_events").insert([{
     event_name: eventName,
     location,
     metadata: extra as any,
     page_path: typeof window !== "undefined" ? window.location.pathname + window.location.search : "",
     locale: typeof document !== "undefined" ? document.documentElement.lang || "" : "",
-  }]);
+  }]).then(({ error }) => { if (error) console.warn("analytics log failed", error.message); });
 }
 
 export function trackEvent(eventName: string, params: EventParams = {}) {
@@ -50,4 +51,36 @@ export function trackContactSubmit(location: string, extra: EventParams = {}) {
   pushToGa("contact_submit", { location, ...extra });
   pushToGa("generate_lead", { location, method: "form", ...extra });
   logToDb("contact_submit", location, extra);
+}
+
+/** Stable per-visit id (sessionStorage only, no cookies, no cross-site tracking). */
+function visitId(): string {
+  try {
+    const k = "em-visit";
+    let v = sessionStorage.getItem(k);
+    if (!v) {
+      v = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      sessionStorage.setItem(k, v);
+    }
+    return v;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Page view: pushed to GA4/GTM and mirrored into `conversion_events` so the
+ * dashboard shows real traffic without the GA4 Data API.
+ */
+export function trackPageView(path: string, title: string, locale: string) {
+  pushToGa("page_view", { page_path: path, page_title: title, page_location: window.location.href, language: locale });
+  if (window.location.pathname.startsWith("/dashboard")) return;
+  const referrer = document.referrer && !document.referrer.includes(window.location.host) ? document.referrer : "";
+  supabase.from("conversion_events").insert([{
+    event_name: "page_view",
+    location: "site",
+    page_path: path,
+    locale,
+    metadata: { title, referrer, visit: visitId() } as any,
+  }]).then(({ error }) => { if (error) console.warn("page_view log failed", error.message); });
 }
