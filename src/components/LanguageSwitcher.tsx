@@ -68,7 +68,7 @@ const LanguageSwitcher = () => {
     <div ref={ref} className="relative" onKeyDown={handleKeyDown}>
       <button
         onClick={() => { setOpen(!open); if (!open) setFocusIdx(0); }}
-        className="flex items-center gap-1.5 text-sm font-body text-muted-foreground hover:text-primary transition-colors"
+        className="flex items-center gap-1.5 text-sm font-body text-muted-foreground hover:text-primary-strong transition-colors"
         aria-label={t.a11y.changeLanguage}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -90,7 +90,7 @@ const LanguageSwitcher = () => {
               role="option"
               aria-selected={l === locale}
               className={`block w-full text-left px-4 py-2 text-sm font-body transition-colors hover:bg-secondary ${
-                l === locale ? "text-primary font-medium" : "text-muted-foreground"
+                l === locale ? "text-primary-strong font-medium" : "text-muted-foreground"
               }`}
             >
               {labels[l]}

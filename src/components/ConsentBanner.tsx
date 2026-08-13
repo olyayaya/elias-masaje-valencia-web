@@ -79,13 +79,13 @@ const ConsentBanner = () => {
         >
           <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-lg p-4 md:p-5">
             <div className="flex items-start gap-3">
-              <Cookie className="shrink-0 text-primary mt-0.5" size={20} aria-hidden="true" />
+              <Cookie className="shrink-0 text-primary-strong mt-0.5" size={20} aria-hidden="true" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-foreground leading-relaxed">
                   {c.banner.body}{" "}
                   <Link
                     to={lp("privacy")}
-                    className="text-primary hover:underline"
+                    className="text-primary-strong hover:underline"
                   >
                     {c.banner.policyLink}
                   </Link>
@@ -130,7 +130,7 @@ const ConsentBanner = () => {
           <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-3 p-5 border-b border-border">
               <div className="flex items-start gap-2">
-                <Shield size={18} className="text-primary mt-1" aria-hidden="true" />
+                <Shield size={18} className="text-primary-strong mt-1" aria-hidden="true" />
                 <div>
                   <h2 className="text-base font-semibold text-foreground">{c.panel.title}</h2>
                   <p className="text-xs text-muted-foreground mt-1">{c.panel.description}</p>

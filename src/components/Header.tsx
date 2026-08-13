@@ -51,8 +51,8 @@ const Header = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`text-sm font-body tracking-wide transition-colors hover:text-primary ${
-                  location.pathname === item.path ? "text-primary" : "text-muted-foreground"
+                className={`text-sm font-body tracking-wide transition-colors hover:text-primary-strong ${
+                  location.pathname === item.path ? "text-primary-strong" : "text-muted-foreground"
                 }`}
                 aria-current={location.pathname === item.path ? "page" : undefined}
               >
@@ -96,7 +96,7 @@ const Header = () => {
                 to={item.path}
                 onClick={() => setOpen(false)}
                 className={`block py-3 text-sm font-body tracking-wide transition-colors ${
-                  location.pathname === item.path ? "text-primary" : "text-muted-foreground"
+                  location.pathname === item.path ? "text-primary-strong" : "text-muted-foreground"
                 }`}
                 aria-current={location.pathname === item.path ? "page" : undefined}
               >

@@ -64,7 +64,7 @@ export const MapPickerOverlay = ({ onClose }: { onClose: () => void }) => {
           className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-border hover:bg-secondary transition-colors"
           onClick={onClose}
         >
-          <Navigation size={18} className="text-primary" />
+          <Navigation size={18} className="text-primary-strong" />
           <span className="text-sm font-body font-medium">Google Maps</span>
         </a>
         <a
@@ -74,7 +74,7 @@ export const MapPickerOverlay = ({ onClose }: { onClose: () => void }) => {
           className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-border hover:bg-secondary transition-colors"
           onClick={onClose}
         >
-          <Navigation size={18} className="text-primary" />
+          <Navigation size={18} className="text-primary-strong" />
           <span className="text-sm font-body font-medium">Apple Maps</span>
         </a>
         <button

@@ -225,7 +225,7 @@ const OrganicHome = () => {
           </div>
 
           <div className="text-center mb-16">
-            <Link to="/servicios" className="text-sm font-body text-primary hover:opacity-80 transition-opacity">
+            <Link to="/servicios" className="text-sm font-body text-primary-strong hover:opacity-80 transition-opacity">
               {t.services.viewAll}
             </Link>
           </div>

@@ -70,11 +70,11 @@ const LanguageSuggestionBanner = () => {
       }`}
     >
       <div className="flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border rounded-xl px-4 py-3 shadow-lg">
-        <Globe size={18} className="text-primary shrink-0" />
+        <Globe size={18} className="text-primary-strong shrink-0" />
         <p className="text-sm font-body text-muted-foreground flex-1">{msg.text}</p>
         <button
           onClick={switchLang}
-          className="text-sm font-body font-medium text-primary hover:underline whitespace-nowrap"
+          className="text-sm font-body font-medium text-primary-strong hover:underline whitespace-nowrap"
         >
           {msg.cta}
         </button>
