@@ -54,8 +54,9 @@ export function useHead(props: HeadProps) {
   propsRef.current = props;
 
   useEffect(() => {
-    const { title, description, canonical, ogTitle, ogDescription, ogType, ogUrl, ogImage, ogImageAlt, locale, alternates } =
+    const { title, description, canonical, ogTitle, ogDescription, ogType, ogUrl, ogImage, ogImageAlt, locale, alternates, robots, article } =
       propsRef.current;
+
     const prevTitle = document.title;
     const created: Element[] = [];
 
