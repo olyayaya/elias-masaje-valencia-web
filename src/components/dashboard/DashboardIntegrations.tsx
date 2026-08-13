@@ -192,9 +192,13 @@ const DashboardIntegrations = () => {
   const [reveal, setReveal] = useState<Record<string, boolean>>({});
   const [testing, setTesting] = useState<string | null>(null);
   const [tests, setTests] = useState<Record<string, TestStatus>>(loadTestCache);
+  const [connectorGa4Id, setConnectorGa4Id] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    const connectorGa4 = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY?.trim() || null;
+    setConnectorGa4Id(connectorGa4);
+
     supabase
       .from("site_content")
       .select("content_key, value_es")
@@ -202,6 +206,8 @@ const DashboardIntegrations = () => {
       .then(({ data }) => {
         const map: Record<string, string> = {};
         (data || []).forEach((r: any) => { map[r.content_key] = r.value_es || ""; });
+        // The connected Google Analytics connector takes precedence for GA4.
+        if (connectorGa4) map.integration_ga4_id = connectorGa4;
         setValues(map);
         setOriginal(map);
         setLoading(false);
@@ -355,6 +361,9 @@ const DashboardIntegrations = () => {
                   {isConnected && (
                     <span className="text-[10px] px-2 py-0.5 bg-green-500/10 text-green-600 rounded-full">Connected</span>
                   )}
+                  {f.key === "integration_ga4_id" && connectorGa4Id && (
+                    <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full">Connector</span>
+                  )}
                   {isConnected && f.key.endsWith("_verification") && test && (
                     test.ok ? (
                       <span className="text-[10px] px-2 py-0.5 bg-green-500/15 text-green-700 dark:text-green-400 rounded-full">
@@ -394,9 +403,13 @@ const DashboardIntegrations = () => {
                     onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
                     placeholder={f.placeholder}
                     spellCheck={false}
+                    disabled={f.key === "integration_ga4_id" && !!connectorGa4Id}
+                    title={f.key === "integration_ga4_id" && connectorGa4Id
+                      ? (docLang === "en" ? "Managed by the Google Analytics connector" : "Управляется коннектором Google Analytics")
+                      : undefined}
                     className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground font-mono ${
                       valid ? "border-border" : "border-destructive"
-                    } ${isSecret ? "pr-10" : ""}`}
+                    } ${isSecret ? "pr-10" : ""} ${f.key === "integration_ga4_id" && connectorGa4Id ? "opacity-60 cursor-not-allowed" : ""}`}
                   />
                   {isSecret && (
                     <button
@@ -410,7 +423,10 @@ const DashboardIntegrations = () => {
                 </div>
                 <button
                   onClick={() => save(f.key)}
-                  disabled={!dirty || !valid || savingKey === f.key}
+                  disabled={!dirty || !valid || savingKey === f.key || (f.key === "integration_ga4_id" && !!connectorGa4Id)}
+                  title={f.key === "integration_ga4_id" && connectorGa4Id
+                    ? (docLang === "en" ? "Managed by the Google Analytics connector" : "Управляется коннектором Google Analytics")
+                    : undefined}
                   className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm rounded-lg hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {savingKey === f.key ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
