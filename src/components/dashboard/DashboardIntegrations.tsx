@@ -7,6 +7,8 @@ import { queryKeys } from "@/lib/query-keys";
 import IntegrationDiagnostics from "./IntegrationDiagnostics";
 import { logDiagnostic, describeError, DiagEntry } from "@/lib/integration-diagnostics";
 import { reportIntegrationFailure, addIntegrationBreadcrumb } from "@/lib/sentry";
+import IntegrationHealthBadge from "./IntegrationHealthBadge";
+import { HealthMap, loadHealth, recordHealth, clearHealth, healthLevel } from "@/lib/integration-health";
 import { toast } from "sonner";
 
 type TestStatus = { ok: boolean; error?: string; details?: string; testedAt: string };
