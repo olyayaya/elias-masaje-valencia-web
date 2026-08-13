@@ -7,7 +7,7 @@ import {
   ArrowUpRight, Tag
 } from "lucide-react";
 import DashboardCard from "./DashboardCard";
-import Ga4Stats from "./Ga4Stats";
+import TrafficStatCards from "./TrafficStatCards";
 
 interface Counts {
   services: number;
@@ -127,7 +127,7 @@ const DashboardOverview = ({ onNavigate }: { onNavigate: (section: string) => vo
         <p className="text-sm text-muted-foreground">{dt.siteOverview}</p>
       </div>
 
-      <Ga4Stats days={30} />
+      <TrafficStatCards days={30} />
 
       <div>
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">{dt.manageYourSite}</h2>
