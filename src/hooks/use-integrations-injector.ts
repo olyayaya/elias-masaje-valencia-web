@@ -41,7 +41,10 @@ export function useIntegrationsInjector() {
       if (window.location.pathname.startsWith("/dashboard")) return;
 
       // ── Google Analytics 4 ─────────────────────────────────────────────
-      const ga4 = map.integration_ga4_id;
+      // Prefer the connected Google Analytics connector; fall back to the
+      // dashboard setting so existing setups keep working.
+      const connectorGa4 = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY?.trim();
+      const ga4 = connectorGa4 || map.integration_ga4_id;
       if (analyticsGranted && ga4 && /^G-[A-Z0-9]+$/i.test(ga4)) {
         const s1 = document.createElement("script");
         s1.async = true;
