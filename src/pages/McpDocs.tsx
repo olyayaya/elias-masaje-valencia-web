@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { Check, Copy, ExternalLink, Lock, Wrench } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Lock, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { useHead } from "@/hooks/use-head";
+import { buildFullSpec, buildMcpJson, buildToolSchema, downloadJson } from "@/lib/mcp-spec";
+
 
 type ToolDoc = {
   name: string;
