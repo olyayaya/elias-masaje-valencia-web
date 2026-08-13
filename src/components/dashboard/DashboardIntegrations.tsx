@@ -201,11 +201,12 @@ const DashboardIntegrations = () => {
     const connectorGa4 = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY?.trim() || null;
     setConnectorGa4Id(connectorGa4);
 
+    const loadStarted = Date.now();
     supabase
       .from("site_content")
       .select("content_key, value_es")
       .eq("category", "integrations")
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         const map: Record<string, string> = {};
         (data || []).forEach((r: any) => { map[r.content_key] = r.value_es || ""; });
         // The connected Google Analytics connector takes precedence for GA4.
@@ -213,6 +214,14 @@ const DashboardIntegrations = () => {
         setValues(map);
         setOriginal(map);
         setLoading(false);
+        logDiagnostic({
+          action: "load",
+          label: "Integration settings",
+          ok: !error,
+          error: error ? error.message : undefined,
+          details: error ? undefined : `${Object.keys(map).length} fields loaded`,
+          durationMs: Date.now() - loadStarted,
+        });
 
         // Auto-verify saved verification meta tags (refresh stale results)
         const cache = loadTestCache();
@@ -226,22 +235,51 @@ const DashboardIntegrations = () => {
           if (!v) return;
           const cached = cache[k];
           if (cached && Date.now() - new Date(cached.testedAt).getTime() < STALE_MS) return;
+          const started = Date.now();
           try {
-            const { data: res, error } = await supabase.functions.invoke("test-integration", {
+            const { data: res, error: fnErr } = await supabase.functions.invoke("test-integration", {
               body: { kind: k, value: v },
             });
-            const result: TestStatus = error
-              ? { ok: false, error: error.message, testedAt: new Date().toISOString() }
+            const result: TestStatus = fnErr
+              ? { ok: false, error: fnErr.message, testedAt: new Date().toISOString() }
               : { ok: !!res?.ok, error: res?.error, details: res?.details, testedAt: res?.testedAt || new Date().toISOString() };
+            logDiagnostic({
+              action: "test",
+              target: k,
+              label: FIELDS.find((f) => f.key === k)?.label || k,
+              ok: result.ok,
+              error: result.error,
+              details: result.details ? `auto · ${result.details}` : "auto-verify on open",
+              durationMs: Date.now() - started,
+            });
             setTests((prev) => {
               const next = { ...prev, [k]: result };
               saveTestCache(next);
               return next;
             });
-          } catch {/* ignore — manual Test still available */}
+          } catch (e) {
+            logDiagnostic({
+              action: "test",
+              target: k,
+              label: FIELDS.find((f) => f.key === k)?.label || k,
+              ok: false,
+              error: describeError(e),
+              details: "auto-verify on open",
+              durationMs: Date.now() - started,
+            });
+          }
         });
       })
-      .then(undefined, () => setLoading(false));
+      .then(undefined, (e) => {
+        setLoading(false);
+        logDiagnostic({
+          action: "load",
+          label: "Integration settings",
+          ok: false,
+          error: describeError(e),
+          durationMs: Date.now() - loadStarted,
+        });
+      });
   }, []);
 
   const labelFor = (key: string) => FIELDS.find((f) => f.key === key)?.label || key;
