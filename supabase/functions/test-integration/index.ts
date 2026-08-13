@@ -81,6 +81,25 @@ async function testTripadvisorUrl(raw: string): Promise<TestResult> {
 }
 
 
+async function testSentryDsn(raw: string): Promise<TestResult> {
+  const dsn = raw.trim();
+  const m = dsn.match(/^https:\/\/([^@/]+)@([^/]+)\/(\d+)$/);
+  if (!m) {
+    return { ok: false, error: "DSN must look like https://<key>@<org>.ingest.sentry.io/<projectId>" };
+  }
+  const [, , host, projectId] = m;
+  try {
+    // Public envelope endpoint responds even without a payload; anything other
+    // than a DNS/connection failure means the project host is reachable.
+    const res = await fetch(`https://${host}/api/${projectId}/envelope/`, { method: "POST", body: "" });
+    if (res.status === 404) return { ok: false, error: `Sentry project ${projectId} not found on ${host}` };
+    await res.text();
+    return { ok: true, details: `Ingest endpoint reachable (HTTP ${res.status}) · project ${projectId}` };
+  } catch (e) {
+    return { ok: false, error: `Network error: ${(e as Error).message}` };
+  }
+}
+
 function testSeoKey(v: string): TestResult {
   const t = v.trim();
   if (t.length < 16) return { ok: false, error: "Key looks too short — most provider keys are 20+ characters" };
@@ -106,6 +125,7 @@ Deno.serve(async (req) => {
       case "integration_gsc_verification": result = await testMetaTag("google-site-verification", value); break;
       case "integration_google_workspace_verification": result = await testMetaTag("google-site-verification", value); break;
       case "integration_tripadvisor_url": result = await testTripadvisorUrl(value); break;
+      case "integration_sentry_dsn": result = await testSentryDsn(value); break;
       case "integration_seo_api_key": result = testSeoKey(value); break;
       default: result = { ok: false, error: `Unknown integration: ${kind}` };
     }
