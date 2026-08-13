@@ -194,24 +194,25 @@ const FIELDS: Field[] = [
   },
   {
     key: "integration_seo_api_key",
-    label: "SEO tool — API key (Ahrefs / SEMrush / Serpstat / etc.)",
-    placeholder: "Paste API key",
+    label: "SEO tool — API key (optional: Ahrefs / SEMrush / Serpstat)",
+    placeholder: "Optional — leave empty",
     secret: true,
     docs: { url: "https://ahrefs.com/api", label: "Provider docs" },
     instructions: {
       en: [
-        "Sign in to your SEO provider (Ahrefs, SEMrush, Serpstat, …).",
-        "Open API section of your account settings and generate a new API key.",
-        "Copy the key and paste it below — it stays private to your dashboard.",
-        "We'll use it later to pull live ranking data into this dashboard.",
+        "Optional — you do NOT need this. Ranking and search-query data already comes free from your connected Google Search Console account (see the SEO tab).",
+        "Only add a key here if you subscribe to a paid SEO tool (Ahrefs, SEMrush, Serpstat) and want its backlink/competitor data too.",
+        "In that provider's account settings open the API section and generate a key.",
+        "Paste it below and Save — it stays private to your dashboard.",
       ],
       ru: [
-        "Войдите в свой SEO-сервис (Ahrefs, SEMrush, Serpstat, …).",
-        "В настройках аккаунта откройте раздел API и сгенерируйте новый ключ.",
-        "Скопируйте ключ и вставьте ниже — он виден только в вашей панели.",
-        "Позже мы используем его для загрузки данных о позициях в этот дашборд.",
+        "Необязательно — этот ключ не нужен. Данные о позициях и запросах уже поступают бесплатно из подключённого Google Search Console (вкладка SEO).",
+        "Добавляйте ключ, только если у вас есть платный SEO-сервис (Ahrefs, SEMrush, Serpstat) и нужны данные по ссылкам и конкурентам.",
+        "В настройках аккаунта провайдера откройте раздел API и создайте ключ.",
+        "Вставьте его ниже и сохраните — он виден только в вашей панели.",
       ],
     },
+
   },
 ];
 
