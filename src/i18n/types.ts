@@ -41,6 +41,14 @@ export interface Translations {
     errPreferredShort: string;
     errPreferredLong: string;
     errFixFields: string;
+    doneTitle: string;
+    doneBody: string;
+    doneCopiedTitle: string;
+    doneCopiedBody: string;
+    doneSummaryLabel: string;
+    doneReopen: string;
+    doneEdit: string;
+    doneClose: string;
     previewLabel: string;
     greeting: string;
     closing: string;

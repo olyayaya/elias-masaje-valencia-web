@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { Check, Copy, MessageCircle } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Copy, MessageCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +56,7 @@ const BookingDialog = ({
   const [touched, setTouched] = useState<{ name?: boolean; phone?: boolean; preferred?: boolean }>({});
   const [message, setMessage] = useState("");
   const [edited, setEdited] = useState(false);
+  const [done, setDone] = useState<null | "opened" | "copied">(null);
 
   /** Strict validation — runs before WhatsApp ever opens. */
   const schema = useMemo(() => z.object({
@@ -134,6 +135,7 @@ const BookingDialog = ({
       setCopied(false);
       setErrors({});
       setTouched({});
+      setDone(null);
       setMessage(generated);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,6 +146,7 @@ const BookingDialog = ({
       await navigator.clipboard.writeText(message);
       setCopied(true);
       toast.success(b.copied);
+      setDone((prev) => prev ?? "copied");
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error(b.copyFailed);
@@ -186,7 +189,7 @@ const BookingDialog = ({
       customized: edited,
     });
     window.open(whatsappUrl(message), "_blank", "noopener,noreferrer");
-    setOpen(false);
+    setDone("opened");
   };
 
   return (
@@ -197,6 +200,72 @@ const BookingDialog = ({
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        {done ? (
+          <div className="font-body">
+            <DialogHeader>
+              <DialogTitle className="font-display text-2xl flex items-center gap-2">
+                <CheckCircle2 className="h-6 w-6 text-primary" aria-hidden="true" />
+                {done === "opened" ? b.doneTitle : b.doneCopiedTitle}
+              </DialogTitle>
+              <DialogDescription className="font-body">
+                {done === "opened" ? b.doneBody : b.doneCopiedBody}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 rounded border border-border bg-muted/40 p-4 text-sm space-y-1" aria-live="polite">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{b.doneSummaryLabel}</p>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">{b.serviceLabel}</span>
+                <span className="font-medium text-right">{service}</span>
+              </div>
+              {shownDuration && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">{b.durationLabel}</span>
+                  <span className="font-medium text-right">{shownDuration}</span>
+                </div>
+              )}
+              {shownPrice && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">{b.priceLabel}</span>
+                  <span className="font-medium text-right">{shownPrice}</span>
+                </div>
+              )}
+              {preferred.trim() && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">{b.preferredLabel}</span>
+                  <span className="font-medium text-right">{preferred.trim()}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={() => setDone(null)}
+                className="flex-1 inline-flex items-center justify-center gap-2 text-sm border border-border rounded px-4 py-2.5 transition-colors hover:bg-muted"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                {b.doneEdit}
+              </button>
+              <button
+                type="button"
+                onClick={openWhatsApp}
+                className="flex-1 inline-flex items-center justify-center gap-2 text-sm bg-primary text-primary-foreground rounded px-4 py-2.5 transition-opacity hover:opacity-90"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {b.doneReopen}
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="mt-2 w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+            >
+              {b.doneClose}
+            </button>
+          </div>
+        ) : (
+        <>
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">{b.title}</DialogTitle>
           <DialogDescription className="font-body">{b.subtitle}</DialogDescription>
@@ -307,6 +376,8 @@ const BookingDialog = ({
           </button>
         </div>
         <p className="text-xs text-muted-foreground font-body">{b.note}</p>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
