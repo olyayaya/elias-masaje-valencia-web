@@ -17,6 +17,7 @@ import { whatsappUrl } from "@/config/contact";
 import { trackWhatsAppClick } from "@/lib/analytics";
 import { formatPrice } from "@/lib/format-price";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface BookingDialogProps {
   /** Service the visitor is booking */
@@ -150,10 +151,27 @@ const BookingDialog = ({
   };
 
   const openWhatsApp = async () => {
-    if (!validate(true)) {
+    const data = validate(true);
+    if (!data) {
       toast.error(b.errFixFields);
       return;
     }
+
+    // Save the lead so the request is never lost if the WhatsApp chat is abandoned.
+    void supabase.from("booking_leads").insert([{
+      name: data.name,
+      phone: data.phone,
+      preferred_time: data.preferred,
+      service,
+      duration: shownDuration || null,
+      price: shownPrice || null,
+      message: message.slice(0, 1000),
+      location,
+      page_path: typeof window !== "undefined" ? window.location.pathname + window.location.search : null,
+      locale: typeof document !== "undefined" ? document.documentElement.lang || null : null,
+    }]).then(({ error }) => {
+      if (error) console.warn("booking lead not saved", error.message);
+    });
     // Copy the exact preview first so it can be pasted if WhatsApp drops the text.
     try {
       await navigator.clipboard.writeText(message);
