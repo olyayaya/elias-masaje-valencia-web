@@ -76,6 +76,11 @@ export function useHead(props: HeadProps) {
     if (socialUrl) setMeta("property", "og:url", socialUrl);
     setMeta("property", "og:image", socialImage);
     setMeta("property", "og:image:secure_url", socialImage);
+    setMeta(
+      "property",
+      "og:image:type",
+      /\.png(\?|$)/i.test(socialImage) ? "image/png" : /\.webp(\?|$)/i.test(socialImage) ? "image/webp" : "image/jpeg",
+    );
     setMeta("property", "og:image:width", "1200");
     setMeta("property", "og:image:height", "630");
     setMeta("property", "og:image:alt", ogImageAlt || socialTitle || "Elias Masaje");
