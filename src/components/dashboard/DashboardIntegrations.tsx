@@ -317,12 +317,17 @@ const DashboardIntegrations = () => {
       }
     } catch (e) {
       const msg = describeError(e);
+      // Automatic rollback: restore the last known-good value so the UI never
+      // shows a value that isn't actually persisted.
+      const lastGood = original[key] ?? "";
+      setValues((prev) => ({ ...prev, [key]: lastGood }));
       logDiagnostic({
         action: "save",
         target: key,
         label: labelFor(key),
         ok: false,
         error: msg,
+        details: "Rolled back to last saved value",
         durationMs: Date.now() - started,
       });
       setTests((prev) => {
@@ -330,10 +335,17 @@ const DashboardIntegrations = () => {
         saveTestCache(next);
         return next;
       });
+      toast.error(
+        docLang === "en"
+          ? `Save failed — ${labelFor(key)} restored to last saved value`
+          : `Ошибка сохранения — «${labelFor(key)}» восстановлено до последнего сохранённого значения`,
+        { description: msg }
+      );
     } finally {
       setSavingKey(null);
     }
   };
+
 
   const runTest = async (key: string, override?: string, action: "test" | "refresh" = "test") => {
     const v = (override ?? values[key] ?? "").trim();
