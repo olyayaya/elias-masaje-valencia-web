@@ -62,6 +62,8 @@ const Footer = () => {
                   {sc.contact_address && <p>{sc.contact_address}</p>}
                   {sc.contact_weekdays && <p>{sc.contact_weekdays}</p>}
                   {sc.contact_saturday && <p>{sc.contact_saturday}</p>}
+                  {sc.contact_sunday && <p>{sc.contact_sunday}</p>}
+
                 </>
               )}
               <a href={`https://instagram.com/${(sc.contact_instagram || INSTAGRAM_HANDLE).replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
