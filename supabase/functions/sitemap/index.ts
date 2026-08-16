@@ -57,7 +57,7 @@ Deno.serve(async (_req) => {
 
     const xml = buildSitemapXml(posts ?? [], extraUrls);
 
-    return new Response(xml, { status: 200, headers: XML_HEADERS });
+    return new Response(xml, { status: 200, headers: xmlHeaders(xml) });
   } catch (err) {
     console.error("Sitemap error:", err);
     const message = err instanceof Error ? err.message : String(err);
