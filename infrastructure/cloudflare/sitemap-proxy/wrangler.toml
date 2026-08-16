@@ -1,8 +1,0 @@
-name = "eliasmas-sitemap-proxy"
-main = "worker.js"
-compatibility_date = "2026-01-01"
-
-# Only the canonical sitemap path is intercepted. Everything else stays on Lovable.
-[[routes]]
-pattern = "eliasmas.es/sitemap.xml*"
-zone_name = "eliasmas.es"
