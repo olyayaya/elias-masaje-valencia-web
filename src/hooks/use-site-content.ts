@@ -33,9 +33,11 @@ const langKey = (lang: Locale): "value_es" | "value_en" | "value_ru" =>
  * `loaded` is true once the initial fetch resolves (success or empty);
  * callers can use it to suppress flicker before content arrives.
  */
+export type SiteContentStatus = "loading" | "ready" | "error";
+
 export function useSiteContent() {
   const { locale } = useI18n();
-  const { data, isFetched } = useQuery({
+  const { data, isFetched, isPending, error, refetch } = useQuery({
     queryKey: queryKeys.siteContent,
     queryFn: async (): Promise<SiteContentRow[]> => {
       const { data, error } = await supabase
@@ -61,5 +63,15 @@ export function useSiteContent() {
     return map;
   }, [data, locale]);
 
-  return { content, loaded: isFetched };
+  const status: SiteContentStatus =
+    error && !data ? "error" : isPending || !data ? "loading" : "ready";
+
+  return {
+    content,
+    loaded: isFetched,
+    status,
+    error: (error as Error | null) ?? null,
+    retry: () => void refetch(),
+  };
 }
+

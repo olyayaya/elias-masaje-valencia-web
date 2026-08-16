@@ -15,7 +15,7 @@ import { BASE_URL } from "@/config/routes";
  * `hide_price`, and `hide_price_from`.
  */
 const StructuredDataPreview = () => {
-  const dbServices = useDbServices();
+  const dbServices = useDbServices().data;
   const [lang, setLang] = useState<Lang>("es");
   const [copied, setCopied] = useState(false);
 

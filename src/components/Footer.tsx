@@ -5,6 +5,7 @@ import { useSiteContent } from "@/hooks/use-site-content";
 import { useLocalePath } from "@/hooks/use-locale-path";
 import { INSTAGRAM_HANDLE } from "@/config/contact";
 import { openConsentSettings } from "@/lib/consent";
+import { TextLinesSkeleton } from "@/components/skeletons/ContentSkeletons";
 
 // Brand glyphs not included in lucide
 const GoogleIcon = ({ className }: { className?: string }) => (
@@ -24,7 +25,7 @@ const TripAdvisorIcon = ({ className }: { className?: string }) => (
 
 const Footer = () => {
   const { t } = useI18n();
-  const { content: sc } = useSiteContent();
+  const { content: sc, status: scStatus } = useSiteContent();
   const lp = useLocalePath();
 
   return (
@@ -54,9 +55,15 @@ const Footer = () => {
           <div>
             <h4 className="font-display text-lg mb-4 text-foreground">{t.footer.contact}</h4>
             <div className="flex flex-col gap-2 text-sm text-muted-foreground font-body">
-              <p>{sc.contact_address || t.contact.addressValue}</p>
-              <p>{sc.contact_weekdays || t.contact.weekdays}</p>
-              <p>{sc.contact_saturday || t.contact.saturday}</p>
+              {scStatus === "loading" ? (
+                <TextLinesSkeleton lines={3} testId="footer-contact-skeleton" />
+              ) : (
+                <>
+                  {sc.contact_address && <p>{sc.contact_address}</p>}
+                  {sc.contact_weekdays && <p>{sc.contact_weekdays}</p>}
+                  {sc.contact_saturday && <p>{sc.contact_saturday}</p>}
+                </>
+              )}
               <a href={`https://instagram.com/${(sc.contact_instagram || INSTAGRAM_HANDLE).replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
                 {sc.contact_instagram || INSTAGRAM_HANDLE}
               </a>

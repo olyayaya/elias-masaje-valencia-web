@@ -32,6 +32,9 @@ import BenefitIcon from "@/components/BenefitIcon";
 import { WHATSAPP_URL } from "@/config/contact";
 import { trackWhatsAppClick } from "@/lib/analytics";
 import BookingDialog from "@/components/BookingDialog";
+import ContentError from "@/components/ContentError";
+import { ServiceRowSkeletonList, RatingLineSkeleton, TestimonialCardSkeleton, FaqSkeleton } from "@/components/skeletons/ContentSkeletons";
+
 
 const OrganicHome = () => {
   const { t, locale } = useI18n();
@@ -45,11 +48,11 @@ const OrganicHome = () => {
   const testimonialsTitle = useFadeIn(0);
   const ctaBlock = useFadeIn(0);
 
-  const dbServices = useDbServices();
-  const dbFaqs = useDbFaqs();
-  const dbTestimonials = useDbTestimonials();
-  const { content: sc } = useSiteContent();
-  const customHomeCarousel = usePageImages("home_carousel");
+  const servicesState = useDbServices();
+  const faqState = useDbFaqs();
+  const testimonialsState = useDbTestimonials();
+  const { content: sc, status: scStatus } = useSiteContent();
+  const { images: customHomeCarousel, loaded: homeCarouselLoaded } = usePageImages("home_carousel");
   const defaultHomeCarousel = [
     { src: massageWrist, alt: "Wrist massage" },
     { src: massageBack, alt: "Back massage" },
@@ -61,7 +64,7 @@ const OrganicHome = () => {
     { src: massageArm, alt: "Arm massage" },
     { src: massageFoot, alt: "Foot massage" },
   ];
-  const homeCarouselImages = customHomeCarousel.length > 0 ? customHomeCarousel : defaultHomeCarousel;
+  const homeCarouselImages = homeCarouselLoaded && customHomeCarousel.length > 0 ? customHomeCarousel : defaultHomeCarousel;
 
   /** Resolve a CSS color; returns "transparent" in dark-gradient mode for seamless bg */
   const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
@@ -70,7 +73,7 @@ const OrganicHome = () => {
   
 
   const services = useMemo(() =>
-    dbServices?.map(s => ({
+    (servicesState.data ?? []).map(s => ({
       title: resolveField(s, "title", locale),
       description: resolveField(s, "description", locale),
       duration: resolveField(s, "duration", locale),
@@ -78,21 +81,22 @@ const OrganicHome = () => {
       hidePrice: s.hide_price,
       hideDuration: s.hide_duration,
       hidePriceFrom: s.hide_price_from,
-    })) ?? t.services.items.map(s => ({ ...s, hidePrice: false, hideDuration: false, hidePriceFrom: false })),
-    [dbServices, t.services.items, locale]
+    })),
+    [servicesState.data, locale]
   );
 
   const faqItems = useMemo(() =>
-    dbFaqs?.map(f => ({ question: resolveField(f, "question", locale), answer: resolveField(f, "answer", locale) })) ?? t.faq.items,
-    [dbFaqs, t.faq.items, locale]
+    (faqState.data ?? []).map(f => ({ question: resolveField(f, "question", locale), answer: resolveField(f, "answer", locale) })),
+    [faqState.data, locale]
   );
 
   const testimonialItems = useMemo(() =>
-    dbTestimonials?.map(tt => ({ quote: resolveField(tt, "quote", locale), name: tt.name, source: tt.source })) ?? t.testimonials.items,
-    [dbTestimonials, t.testimonials.items, locale]
+    (testimonialsState.data ?? []).map(tt => ({ quote: resolveField(tt, "quote", locale), name: tt.name, source: tt.source })),
+    [testimonialsState.data, locale]
   );
 
   const previewServices = services.slice(0, 3);
+
 
   return (
     <div>
@@ -189,7 +193,11 @@ const OrganicHome = () => {
 
           {/* Service list — editorial layout */}
           <div className="space-y-0 divide-y divide-border mb-16">
-            {previewServices.map((s, i) => {
+            {servicesState.status === "loading" && <ServiceRowSkeletonList count={3} />}
+            {servicesState.status === "error" && (
+              <ContentError onRetry={servicesState.retry} showWhatsApp whatsappLocation="home_services_error" />
+            )}
+            {servicesState.status === "ready" && previewServices.map((s, i) => {
               const ServiceRow = () => {
                 const anim = useFadeIn(i * 0.1);
                 return (
@@ -199,19 +207,19 @@ const OrganicHome = () => {
                       <p className="text-sm text-muted-foreground font-body leading-relaxed max-w-lg">{s.description}</p>
                     </div>
                     <div className="flex items-center gap-6 shrink-0">
-                      {!(s as any).hideDuration && s.duration && (
+                      {!s.hideDuration && s.duration && (
                         <span className="text-sm font-body text-muted-foreground">{s.duration}</span>
                       )}
-                      {!(s as any).hidePrice && s.price && (
-                        <span className="text-sm font-body font-medium">{formatPrice(s.price, t, { hidePrefix: (s as any).hidePriceFrom })}</span>
+                      {!s.hidePrice && s.price && (
+                        <span className="text-sm font-body font-medium">{formatPrice(s.price, t, { hidePrefix: s.hidePriceFrom })}</span>
                       )}
                       <BookingDialog
                         service={s.title}
                         duration={s.duration}
                         price={s.price}
-                        hidePrice={(s as any).hidePrice}
-                        hideDuration={(s as any).hideDuration}
-                        hidePriceFrom={(s as any).hidePriceFrom}
+                        hidePrice={s.hidePrice}
+                        hideDuration={s.hideDuration}
+                        hidePriceFrom={s.hidePriceFrom}
                         location="home_service_card"
                         triggerLabel={t.services.bookBtn}
                         triggerClassName="text-sm font-body border border-foreground/20 text-foreground px-5 py-2 rounded-full transition-all hover:bg-foreground hover:text-background"
@@ -223,6 +231,7 @@ const OrganicHome = () => {
               return <ServiceRow key={i} />;
             })}
           </div>
+
 
           <div className="text-center mb-16">
             <Link to="/servicios" className="text-sm font-body text-primary-strong hover:opacity-80 transition-opacity">
@@ -299,7 +308,14 @@ const OrganicHome = () => {
         <div className="max-w-5xl mx-auto">
           <div ref={testimonialsTitle.ref} style={testimonialsTitle.style} className="text-center mb-4">
             <h2 className="font-display text-3xl md:text-4xl mb-2">{t.testimonials.title}</h2>
-            <p className="text-sm text-muted-foreground font-body mb-1">{sc.google_rating || "5.0"} ★ — {sc.google_review_count || "66"}+ Google & TripAdvisor reviews</p>
+            <div className="mb-1 min-h-[20px] flex items-center justify-center">
+              {scStatus === "loading" ? (
+                <RatingLineSkeleton />
+              ) : sc.google_rating && sc.google_review_count ? (
+                <p className="text-sm text-muted-foreground font-body">{sc.google_rating} ★ — {sc.google_review_count}+ Google &amp; TripAdvisor reviews</p>
+              ) : null}
+            </div>
+
             <div className="w-12 h-px bg-primary mx-auto mt-3" />
           </div>
         </div>
@@ -410,7 +426,25 @@ const OrganicHome = () => {
               </div>
             );
           };
+          if (testimonialsState.status === "loading") {
+            return (
+              <div className="mt-10 flex gap-5 overflow-hidden px-6" aria-hidden="true">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <TestimonialCardSkeleton key={i} />
+                ))}
+              </div>
+            );
+          }
+          if (testimonialsState.status === "error") {
+            return (
+              <div className="max-w-5xl mx-auto px-6">
+                <ContentError onRetry={testimonialsState.retry} />
+              </div>
+            );
+          }
+          if (!testimonialItems.length) return null;
           return <TestimonialsMarquee />;
+
         })()}
       </section>
 
@@ -496,7 +530,10 @@ const OrganicHome = () => {
                   }}
                 >
                   <h2 className="font-display text-3xl md:text-4xl text-center mb-12">{t.faq.title}</h2>
-                  <FaqAccordion items={faqItems} />
+                  {faqState.status === "loading" && <FaqSkeleton count={4} />}
+                  {faqState.status === "error" && <ContentError onRetry={faqState.retry} />}
+                  {faqState.status === "ready" && faqItems.length > 0 && <FaqAccordion items={faqItems} />}
+
                 </div>
               );
             };

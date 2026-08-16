@@ -11,17 +11,19 @@ import { useMemo } from "react";
 const Index = () => {
   const { locale, t } = useI18n();
   const { content: sc } = useSiteContent();
-  const dbFaqs = useDbFaqs();
+  const faqState = useDbFaqs();
 
-  // Mirrors the FAQ list rendered on the homepage (DB entries, i18n fallback).
+  // Mirrors the FAQ list rendered on the homepage. Only emitted once the DB
+  // rows have loaded — never from static fallbacks.
   const faqItems = useMemo(
     () =>
-      dbFaqs?.map((f) => ({
+      (faqState.data ?? []).map((f) => ({
         question: resolveField(f, "question", locale),
         answer: resolveField(f, "answer", locale),
-      })) ?? t.faq.items,
-    [dbFaqs, t.faq.items, locale],
+      })),
+    [faqState.data, locale],
   );
+
 
   const faqPage = faqItems.length
     ? {

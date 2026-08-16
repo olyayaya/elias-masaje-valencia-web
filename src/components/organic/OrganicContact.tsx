@@ -4,6 +4,7 @@ import MapBlock, { MapPickerOverlay } from "@/components/MapBlock";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
+import { TextLinesSkeleton } from "@/components/skeletons/ContentSkeletons";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -35,7 +36,7 @@ const ContactItem = ({ icon: Icon, title, children, index }: {
 
 const OrganicContact = () => {
   const { t, locale } = useI18n();
-  const { content: sc } = useSiteContent();
+  const { content: sc, status: scStatus } = useSiteContent();
   const { mode } = useTheme();
   const isDG = mode === "dark-gradient";
   const [showMapPicker, setShowMapPicker] = useState(false);
@@ -67,19 +68,29 @@ const OrganicContact = () => {
             {/* Details */}
             <div className="md:col-span-5 space-y-8">
               <ContactItem icon={MapPin} title={t.contact.address} index={0}>
-                <button
-                  onClick={() => setShowMapPicker(true)}
-                  className="text-sm text-muted-foreground font-body text-left hover:text-primary-strong transition-colors border-b border-transparent hover:border-primary/30 cursor-pointer"
-                >
-                  {sc.contact_address || t.contact.addressValue}
-                </button>
+                {scStatus === "loading" ? (
+                  <TextLinesSkeleton lines={1} testId="contact-address-skeleton" />
+                ) : sc.contact_address ? (
+                  <button
+                    onClick={() => setShowMapPicker(true)}
+                    className="text-sm text-muted-foreground font-body text-left hover:text-primary-strong transition-colors border-b border-transparent hover:border-primary/30 cursor-pointer"
+                  >
+                    {sc.contact_address}
+                  </button>
+                ) : null}
               </ContactItem>
 
               <ContactItem icon={Clock} title={t.contact.hours} index={1}>
-                <div className="text-sm text-muted-foreground font-body space-y-1">
-                  <p>{sc.contact_weekdays || t.contact.weekdays}</p>
-                  <p>{sc.contact_saturday || t.contact.saturday}</p>
-                  <p>{sc.contact_sunday || t.contact.sunday}</p>
+                <div className="text-sm text-muted-foreground font-body space-y-1 min-h-[66px]">
+                  {scStatus === "loading" ? (
+                    <TextLinesSkeleton lines={3} testId="contact-hours-skeleton" />
+                  ) : (
+                    <>
+                      {sc.contact_weekdays && <p>{sc.contact_weekdays}</p>}
+                      {sc.contact_saturday && <p>{sc.contact_saturday}</p>}
+                      {sc.contact_sunday && <p>{sc.contact_sunday}</p>}
+                    </>
+                  )}
                 </div>
               </ContactItem>
 

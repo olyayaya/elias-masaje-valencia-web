@@ -15,11 +15,11 @@ interface PageImageRow {
 
 /**
  * Fetches custom carousel images for a given collection (e.g. "home_carousel").
- * Returns the custom list (possibly empty) — callers should fall back to their
- * built-in defaults when `length === 0`.
+ * `loaded` is false until the request resolves so callers can keep their
+ * built-in defaults instead of swapping images mid-load.
  */
-export const usePageImages = (collectionKey: string): PageImage[] => {
-  const { data } = useQuery({
+export const usePageImages = (collectionKey: string): { images: PageImage[]; loaded: boolean } => {
+  const { data, isFetched } = useQuery({
     queryKey: queryKeys.pageImages(collectionKey),
     queryFn: async (): Promise<PageImage[]> => {
       const { data, error } = await supabase
@@ -34,5 +34,6 @@ export const usePageImages = (collectionKey: string): PageImage[] => {
       }));
     },
   });
-  return data ?? [];
+  return { images: data ?? [], loaded: isFetched };
 };
+

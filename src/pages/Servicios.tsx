@@ -7,7 +7,7 @@ import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
 const ServiciosPage = () => {
   const { locale } = useI18n();
-  const dbServices = useDbServices();
+  const dbServices = useDbServices().data;
 
   const localBusiness = {
     "@type": "HealthAndBeautyBusiness",
