@@ -1,11 +1,19 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { buildSitemapXml, type ExtraUrl } from "./build-sitemap.ts";
 
-const XML_HEADERS = {
-  "Content-Type": "application/xml; charset=utf-8",
-  "Cache-Control": "public, max-age=60, s-maxage=60",
-  "Access-Control-Allow-Origin": "*",
-};
+// NOTE: the Supabase edge gateway rewrites the response Content-Type to
+// text/plain on GET requests (verified with both an object literal and an
+// explicit Headers instance, with and without charset). The function still
+// declares the correct type; the canonical public URL is guaranteed to be
+// application/xml by the Cloudflare worker in infrastructure/cloudflare.
+function xmlHeaders(): Headers {
+  const headers = new Headers();
+  headers.set("content-type", "application/xml; charset=utf-8");
+  headers.set("cache-control", "public, max-age=60, s-maxage=60");
+  headers.set("access-control-allow-origin", "*");
+  headers.set("x-content-type-options", "nosniff");
+  return headers;
+}
 
 Deno.serve(async (_req) => {
   try {
@@ -18,7 +26,7 @@ Deno.serve(async (_req) => {
 
     const { data: posts, error } = await supabase
       .from("blog_posts")
-      .select("slug, updated_at, published_at")
+      .select("slug, updated_at, published_at, status, hidden")
       .eq("status", "published")
       .eq("hidden", false)
       .not("slug", "is", null)
@@ -51,7 +59,7 @@ Deno.serve(async (_req) => {
 
     const xml = buildSitemapXml(posts ?? [], extraUrls);
 
-    return new Response(xml, { status: 200, headers: XML_HEADERS });
+    return new Response(xml, { status: 200, headers: xmlHeaders() });
   } catch (err) {
     console.error("Sitemap error:", err);
     const message = err instanceof Error ? err.message : String(err);

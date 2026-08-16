@@ -63,12 +63,12 @@ function toW3CDate(value: string | null | undefined): string | undefined {
  */
 export function isIndexablePost(post: BlogPostRow, now: Date = new Date()): boolean {
   if (!post.slug || !post.slug.trim()) return false;
-  if (post.status != null && post.status !== "published") return false;
-  if (post.hidden === true) return false;
-  if (post.published_at) {
-    const published = new Date(post.published_at);
-    if (!Number.isNaN(published.getTime()) && published.getTime() > now.getTime()) return false;
-  }
+  if (post.status !== "published") return false;
+  if (post.hidden !== false) return false;
+  if (!post.published_at) return false;
+  const published = new Date(post.published_at);
+  if (Number.isNaN(published.getTime())) return false;
+  if (published.getTime() > now.getTime()) return false;
   return true;
 }
 

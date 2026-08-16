@@ -28,11 +28,11 @@ export default {
       redirect: "follow",
     });
 
+    // Always serve XML, never mirror an upstream content type such as
+    // text/plain (the Supabase gateway has been observed rewriting it).
     const headers = new Headers();
-    headers.set(
-      "Content-Type",
-      upstream.headers.get("Content-Type") || "application/xml; charset=utf-8",
-    );
+    headers.set("Content-Type", "application/xml; charset=utf-8");
+    headers.set("X-Content-Type-Options", "nosniff");
     headers.set(
       "Cache-Control",
       upstream.ok ? `public, max-age=${MAX_AGE_SECONDS}, s-maxage=${MAX_AGE_SECONDS}` : "no-store",
