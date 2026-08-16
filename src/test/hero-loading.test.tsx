@@ -43,17 +43,15 @@ vi.mock("@/integrations/supabase/client", () => {
 
 const HERO_ROWS = [
   { content_key: "hero_headline", value_es: "Tu cuerpo merece atención experta", value_en: "Your body deserves expert care", value_ru: "Ваше тело заслуживает заботы" },
-  { content_key: "hero_subheadline", value_es: "Masaje profesional en el corazón de Valencia", value_en: "Professional massage in the heart of Valencia", value_ru: "Профессиональный массаж в центре Валенсии" },
+  { content_key: "hero_subheadline", value_es: "Masaje profesional en el corazón de Valencia", value_en: "Professional massage in the heart of Valencia", value_ru: "Профессиональный массаж в сердце Валенсии" },
   { content_key: "hero_cta", value_es: "Reservar cita", value_en: "Book an appointment", value_ru: "Записаться" },
 ];
 
 const STALE = [
   "Masaje profesional\nen el centro de Valencia",
   "Un espacio para bajar el ritmo, liberar tensión y reconectar con tu cuerpo.",
-  "Reservar por WhatsApp",
   "Professional massage\nin the heart of Valencia",
   "A space to slow down, release tension, and reconnect with your body.",
-  "Book via WhatsApp",
   "Профессиональный массаж\nв центре Валенсии",
 ];
 
@@ -96,6 +94,8 @@ describe("Hero — no stale content flash", () => {
     renderHome(path);
     expect(await screen.findByTestId("hero-skeleton")).toBeInTheDocument();
     noStaleCopy();
+    // No hero copy at all is committed to the DOM while loading.
+    expect(document.querySelector("section h1")).toBeNull();
   });
 
   it("renders the database values once site_content resolves", async () => {
