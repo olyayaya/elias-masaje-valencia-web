@@ -3,7 +3,6 @@ import { Copy, Check } from "lucide-react";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { Lang } from "./LanguageTabs";
 import { useDbServices, resolveField } from "@/hooks/use-db-content";
-import { BASE_URL } from "@/config/routes";
 import { buildLocalBusiness } from "@/lib/local-business";
 
 /**
