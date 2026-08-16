@@ -1,6 +1,11 @@
 import { Translations } from "./types";
 
 export const en: Translations = {
+  common: {
+    loadError: "We couldn't load this information.",
+    retry: "Retry",
+    loading: "Loading…",
+  },
   nav: {
     home: "Home",
     services: "Services",
@@ -70,14 +75,6 @@ export const en: Translations = {
     bookBtn: "Book",
     sectionLabel: "Treatments",
     priceFrom: "from",
-    items: [
-      { title: "Deep tissue massage", description: "Deep work on knots and chronic muscle tension. Ideal for back, neck, and shoulder pain. Combines deep pressure techniques and stretching.", duration: "60 min", price: "€50" },
-      { title: "Relaxation massage", description: "Gentle pressure and slow rhythm to release accumulated stress and improve rest quality. Perfect for disconnecting from daily life.", duration: "60 min", price: "€45" },
-      { title: "Sports massage", description: "Muscle preparation and recovery for athletes. Zone-specific work to prevent injuries and improve performance.", duration: "45 min", price: "€40" },
-      { title: "Back & neck massage", description: "Focused session on the areas where tension accumulates the most. Ideal if you spend long hours sitting or at a computer.", duration: "30 min", price: "€30" },
-      { title: "Cupping massage", description: "Decompression technique that improves circulation, reduces inflammation, and relieves deep muscle pain.", duration: "45 min", price: "€45" },
-      { title: "Combined session", description: "Personalised combination of techniques based on your needs. Includes a prior assessment to design a tailored treatment.", duration: "90 min", price: "€70" },
-    ],
   },
   about: {
     title: "Professional massage therapist in Valencia — About me",
@@ -100,29 +97,10 @@ export const en: Translations = {
   },
   testimonials: {
     title: "What my clients say",
-    items: [
-      { quote: "Cleanliness, respect, professionalism. You can completely let go and trust his expertise.", name: "Julio Vicente G.", source: "TripAdvisor" },
-      { quote: "Very calm and relaxing atmosphere, very professional and pleasant. Everything spotlessly clean. Relieves any kind of pain and tension.", name: "Karlos K.", source: "TripAdvisor" },
-      { quote: "I came to Elías with plantar fasciitis and muscle contractures. After an hour and a half of treatment, I walked out pain-free.", name: "Paolo R.", source: "TripAdvisor" },
-      { quote: "Very professional. The atmosphere is lovely and the music very relaxing. Located in the center of Valencia.", name: "Álvaro", source: "TripAdvisor" },
-      { quote: "I came with a lot of muscle pain and stress. The experience was a 10 — I fell asleep during the session, that's how good it was.", name: "Raúl I.", source: "TripAdvisor" },
-      { quote: "The service was very professional, and the atmosphere was relaxing and welcoming. I'd rate it a solid 10/10.", name: "Luis T.", source: "TripAdvisor" },
-      { quote: "Elías is an incredible massage therapist. I went for severe neck pain. He instantly found my problem areas and worked out all the knots.", name: "Erich K.", source: "TripAdvisor" },
-      { quote: "An experience worth repeating. The space, the care, his professionalism — it goes beyond a massage.", name: "Goyo A.", source: "TripAdvisor" },
-      { quote: "Great professional! Variety of treatments for every occasion. Excellent human and professional care.", name: "Gtell", source: "TripAdvisor" },
-      { quote: "The service and attention to detail were excellent.", name: "Vasilii M.", source: "Google" },
-      { quote: "Very professional, well mannered and very well located.", name: "Peter C.", source: "Google" },
-    ],
   },
   location: { title: "Location" },
   faq: {
     title: "Frequently asked questions",
-    items: [
-      { question: "Do I need to bring anything?", answer: "No, everything you need is provided. Just come in comfortable clothes." },
-      { question: "How long is a session?", answer: "Sessions range from 45 to 90 minutes depending on the treatment chosen." },
-      { question: "Can I cancel or reschedule?", answer: "Yes, you can cancel or change your appointment with at least 24 hours' notice at no cost." },
-      { question: "What payment methods do you accept?", answer: "We accept cash, card, and Bizum." },
-    ],
   },
   giftCard: {
     title: "Gift cards",
@@ -138,11 +116,7 @@ export const en: Translations = {
     title: "Contact",
     sectionLabel: "Get in touch",
     address: "Address",
-    addressValue: "Calle San Vicente Mártir, 24, 46002 Valencia",
     hours: "Opening hours",
-    weekdays: "Monday – Friday: 9:00 – 20:00",
-    saturday: "Saturday: 10:00 – 14:00",
-    sunday: "Sunday: Closed",
     whatsapp: "WhatsApp",
     sendMessage: "Send message",
     instagram: "Instagram",

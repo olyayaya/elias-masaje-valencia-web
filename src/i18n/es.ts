@@ -1,6 +1,11 @@
 import { Translations } from "./types";
 
 export const es: Translations = {
+  common: {
+    loadError: "No pudimos cargar esta información.",
+    retry: "Reintentar",
+    loading: "Cargando…",
+  },
   nav: {
     home: "Inicio",
     services: "Servicios",
@@ -70,14 +75,6 @@ export const es: Translations = {
     bookBtn: "Reservar",
     sectionLabel: "Tratamientos",
     priceFrom: "desde",
-    items: [
-      { title: "Masaje descontracturante", description: "Trabajo profundo sobre nudos y tensiones musculares crónicas. Ideal para dolores de espalda, cuello y hombros. Se combinan técnicas de presión profunda y estiramientos.", duration: "60 min", price: "50 €" },
-      { title: "Masaje relajante", description: "Presión suave y ritmo lento para liberar estrés acumulado y mejorar la calidad del descanso. Perfecto para desconectar del día a día.", duration: "60 min", price: "45 €" },
-      { title: "Masaje deportivo", description: "Preparación y recuperación muscular para deportistas. Trabajo específico por zonas para prevenir lesiones y mejorar el rendimiento.", duration: "45 min", price: "40 €" },
-      { title: "Masaje de espalda y cuello", description: "Sesión focalizada en las zonas donde más se acumula la tensión. Ideal si trabajas muchas horas sentado o frente al ordenador.", duration: "30 min", price: "30 €" },
-      { title: "Masaje con ventosas", description: "Técnica de descompresión que mejora la circulación, reduce inflamación y alivia el dolor muscular profundo.", duration: "45 min", price: "45 €" },
-      { title: "Sesión combinada", description: "Combinación personalizada de técnicas según tus necesidades. Evaluación previa incluida para diseñar un tratamiento a medida.", duration: "90 min", price: "70 €" },
-    ],
   },
   about: {
     title: "Masajista profesional en Valencia — Sobre mí",
@@ -100,29 +97,10 @@ export const es: Translations = {
   },
   testimonials: {
     title: "Lo que dicen mis clientes",
-    items: [
-      { quote: "Limpieza, respeto, profesionalidad. Puedes abandonarte a su buen hacer.", name: "Julio Vicente G.", source: "TripAdvisor" },
-      { quote: "Ambiente muy tranquilo y relajante, muy profesional y muy agradable. Todo muy limpio y aseado. Te alivia cualquier tipo de dolor y contractura. Recomendable MIL×MIL.", name: "Karlos K.", source: "TripAdvisor" },
-      { quote: "He acudido a Elías por un problema de fascitis plantar y contracturas. Después de una hora y media de tratamiento, he salido caminando sin dolores.", name: "Paolo R.", source: "TripAdvisor" },
-      { quote: "Muy profesional. El ambiente muy agradable y la música muy relajante. Ubicado en el centro de Valencia, a pocas calles de la plaza del Ayuntamiento.", name: "Álvaro", source: "TripAdvisor" },
-      { quote: "Acudí a Elías con mucho malestar en los músculos y bastante estrés. La experiencia de 10 — me quedé dormido en la sesión del bien que me hizo. Sin dudas volveré.", name: "Raúl I.", source: "TripAdvisor" },
-      { quote: "El servicio era muy profesional, y el ambiente era relajante y acogedor. Lo calificaría con un sólido 10/10 y lo recomiendo encarecidamente.", name: "Luis T.", source: "TripAdvisor" },
-      { quote: "Elías es un masajista increíble. Fui a él por un fuerte dolor de cuello. Al instante encontró mis áreas problemáticas y deshizo todos los nudos. Salí sintiéndome increíblemente relajado.", name: "Erich K.", source: "TripAdvisor" },
-      { quote: "Experiencia para repetir más de una vez. El espacio, el trato, su profesionalidad — va más allá de un masaje. Elías, una persona de diez.", name: "Goyo A.", source: "TripAdvisor" },
-      { quote: "Gran profesional. Variedad de tratamientos adecuados para cada ocasión. Excelente trato humano y profesional. Muy recomendable.", name: "Gtell", source: "TripAdvisor" },
-      { quote: "The service and attention to detail were excellent.", name: "Vasilii M.", source: "Google" },
-      { quote: "Very professional, well mannered and very well located.", name: "Peter C.", source: "Google" },
-    ],
   },
   location: { title: "Ubicación" },
   faq: {
     title: "Preguntas frecuentes",
-    items: [
-      { question: "¿Necesito traer algo a la sesión?", answer: "No, todo el material necesario está incluido. Solo necesitas venir con ropa cómoda." },
-      { question: "¿Cuánto dura una sesión?", answer: "Las sesiones varían entre 45 y 90 minutos según el tratamiento elegido." },
-      { question: "¿Se puede cancelar o reprogramar?", answer: "Sí, puedes cancelar o cambiar tu cita con al menos 24 horas de antelación sin coste." },
-      { question: "¿Qué métodos de pago aceptáis?", answer: "Aceptamos efectivo, tarjeta y Bizum." },
-    ],
   },
   giftCard: {
     title: "Tarjetas regalo",
@@ -138,11 +116,7 @@ export const es: Translations = {
     title: "Contacto",
     sectionLabel: "Contactar",
     address: "Dirección",
-    addressValue: "Calle San Vicente Mártir, 24, 46002 Valencia",
     hours: "Horario",
-    weekdays: "Lunes – Viernes: 9:00 – 20:00",
-    saturday: "Sábado: 10:00 – 14:00",
-    sunday: "Domingo: Cerrado",
     whatsapp: "WhatsApp",
     sendMessage: "Enviar mensaje",
     instagram: "Instagram",
