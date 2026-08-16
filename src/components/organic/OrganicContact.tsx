@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin, Clock, MessageCircle, Instagram } from "lucide-react";
+import { MapPin, Clock, MessageCircle } from "lucide-react";
 import MapBlock, { MapPickerOverlay } from "@/components/MapBlock";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
@@ -109,19 +109,9 @@ const OrganicContact = () => {
                 </a>
               </ContactItem>
 
-              <ContactItem icon={Instagram} title={t.contact.instagram} index={3}>
-                <a
-                  href={`https://instagram.com/${(sc.contact_instagram || INSTAGRAM_HANDLE).replace("@", "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary-strong font-body hover:opacity-80 transition-opacity border-b border-primary/30 pb-0.5"
-                >
-                  {sc.contact_instagram || INSTAGRAM_HANDLE}
-                </a>
-              </ContactItem>
 
               {(sc.integration_tripadvisor_url || sc.contact_tripadvisor_url) && (
-                <ContactItem icon={TripAdvisorIcon as any} title="TripAdvisor" index={4}>
+                <ContactItem icon={TripAdvisorIcon as any} title="TripAdvisor" index={3}>
                   <a
                     href={sc.integration_tripadvisor_url || sc.contact_tripadvisor_url}
                     target="_blank"

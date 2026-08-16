@@ -5,6 +5,7 @@ import { Menu, X } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { useLocalePath } from "@/hooks/use-locale-path";
 import LanguageSwitcher from "./LanguageSwitcher";
+import ThemeSwitcher from "./ThemeSwitcher";
 import { WHATSAPP_URL } from "@/config/contact";
 import { trackWhatsAppClick } from "@/lib/analytics";
 
@@ -59,7 +60,10 @@ const Header = () => {
                 {item.label}
               </Link>
             ))}
-            <LanguageSwitcher />
+            <div className="flex items-center gap-3">
+              <LanguageSwitcher />
+              <ThemeSwitcher />
+            </div>
             <a
               href={WHATSAPP_URL}
               target="_blank"
@@ -71,8 +75,9 @@ const Header = () => {
             </a>
           </nav>
 
-          <div className="flex items-center gap-4 md:hidden">
+          <div className="flex items-center gap-3 md:hidden">
             <LanguageSwitcher />
+            <ThemeSwitcher />
             <button
               onClick={() => setOpen(!open)}
               className="text-foreground"
