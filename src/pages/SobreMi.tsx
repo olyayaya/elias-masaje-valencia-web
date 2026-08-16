@@ -16,10 +16,10 @@ const SobreMiPage = () => {
     : "Professional massage therapist in Valencia — About me | Elias Masaje";
 
   const fallbackDesc = locale === "es"
-    ? "Descubre a Elias, masajista profesional en Valencia con más de 8 años de experiencia en masaje descontracturante, relajante y deportivo. Reserva tu cita por WhatsApp en el centro de Valencia."
+    ? "Descubre a Elias, masajista profesional en Valencia especializado en masaje antiestrés, relajante, tejido profundo, piedras calientes y a 4 manos. Reserva tu cita por WhatsApp en el centro de Valencia."
     : locale === "ru"
-    ? "Познакомьтесь с Элиасом — профессиональным массажистом в Валенсии с более чем 8-летним опытом в лечебном, расслабляющем и спортивном массаже. Запишитесь через WhatsApp в центре Валенсии."
-    : "Meet Elias, a professional massage therapist in Valencia with over 8 years of experience in deep tissue, relaxation and sports massage. Book your session via WhatsApp in central Valencia.";
+    ? "Познакомьтесь с Элиасом — профессиональным массажистом в Валенсии с более чем 8-летним опытом в антистресс, расслабляющем, глубокотканевом, каменном и четырёхручном массаже. Запишитесь через WhatsApp в центре Валенсии."
+    : "Meet Elias, a professional massage therapist in Valencia with over 8 years of experience in anti-stress, relaxation, deep tissue, hot stone and four-hand massage. Book your session via WhatsApp in central Valencia.";
 
   const title = sc.about_seo_title?.trim() || fallbackTitle;
   const desc = sc.about_seo_description?.trim() || fallbackDesc;
