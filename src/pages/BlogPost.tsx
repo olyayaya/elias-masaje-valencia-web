@@ -63,7 +63,7 @@ const BlogPost = () => {
 
       // Resolve strictly on the active locale column, then fall back to the
       // untouched legacy slug (and finally the id) so old links keep working.
-      let { data } = await base().eq(slugField(locale), slug).maybeSingle();
+      let { data } = await base().eq(slugField(locale) as "slug", slug).maybeSingle();
 
       if (!data) {
         const res = await base().eq("slug", slug).maybeSingle();
