@@ -5,6 +5,7 @@ import { useSiteContent } from "@/hooks/use-site-content";
 import { useLocalePath } from "@/hooks/use-locale-path";
 import { INSTAGRAM_HANDLE } from "@/config/contact";
 import { openConsentSettings } from "@/lib/consent";
+import { TextLinesSkeleton } from "@/components/skeletons/ContentSkeletons";
 
 // Brand glyphs not included in lucide
 const GoogleIcon = ({ className }: { className?: string }) => (
