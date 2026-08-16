@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import {
@@ -9,7 +9,6 @@ import {
   type BlogPostRow,
 } from "../../supabase/functions/sitemap/build-sitemap";
 import * as APP_ROUTES from "@/config/routes";
-import worker, { UPSTREAM, PROXIED_PATH } from "../../infrastructure/cloudflare/sitemap-proxy/worker.js";
 
 const NOW = new Date("2026-08-16T12:00:00.000Z");
 
@@ -117,64 +116,6 @@ describe("route map mirror", () => {
   });
 });
 
-describe("cloudflare sitemap worker", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it("proxies /sitemap.xml to the edge function and preserves status/content-type", async () => {
-    const fetchMock = vi.fn(async (_input: unknown) =>
-      new Response("<?xml version=\"1.0\"?><urlset/>", {
-        status: 200,
-        // Upstream gateway rewrites the type — the worker must not mirror it.
-        headers: { "Content-Type": "text/plain" },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const res = await worker.fetch(new Request("https://eliasmas.es/sitemap.xml"));
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toBe(UPSTREAM);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toBe("application/xml; charset=utf-8");
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60, s-maxage=60");
-  });
-
-  it("forces XML content type and no-store when upstream fails", async () => {
-    const fetchMock = vi.fn(async (_input: unknown) =>
-      new Response("boom", { status: 502, headers: { "Content-Type": "text/html" } }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const res = await worker.fetch(new Request("https://eliasmas.es/sitemap.xml"));
-
-    expect(res.status).toBe(502);
-    expect(res.headers.get("Content-Type")).toBe("application/xml; charset=utf-8");
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-  });
-
-  it("does not intercept other paths", async () => {
-    const fetchMock = vi.fn(async (_input: unknown) => new Response("ok"));
-    vi.stubGlobal("fetch", fetchMock);
-
-    await worker.fetch(new Request("https://eliasmas.es/servicios"));
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).not.toBe(UPSTREAM);
-  });
-
-  it("contains no URL list of its own", () => {
-    const src = readFileSync(
-      resolve(__dirname, "../../infrastructure/cloudflare/sitemap-proxy/worker.js"),
-      "utf8",
-    );
-    expect(PROXIED_PATH).toBe("/sitemap.xml");
-    expect(src).not.toContain("eliasmas.es/servicios");
-    // The only URL in executable code is the upstream edge function.
-    const code = src.split("\n").filter((l) => !l.trim().startsWith("*") && !l.trim().startsWith("//")).join("\n");
-    expect(code.match(/https:\/\/[^\s"']+/g) ?? []).toEqual([UPSTREAM]);
-  });
-});
-
 describe("single sitemap mechanism", () => {
   it("has no static generator or static sitemap file", () => {
     expect(existsSync(resolve(__dirname, "../../scripts/generate-sitemap.ts"))).toBe(false);
@@ -188,9 +129,15 @@ describe("single sitemap mechanism", () => {
     expect(JSON.stringify(pkg.scripts)).not.toContain("generate-sitemap");
   });
 
-  it("robots.txt declares exactly one canonical sitemap", () => {
+  it("robots.txt declares exactly one direct Supabase sitemap", () => {
     const robots = readFileSync(resolve(__dirname, "../../public/robots.txt"), "utf8");
     const lines = robots.split("\n").filter((l) => l.trim().toLowerCase().startsWith("sitemap:"));
-    expect(lines.map((l) => l.trim())).toEqual(["Sitemap: https://eliasmas.es/sitemap.xml"]);
+    expect(lines.map((l) => l.trim())).toEqual([
+      "Sitemap: https://ukjljyrejfkyurebksqz.supabase.co/functions/v1/sitemap",
+    ]);
+  });
+
+  it("has no cloudflare sitemap proxy", () => {
+    expect(existsSync(resolve(__dirname, "../../infrastructure/cloudflare"))).toBe(false);
   });
 });
