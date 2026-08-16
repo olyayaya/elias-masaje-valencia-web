@@ -71,20 +71,32 @@ export const resolveField = (record: object, base: string, lang: SiteLang): stri
 };
 
 /**
- * Public hook return type for the content fetchers.
+ * Explicit async state for every public content read.
  *
- *   null  → query is still loading (initial fetch hasn't resolved).
- *   []    → loaded; the table genuinely has no rows.
- *   [...] → loaded with data.
- *
- * Callers that want "fall back to static defaults when empty" must check
- * `data && data.length > 0`, *not* `data?.map(...) ?? defaults` — the latter
- * only triggers the fallback while loading, never for a real empty result.
+ *   loading → the first request hasn't resolved; render skeletons, never
+ *             static business facts (see FINDINGS: stale-content flash).
+ *   ready   → `data` is authoritative, and may legitimately be an empty array.
+ *   error   → the fetch failed; render a neutral localized error + `retry`,
+ *             never outdated services / prices / hours.
  */
-type Loaded<T> = T[] | null;
+export type AsyncState<T> =
+  | { status: "loading"; data: null; error: null; retry: () => void }
+  | { status: "ready"; data: T; error: null; retry: () => void }
+  | { status: "error"; data: null; error: Error; retry: () => void };
 
-export function useDbServices(): Loaded<DbService> {
-  const { data } = useQuery({
+const toAsyncState = <T,>(
+  data: T | undefined,
+  isPending: boolean,
+  error: Error | null,
+  retry: () => void,
+): AsyncState<T> => {
+  if (error && data === undefined) return { status: "error", data: null, error, retry };
+  if (isPending || data === undefined) return { status: "loading", data: null, error: null, retry };
+  return { status: "ready", data, error: null, retry };
+};
+
+export function useDbServices(): AsyncState<DbService[]> {
+  const { data, isPending, error, refetch } = useQuery({
     queryKey: queryKeys.services,
     queryFn: async (): Promise<DbService[]> => {
       const { data, error } = await supabase
@@ -96,11 +108,11 @@ export function useDbServices(): Loaded<DbService> {
       return (data ?? []) as DbService[];
     },
   });
-  return data ?? null;
+  return toAsyncState(data, isPending, error as Error | null, () => void refetch());
 }
 
-export function useDbFaqs(): Loaded<DbFaq> {
-  const { data } = useQuery({
+export function useDbFaqs(): AsyncState<DbFaq[]> {
+  const { data, isPending, error, refetch } = useQuery({
     queryKey: queryKeys.faqs,
     queryFn: async (): Promise<DbFaq[]> => {
       const { data, error } = await supabase
@@ -111,11 +123,11 @@ export function useDbFaqs(): Loaded<DbFaq> {
       return (data ?? []) as DbFaq[];
     },
   });
-  return data ?? null;
+  return toAsyncState(data, isPending, error as Error | null, () => void refetch());
 }
 
-export function useDbTestimonials(): Loaded<DbTestimonial> {
-  const { data } = useQuery({
+export function useDbTestimonials(): AsyncState<DbTestimonial[]> {
+  const { data, isPending, error, refetch } = useQuery({
     queryKey: queryKeys.testimonials,
     queryFn: async (): Promise<DbTestimonial[]> => {
       const { data, error } = await supabase
@@ -127,11 +139,11 @@ export function useDbTestimonials(): Loaded<DbTestimonial> {
       return (data ?? []) as DbTestimonial[];
     },
   });
-  return data ?? null;
+  return toAsyncState(data, isPending, error as Error | null, () => void refetch());
 }
 
-export function useDbPromotions(): Loaded<DbPromotion> {
-  const { data } = useQuery({
+export function useDbPromotions(): AsyncState<DbPromotion[]> {
+  const { data, isPending, error, refetch } = useQuery({
     queryKey: queryKeys.promotions,
     queryFn: async (): Promise<DbPromotion[]> => {
       const { data, error } = await supabase
@@ -144,11 +156,13 @@ export function useDbPromotions(): Loaded<DbPromotion> {
   });
   // Date filter is applied at render time so promotions auto-expire mid-session
   // without needing a re-fetch.
-  return useMemo(() => {
-    if (!data) return null;
+  const filtered = useMemo(() => {
+    if (!data) return undefined;
     const now = new Date();
     return data.filter(
       (p) => isBefore(new Date(p.starts_at), now) && isAfter(new Date(p.ends_at), now),
     );
   }, [data]);
+  return toAsyncState(filtered, isPending, error as Error | null, () => void refetch());
 }
+
