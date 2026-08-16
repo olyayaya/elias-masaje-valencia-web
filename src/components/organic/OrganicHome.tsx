@@ -190,7 +190,11 @@ const OrganicHome = () => {
 
           {/* Service list — editorial layout */}
           <div className="space-y-0 divide-y divide-border mb-16">
-            {previewServices.map((s, i) => {
+            {servicesState.status === "loading" && <ServiceRowSkeletonList count={3} />}
+            {servicesState.status === "error" && (
+              <ContentError onRetry={servicesState.retry} showWhatsApp whatsappLocation="home_services_error" />
+            )}
+            {servicesState.status === "ready" && previewServices.map((s, i) => {
               const ServiceRow = () => {
                 const anim = useFadeIn(i * 0.1);
                 return (
@@ -200,19 +204,19 @@ const OrganicHome = () => {
                       <p className="text-sm text-muted-foreground font-body leading-relaxed max-w-lg">{s.description}</p>
                     </div>
                     <div className="flex items-center gap-6 shrink-0">
-                      {!(s as any).hideDuration && s.duration && (
+                      {!s.hideDuration && s.duration && (
                         <span className="text-sm font-body text-muted-foreground">{s.duration}</span>
                       )}
-                      {!(s as any).hidePrice && s.price && (
-                        <span className="text-sm font-body font-medium">{formatPrice(s.price, t, { hidePrefix: (s as any).hidePriceFrom })}</span>
+                      {!s.hidePrice && s.price && (
+                        <span className="text-sm font-body font-medium">{formatPrice(s.price, t, { hidePrefix: s.hidePriceFrom })}</span>
                       )}
                       <BookingDialog
                         service={s.title}
                         duration={s.duration}
                         price={s.price}
-                        hidePrice={(s as any).hidePrice}
-                        hideDuration={(s as any).hideDuration}
-                        hidePriceFrom={(s as any).hidePriceFrom}
+                        hidePrice={s.hidePrice}
+                        hideDuration={s.hideDuration}
+                        hidePriceFrom={s.hidePriceFrom}
                         location="home_service_card"
                         triggerLabel={t.services.bookBtn}
                         triggerClassName="text-sm font-body border border-foreground/20 text-foreground px-5 py-2 rounded-full transition-all hover:bg-foreground hover:text-background"
@@ -224,6 +228,7 @@ const OrganicHome = () => {
               return <ServiceRow key={i} />;
             })}
           </div>
+
 
           <div className="text-center mb-16">
             <Link to="/servicios" className="text-sm font-body text-primary-strong hover:opacity-80 transition-opacity">
