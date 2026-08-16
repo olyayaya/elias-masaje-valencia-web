@@ -5,4 +5,4 @@ Disallow: /dashboard
 Disallow: /reset-password
 Disallow: /analytics-check
 
-Sitemap: https://eliasmas.es/sitemap.xml
+Sitemap: https://ukjljyrejfkyurebksqz.supabase.co/functions/v1/sitemap
