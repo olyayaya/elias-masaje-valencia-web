@@ -7,7 +7,6 @@ import {
   BASE_URL,
   type BlogPostRow,
 } from "../../supabase/functions/sitemap/build-sitemap";
-// @ts-expect-error — plain JS Cloudflare Worker module
 import worker, { UPSTREAM, PROXIED_PATH } from "../../infrastructure/cloudflare/sitemap-proxy/worker.js";
 
 const NOW = new Date("2026-08-16T12:00:00.000Z");
@@ -98,7 +97,7 @@ describe("cloudflare sitemap worker", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("proxies /sitemap.xml to the edge function and preserves status/content-type", async () => {
-    const fetchMock = vi.fn(async () =>
+    const fetchMock = vi.fn(async (_input: unknown) =>
       new Response("<?xml version=\"1.0\"?><urlset/>", {
         status: 200,
         headers: { "Content-Type": "application/xml; charset=utf-8" },
@@ -116,7 +115,7 @@ describe("cloudflare sitemap worker", () => {
   });
 
   it("does not intercept other paths", async () => {
-    const fetchMock = vi.fn(async () => new Response("ok"));
+    const fetchMock = vi.fn(async (_input: unknown) => new Response("ok"));
     vi.stubGlobal("fetch", fetchMock);
 
     await worker.fetch(new Request("https://eliasmas.es/servicios"));
