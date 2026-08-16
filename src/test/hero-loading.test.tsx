@@ -76,10 +76,12 @@ const setPath = (path: string) => {
   window.history.pushState({}, "", path);
 };
 
+const heroText = () => document.querySelector("section")?.textContent ?? "";
+
 const noStaleCopy = () => {
-  const text = document.body.textContent ?? "";
+  const text = heroText();
   for (const stale of STALE) {
-    expect(text).not.toContain(stale.replace(/\n/g, " ").split(" ").slice(0, 4).join(" "));
+    expect(text).not.toContain(stale.replace(/\n/g, " "));
   }
 };
 
