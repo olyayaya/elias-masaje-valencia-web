@@ -3,6 +3,7 @@ import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 import { buildBreadcrumbList } from "@/lib/breadcrumbs";
+import { buildLocalBusiness } from "@/lib/local-business";
 
 const ContactoPage = () => {
   const { locale } = useI18n();
