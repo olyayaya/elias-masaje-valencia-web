@@ -21,6 +21,7 @@ import { useI18n } from "@/i18n/context";
 import { formatPrice } from "@/lib/format-price";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
+import { useLocalePath } from "@/hooks/use-locale-path";
 import CircularImage from "@/components/CircularImage";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import { usePageImages } from "@/hooks/use-page-images";
