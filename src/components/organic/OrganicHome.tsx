@@ -121,21 +121,31 @@ const OrganicHome = () => {
             <p className="text-xs font-body tracking-[0.3em] uppercase text-foreground/70 mb-6">
               {t.hero.tagline}
             </p>
-            <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] leading-[1.15] mb-6 whitespace-pre-line">
-              {sc.hero_headline || t.hero.headline}
-            </h1>
-            <p className="text-base md:text-lg text-foreground/60 font-body leading-relaxed mb-10 max-w-md">
-              {sc.hero_subheadline || t.hero.subheadline}
-            </p>
-            <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackWhatsAppClick("home_hero")}
-              className="inline-block text-sm font-body bg-foreground text-background px-8 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
-            >
-              {sc.hero_cta || t.hero.cta}
-            </a>
+            {scStatus === "loading" && <HeroTextSkeleton />}
+            {scStatus === "error" && (
+              <ContentError onRetry={scRetry} showWhatsApp whatsappLocation="home_hero_error" />
+            )}
+            {scStatus === "ready" && (
+              <>
+                <h1 className="font-display text-4xl md:text-5xl lg:text-[3.5rem] leading-[1.15] mb-6 whitespace-pre-line">
+                  {sc.hero_headline}
+                </h1>
+                <p className="text-base md:text-lg text-foreground/60 font-body leading-relaxed mb-10 max-w-md">
+                  {sc.hero_subheadline}
+                </p>
+                {sc.hero_cta && (
+                  <a
+                    href={WHATSAPP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackWhatsAppClick("home_hero")}
+                    className="inline-block text-sm font-body bg-foreground text-background px-8 py-3.5 rounded-full transition-all hover:opacity-90 hover:-translate-y-0.5"
+                  >
+                    {sc.hero_cta}
+                  </a>
+                )}
+              </>
+            )}
           </div>
         </div>
 
