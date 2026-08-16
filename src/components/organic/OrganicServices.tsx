@@ -78,9 +78,9 @@ const OrganicServices = () => {
   const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
   const { t, locale } = useI18n();
   const { content: sc } = useSiteContent();
-  const dbServices = useDbServices();
-  const dbPromotions = useDbPromotions();
-  const customCarousel = usePageImages("services_carousel");
+  const servicesState = useDbServices();
+  const promotionsState = useDbPromotions();
+  const { images: customCarousel, loaded: carouselLoaded } = usePageImages("services_carousel");
 
   const defaultCarousel = [
     { src: massageArm, alt: "Arm massage" },
@@ -93,7 +93,7 @@ const OrganicServices = () => {
     { src: massageWrist, alt: "Wrist massage" },
     { src: massageFoot, alt: "Foot massage" },
   ];
-  const carouselImages = customCarousel.length > 0 ? customCarousel : defaultCarousel;
+  const carouselImages = carouselLoaded && customCarousel.length > 0 ? customCarousel : defaultCarousel;
 
   const langBadge = (p: { badge_text: string; badge_text_en: string; badge_text_ru: string }) => {
     if (locale === "en" && p.badge_text_en?.trim()) return p.badge_text_en;
@@ -101,8 +101,8 @@ const OrganicServices = () => {
     return p.badge_text;
   };
 
-  const services = dbServices?.map(s => {
-    const promo = dbPromotions?.find(p => p.service_id === s.id);
+  const services = (servicesState.data ?? []).map(s => {
+    const promo = (promotionsState.data ?? []).find(p => p.service_id === s.id);
     return {
       title: resolveField(s, "title", locale),
       description: resolveField(s, "description", locale),
@@ -114,7 +114,8 @@ const OrganicServices = () => {
       badge: promo ? langBadge(promo) : undefined,
       badgeColor: promo?.badge_color,
     };
-  }) ?? t.services.items;
+  });
+
   const heroText = useFadeIn(0.1);
 
   return (
