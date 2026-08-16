@@ -63,25 +63,28 @@ const SobreMiPage = () => {
             locale === "es"
               ? [
                   "Masajista profesional en Valencia",
-                  "Masaje descontracturante",
+                  "Masaje antiestrés",
                   "Masaje relajante",
-                  "Masaje deportivo",
-                  "Masaje terapéutico",
+                  "Masaje de tejido profundo",
+                  "Masaje con piedras calientes",
+                  "Masaje a 4 manos",
                 ]
               : locale === "ru"
               ? [
                   "Профессиональный массажист в Валенсии",
-                  "Лечебный массаж",
+                  "Антистресс массаж",
                   "Расслабляющий массаж",
-                  "Спортивный массаж",
-                  "Терапевтический массаж",
+                  "Глубокотканевый массаж",
+                  "Каменный массаж",
+                  "Четырёхручный массаж",
                 ]
               : [
                   "Professional massage therapist in Valencia",
-                  "Deep tissue massage",
+                  "Anti-stress massage",
                   "Relaxation massage",
-                  "Sports massage",
-                  "Therapeutic massage",
+                  "Deep tissue massage",
+                  "Hot stone massage",
+                  "Four-hand massage",
                 ],
           sameAs: ["https://instagram.com/elias_masaje"],
         },
