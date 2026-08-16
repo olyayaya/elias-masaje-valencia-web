@@ -24,7 +24,7 @@ Deno.serve(async (_req) => {
 
     const { data: posts, error } = await supabase
       .from("blog_posts")
-      .select("slug, updated_at, published_at")
+      .select("slug, updated_at, published_at, status, hidden")
       .eq("status", "published")
       .eq("hidden", false)
       .not("slug", "is", null)
