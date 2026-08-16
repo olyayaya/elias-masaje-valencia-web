@@ -22,6 +22,8 @@ import { WHATSAPP_URL } from "@/config/contact";
 import { trackWhatsAppClick } from "@/lib/analytics";
 import { formatPrice } from "@/lib/format-price";
 import BookingDialog from "@/components/BookingDialog";
+import ContentError from "@/components/ContentError";
+import { ServiceRowSkeletonList } from "@/components/skeletons/ContentSkeletons";
 
 const PROMO_COLORS: Record<string, string> = {
   amber: "bg-amber-100 text-amber-800 border-amber-200",
