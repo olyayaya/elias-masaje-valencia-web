@@ -170,6 +170,13 @@ const Blog = () => {
                 <Link
                   key={post.id}
                   to={lp("blogPost", { slug })}
+                  aria-label={
+                    locale === "es"
+                      ? `Leer el artículo: ${title}`
+                      : locale === "ru"
+                        ? `Читать статью: ${title}`
+                        : `Read the article: ${title}`
+                  }
                   className="group block bg-card rounded-xl border border-border p-6 md:p-8 transition-all hover:border-muted-foreground/30 hover:shadow-soft"
                 >
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
@@ -184,7 +191,8 @@ const Blog = () => {
                   </p>
                   <div className="flex items-center gap-3 flex-wrap">
                     <span className="text-xs font-medium text-primary-strong flex items-center gap-1 group-hover:gap-2 transition-all">
-                      {locale === "es" ? "Leer más" : locale === "ru" ? "Читать далее" : "Read more"}
+                      {locale === "es" ? "Leer el artículo" : locale === "ru" ? "Читать статью" : "Read the article"}
+                      <span className="sr-only">: {title}</span>
                       <ArrowRight size={12} />
                     </span>
                     {(locale === "en" ? post.seo_keywords_en : locale === "ru" ? post.seo_keywords_ru : post.seo_keywords)?.slice(0, 3).map((kw) => (
