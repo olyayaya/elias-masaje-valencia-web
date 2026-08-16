@@ -45,11 +45,11 @@ const OrganicHome = () => {
   const testimonialsTitle = useFadeIn(0);
   const ctaBlock = useFadeIn(0);
 
-  const dbServices = useDbServices();
-  const dbFaqs = useDbFaqs();
-  const dbTestimonials = useDbTestimonials();
-  const { content: sc } = useSiteContent();
-  const customHomeCarousel = usePageImages("home_carousel");
+  const servicesState = useDbServices();
+  const faqState = useDbFaqs();
+  const testimonialsState = useDbTestimonials();
+  const { content: sc, status: scStatus } = useSiteContent();
+  const { images: customHomeCarousel, loaded: homeCarouselLoaded } = usePageImages("home_carousel");
   const defaultHomeCarousel = [
     { src: massageWrist, alt: "Wrist massage" },
     { src: massageBack, alt: "Back massage" },
@@ -61,7 +61,7 @@ const OrganicHome = () => {
     { src: massageArm, alt: "Arm massage" },
     { src: massageFoot, alt: "Foot massage" },
   ];
-  const homeCarouselImages = customHomeCarousel.length > 0 ? customHomeCarousel : defaultHomeCarousel;
+  const homeCarouselImages = homeCarouselLoaded && customHomeCarousel.length > 0 ? customHomeCarousel : defaultHomeCarousel;
 
   /** Resolve a CSS color; returns "transparent" in dark-gradient mode for seamless bg */
   const bgColor = (cssVar: string) => isDG ? "transparent" : `hsl(var(${cssVar}))`;
@@ -70,7 +70,7 @@ const OrganicHome = () => {
   
 
   const services = useMemo(() =>
-    dbServices?.map(s => ({
+    (servicesState.data ?? []).map(s => ({
       title: resolveField(s, "title", locale),
       description: resolveField(s, "description", locale),
       duration: resolveField(s, "duration", locale),
@@ -78,21 +78,22 @@ const OrganicHome = () => {
       hidePrice: s.hide_price,
       hideDuration: s.hide_duration,
       hidePriceFrom: s.hide_price_from,
-    })) ?? t.services.items.map(s => ({ ...s, hidePrice: false, hideDuration: false, hidePriceFrom: false })),
-    [dbServices, t.services.items, locale]
+    })),
+    [servicesState.data, locale]
   );
 
   const faqItems = useMemo(() =>
-    dbFaqs?.map(f => ({ question: resolveField(f, "question", locale), answer: resolveField(f, "answer", locale) })) ?? t.faq.items,
-    [dbFaqs, t.faq.items, locale]
+    (faqState.data ?? []).map(f => ({ question: resolveField(f, "question", locale), answer: resolveField(f, "answer", locale) })),
+    [faqState.data, locale]
   );
 
   const testimonialItems = useMemo(() =>
-    dbTestimonials?.map(tt => ({ quote: resolveField(tt, "quote", locale), name: tt.name, source: tt.source })) ?? t.testimonials.items,
-    [dbTestimonials, t.testimonials.items, locale]
+    (testimonialsState.data ?? []).map(tt => ({ quote: resolveField(tt, "quote", locale), name: tt.name, source: tt.source })),
+    [testimonialsState.data, locale]
   );
 
   const previewServices = services.slice(0, 3);
+
 
   return (
     <div>
