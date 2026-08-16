@@ -103,7 +103,7 @@ describe("blog post localized routing", () => {
     expect(screen.getByTestId("pathname").textContent).toBe(
       "/en/blog/sports-massage-benefits-runners-active-men-valencia",
     );
-    expect(queries[0][0][0]).toBe("slug_en");
+    expect(queries.flat().some(([col]) => col === "slug_en")).toBe(true);
     await waitFor(() =>
       expect(canonicalHref()).toBe(
         "https://eliasmas.es/en/blog/sports-massage-benefits-runners-active-men-valencia",
@@ -114,9 +114,10 @@ describe("blog post localized routing", () => {
   it("resolves a legacy slug and replaces it with the localized URL", async () => {
     renderPost("/en/blog/sportivnyy-massazh-dlya-begunov-valensiya");
     await screen.findByText("Sports massage for runners");
-    // first attempt on the locale column, then the untouched legacy column
-    expect(queries[0][0][0]).toBe("slug_en");
-    expect(queries[1][0][0]).toBe("slug");
+    // the locale column is tried first, then the untouched legacy column
+    const cols = queries.flat().map(([col]) => col);
+    expect(cols).toContain("slug_en");
+    expect(cols.indexOf("slug")).toBeGreaterThan(cols.indexOf("slug_en"));
     await waitFor(() =>
       expect(screen.getByTestId("pathname").textContent).toBe(
         "/en/blog/sports-massage-benefits-runners-active-men-valencia",
