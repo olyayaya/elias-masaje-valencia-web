@@ -20,23 +20,11 @@ const StructuredDataPreview = () => {
   const [copied, setCopied] = useState(false);
 
   const json = useMemo(() => {
-    const localBusiness = {
+    const localBusiness: Record<string, unknown> = {
       "@context": "https://schema.org",
-      "@type": "HealthAndBeautyBusiness",
-      name: "Elias Masaje",
-      url: BASE_URL,
-      telephone: "+34698968007",
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: "Calle San Vicente Mártir, 24",
-        addressLocality: "Valencia",
-        addressRegion: "Comunidad Valenciana",
-        postalCode: "46002",
-        addressCountry: "ES",
-      },
-      geo: { "@type": "GeoCoordinates", latitude: 39.4699, longitude: -0.3763 },
-      priceRange: "€€",
+      ...buildLocalBusiness(lang, { parentOrganization: false }),
       hasOfferCatalog: dbServices?.length
+
         ? {
             "@type": "OfferCatalog",
             name:
