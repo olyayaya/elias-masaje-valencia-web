@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getEquivalentPath } from "@/config/routes";
 import { Globe } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useCurrentPostSlugs } from "@/lib/blog-slug-store";
 
 const labels: Record<Locale, string> = { es: "ES", en: "EN", ru: "RU" };
 const locales: Locale[] = ["es", "en", "ru"];
@@ -12,6 +13,7 @@ const LanguageSwitcher = () => {
   const { locale, t } = useI18n();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const postSlugs = useCurrentPostSlugs();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const [focusIdx, setFocusIdx] = useState(-1);
@@ -59,7 +61,7 @@ const LanguageSwitcher = () => {
   }, [open]);
 
   const switchTo = (l: Locale) => {
-    const target = getEquivalentPath(pathname, l);
+    const target = getEquivalentPath(pathname, l, postSlugs?.[l]);
     navigate(target);
     setOpen(false);
   };

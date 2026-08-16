@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/context";
 import { useLocalePath } from "@/hooks/use-locale-path";
 import { Calendar, ChevronLeft, Loader2 } from "lucide-react";
 import { useHead } from "@/hooks/use-head";
-import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
+import { BASE_URL, ROUTE_MAP } from "@/config/routes";
+import { localizedSlug, localizedPostAlternates, slugField } from "@/lib/blog-slugs";
+import { setCurrentPostSlugs } from "@/lib/blog-slug-store";
 import DOMPurify from "dompurify";
 import { buildLocalBusiness } from "@/lib/local-business";
 import { buildBreadcrumbList } from "@/lib/breadcrumbs";
@@ -22,6 +24,9 @@ interface Post {
   meta_description_en: string;
   meta_description_ru: string;
   slug: string;
+  slug_es: string | null;
+  slug_en: string | null;
+  slug_ru: string | null;
   published_at: string;
   updated_at?: string | null;
   seo_keywords: string[];
@@ -37,40 +42,67 @@ const langField = (field: string, locale: string) => {
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
   const { locale } = useI18n();
+  const navigate = useNavigate();
   const lp = useLocalePath();
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       if (!slug) return;
+      setLoading(true);
 
-      let { data } = await supabase
-        .from("blog_posts")
-        .select("*")
-        .eq("slug", slug)
-        .eq("status", "published")
-        .eq("hidden", false)
-        .lte("published_at", new Date().toISOString())
-        .maybeSingle();
-
-      if (!data) {
-        const res = await supabase
+      const base = () =>
+        supabase
           .from("blog_posts")
           .select("*")
-          .eq("id", slug)
           .eq("status", "published")
           .eq("hidden", false)
-          .lte("published_at", new Date().toISOString())
-          .maybeSingle();
+          .lte("published_at", new Date().toISOString());
+
+      // Resolve strictly on the active locale column, then fall back to the
+      // untouched legacy slug (and finally the id) so old links keep working.
+      let { data } = await base().eq(slugField(locale), slug).maybeSingle();
+
+      if (!data) {
+        const res = await base().eq("slug", slug).maybeSingle();
         data = res.data;
       }
 
-      if (data) setPost(data as unknown as Post);
+      if (!data) {
+        const res = await base().eq("id", slug).maybeSingle();
+        data = res.data;
+      }
+
+      if (cancelled) return;
+      setPost((data as unknown as Post) ?? null);
       setLoading(false);
     };
     load();
-  }, [slug]);
+    return () => { cancelled = true; };
+  }, [slug, locale]);
+
+  // Publish the localized slugs so the language switcher targets the right URL.
+  useEffect(() => {
+    if (!post) return;
+    setCurrentPostSlugs({
+      es: localizedSlug(post, "es"),
+      en: localizedSlug(post, "en"),
+      ru: localizedSlug(post, "ru"),
+    });
+    return () => setCurrentPostSlugs(null);
+  }, [post]);
+
+  const canonicalSlug = post ? localizedSlug(post, locale) : "";
+
+  // Legacy/foreign slug reached this locale: swap the address bar for the
+  // localized URL. This is a client-side replace, not an HTTP 301; the
+  // canonical below points at the localized URL for search engines.
+  useEffect(() => {
+    if (!post || !canonicalSlug || canonicalSlug === slug) return;
+    navigate(`${ROUTE_MAP.blog[locale]}/${canonicalSlug}`, { replace: true });
+  }, [post, canonicalSlug, slug, locale, navigate]);
 
   const getField = (p: Post, field: string): string => {
     const key = langField(field, locale) as keyof Post;
@@ -96,8 +128,7 @@ const BlogPost = () => {
   const title = post ? getField(post, "title") : "";
   const content = post ? getField(post, "content") : "";
   const metaDesc = post ? getField(post, "meta_description") : "";
-  const postSlug = post ? (post.slug || post.id) : "";
-  const postUrl = post ? `${BASE_URL}${ROUTE_MAP.blog[locale]}/${postSlug}` : "";
+  const postUrl = post ? `${BASE_URL}${ROUTE_MAP.blog[locale]}/${canonicalSlug}` : "";
 
   const blogPosting = post ? {
     "@type": "BlogPosting",
@@ -155,7 +186,7 @@ const BlogPost = () => {
         }
       : undefined,
     locale,
-    alternates: postSlug ? getAlternates("blogPost", { slug: postSlug }) : undefined,
+    alternates: post ? localizedPostAlternates(post) : undefined,
     jsonLd,
   });
 

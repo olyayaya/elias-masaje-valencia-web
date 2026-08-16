@@ -18,6 +18,7 @@ import DashboardCard from "./DashboardCard";
 import ImagePicker from "./ImagePicker";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
 import { AI_ENABLED } from "@/config/features";
+import { slugify, isValidSlug } from "@/lib/blog-slugs";
 import { toast } from "sonner";
 
 interface BlogPost {
@@ -39,6 +40,9 @@ interface BlogPost {
   hidden: boolean;
   published_at: string | null;
   slug: string;
+  slug_es: string | null;
+  slug_en: string | null;
+  slug_ru: string | null;
 }
 
 const suggestedKeywordsByLang: Record<Lang, string[]> = {
@@ -259,7 +263,7 @@ const DashboardBlog = () => {
       meta_description: "", status: "draft", created_at: new Date().toISOString(),
       title_en: "", title_ru: "", content_en: "", content_ru: "",
       meta_description_en: "", meta_description_ru: "", hidden: false,
-      published_at: null, slug: "",
+      published_at: null, slug: "", slug_es: "", slug_en: "", slug_ru: "",
     };
     setDraft(newPost); setEditing("new");
   };
@@ -276,7 +280,7 @@ const DashboardBlog = () => {
       meta_description: "", status: "draft", created_at: new Date().toISOString(),
       title_en: "", title_ru: "", content_en: "", content_ru: "",
       meta_description_en: "", meta_description_ru: "", hidden: false,
-      published_at: null, slug: "",
+      published_at: null, slug: "", slug_es: "", slug_en: "", slug_ru: "",
       [titleK]: result.title,
       [contentK]: result.content,
       [metaK]: result.meta_description,
@@ -288,7 +292,38 @@ const DashboardBlog = () => {
 
   const save = async () => {
     if (!draft) return;
+
+    const localized = {
+      slug_es: (draft.slug_es || "").trim(),
+      slug_en: (draft.slug_en || "").trim(),
+      slug_ru: (draft.slug_ru || "").trim(),
+    };
+
+    for (const [key, value] of Object.entries(localized)) {
+      if (!value) {
+        toast.error(`Missing ${key.replace("slug_", "").toUpperCase()} slug`);
+        return;
+      }
+      if (!isValidSlug(value)) {
+        toast.error(`Invalid ${key.replace("slug_", "").toUpperCase()} slug — use lowercase letters, numbers and hyphens`);
+        return;
+      }
+    }
+
     setSaving(true);
+
+    // Uniqueness check per column so we never silently overwrite another article.
+    for (const key of ["slug_es", "slug_en", "slug_ru"] as const) {
+      let q = supabase.from("blog_posts").select("id").eq(key, localized[key]).limit(1);
+      if (editing && editing !== "new") q = q.neq("id", editing);
+      const { data: clash } = await q;
+      if (clash && clash.length > 0) {
+        setSaving(false);
+        toast.error(`The ${key.replace("slug_", "").toUpperCase()} slug "${localized[key]}" is already used by another article`);
+        return;
+      }
+    }
+
     const payload = {
       title: draft.title, content: draft.content,
       seo_keywords: draft.seo_keywords, seo_keywords_en: draft.seo_keywords_en, seo_keywords_ru: draft.seo_keywords_ru,
@@ -296,16 +331,24 @@ const DashboardBlog = () => {
       title_en: draft.title_en, title_ru: draft.title_ru,
       content_en: draft.content_en, content_ru: draft.content_ru,
       meta_description_en: draft.meta_description_en, meta_description_ru: draft.meta_description_ru,
-      slug: draft.slug,
+      slug: (draft.slug || "").trim() || localized.slug_es,
+      slug_es: localized.slug_es,
+      slug_en: localized.slug_en,
+      slug_ru: localized.slug_ru,
       published_at: draft.status === "published" && !draft.published_at
         ? new Date().toISOString()
         : draft.published_at,
     };
-    if (editing === "new") {
-      await supabase.from("blog_posts").insert(payload as any);
-    } else if (editing) {
-      await supabase.from("blog_posts").update(payload as any).eq("id", editing);
+    const { error } = editing === "new"
+      ? await supabase.from("blog_posts").insert(payload as any)
+      : await supabase.from("blog_posts").update(payload as any).eq("id", editing!);
+
+    if (error) {
+      setSaving(false);
+      toast.error(error.message || "Could not save the post");
+      return;
     }
+
     setEditing(null); setDraft(null); setSaving(false);
     fetchPosts();
     invalidatePublic();
@@ -849,15 +892,40 @@ const BlogEditor = ({
             {draft.published_at && new Date(draft.published_at) > new Date() && (
               <p className="text-xs text-primary">⏰ Scheduled — will go live {new Date(draft.published_at).toLocaleString()}</p>
             )}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">URL slug</label>
-              <input
-                value={draft.slug || ""}
-                onChange={(e) => setDraft({ ...draft, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-") })}
-                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none"
-                placeholder="my-post-title"
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">/blog/{draft.slug || "..."}</p>
+            <div className="space-y-3">
+              {([
+                { key: "slug_es" as const, label: "Spanish slug", prefix: "/blog/", title: draft.title },
+                { key: "slug_en" as const, label: "English slug", prefix: "/en/blog/", title: draft.title_en || draft.title },
+                { key: "slug_ru" as const, label: "Russian slug", prefix: "/ru/blog/", title: draft.title_ru || draft.title_en || draft.title },
+              ]).map(({ key, label, prefix, title }) => {
+                const value = draft[key] || "";
+                const invalid = value.length > 0 && !isValidSlug(value);
+                return (
+                  <div key={key}>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
+                    <div className="flex gap-2">
+                      <input
+                        value={value}
+                        onChange={(e) => setDraft({ ...draft, [key]: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-") })}
+                        className={`flex-1 px-3 py-2 text-sm border rounded-lg bg-background focus:outline-none ${invalid ? "border-destructive" : "border-border"}`}
+                        placeholder="my-post-title"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setDraft({ ...draft, [key]: slugify(title || "") })}
+                        className="px-3 py-2 text-xs text-muted-foreground border border-border rounded-lg hover:text-foreground"
+                      >
+                        Auto
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">{prefix}{value || "..."}</p>
+                    {invalid && <p className="text-[11px] text-destructive mt-1">Use lowercase letters, numbers and hyphens only.</p>}
+                  </div>
+                );
+              })}
+              <p className="text-[11px] text-muted-foreground">
+                Legacy slug (kept for old links): {draft.slug || "— will use the Spanish slug"}
+              </p>
             </div>
           </div>
         </div>

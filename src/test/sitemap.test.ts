@@ -13,16 +13,59 @@ import * as APP_ROUTES from "@/config/routes";
 const NOW = new Date("2026-08-16T12:00:00.000Z");
 
 const POSTS: BlogPostRow[] = [
-  { slug: "sportivnyy-massazh-dlya-begunov-valensiya", status: "published", hidden: false, published_at: "2026-05-01T10:00:00Z", updated_at: "2026-06-01T10:00:00Z" },
-  { slug: "masaje-descontracturante", status: "published", hidden: false, published_at: "2026-04-01T10:00:00Z", updated_at: null },
-  { slug: "deep-tissue-valencia", status: "published", hidden: false, published_at: "2026-03-01T10:00:00Z", updated_at: "2026-03-05T10:00:00Z" },
-  { slug: "masaje-relajante", status: "published", hidden: false, published_at: "2026-02-01T10:00:00Z", updated_at: "2026-02-02T10:00:00Z" },
+  {
+    slug: "sportivnyy-massazh-dlya-begunov-valensiya",
+    slug_es: "beneficios-masaje-deportivo-corredores-valencia",
+    slug_en: "sports-massage-benefits-runners-active-men-valencia",
+    slug_ru: "sportivnyy-massazh-dlya-begunov-valensiya",
+    status: "published", hidden: false, published_at: "2026-05-01T10:00:00Z", updated_at: "2026-06-01T10:00:00Z",
+  },
+  {
+    slug: "antistress-massazh-dlya-muzhchin-valensiya",
+    slug_es: "masaje-antiestres-hombres-valencia",
+    slug_en: "anti-stress-massage-men-valencia",
+    slug_ru: "antistress-massazh-dlya-muzhchin-valensiya",
+    status: "published", hidden: false, published_at: "2026-04-01T10:00:00Z", updated_at: null,
+  },
+  {
+    slug: "5-beneficios-masaje-espalda-oficinistas",
+    slug_es: "5-beneficios-masaje-espalda-oficinistas",
+    slug_en: "5-benefits-back-massage-office-workers",
+    slug_ru: "5-preimushchestv-massazha-spiny-dlya-ofisnykh-rabotnikov",
+    status: "published", hidden: false, published_at: "2026-03-01T10:00:00Z", updated_at: "2026-03-05T10:00:00Z",
+  },
+  {
+    slug: "beneficios-masaje-regular",
+    slug_es: "beneficios-masaje-regular",
+    slug_en: "benefits-of-regular-massage",
+    slug_ru: "polza-regulyarnogo-massazha",
+    status: "published", hidden: false, published_at: "2026-02-01T10:00:00Z", updated_at: "2026-02-02T10:00:00Z",
+  },
   // excluded
   { slug: "borrador", status: "draft", hidden: false, published_at: "2026-01-01T10:00:00Z" },
   { slug: "oculto", status: "published", hidden: true, published_at: "2026-01-01T10:00:00Z" },
   { slug: "  ", status: "published", hidden: false, published_at: "2026-01-01T10:00:00Z" },
   { slug: null, status: "published", hidden: false, published_at: "2026-01-01T10:00:00Z" },
   { slug: "programado", status: "published", hidden: false, published_at: "2027-01-01T10:00:00Z" },
+];
+
+const MAPPINGS: Array<[string, string, string]> = [
+  [
+    "beneficios-masaje-deportivo-corredores-valencia",
+    "sports-massage-benefits-runners-active-men-valencia",
+    "sportivnyy-massazh-dlya-begunov-valensiya",
+  ],
+  [
+    "masaje-antiestres-hombres-valencia",
+    "anti-stress-massage-men-valencia",
+    "antistress-massazh-dlya-muzhchin-valensiya",
+  ],
+  [
+    "5-beneficios-masaje-espalda-oficinistas",
+    "5-benefits-back-massage-office-workers",
+    "5-preimushchestv-massazha-spiny-dlya-ofisnykh-rabotnikov",
+  ],
+  ["beneficios-masaje-regular", "benefits-of-regular-massage", "polza-regulyarnogo-massazha"],
 ];
 
 const locs = () => buildSitemapEntries(POSTS, [], NOW).map((e) => e.loc);
@@ -33,11 +76,46 @@ describe("sitemap generator", () => {
     expect(blogPostUrls).toHaveLength(12);
   });
 
-  it("includes the runners article in ES/EN/RU", () => {
+  it("emits the exact localized ES/EN/RU URLs for every mapping", () => {
     const all = locs();
-    for (const path of ["/blog", "/en/blog", "/ru/blog"]) {
-      expect(all).toContain(`${BASE_URL}${path}/sportivnyy-massazh-dlya-begunov-valensiya`);
+    for (const [es, en, ru] of MAPPINGS) {
+      expect(all).toContain(`${BASE_URL}/blog/${es}`);
+      expect(all).toContain(`${BASE_URL}/en/blog/${en}`);
+      expect(all).toContain(`${BASE_URL}/ru/blog/${ru}`);
     }
+  });
+
+  it("emits 30 unique <loc> entries for 6 static route groups + 4 published articles", () => {
+    const all = locs();
+    expect(all).toHaveLength(30);
+    expect(new Set(all).size).toBe(30);
+  });
+
+  it("emits reciprocal article hreflang with Spanish x-default", () => {
+    const entries = buildSitemapEntries(POSTS, [], NOW);
+    const en = entries.find(
+      (e) => e.loc === `${BASE_URL}/en/blog/sports-massage-benefits-runners-active-men-valencia`,
+    )!;
+    expect(en.alternates).toEqual([
+      { hreflang: "es", href: `${BASE_URL}/blog/beneficios-masaje-deportivo-corredores-valencia` },
+      { hreflang: "en", href: `${BASE_URL}/en/blog/sports-massage-benefits-runners-active-men-valencia` },
+      { hreflang: "ru", href: `${BASE_URL}/ru/blog/sportivnyy-massazh-dlya-begunov-valensiya` },
+      { hreflang: "x-default", href: `${BASE_URL}/blog/beneficios-masaje-deportivo-corredores-valencia` },
+    ]);
+  });
+
+  it("falls back to the legacy slug when localized columns are null", () => {
+    const rows: BlogPostRow[] = [
+      { slug: "legacy-only", slug_es: null, slug_en: null, slug_ru: null, status: "published", hidden: false, published_at: "2026-01-01T00:00:00Z" },
+      { slug: "partial", slug_es: "solo-espanol", slug_en: null, slug_ru: null, status: "published", hidden: false, published_at: "2026-01-01T00:00:00Z" },
+    ];
+    const all = buildSitemapEntries(rows, [], NOW).map((e) => e.loc);
+    expect(all).toContain(`${BASE_URL}/blog/legacy-only`);
+    expect(all).toContain(`${BASE_URL}/en/blog/legacy-only`);
+    expect(all).toContain(`${BASE_URL}/ru/blog/legacy-only`);
+    expect(all).toContain(`${BASE_URL}/blog/solo-espanol`);
+    expect(all).toContain(`${BASE_URL}/en/blog/partial`);
+    expect(all).toContain(`${BASE_URL}/ru/blog/partial`);
   });
 
   it("excludes draft, hidden, empty-slug and future scheduled posts", () => {
@@ -84,8 +162,8 @@ describe("sitemap generator", () => {
 
   it("uses updated_at with fallback to published_at for lastmod", () => {
     const entries = buildSitemapEntries(POSTS, [], NOW);
-    const withUpdated = entries.find((e) => e.loc.endsWith("/blog/deep-tissue-valencia"))!;
-    const withoutUpdated = entries.find((e) => e.loc.endsWith("/blog/masaje-descontracturante"))!;
+    const withUpdated = entries.find((e) => e.loc.endsWith("/blog/5-beneficios-masaje-espalda-oficinistas"))!;
+    const withoutUpdated = entries.find((e) => e.loc.endsWith("/blog/masaje-antiestres-hombres-valencia"))!;
     expect(withUpdated.lastmod).toBe("2026-03-05");
     expect(withoutUpdated.lastmod).toBe("2026-04-01");
   });

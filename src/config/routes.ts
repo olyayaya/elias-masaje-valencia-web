@@ -30,14 +30,19 @@ export function getCurrentPageId(pathname: string): PageId | null {
   return null;
 }
 
-export function getEquivalentPath(currentPath: string, targetLocale: Locale): string {
+export function getEquivalentPath(
+  currentPath: string,
+  targetLocale: Locale,
+  /** Localized slug for the target locale (blog posts); falls back to the current slug. */
+  targetSlug?: string,
+): string {
   const pageId = getCurrentPageId(currentPath);
   if (!pageId) return targetLocale === "es" ? "/" : `/${targetLocale}`;
 
   const targetPath = ROUTE_MAP[pageId][targetLocale];
 
   if (pageId === "blogPost") {
-    const slug = currentPath.split("/").pop();
+    const slug = targetSlug || currentPath.split("/").pop();
     return targetPath.replace(":slug", slug || "");
   }
 
