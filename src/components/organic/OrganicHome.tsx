@@ -426,7 +426,25 @@ const OrganicHome = () => {
               </div>
             );
           };
+          if (testimonialsState.status === "loading") {
+            return (
+              <div className="mt-10 flex gap-5 overflow-hidden px-6" aria-hidden="true">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <TestimonialCardSkeleton key={i} />
+                ))}
+              </div>
+            );
+          }
+          if (testimonialsState.status === "error") {
+            return (
+              <div className="max-w-5xl mx-auto px-6">
+                <ContentError onRetry={testimonialsState.retry} />
+              </div>
+            );
+          }
+          if (!testimonialItems.length) return null;
           return <TestimonialsMarquee />;
+
         })()}
       </section>
 
