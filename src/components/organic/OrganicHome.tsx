@@ -32,6 +32,9 @@ import BenefitIcon from "@/components/BenefitIcon";
 import { WHATSAPP_URL } from "@/config/contact";
 import { trackWhatsAppClick } from "@/lib/analytics";
 import BookingDialog from "@/components/BookingDialog";
+import ContentError from "@/components/ContentError";
+import { ServiceRowSkeletonList, RatingLineSkeleton, TestimonialCardSkeleton, FaqSkeleton } from "@/components/skeletons/ContentSkeletons";
+
 
 const OrganicHome = () => {
   const { t, locale } = useI18n();
