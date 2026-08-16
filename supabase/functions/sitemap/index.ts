@@ -1,11 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { buildSitemapXml, type ExtraUrl } from "./build-sitemap.ts";
 
-const XML_HEADERS = {
-  "Content-Type": "application/xml; charset=utf-8",
-  "Cache-Control": "public, max-age=60, s-maxage=60",
-  "Access-Control-Allow-Origin": "*",
-};
+// Build headers with an explicit Headers instance — the edge gateway has been
+// observed dropping the content type from a plain object literal on GET.
+function xmlHeaders(body: string): Headers {
+  const headers = new Headers();
+  headers.set("content-type", "application/xml; charset=utf-8");
+  headers.set("cache-control", "public, max-age=60, s-maxage=60");
+  headers.set("access-control-allow-origin", "*");
+  headers.set("content-length", String(new TextEncoder().encode(body).byteLength));
+  headers.set("x-content-type-options", "nosniff");
+  return headers;
+}
 
 Deno.serve(async (_req) => {
   try {
