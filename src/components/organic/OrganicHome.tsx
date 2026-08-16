@@ -21,6 +21,7 @@ import { useI18n } from "@/i18n/context";
 import { formatPrice } from "@/lib/format-price";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSiteContent } from "@/hooks/use-site-content";
+import { useLocalePath } from "@/hooks/use-locale-path";
 import CircularImage from "@/components/CircularImage";
 import CircularImageCarousel from "@/components/CircularImageCarousel";
 import { usePageImages } from "@/hooks/use-page-images";
@@ -38,6 +39,7 @@ import { ServiceRowSkeletonList, RatingLineSkeleton, TestimonialCardSkeleton, Fa
 
 const OrganicHome = () => {
   const { t, locale } = useI18n();
+  const lp = useLocalePath();
   const { mode } = useTheme();
   const isDG = mode === "dark-gradient";
   const heroText = useFadeIn(0.2);
@@ -244,7 +246,7 @@ const OrganicHome = () => {
 
 
           <div className="text-center mb-16">
-            <Link to="/servicios" className="text-sm font-body text-primary-strong hover:opacity-80 transition-opacity">
+            <Link to={lp("services")} className="text-sm font-body text-primary-strong hover:opacity-80 transition-opacity">
               {t.services.viewAll}
             </Link>
           </div>
@@ -286,7 +288,7 @@ const OrganicHome = () => {
                 {sc.about_preview_p2 || t.about.previewP2}
               </p>
               <Link
-                to="/sobre-mi"
+                to={lp("about")}
                 className="text-sm font-body pb-0.5 transition-colors"
                 style={{ color: "hsl(var(--organic-dark-foreground))", borderBottom: "1px solid hsl(var(--organic-dark-foreground) / 0.3)" }}
               >
