@@ -99,7 +99,7 @@ describe("Homepage — locale-aware internal CTAs", () => {
     deferreds["page_images"]?.resolve({ data: [], error: null });
 
     const servicesLink = await screen.findByRole("link", { name: /Ver todos|View all|Смотреть все/i });
-    const aboutLink = await screen.findByRole("link", { name: /Saber más|Learn more|Узнать больше/i });
+    const aboutLink = await screen.findByRole("link", { name: /Conoce más|Learn more|Узнать больше/i });
 
     expect(servicesLink).toHaveAttribute("href", expectedServices);
     expect(aboutLink).toHaveAttribute("href", expectedAbout);
