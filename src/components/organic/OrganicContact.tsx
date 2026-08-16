@@ -8,7 +8,7 @@ import { TextLinesSkeleton } from "@/components/skeletons/ContentSkeletons";
 import CurvedDivider from "@/components/CurvedDivider";
 import OrganicShape from "@/components/organic/OrganicShape";
 import { useTheme } from "@/contexts/ThemeContext";
-import { WHATSAPP_PHONE, WHATSAPP_DEFAULT_MESSAGE, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/config/contact";
+import { WHATSAPP_PHONE, WHATSAPP_DEFAULT_MESSAGE } from "@/config/contact";
 import { trackWhatsAppClick, trackContactSubmit } from "@/lib/analytics";
 
 const TripAdvisorIcon = ({ size = 18, className }: { size?: number; className?: string }) => (

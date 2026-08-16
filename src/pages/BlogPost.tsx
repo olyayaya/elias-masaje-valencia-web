@@ -243,7 +243,11 @@ const BlogPost = () => {
             prose-p:text-muted-foreground prose-p:leading-relaxed
             prose-a:text-primary-strong prose-a:no-underline hover:prose-a:underline
             prose-strong:text-foreground
-            prose-li:text-muted-foreground
+            prose-li:text-muted-foreground prose-li:my-1
+            prose-ul:list-disc prose-ul:pl-6 prose-ul:my-4
+            prose-ol:list-decimal prose-ol:pl-6 prose-ol:my-4
+            [&_li>ul]:list-[circle] [&_li>ol]:list-[lower-alpha] [&_li>ul]:my-2 [&_li>ol]:my-2
+            prose-li:marker:text-primary-strong
             prose-blockquote:border-primary/30 prose-blockquote:text-muted-foreground"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content, {
             ALLOWED_TAGS: ["p","h1","h2","h3","h4","strong","em","u","a","ul","ol","li","blockquote","br","hr","img","figure","figcaption","code","pre"],

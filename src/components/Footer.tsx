@@ -3,7 +3,6 @@ import { Facebook } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { useLocalePath } from "@/hooks/use-locale-path";
-import { INSTAGRAM_HANDLE } from "@/config/contact";
 import { openConsentSettings } from "@/lib/consent";
 import { TextLinesSkeleton } from "@/components/skeletons/ContentSkeletons";
 
