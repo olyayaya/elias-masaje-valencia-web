@@ -246,7 +246,7 @@ const OrganicHome = () => {
 
 
           <div className="text-center mb-16">
-            <Link to="/servicios" className="text-sm font-body text-primary-strong hover:opacity-80 transition-opacity">
+            <Link to={lp("services")} className="text-sm font-body text-primary-strong hover:opacity-80 transition-opacity">
               {t.services.viewAll}
             </Link>
           </div>
@@ -288,7 +288,7 @@ const OrganicHome = () => {
                 {sc.about_preview_p2 || t.about.previewP2}
               </p>
               <Link
-                to="/sobre-mi"
+                to={lp("about")}
                 className="text-sm font-body pb-0.5 transition-colors"
                 style={{ color: "hsl(var(--organic-dark-foreground))", borderBottom: "1px solid hsl(var(--organic-dark-foreground) / 0.3)" }}
               >
