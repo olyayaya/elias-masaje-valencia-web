@@ -308,7 +308,14 @@ const OrganicHome = () => {
         <div className="max-w-5xl mx-auto">
           <div ref={testimonialsTitle.ref} style={testimonialsTitle.style} className="text-center mb-4">
             <h2 className="font-display text-3xl md:text-4xl mb-2">{t.testimonials.title}</h2>
-            <p className="text-sm text-muted-foreground font-body mb-1">{sc.google_rating || "5.0"} ★ — {sc.google_review_count || "66"}+ Google & TripAdvisor reviews</p>
+            <div className="mb-1 min-h-[20px] flex items-center justify-center">
+              {scStatus === "loading" ? (
+                <RatingLineSkeleton />
+              ) : sc.google_rating && sc.google_review_count ? (
+                <p className="text-sm text-muted-foreground font-body">{sc.google_rating} ★ — {sc.google_review_count}+ Google &amp; TripAdvisor reviews</p>
+              ) : null}
+            </div>
+
             <div className="w-12 h-px bg-primary mx-auto mt-3" />
           </div>
         </div>
