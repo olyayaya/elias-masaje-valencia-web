@@ -4,7 +4,7 @@ import { INSTAGRAM_URL } from "@/config/contact";
 
 const ADDRESS = {
   "@type": "PostalAddress" as const,
-  streetAddress: "Calle de la Paz 18",
+  streetAddress: "Calle San Vicente Mártir, 24",
   addressLocality: "Valencia",
   addressRegion: "Comunidad Valenciana",
   postalCode: "46002",
@@ -97,7 +97,7 @@ export function buildLocalBusiness(
     address: ADDRESS,
     geo: GEO,
     areaServed: { "@type": "City", name: "Valencia" },
-    hasMap: "https://maps.google.com/?q=Calle+de+la+Paz+18,+46002+Valencia",
+    hasMap: "https://maps.google.com/?q=Calle+San+Vicente+M%C3%A1rtir%2C+24,+46002+Valencia",
     currenciesAccepted: "EUR",
     paymentAccepted: "Cash, Bizum",
     availableLanguage: ["es", "en", "ru"],
