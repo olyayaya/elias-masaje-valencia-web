@@ -5,7 +5,7 @@ import { buildSitemapXml, type ExtraUrl } from "./build-sitemap.ts";
 // observed dropping the content type from a plain object literal on GET.
 function xmlHeaders(body: string): Headers {
   const headers = new Headers();
-  headers.set("content-type", "application/xml; charset=utf-8");
+  headers.set("content-type", globalThis.__CT_TEST || "application/xml; charset=utf-8");
   headers.set("cache-control", "public, max-age=60, s-maxage=60");
   headers.set("access-control-allow-origin", "*");
   headers.set("content-length", String(new TextEncoder().encode(body).byteLength));
