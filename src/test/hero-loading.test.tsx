@@ -43,7 +43,7 @@ vi.mock("@/integrations/supabase/client", () => {
 
 const HERO_ROWS = [
   { content_key: "hero_headline", value_es: "Tu cuerpo merece atención experta", value_en: "Your body deserves expert care", value_ru: "Ваше тело заслуживает заботы" },
-  { content_key: "hero_subheadline", value_es: "Masaje profesional en el corazón de Valencia", value_en: "Professional massage in the heart of Valencia", value_ru: "Профессиональный массаж в сердце Валенсии" },
+  { content_key: "hero_subheadline", value_es: "Masaje profesional en el corazón de Valencia", value_en: "Professional massage in central Valencia", value_ru: "Профессиональный массаж в сердце Валенсии" },
   { content_key: "hero_cta", value_es: "Reservar cita", value_en: "Book an appointment", value_ru: "Записаться" },
 ];
 
