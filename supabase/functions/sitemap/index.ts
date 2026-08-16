@@ -1,14 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { buildSitemapXml, type ExtraUrl } from "./build-sitemap.ts";
 
-// Build headers with an explicit Headers instance — the edge gateway has been
-// observed dropping the content type from a plain object literal on GET.
-function xmlHeaders(body: string): Headers {
+// NOTE: the Supabase edge gateway rewrites the response Content-Type to
+// text/plain on GET requests (verified with both an object literal and an
+// explicit Headers instance, with and without charset). The function still
+// declares the correct type; the canonical public URL is guaranteed to be
+// application/xml by the Cloudflare worker in infrastructure/cloudflare.
+function xmlHeaders(): Headers {
   const headers = new Headers();
-  headers.set("content-type", "text/xml; charset=utf-8");
+  headers.set("content-type", "application/xml; charset=utf-8");
   headers.set("cache-control", "public, max-age=60, s-maxage=60");
   headers.set("access-control-allow-origin", "*");
-  headers.set("content-length", String(new TextEncoder().encode(body).byteLength));
   headers.set("x-content-type-options", "nosniff");
   return headers;
 }
@@ -57,7 +59,7 @@ Deno.serve(async (_req) => {
 
     const xml = buildSitemapXml(posts ?? [], extraUrls);
 
-    return new Response(xml, { status: 200, headers: xmlHeaders(xml) });
+    return new Response(xml, { status: 200, headers: xmlHeaders() });
   } catch (err) {
     console.error("Sitemap error:", err);
     const message = err instanceof Error ? err.message : String(err);
