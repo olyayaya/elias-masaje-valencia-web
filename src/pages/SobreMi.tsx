@@ -10,16 +10,16 @@ const SobreMiPage = () => {
   const { content: sc } = useSiteContent();
 
   const fallbackTitle = locale === "es"
-    ? "Sobre Mí — Elias Masaje Valencia"
+    ? "Masajista profesional en Valencia — Sobre mí | Elias Masaje"
     : locale === "ru"
-    ? "Обо мне — Elias Masaje Валенсия"
-    : "About Me — Elias Masaje Valencia";
+    ? "Профессиональный массажист в Валенсии — Обо мне | Elias Masaje"
+    : "Professional massage therapist in Valencia — About me | Elias Masaje";
 
   const fallbackDesc = locale === "es"
-    ? "Conoce a Elias, masajista profesional en Valencia con experiencia en masaje descontracturante, relajante y deportivo."
+    ? "Descubre a Elias, masajista profesional en Valencia con más de 8 años de experiencia en masaje descontracturante, relajante y deportivo. Reserva tu cita por WhatsApp en el centro de Valencia."
     : locale === "ru"
-    ? "Познакомьтесь с Элиасом — профессиональным массажистом в Валенсии с опытом в лечебном, расслабляющем и спортивном массаже."
-    : "Meet Elias, a professional massage therapist in Valencia specializing in deep tissue, relaxation and sports massage.";
+    ? "Познакомьтесь с Элиасом — профессиональным массажистом в Валенсии с более чем 8-летним опытом в лечебном, расслабляющем и спортивном массаже. Запишитесь через WhatsApp в центре Валенсии."
+    : "Meet Elias, a professional massage therapist in Valencia with over 8 years of experience in deep tissue, relaxation and sports massage. Book your session via WhatsApp in central Valencia.";
 
   const title = sc.about_seo_title?.trim() || fallbackTitle;
   const desc = sc.about_seo_description?.trim() || fallbackDesc;
@@ -59,12 +59,30 @@ const SobreMiPage = () => {
               addressCountry: "ES",
             },
           },
-          knowsAbout: [
-            "Deep tissue massage",
-            "Relaxation massage",
-            "Sports massage",
-            "Therapeutic massage",
-          ],
+          knowsAbout:
+            locale === "es"
+              ? [
+                  "Masajista profesional en Valencia",
+                  "Masaje descontracturante",
+                  "Masaje relajante",
+                  "Masaje deportivo",
+                  "Masaje terapéutico",
+                ]
+              : locale === "ru"
+              ? [
+                  "Профессиональный массажист в Валенсии",
+                  "Лечебный массаж",
+                  "Расслабляющий массаж",
+                  "Спортивный массаж",
+                  "Терапевтический массаж",
+                ]
+              : [
+                  "Professional massage therapist in Valencia",
+                  "Deep tissue massage",
+                  "Relaxation massage",
+                  "Sports massage",
+                  "Therapeutic massage",
+                ],
           sameAs: ["https://instagram.com/elias_masaje"],
         },
         {
