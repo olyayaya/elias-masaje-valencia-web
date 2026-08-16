@@ -65,3 +65,18 @@ export const FaqSkeleton = ({ count = 4 }: { count?: number }) => (
     ))}
   </div>
 );
+
+/** Hero headline + subheadline + CTA placeholder, sized to the real hero block. */
+export const HeroTextSkeleton = () => (
+  <div data-testid="hero-skeleton" aria-hidden="true">
+    <div className="mb-6 space-y-3">
+      <Skeleton className="h-10 md:h-14 w-full max-w-md" />
+      <Skeleton className="h-10 md:h-14 w-4/5 max-w-sm" />
+    </div>
+    <div className="mb-10 max-w-md space-y-2">
+      <Skeleton className="h-5 w-full" />
+      <Skeleton className="h-5 w-2/3" />
+    </div>
+    <Skeleton className="h-[50px] w-44 rounded-full" />
+  </div>
+);

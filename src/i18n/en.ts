@@ -16,9 +16,6 @@ export const en: Translations = {
     bookWhatsApp: "Book via WhatsApp",
   },
   hero: {
-    headline: "Professional massage\nin the heart of Valencia",
-    subheadline: "A space to slow down, release tension, and reconnect with your body.",
-    cta: "Book via WhatsApp",
     tagline: "Valencia · Massage · Wellness",
   },
   benefits: {

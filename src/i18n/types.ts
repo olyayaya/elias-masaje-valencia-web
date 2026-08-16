@@ -16,9 +16,6 @@ export interface Translations {
     bookWhatsApp: string;
   };
   hero: {
-    headline: string;
-    subheadline: string;
-    cta: string;
     tagline: string;
   };
   benefits: {
