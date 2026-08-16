@@ -33,7 +33,7 @@ import { WHATSAPP_URL } from "@/config/contact";
 import { trackWhatsAppClick } from "@/lib/analytics";
 import BookingDialog from "@/components/BookingDialog";
 import ContentError from "@/components/ContentError";
-import { ServiceRowSkeletonList, RatingLineSkeleton, TestimonialCardSkeleton, FaqSkeleton } from "@/components/skeletons/ContentSkeletons";
+import { ServiceRowSkeletonList, RatingLineSkeleton, TestimonialCardSkeleton, FaqSkeleton, HeroTextSkeleton } from "@/components/skeletons/ContentSkeletons";
 
 
 const OrganicHome = () => {
@@ -51,7 +51,7 @@ const OrganicHome = () => {
   const servicesState = useDbServices();
   const faqState = useDbFaqs();
   const testimonialsState = useDbTestimonials();
-  const { content: sc, status: scStatus } = useSiteContent();
+  const { content: sc, status: scStatus, retry: scRetry } = useSiteContent();
   const { images: customHomeCarousel, loaded: homeCarouselLoaded } = usePageImages("home_carousel");
   const defaultHomeCarousel = [
     { src: massageWrist, alt: "Wrist massage" },
