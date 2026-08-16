@@ -82,13 +82,13 @@ export const es: Translations = {
   about: {
     title: "Masajista profesional en Valencia — Sobre mí",
     sectionLabel: "El terapeuta",
-    previewP1: "Me llamo Elias y soy masajista profesional en Valencia. Mi camino hacia el masaje comenzó con una idea muy sencilla: ayudar a la gente a sentirse mejor, liberar tensiones y regalarse un momento real de pausa.",
+    previewP1: "Me llamo Elias y soy masajista profesional en Valencia. Mi camino en el masaje nació de una idea muy simple: ayudar a las personas a sentirse mejor, a soltar tensión y a regalarse un momento real de pausa en medio del ritmo diario.",
     previewP2: "En cada sesión busco algo más que un masaje: crear una experiencia de bienestar adaptada a lo que tu cuerpo y tu mente necesitan en ese momento.",
     learnMore: "Conoce más →",
     paragraphs: [
-      "Me llamo Elias y soy masajista profesional en Valencia. Mi camino hacia el masaje comenzó con una idea muy sencilla: ayudar a la gente a sentirse mejor, liberar tensiones y regalarse un momento real de pausa en medio del día a día. Con el tiempo, esa idea se convirtió en mi vocación y en la base de mi trabajo.",
-      "En cada sesión busco algo más que un masaje: crear una experiencia de bienestar adaptada a lo que tu cuerpo y tu mente necesitan en ese momento. Ya sea para reducir el estrés, aliviar la tensión acumulada, desconectar o simplemente dedicarte un tiempo, mi objetivo es que salgas con una sensación de calma, ligereza y cuidado genuino.",
-      "Trabajo con diferentes tipos de masaje, como antiestrés, relajante, tejido profundo, piedras calientes, a 4 manos, cuerpo superior y cuerpo inferior, adaptando siempre la presión, el ritmo y las técnicas a cada persona. Porque no todo el mundo necesita lo mismo, y cada sesión debe ser personal, no genérica.",
+      "Me llamo Elias y soy masajista profesional en Valencia. Mi camino en el masaje nació de una idea muy simple: ayudar a las personas a sentirse mejor, a soltar tensión y a regalarse un momento real de pausa en medio del ritmo diario. Con el tiempo, esa idea se convirtió en mi vocación y en la base de mi trabajo.",
+      "En cada sesión busco algo más que un masaje: crear una experiencia de bienestar adaptada a lo que tu cuerpo y tu mente necesitan en ese momento. Ya sea para reducir el estrés, aliviar la tensión acumulada, desconectar o simplemente regalarte un espacio para ti, mi objetivo es que salgas con una sensación de calma, ligereza y cuidado auténtico.",
+      "Trabajo con distintos tipos de masaje, como antiestrés, relajante, tejido profundo, piedras calientes, masaje a 4 manos, zona superior y zona inferior, adaptando siempre la presión, el ritmo y las técnicas a cada persona. Porque no todos los cuerpos necesitan lo mismo, y cada sesión debe sentirse personal, no genérica.",
     ],
     spaceTitle: "El espacio",
     spaceLabel: "El espacio",
