@@ -13,20 +13,24 @@ const modeLabels: Record<ThemeMode, string> = {
   "dark-gradient": "Switch to light mode",
 };
 
+/**
+ * Header theme control. Rendered inline right after the language switcher so
+ * both controls share the same baseline, hit area and icon size.
+ */
 const ThemeSwitcher = () => {
   const { mode, toggleMode } = useTheme();
   const Icon = modeIcons[mode];
 
   return (
-    <div className="fixed bottom-6 left-6 z-50">
-      <button
-        onClick={toggleMode}
-        className="w-11 h-11 rounded-full bg-foreground/90 text-background flex items-center justify-center shadow-lg hover:bg-foreground transition-all hover:-translate-y-0.5"
-        aria-label={modeLabels[mode]}
-      >
-        <Icon size={17} />
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={toggleMode}
+      className="flex shrink-0 items-center justify-center w-8 h-8 -mx-1 rounded text-muted-foreground hover:text-primary-strong transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label={modeLabels[mode]}
+      title={modeLabels[mode]}
+    >
+      <Icon size={16} aria-hidden="true" />
+    </button>
   );
 };
 

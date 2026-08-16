@@ -1,9 +1,8 @@
 import { Link } from "react-router-dom";
-import { Facebook, Instagram } from "lucide-react";
+import { Facebook } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { useLocalePath } from "@/hooks/use-locale-path";
-import { INSTAGRAM_HANDLE } from "@/config/contact";
 import { openConsentSettings } from "@/lib/consent";
 import { TextLinesSkeleton } from "@/components/skeletons/ContentSkeletons";
 
@@ -66,13 +65,8 @@ const Footer = () => {
 
                 </>
               )}
-              <a href={`https://instagram.com/${(sc.contact_instagram || INSTAGRAM_HANDLE).replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
-                {sc.contact_instagram || INSTAGRAM_HANDLE}
-              </a>
               {(() => {
                 const socials: { href: string; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [];
-                const ig = sc.contact_instagram || INSTAGRAM_HANDLE;
-                if (ig) socials.push({ href: `https://instagram.com/${ig.replace("@", "")}`, label: "Instagram", Icon: ({ className }) => <Instagram className={className} /> });
                 if (sc.contact_facebook_url) socials.push({ href: sc.contact_facebook_url, label: "Facebook", Icon: ({ className }) => <Facebook className={className} /> });
                 if (sc.contact_google_url) socials.push({ href: sc.contact_google_url, label: "Google", Icon: GoogleIcon });
                 const tripUrl = sc.integration_tripadvisor_url || sc.contact_tripadvisor_url;

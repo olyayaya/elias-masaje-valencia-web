@@ -251,7 +251,7 @@ const DashboardBlog = () => {
 
   const fetchPosts = async () => {
     const { data } = await supabase.from("blog_posts").select("*").order("created_at", { ascending: false });
-    if (data) setPosts(data as BlogPost[]);
+    if (data) setPosts(data as unknown as BlogPost[]);
     setLoading(false);
   };
 
@@ -314,7 +314,7 @@ const DashboardBlog = () => {
 
     // Uniqueness check per column so we never silently overwrite another article.
     for (const key of ["slug_es", "slug_en", "slug_ru"] as const) {
-      let q = supabase.from("blog_posts").select("id").eq(key, localized[key]).limit(1);
+      let q = supabase.from("blog_posts").select("id").eq(key as "slug", localized[key]).limit(1);
       if (editing && editing !== "new") q = q.neq("id", editing);
       const { data: clash } = await q;
       if (clash && clash.length > 0) {

@@ -30,9 +30,6 @@ export type Database = {
           seo_keywords_en: string[]
           seo_keywords_ru: string[]
           slug: string | null
-          slug_es: string | null
-          slug_en: string | null
-          slug_ru: string | null
           status: string
           title: string
           title_en: string
@@ -54,9 +51,6 @@ export type Database = {
           seo_keywords_en?: string[]
           seo_keywords_ru?: string[]
           slug?: string | null
-          slug_es?: string | null
-          slug_en?: string | null
-          slug_ru?: string | null
           status?: string
           title?: string
           title_en?: string
@@ -78,9 +72,6 @@ export type Database = {
           seo_keywords_en?: string[]
           seo_keywords_ru?: string[]
           slug?: string | null
-          slug_es?: string | null
-          slug_en?: string | null
-          slug_ru?: string | null
           status?: string
           title?: string
           title_en?: string
