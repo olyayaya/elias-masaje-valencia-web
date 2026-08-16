@@ -16,9 +16,6 @@ export const ru: Translations = {
     bookWhatsApp: "Записаться через WhatsApp",
   },
   hero: {
-    headline: "Профессиональный массаж\nв центре Валенсии",
-    subheadline: "Пространство, чтобы замедлиться, снять напряжение и восстановить связь с телом.",
-    cta: "Записаться через WhatsApp",
     tagline: "Валенсия · Массаж · Здоровье",
   },
   benefits: {
