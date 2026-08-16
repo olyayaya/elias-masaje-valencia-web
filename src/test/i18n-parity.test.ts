@@ -30,7 +30,7 @@ describe("locale array parity", () => {
   it("no locale has empty string values at the top level fields", () => {
     for (const [name, t] of Object.entries(locales)) {
       expect(t.nav.home, `${name}.nav.home`).not.toBe("");
-      expect(t.hero.headline, `${name}.hero.headline`).not.toBe("");
+      expect(t.hero.tagline, `${name}.hero.tagline`).not.toBe("");
       expect(t.services.title, `${name}.services.title`).not.toBe("");
       expect(t.contact.title, `${name}.contact.title`).not.toBe("");
     }
