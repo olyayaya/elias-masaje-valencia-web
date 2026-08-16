@@ -131,7 +131,9 @@ describe("cloudflare sitemap worker", () => {
     );
     expect(PROXIED_PATH).toBe("/sitemap.xml");
     expect(src).not.toContain("eliasmas.es/servicios");
-    expect(src.match(/https:\/\/[^\s"']+/g) ?? []).toEqual([UPSTREAM]);
+    // The only URL in executable code is the upstream edge function.
+    const code = src.split("\n").filter((l) => !l.trim().startsWith("*") && !l.trim().startsWith("//")).join("\n");
+    expect(code.match(/https:\/\/[^\s"']+/g) ?? []).toEqual([UPSTREAM]);
   });
 });
 
