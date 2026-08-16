@@ -82,12 +82,12 @@ export const es: Translations = {
   about: {
     title: "Masajista profesional en Valencia — Sobre mí",
     sectionLabel: "El terapeuta",
-    previewP1: "Soy Elias, masajista profesional en Valencia con más de 8 años de experiencia. Me formé en técnicas de masaje descontracturante, relajante y deportivo, y desde entonces he atendido a cientos de personas en el centro de Valencia.",
+    previewP1: "Soy Elias, masajista profesional en Valencia con más de 8 años de experiencia. Me formé en técnicas de masaje antiestrés, relajante, tejido profundo, piedras calientes y a 4 manos, y desde entonces he atendido a cientos de personas en el centro de Valencia.",
     previewP2: "Mi enfoque combina conocimiento anatómico con una escucha activa del cuerpo. Cada sesión se adapta a lo que necesitas ese día.",
     learnMore: "Conoce más →",
     paragraphs: [
-      "Me llamo Elias y soy masajista profesional en Valencia, especializado en masaje descontracturante, relajante y deportivo. Llevo más de 8 años dedicándome a esto, y cada día me confirma que elegí bien.",
-      "Me formé en fisioterapia y me especialicé en técnicas de masaje terapéutico, deportivo y relajante. He trabajado con deportistas, personas con dolor crónico y con quienes simplemente necesitan parar.",
+      "Me llamo Elias y soy masajista profesional en Valencia, especializado en masaje antiestrés, relajante, tejido profundo, piedras calientes y a 4 manos. Llevo más de 8 años dedicándome a esto, y cada día me confirma que elegí bien.",
+      "Me formé en fisioterapia y me especialicé en técnicas de masaje terapéutico, deportivo y relajante, incluyendo tratamientos antiestrés, de tejido profundo, con piedras calientes y a 4 manos. He trabajado con deportistas, personas con dolor crónico y con quienes simplemente necesitan parar.",
       "Mi enfoque es sencillo: escuchar al cuerpo, entender lo que necesita y trabajar con precisión. No hago protocolos genéricos. Cada sesión es diferente porque cada persona lo es.",
       "El espacio donde trabajo está en el centro de Valencia, pensado para que te sientas tranquilo desde que llegas. Sin música alta, sin luces artificiales, sin prisas. Solo tú, tu cuerpo y el tiempo que necesitas.",
     ],

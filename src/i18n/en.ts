@@ -82,12 +82,12 @@ export const en: Translations = {
   about: {
     title: "Professional massage therapist in Valencia — About me",
     sectionLabel: "The therapist",
-    previewP1: "I'm Elias, a professional massage therapist in Valencia with over 8 years of experience. I trained in deep tissue, relaxation and sports massage techniques, and have since treated hundreds of people in central Valencia.",
+    previewP1: "I'm Elias, a professional massage therapist in Valencia with over 8 years of experience. I trained in anti-stress, relaxation, deep tissue, hot stone and four-hand massage techniques, and have since treated hundreds of people in central Valencia.",
     previewP2: "My approach combines anatomical knowledge with active body listening. Every session adapts to what you need that day.",
     learnMore: "Learn more →",
     paragraphs: [
-      "My name is Elias and I'm a professional massage therapist in Valencia, specializing in deep tissue, relaxation and sports massage. I've been doing this for over 8 years, and every day confirms I made the right choice.",
-      "I trained in physiotherapy and specialised in therapeutic, sports, and relaxation massage techniques. I've worked with athletes, people with chronic pain, and those who simply need to stop.",
+      "My name is Elias and I'm a professional massage therapist in Valencia, specializing in anti-stress, relaxation, deep tissue, hot stone and four-hand massage. I've been doing this for over 8 years, and every day confirms I made the right choice.",
+      "I trained in physiotherapy and specialised in therapeutic, sports, and relaxation massage techniques, including anti-stress, deep tissue, hot stone and four-hand treatments. I've worked with athletes, people with chronic pain, and those who simply need to stop.",
       "My approach is simple: listen to the body, understand what it needs, and work with precision. I don't follow generic protocols. Every session is different because every person is.",
       "The space where I work is in central Valencia, designed so you feel calm from the moment you arrive. No loud music, no artificial lights, no rush. Just you, your body, and the time you need.",
     ],
