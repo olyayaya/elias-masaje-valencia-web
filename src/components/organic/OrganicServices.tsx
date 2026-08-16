@@ -157,10 +157,15 @@ const OrganicServices = () => {
         <OrganicShape shape="circle" size="w-72 h-72 md:w-14 md:h-14" position="bottom-16 left-6" animation="breathe" color="hsl(var(--primary) / 0.05)" delay={2500} />
         <div className="max-w-5xl mx-auto">
           <div className="space-y-0 divide-y divide-border">
-            {services.map((s, i) => (
+            {servicesState.status === "loading" && <ServiceRowSkeletonList count={5} />}
+            {servicesState.status === "error" && (
+              <ContentError onRetry={servicesState.retry} showWhatsApp whatsappLocation="services_page_error" />
+            )}
+            {servicesState.status === "ready" && services.map((s, i) => (
               <ServiceRow key={i} {...s} bookLabel={t.services.bookBtn} index={i} />
             ))}
           </div>
+
         </div>
       </section>
 
