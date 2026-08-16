@@ -25,7 +25,7 @@ const TripAdvisorIcon = ({ className }: { className?: string }) => (
 
 const Footer = () => {
   const { t } = useI18n();
-  const { content: sc } = useSiteContent();
+  const { content: sc, status: scStatus } = useSiteContent();
   const lp = useLocalePath();
 
   return (
