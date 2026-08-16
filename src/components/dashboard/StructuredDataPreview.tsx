@@ -28,7 +28,7 @@ const StructuredDataPreview = () => {
       telephone: "+34698968007",
       address: {
         "@type": "PostalAddress",
-        streetAddress: "Calle de la Paz 18",
+        streetAddress: "Calle San Vicente Mártir, 24",
         addressLocality: "Valencia",
         addressRegion: "Comunidad Valenciana",
         postalCode: "46002",

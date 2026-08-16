@@ -27,7 +27,7 @@ BRAND VOICE:
 - Easy to read — short paragraphs, clear language
 
 BUSINESS CONTEXT:
-- Located at Calle de la Paz 18, Valencia centro
+- Located at Calle San Vicente Mártir, 24, Valencia centro
 - Services: deep tissue (descontracturante), relaxation, sports, back & neck, cupping, combined sessions
 - Target audience: Valencia residents, office workers, athletes, people with chronic tension
 - Key differentiator: personalized one-on-one sessions in a calm, private space
