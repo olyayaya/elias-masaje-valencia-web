@@ -19,7 +19,8 @@ const ROW = {
   title: "Masaje deportivo para corredores",
   title_en: "Sports massage for runners",
   title_ru: "Спортивный массаж для бегунов",
-  content: "<p>es</p>",
+  content:
+    '<p>es</p><ul><li>uno</li><li>dos<ul><li>anidado</li></ul></li></ul><ol><li>primero</li><li>segundo</li></ol>',
   content_en: "<p>en</p>",
   content_ru: "<p>ru</p>",
   meta_description: "es",
@@ -144,5 +145,20 @@ describe("blog post localized routing", () => {
         ]),
       );
     });
+  });
+
+  it("preserves unordered, ordered and nested list markup through sanitization", async () => {
+    renderPost("/blog/beneficios-masaje-deportivo-corredores-valencia");
+    await screen.findByText("Masaje deportivo para corredores");
+    const prose = document.querySelector(".prose")!;
+    const ul = prose.querySelector("ul")!;
+    const ol = prose.querySelector("ol")!;
+    expect(ul).toBeTruthy();
+    expect(ol).toBeTruthy();
+    expect(ul.querySelectorAll(":scope > li")).toHaveLength(2);
+    expect(ul.querySelector("li ul li")!.textContent).toBe("anidado");
+    expect(ol.querySelectorAll("li")).toHaveLength(2);
+    expect(prose.className).toContain("prose-ul:list-disc");
+    expect(prose.className).toContain("prose-ol:list-decimal");
   });
 });
