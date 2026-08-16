@@ -17,20 +17,26 @@ const GEO = {
   longitude: -0.3763,
 };
 
-const OPENING_HOURS = [
+/**
+ * Owner-confirmed schedule: Monday–Saturday 11:00–21:00, Sunday closed.
+ * Single source of truth for every LocalBusiness JSON-LD node on the site.
+ */
+export const OPENING_HOURS = [
   {
     "@type": "OpeningHoursSpecification" as const,
-    dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-    opens: "10:00",
-    closes: "20:00",
+    dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    opens: "11:00",
+    closes: "21:00",
   },
   {
+    // Google's convention for a closed day.
     "@type": "OpeningHoursSpecification" as const,
-    dayOfWeek: "Saturday",
-    opens: "10:00",
-    closes: "14:00",
+    dayOfWeek: "Sunday",
+    opens: "00:00",
+    closes: "00:00",
   },
 ];
+
 
 const SAME_AS = [INSTAGRAM_URL];
 

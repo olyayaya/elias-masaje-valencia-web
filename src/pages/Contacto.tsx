@@ -3,6 +3,7 @@ import { useHead } from "@/hooks/use-head";
 import { useI18n } from "@/i18n/context";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 import { buildBreadcrumbList } from "@/lib/breadcrumbs";
+import { buildLocalBusiness } from "@/lib/local-business";
 
 const ContactoPage = () => {
   const { locale } = useI18n();
@@ -31,45 +32,7 @@ const ContactoPage = () => {
     jsonLd: {
       "@context": "https://schema.org",
       "@graph": [
-        {
-          "@type": "HealthAndBeautyBusiness",
-          "@id": `${BASE_URL}/#localbusiness`,
-          name: "Elias Masaje",
-          url: BASE_URL,
-          telephone: "+34698968007",
-          address: {
-            "@type": "PostalAddress",
-            streetAddress: "Calle San Vicente Mártir, 24",
-            addressLocality: "Valencia",
-            addressRegion: "Comunidad Valenciana",
-            postalCode: "46002",
-            addressCountry: "ES",
-          },
-          geo: {
-            "@type": "GeoCoordinates",
-            latitude: 39.4699,
-            longitude: -0.3763,
-          },
-          contactPoint: [
-            {
-              "@type": "ContactPoint",
-              telephone: "+34698968007",
-              contactType: "reservations",
-              areaServed: "ES",
-              availableLanguage: ["Spanish", "English", "Russian"],
-            },
-            {
-              "@type": "ContactPoint",
-              url: "https://instagram.com/elias_masaje",
-              contactType: "customer service",
-            },
-          ],
-          openingHoursSpecification: [
-            { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], opens: "10:00", closes: "20:00" },
-            { "@type": "OpeningHoursSpecification", dayOfWeek: "Saturday", opens: "10:00", closes: "14:00" },
-          ],
-          sameAs: ["https://instagram.com/elias_masaje"],
-        },
+        buildLocalBusiness(locale, { parentOrganization: false }),
         {
           "@type": "WebPage",
           "@id": `${BASE_URL}${ROUTE_MAP.contact[locale]}`,
@@ -81,6 +44,7 @@ const ContactoPage = () => {
         buildBreadcrumbList("contact", locale),
       ],
     },
+
   });
 
   return <OrganicContact />;
