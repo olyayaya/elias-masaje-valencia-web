@@ -5,8 +5,10 @@ import {
   buildSitemapXml,
   buildSitemapEntries,
   BASE_URL,
+  ROUTE_MAP as BUILDER_ROUTE_MAP,
   type BlogPostRow,
 } from "../../supabase/functions/sitemap/build-sitemap";
+import * as APP_ROUTES from "@/config/routes";
 import worker, { UPSTREAM, PROXIED_PATH } from "../../infrastructure/cloudflare/sitemap-proxy/worker.js";
 
 const NOW = new Date("2026-08-16T12:00:00.000Z");
@@ -45,6 +47,18 @@ describe("sitemap generator", () => {
       expect(all).not.toContain(slug);
     }
     expect(all).not.toMatch(/\/blog\/\s*$/m);
+  });
+
+  it("excludes posts with null or invalid published_at", () => {
+    const rows: BlogPostRow[] = [
+      { slug: "sin-fecha", status: "published", hidden: false, published_at: null },
+      { slug: "fecha-invalida", status: "published", hidden: false, published_at: "not-a-date" },
+      { slug: "sin-hidden", status: "published", published_at: "2026-01-01T00:00:00Z" },
+    ];
+    const all = buildSitemapEntries(rows, [], NOW).map((e) => e.loc).join("\n");
+    for (const slug of ["sin-fecha", "fecha-invalida", "sin-hidden"]) {
+      expect(all).not.toContain(slug);
+    }
   });
 
   it("includes the privacy page for ES/EN/RU", () => {
@@ -93,6 +107,16 @@ describe("sitemap generator", () => {
   });
 });
 
+describe("route map mirror", () => {
+  it("matches the static routes in src/config/routes.ts", () => {
+    const { ROUTE_MAP: appRoutes } = APP_ROUTES;
+    const expected = Object.fromEntries(
+      Object.entries(appRoutes).filter(([id]) => id !== "blogPost"),
+    );
+    expect(BUILDER_ROUTE_MAP).toEqual(expected);
+  });
+});
+
 describe("cloudflare sitemap worker", () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -100,7 +124,8 @@ describe("cloudflare sitemap worker", () => {
     const fetchMock = vi.fn(async (_input: unknown) =>
       new Response("<?xml version=\"1.0\"?><urlset/>", {
         status: 200,
-        headers: { "Content-Type": "application/xml; charset=utf-8" },
+        // Upstream gateway rewrites the type — the worker must not mirror it.
+        headers: { "Content-Type": "text/plain" },
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
@@ -112,6 +137,19 @@ describe("cloudflare sitemap worker", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("application/xml; charset=utf-8");
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=60, s-maxage=60");
+  });
+
+  it("forces XML content type and no-store when upstream fails", async () => {
+    const fetchMock = vi.fn(async (_input: unknown) =>
+      new Response("boom", { status: 502, headers: { "Content-Type": "text/html" } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await worker.fetch(new Request("https://eliasmas.es/sitemap.xml"));
+
+    expect(res.status).toBe(502);
+    expect(res.headers.get("Content-Type")).toBe("application/xml; charset=utf-8");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("does not intercept other paths", async () => {
