@@ -155,7 +155,7 @@ describe("blog post localized routing", () => {
     const ol = prose.querySelector("ol")!;
     expect(ul).toBeTruthy();
     expect(ol).toBeTruthy();
-    expect(ul.querySelectorAll(":scope > li")).toHaveLength(2);
+    expect(Array.from(ul.children).filter((c) => c.tagName === "LI")).toHaveLength(2);
     expect(ul.querySelector("li ul li")!.textContent).toBe("anidado");
     expect(ol.querySelectorAll("li")).toHaveLength(2);
     expect(prose.className).toContain("prose-ul:list-disc");
