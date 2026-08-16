@@ -29,6 +29,9 @@ export const STATIC_PAGES: Array<{ id: PageId; changefreq: string; priority: str
 
 export interface BlogPostRow {
   slug: string | null;
+  slug_es?: string | null;
+  slug_en?: string | null;
+  slug_ru?: string | null;
   updated_at?: string | null;
   published_at?: string | null;
   status?: string | null;
@@ -70,6 +73,15 @@ export function isIndexablePost(post: BlogPostRow, now: Date = new Date()): bool
   if (Number.isNaN(published.getTime())) return false;
   if (published.getTime() > now.getTime()) return false;
   return true;
+}
+
+/**
+ * Localized slug for a locale, falling back to the untouched legacy slug so
+ * rows whose localized columns are still null stay indexable during rollout.
+ */
+export function slugForLocale(post: BlogPostRow, locale: Locale): string {
+  const localized = locale === "es" ? post.slug_es : locale === "en" ? post.slug_en : post.slug_ru;
+  return (localized ?? "").trim() || (post.slug ?? "").trim();
 }
 
 interface UrlEntry {
@@ -126,12 +138,11 @@ export function buildSitemapEntries(
 
   for (const post of posts) {
     if (!isIndexablePost(post, now)) continue;
-    const slug = (post.slug as string).trim();
     const lastmod = toW3CDate(post.updated_at) ?? toW3CDate(post.published_at);
-    const alternates = alternatesFor((loc) => `${ROUTE_MAP.blog[loc]}/${slug}`);
+    const alternates = alternatesFor((loc) => `${ROUTE_MAP.blog[loc]}/${slugForLocale(post, loc)}`);
     for (const locale of LOCALES) {
       entries.push({
-        loc: `${BASE_URL}${ROUTE_MAP.blog[locale]}/${slug}`,
+        loc: `${BASE_URL}${ROUTE_MAP.blog[locale]}/${slugForLocale(post, locale)}`,
         alternates,
         changefreq: "monthly",
         priority: "0.6",
