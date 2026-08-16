@@ -7,6 +7,7 @@ import { Calendar, ArrowRight, Loader2 } from "lucide-react";
 import { useHead } from "@/hooks/use-head";
 import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 import { queryKeys } from "@/lib/query-keys";
+import { localizedSlug } from "@/lib/blog-slugs";
 import { buildLocalBusiness } from "@/lib/local-business";
 import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 
@@ -22,6 +23,9 @@ interface BlogPost {
   meta_description_en: string;
   meta_description_ru: string;
   slug: string;
+  slug_es: string | null;
+  slug_en: string | null;
+  slug_ru: string | null;
   published_at: string;
   seo_keywords: string[];
   seo_keywords_en: string[];
@@ -127,7 +131,7 @@ const Blog = () => {
           itemListElement: posts.map((post, i) => ({
             "@type": "ListItem",
             position: i + 1,
-            url: `${blogUrl}/${post.slug || post.id}`,
+            url: `${blogUrl}/${localizedSlug(post, locale)}`,
             name: getField(post, "title"),
           })),
         },
@@ -164,7 +168,7 @@ const Blog = () => {
               const description = getField(post, "meta_description");
               const content = getField(post, "content");
               const preview = description || stripHtml(content).slice(0, 160) + "…";
-              const slug = post.slug || post.id;
+              const slug = localizedSlug(post, locale);
 
               return (
                 <Link
