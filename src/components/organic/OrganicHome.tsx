@@ -39,6 +39,7 @@ import { ServiceRowSkeletonList, RatingLineSkeleton, TestimonialCardSkeleton, Fa
 
 const OrganicHome = () => {
   const { t, locale } = useI18n();
+  const lp = useLocalePath();
   const { mode } = useTheme();
   const isDG = mode === "dark-gradient";
   const heroText = useFadeIn(0.2);
