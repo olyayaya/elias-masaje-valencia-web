@@ -59,12 +59,30 @@ const SobreMiPage = () => {
               addressCountry: "ES",
             },
           },
-          knowsAbout: [
-            "Deep tissue massage",
-            "Relaxation massage",
-            "Sports massage",
-            "Therapeutic massage",
-          ],
+          knowsAbout:
+            locale === "es"
+              ? [
+                  "Masajista profesional en Valencia",
+                  "Masaje descontracturante",
+                  "Masaje relajante",
+                  "Masaje deportivo",
+                  "Masaje terapéutico",
+                ]
+              : locale === "ru"
+              ? [
+                  "Профессиональный массажист в Валенсии",
+                  "Лечебный массаж",
+                  "Расслабляющий массаж",
+                  "Спортивный массаж",
+                  "Терапевтический массаж",
+                ]
+              : [
+                  "Professional massage therapist in Valencia",
+                  "Deep tissue massage",
+                  "Relaxation massage",
+                  "Sports massage",
+                  "Therapeutic massage",
+                ],
           sameAs: ["https://instagram.com/elias_masaje"],
         },
         {
