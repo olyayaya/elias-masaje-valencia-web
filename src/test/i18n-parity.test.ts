@@ -17,20 +17,10 @@ describe("locale array parity", () => {
     expect(ru.benefits.items.length).toBe(es.benefits.items.length);
   });
 
-  it("services.items length matches across locales", () => {
-    expect(en.services.items.length).toBe(es.services.items.length);
-    expect(ru.services.items.length).toBe(es.services.items.length);
-  });
+  // Services, FAQ and testimonials now come from the database, so there are
+  // no static `items` arrays left to compare.
 
-  it("faq.items length matches across locales", () => {
-    expect(en.faq.items.length).toBe(es.faq.items.length);
-    expect(ru.faq.items.length).toBe(es.faq.items.length);
-  });
 
-  it("testimonials.items length matches across locales", () => {
-    expect(en.testimonials.items.length).toBe(es.testimonials.items.length);
-    expect(ru.testimonials.items.length).toBe(es.testimonials.items.length);
-  });
 
   it("about.paragraphs length matches across locales", () => {
     expect(en.about.paragraphs.length).toBe(es.about.paragraphs.length);
