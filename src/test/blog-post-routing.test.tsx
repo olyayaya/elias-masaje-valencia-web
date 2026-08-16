@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import { I18nProvider } from "@/i18n/context";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import BlogPost from "@/pages/BlogPost";
+import LocaleSync from "@/components/LocaleSync";
 
 /**
  * Locale-specific article lookup with legacy fallback:
@@ -75,6 +76,7 @@ const renderPost = (path: string) =>
     <MemoryRouter initialEntries={[path]}>
       <ThemeProvider>
         <I18nProvider>
+          <LocaleSync />
           <LocationProbe />
           <Routes>
             <Route path="/en/blog/:slug" element={<BlogPost />} />
