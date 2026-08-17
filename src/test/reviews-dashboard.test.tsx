@@ -192,8 +192,12 @@ describe("tripadvisor compliance card", () => {
 });
 
 describe("manual import — preview, dedupe and rights confirmation", () => {
-  const file = (text: string, name: string) =>
-    new File([text], name, { type: name.endsWith(".json") ? "application/json" : "text/csv" });
+  // jsdom's File has no .text(); the component reads the file that way.
+  const file = (text: string, name: string) => {
+    const f = new File([text], name, { type: name.endsWith(".json") ? "application/json" : "text/csv" });
+    Object.defineProperty(f, "text", { value: async () => text });
+    return f;
+  };
 
   const upload = async (text: string, name = "reviews.csv") => {
     const input = screen.getByLabelText(/choose|elegir|выбрать/i) as HTMLInputElement;
