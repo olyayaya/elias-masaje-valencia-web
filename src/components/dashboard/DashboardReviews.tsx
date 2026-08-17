@@ -502,6 +502,9 @@ const DashboardReviews = () => {
         imported_at: stamp,
         // Visibility comes from the explicit UI choice only — never from the file.
         visible: publishNow,
+        // Same for pinning: the file's featured/pinned flag only applies when
+        // the owner explicitly asked to keep it.
+        pinned: keepPinned ? r.pinned : false,
       }));
       const { data, error } = await reviewsTable()
         .upsert(payload, { onConflict: "dedupe_key", ignoreDuplicates: true })
