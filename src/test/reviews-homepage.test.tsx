@@ -25,6 +25,10 @@ const review = (p: Partial<Review>): Review => ({
   author_name: p.author_name ?? "Ana",
   rating: p.rating ?? 5,
   review_text: p.review_text ?? "Short text",
+  original_language: p.original_language ?? null,
+  review_text_es: p.review_text_es ?? null,
+  review_text_en: p.review_text_en ?? null,
+  review_text_ru: p.review_text_ru ?? null,
   reviewed_at: p.reviewed_at ?? "2026-01-01T00:00:00Z",
   original_url: p.original_url ?? null,
   visible: p.visible ?? true,
@@ -164,5 +168,73 @@ describe("no platform branding and no invented data", () => {
     expect(cards).toHaveLength(1);
     expect(cards[0].textContent).toContain("Bea");
     expect(document.body.textContent).not.toMatch(/google user/i);
+  });
+});
+
+describe("localized review text on the public page", () => {
+  const translated = review({
+    id: "t",
+    review_text: "Fantastic massage from Elias!",
+    original_language: "en",
+    review_text_es: "¡Un masaje fantástico de Elias!",
+    review_text_en: "Fantastic massage from Elias!",
+    review_text_ru: "Потрясающий массаж у Элиаса!",
+  });
+
+  afterEach(() => window.history.pushState({}, "", "/"));
+
+  it("shows the Spanish text and the note on the Spanish page", () => {
+    state.value.items = [translated];
+    mount();
+    expect(screen.getByTestId("review-card").textContent).toContain("¡Un masaje fantástico de Elias!");
+    expect(screen.getByTestId("review-translated-note").textContent).toBe("Traducido del original");
+  });
+
+  it("shows the untouched original and no note in the original language", () => {
+    window.history.pushState({}, "", "/en");
+    state.value.items = [translated];
+    mount();
+    expect(screen.getByTestId("review-card").textContent).toContain("Fantastic massage from Elias!");
+    expect(screen.queryByTestId("review-translated-note")).toBeNull();
+  });
+
+  it("shows the Russian text and the Russian note on the Russian page", () => {
+    window.history.pushState({}, "", "/ru");
+    state.value.items = [translated];
+    mount();
+    expect(screen.getByTestId("review-card").textContent).toContain("Потрясающий массаж у Элиаса!");
+    expect(screen.getByTestId("review-translated-note").textContent).toBe("Перевод оригинала");
+  });
+
+  it("falls back to the original without a note when a translation is missing", () => {
+    window.history.pushState({}, "", "/ru");
+    state.value.items = [review({ id: "f", review_text: "Genial", original_language: "es" })];
+    mount();
+    expect(screen.getByTestId("review-card").textContent).toContain("Genial");
+    expect(screen.queryByTestId("review-translated-note")).toBeNull();
+  });
+
+  it("labels a mixed-language original as translated in every language", () => {
+    state.value.items = [
+      review({
+        id: "m",
+        review_text: "Great service / Muy buen servicio",
+        original_language: "mul",
+        review_text_es: "Muy buen servicio",
+        review_text_en: "Great service",
+        review_text_ru: "Отличный сервис",
+      }),
+    ];
+    mount();
+    expect(screen.getByTestId("review-card").textContent).toContain("Muy buen servicio");
+    expect(screen.getByTestId("review-translated-note")).toBeTruthy();
+  });
+
+  it("clamps on the length of the shown translation, not the original", () => {
+    state.value.items = [
+      review({ id: "c", review_text: "short", original_language: "en", review_text_es: "x".repeat(400) }),
+    ];
+    mount();
+    expect(screen.getByTestId("review-card").querySelector("p")!.className).toContain("line-clamp-4");
   });
 });

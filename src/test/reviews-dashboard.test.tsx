@@ -46,6 +46,10 @@ const review = (p: Partial<Review>): Review => ({
   author_name: p.author_name ?? "Ana",
   rating: p.rating ?? 5,
   review_text: p.review_text ?? "text",
+  original_language: p.original_language ?? null,
+  review_text_es: p.review_text_es ?? null,
+  review_text_en: p.review_text_en ?? null,
+  review_text_ru: p.review_text_ru ?? null,
   reviewed_at: p.reviewed_at ?? "2026-01-01T00:00:00Z",
   original_url: null,
   visible: p.visible ?? true,
@@ -506,5 +510,73 @@ describe("manual import — pinning is an explicit choice", () => {
     fireEvent.click(screen.getByRole("button", { name: /discard|descartar|отменить/i }));
     await upload(PINNED_CSV);
     expect((screen.getByTestId("import-pin-none") as HTMLInputElement).checked).toBe(true);
+  });
+});
+
+describe("dashboard reviews — translation editor", () => {
+  it("summarizes the original language and which translations exist", () => {
+    h.state.items = [
+      review({ id: "a", author_name: "Ana", original_language: "en", review_text_es: "Genial" }),
+    ];
+    mount();
+    const state = screen.getByTestId("tr-state-a").textContent!;
+    expect(state).toMatch(/en/);
+    expect(state).toMatch(/ES/);
+    expect(state).not.toMatch(/\bRU\b/);
+  });
+
+  it("writes only the translation columns, leaving the original and the key untouched", async () => {
+    h.state.items = [review({ id: "a", author_name: "Ana", review_text: "Great", original_language: null })];
+    mount();
+    fireEvent.click(screen.getByTestId("tr-edit-a"));
+    const boxes = screen.getByTestId("tr-editor-a").querySelectorAll("textarea");
+    fireEvent.change(screen.getByTestId("tr-editor-a").querySelector("input")!, { target: { value: "EN" } });
+    fireEvent.change(boxes[0], { target: { value: " Genial " } });
+    fireEvent.change(boxes[2], { target: { value: "Отлично" } });
+    fireEvent.click(screen.getByTestId("tr-save-a"));
+
+    await waitFor(() => expect(h.update).toHaveBeenCalled());
+    const values = h.update.mock.calls.at(-1)![0];
+    expect(values).toEqual({
+      original_language: "en",
+      review_text_es: "Genial",
+      review_text_en: null,
+      review_text_ru: "Отлично",
+    });
+    expect(values).not.toHaveProperty("review_text");
+    expect(values).not.toHaveProperty("dedupe_key");
+  });
+
+  it("rejects a nonsense language tag without writing anything", () => {
+    h.state.items = [review({ id: "a", author_name: "Ana" })];
+    mount();
+    fireEvent.click(screen.getByTestId("tr-edit-a"));
+    fireEvent.change(screen.getByTestId("tr-editor-a").querySelector("input")!, { target: { value: "español!!" } });
+    fireEvent.click(screen.getByTestId("tr-save-a"));
+    expect(screen.getByTestId("tr-error-a")).toBeTruthy();
+    expect(h.update).not.toHaveBeenCalled();
+  });
+
+  it("discards the draft on cancel", () => {
+    h.state.items = [review({ id: "a", author_name: "Ana", review_text_es: "Genial" })];
+    mount();
+    fireEvent.click(screen.getByTestId("tr-edit-a"));
+    fireEvent.change(screen.getByTestId("tr-editor-a").querySelectorAll("textarea")[0], {
+      target: { value: "otro" },
+    });
+    fireEvent.click(screen.getByTestId("tr-cancel-a"));
+    expect(screen.queryByTestId("tr-editor-a")).toBeNull();
+    expect(h.update).not.toHaveBeenCalled();
+  });
+
+  it("finds a review by the text of its translation", () => {
+    h.state.items = [
+      review({ id: "a", author_name: "Ana", review_text: "Great", review_text_ru: "Отлично" }),
+      review({ id: "b", author_name: "Bea", review_text: "Nice" }),
+    ];
+    mount();
+    fireEvent.change(screen.getByLabelText(/search|buscar|поиск/i), { target: { value: "Отлично" } });
+    const names = screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent);
+    expect(names).toEqual(["Ana"]);
   });
 });
