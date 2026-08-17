@@ -239,6 +239,69 @@ export type Database = {
         }
         Relationships: []
       }
+      gallery_items: {
+        Row: {
+          alt_en: string
+          alt_es: string
+          alt_ru: string
+          created_at: string
+          description_en: string
+          description_es: string
+          description_ru: string
+          duration_seconds: number | null
+          id: string
+          media_type: string
+          media_url: string
+          poster_url: string
+          published: boolean
+          sort_order: number
+          title_en: string
+          title_es: string
+          title_ru: string
+          updated_at: string
+        }
+        Insert: {
+          alt_en?: string
+          alt_es?: string
+          alt_ru?: string
+          created_at?: string
+          description_en?: string
+          description_es?: string
+          description_ru?: string
+          duration_seconds?: number | null
+          id?: string
+          media_type?: string
+          media_url: string
+          poster_url?: string
+          published?: boolean
+          sort_order?: number
+          title_en?: string
+          title_es?: string
+          title_ru?: string
+          updated_at?: string
+        }
+        Update: {
+          alt_en?: string
+          alt_es?: string
+          alt_ru?: string
+          created_at?: string
+          description_en?: string
+          description_es?: string
+          description_ru?: string
+          duration_seconds?: number | null
+          id?: string
+          media_type?: string
+          media_url?: string
+          poster_url?: string
+          published?: boolean
+          sort_order?: number
+          title_en?: string
+          title_es?: string
+          title_ru?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       media_aliases: {
         Row: {
           created_at: string
@@ -535,6 +598,7 @@ export type Database = {
         }
         Returns: number
       }
+      swap_gallery_order: { Args: { _a: string; _b: string }; Returns: number }
     }
     Enums: {
       app_role: "admin"

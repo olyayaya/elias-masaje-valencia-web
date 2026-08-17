@@ -1,6 +1,3 @@
--- PENDING (NOT APPLIED): public Gallery section (photos + videos) managed from the Dashboard.
--- Additive only. Apply to production only after explicit confirmation.
-
 CREATE TABLE IF NOT EXISTS public.gallery_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   media_type text NOT NULL DEFAULT 'photo' CHECK (media_type IN ('photo', 'video')),
@@ -16,21 +13,17 @@ CREATE TABLE IF NOT EXISTS public.gallery_items (
   alt_en text NOT NULL DEFAULT '',
   alt_ru text NOT NULL DEFAULT '',
   sort_order integer NOT NULL DEFAULT 0,
-  -- New items are drafts: nothing reaches the public grid without an explicit publish.
   published boolean NOT NULL DEFAULT false,
   duration_seconds integer,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT gallery_items_media_url_not_blank CHECK (length(btrim(media_url)) > 0),
   CONSTRAINT gallery_items_duration_non_negative CHECK (duration_seconds IS NULL OR duration_seconds >= 0),
-  -- A published video without a cover would render an empty tile and would produce an
-  -- invalid VideoObject (thumbnailUrl is required), so it is rejected at the DB level.
   CONSTRAINT gallery_items_published_video_needs_poster CHECK (
     media_type <> 'video' OR published = false OR length(btrim(poster_url)) > 0
   )
 );
 
--- Idempotent hardening for an already-created table (re-runs safely).
 ALTER TABLE public.gallery_items ALTER COLUMN published SET DEFAULT false;
 
 DO $$
@@ -51,21 +44,18 @@ BEGIN
   END IF;
 END $$;
 
--- Data API access (PostgREST grants nothing on public by default).
 GRANT SELECT ON public.gallery_items TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.gallery_items TO authenticated;
 GRANT ALL ON public.gallery_items TO service_role;
 
 ALTER TABLE public.gallery_items ENABLE ROW LEVEL SECURITY;
 
--- Visitors only ever see published items.
 DROP POLICY IF EXISTS "Published gallery items are publicly readable" ON public.gallery_items;
 CREATE POLICY "Published gallery items are publicly readable"
 ON public.gallery_items FOR SELECT
 TO anon, authenticated
 USING (published = true);
 
--- Admins (verified through the security-definer role check) manage everything.
 DROP POLICY IF EXISTS "Admins read all gallery items" ON public.gallery_items;
 CREATE POLICY "Admins read all gallery items"
 ON public.gallery_items FOR SELECT
@@ -91,12 +81,6 @@ CREATE TRIGGER log_gallery_items_changes
 AFTER INSERT OR UPDATE OR DELETE ON public.gallery_items
 FOR EACH ROW EXECUTE FUNCTION public.log_content_change();
 
--- ---------------------------------------------------------------------------
--- Atomic reorder: two independent UPDATE round-trips can leave the list in a
--- half-swapped state if the second one fails. This RPC swaps both rows inside a
--- single transaction, locks them in a stable id order (so two concurrent reorders
--- of the same pair can never deadlock), and is admin / service_role only.
--- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.swap_gallery_order(_a uuid, _b uuid)
 RETURNS integer
 LANGUAGE plpgsql
@@ -112,8 +96,6 @@ DECLARE
     ''
   );
 BEGIN
-  -- Authenticated admin (verified through the security-definer role check) OR the
-  -- service role. anon is never allowed, and "any authenticated user" is not enough.
   IF NOT (
     jwt_role = 'service_role'
     OR (auth.uid() IS NOT NULL AND public.has_role(auth.uid(), 'admin'::app_role))
@@ -125,7 +107,6 @@ BEGIN
     RAISE EXCEPTION 'invalid gallery reorder arguments';
   END IF;
 
-  -- ONE locking statement in a deterministic (id) order — never caller order.
   PERFORM id FROM public.gallery_items
    WHERE id IN (_a, _b)
    ORDER BY id
@@ -135,7 +116,6 @@ BEGIN
   IF locked_count <> 2 THEN
     RAISE EXCEPTION 'gallery item not found';
   END IF;
-
 
   SELECT sort_order INTO order_a FROM public.gallery_items WHERE id = _a;
   SELECT sort_order INTO order_b FROM public.gallery_items WHERE id = _b;
@@ -151,13 +131,6 @@ REVOKE ALL ON FUNCTION public.swap_gallery_order(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.swap_gallery_order(uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.swap_gallery_order(uuid, uuid) TO service_role;
 
-
--- ---------------------------------------------------------------------------
--- Media renames must follow gallery media + poster references too.
--- Based verbatim on the latest shipped version (20260817074200), which added the
--- localized page_images.alt_text_en / alt_text_ru handling — only the gallery
--- block is new, nothing from the existing function is dropped.
--- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.rewrite_media_references(
   _old text,
   _new text,
@@ -269,7 +242,6 @@ BEGIN
      OR position(o in quote_ru) > 0 OR position(e in quote_ru) > 0;
   GET DIAGNOSTICS n = ROW_COUNT; total := total + n;
 
-  -- Alias is written in the SAME transaction as the reference rewrite.
   INSERT INTO public.media_aliases (old_name, new_name, created_by)
   VALUES (_old, _new, _actor)
   ON CONFLICT (old_name) DO UPDATE
