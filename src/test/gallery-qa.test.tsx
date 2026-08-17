@@ -113,9 +113,12 @@ describe("video SEO honesty", () => {
 
 describe("poster naming", () => {
   it("derives a collision-safe cover name from the video", () => {
-    expect(posterNameFor("https://cdn.test/1750000000000-clip.mp4", "webp")).toBe("clip-cover.webp");
-    const taken = ["clip-cover.webp"];
-    expect(posterNameFor("https://cdn.test/clip.mp4", "webp", taken)).not.toBe("clip-cover.webp");
+    // The upload timestamp prefix of the source is stripped, the storage-safe
+    // prefix is re-applied, and an existing name is never overwritten.
+    expect(posterNameFor("https://cdn.test/1750000000000-clip.mp4", "webp", [], 111)).toBe("111-clip-cover.webp");
+    expect(posterNameFor("https://cdn.test/clip.mp4", "webp", ["111-clip-cover.webp"], 111)).toBe(
+      "111-1-clip-cover.webp",
+    );
   });
 });
 
