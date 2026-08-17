@@ -3,28 +3,28 @@ import {
   REVIEW_SORTS,
   TRIPADVISOR_PROFILE_URL,
   reviewSettingsTable,
-  reviewSyncStateTable,
   reviewsTable,
   type PendingError,
   type ReviewDisplaySettingsRow,
   type ReviewRow,
   type ReviewSort,
   type ReviewSource,
-  type ReviewSyncStateRow,
-  type ReviewSyncStatus,
 } from "@/integrations/supabase/pending-reviews";
 
 /* ------------------------------------------------------------------ *
- * Real customer reviews — Google Business Profile and manual entries the owner
- * holds the rights to.
+ * Real customer reviews — imported by hand only.
  *
- * TripAdvisor is intentionally not a stored source: their Content API terms
- * forbid selective filtering/sorting and commingling their licensed content with
+ * There is no provider API, no OAuth, no scheduled job and no scraping in this
+ * app. A review exists because an admin uploaded a CSV/JSON file, reviewed the
+ * preview and confirmed they hold the rights to publish those texts.
+ *
+ * TripAdvisor content is not importable at all: their Content API terms forbid
+ * selective filtering/sorting and commingling their licensed content with
  * third-party reviews. The dashboard links to the TripAdvisor profile instead.
  *
- * The `reviews`, `review_display_settings` and `review_sync_state` tables ship
- * ahead of their migration, so "table not there yet" degrades to an empty list
- * exactly like the gallery does. Nothing in this module ever invents a review.
+ * The `reviews` and `review_display_settings` tables ship ahead of their
+ * migration, so "table not there yet" degrades to an empty list exactly like the
+ * gallery does. Nothing in this module ever invents a review.
  * ------------------------------------------------------------------ */
 
 export {
@@ -32,17 +32,16 @@ export {
   REVIEW_SORTS,
   TRIPADVISOR_PROFILE_URL,
   reviewSettingsTable,
-  reviewSyncStateTable,
   reviewsTable,
 };
-export type { ReviewSort, ReviewSource, ReviewSyncStateRow, ReviewSyncStatus };
+export type { ReviewSort, ReviewSource };
 
 export type Review = ReviewRow;
 export type ReviewDisplaySettings = ReviewDisplaySettingsRow;
 
 /**
- * Public profile pages. Used as the *source* link when a provider does not hand
- * out a per-review permalink — never presented as the individual review URL.
+ * Public profile pages. Used as the *source* link when an imported row carries
+ * no per-review permalink — never presented as the individual review URL.
  */
 export const SOURCE_PROFILE_URL: Record<ReviewSource, string | null> = {
   google: "https://maps.app.goo.gl/uyR3ZRdYUFiYSwXt5",
@@ -50,7 +49,7 @@ export const SOURCE_PROFILE_URL: Record<ReviewSource, string | null> = {
 };
 
 export const REVIEW_COLUMNS =
-  "id, source, external_review_id, author_name, author_avatar_url, rating, review_text, review_language, reviewed_at, original_url, visible, pinned, manual_priority, created_at, updated_at, last_synced_at";
+  "id, source, external_review_id, author_name, author_avatar_url, rating, review_text, review_language, reviewed_at, original_url, visible, pinned, manual_priority, created_at, updated_at, imported_at";
 
 /** Ordering inputs (pinned / manual_priority) are part of the public read. */
 export const PUBLIC_REVIEW_COLUMNS =
@@ -59,8 +58,6 @@ export const PUBLIC_REVIEW_COLUMNS =
 export const REVIEW_SETTINGS_COLUMNS =
   "id, section_enabled, allowed_ratings, allowed_sources, sort_mode, updated_at";
 
-export const REVIEW_SYNC_STATE_COLUMNS =
-  "source, last_attempt_at, last_success_at, status, imported_count, updated_count, skipped_count, error_code, error_message, updated_at";
 
 export const DEFAULT_REVIEW_SETTINGS: Omit<ReviewDisplaySettings, "id" | "updated_at"> = {
   section_enabled: true,
