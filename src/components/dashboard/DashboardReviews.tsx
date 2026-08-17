@@ -405,34 +405,79 @@ const DashboardReviews = () => {
           </ul>
         )}
         {importRows && importRows.length > 0 && (
-          <div className="mt-3 space-y-2" data-testid="import-preview">
+          <div className="mt-3 space-y-3" data-testid="import-preview">
             <p className="text-xs text-muted-foreground">{c("importPreview", { n: String(importRows.length) })}</p>
-            <ul className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-y-auto">
-              {importRows.slice(0, 5).map((r) => (
-                <li key={`${r.source}-${r.external_review_id}`}>
-                  {r.author_name} · {r.rating}★ · {r.review_text.slice(0, 60)}
-                </li>
-              ))}
-            </ul>
-            <div className="flex gap-2">
-              <Button size="sm" disabled={importing || missingTable} onClick={() => void confirmImport()}>
+            <p className="text-xs text-muted-foreground" data-testid="import-summary">
+              {c("importSummary", {
+                n: String(importRows.length),
+                fresh: String(plan.fresh.length),
+                upd: String(plan.updates.length),
+                dupe: String(importDupes),
+              })}
+            </p>
+            {/* Full preview — the owner sees every row exactly as it will be stored. */}
+            <div className="max-h-72 overflow-auto border border-border rounded-lg">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-muted/80 backdrop-blur">
+                  <tr className="text-left">
+                    <th className="p-2 font-medium">{c("colAuthor")}</th>
+                    <th className="p-2 font-medium">{c("colRating")}</th>
+                    <th className="p-2 font-medium">{c("colSource")}</th>
+                    <th className="p-2 font-medium">{c("colDate")}</th>
+                    <th className="p-2 font-medium">{c("colText")}</th>
+                    <th className="p-2 font-medium">{c("colState")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importRows.map((r) => (
+                    <tr key={`${r.source}-${r.external_review_id}`} className="border-t border-border align-top">
+                      <td className="p-2 whitespace-nowrap">{r.author_name}</td>
+                      <td className="p-2"><Stars n={r.rating} /></td>
+                      <td className="p-2">{c(SOURCE_LABEL[r.source])}</td>
+                      <td className="p-2 whitespace-nowrap text-muted-foreground">
+                        {r.reviewed_at ? new Date(r.reviewed_at).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="p-2 text-muted-foreground max-w-md">{r.review_text}</td>
+                      <td className="p-2 whitespace-nowrap">
+                        {isUpdate.has(`${r.source}|${r.external_review_id}`) ? c("rowUpdate") : c("rowNew")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <label className="flex items-start gap-2 text-xs text-foreground">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={rightsConfirmed}
+                onChange={(e) => setRightsConfirmed(e.target.checked)}
+                data-testid="import-rights"
+              />
+              <span>
+                {c("importRights")}
+                <span className="block text-muted-foreground">{c("importRightsHint")}</span>
+              </span>
+            </label>
+            <div className="flex gap-2 items-center flex-wrap">
+              <Button
+                size="sm"
+                disabled={importing || missingTable || !rightsConfirmed}
+                onClick={() => void confirmImport()}
+              >
                 {importing ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : <Upload size={13} className="mr-1.5" />}
                 {c("importConfirm", { n: String(importRows.length) })}
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setImportRows(null);
-                  setImportErrors([]);
-                  if (fileRef.current) fileRef.current.value = "";
-                }}
-              >
+              <Button size="sm" variant="ghost" onClick={resetImport}>
                 {c("importCancel")}
               </Button>
+              {!rightsConfirmed && <span className="text-[11px] text-muted-foreground">{c("importNeedsRights")}</span>}
             </div>
           </div>
         )}
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          {c("lastImport", { v: lastImport ? new Date(lastImport).toLocaleString() : c("neverImported") })}
+        </p>
       </DashboardCard>
 
       {/* -------------------------------------------------------- filters --- */}
