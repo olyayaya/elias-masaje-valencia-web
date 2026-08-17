@@ -145,7 +145,7 @@ describe("dashboard reviews — persisted display settings", () => {
     mount();
     fireEvent.click(screen.getByLabelText(/show reviews from google|mostrar reseñas de google|отзывы из google/i));
     await waitFor(() =>
-      expect(h.settingsUpdate).toHaveBeenCalledWith({ allowed_sources: ["tripadvisor", "manual"] }),
+      expect(h.settingsUpdate).toHaveBeenCalledWith({ allowed_sources: ["manual"] }),
     );
 
     fireEvent.change(screen.getByLabelText(/order on the homepage|orden en la portada|порядок на главной/i), {
