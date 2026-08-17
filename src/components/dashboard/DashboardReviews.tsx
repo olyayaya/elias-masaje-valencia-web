@@ -102,9 +102,9 @@ const COPY = {
 
   importTitle: { en: "Import reviews (CSV or JSON)", es: "Importar reseñas (CSV o JSON)", ru: "Импорт отзывов (CSV или JSON)" },
   importHint: {
-    en: "Columns: author_name, rating, review_text, reviewed_at, original_url. Up to {rows} rows and {mb} MB per file. Nothing is saved until you pick the rows, tick the rights box and confirm.",
-    es: "Columnas: author_name, rating, review_text, reviewed_at, original_url. Máximo {rows} filas y {mb} MB por archivo. No se guarda nada hasta que elijas las filas, marques la casilla de derechos y confirmes.",
-    ru: "Столбцы: author_name, rating, review_text, reviewed_at, original_url. Не более {rows} строк и {mb} МБ на файл. Ничего не сохраняется, пока вы не выберете строки, не отметите подтверждение прав и не подтвердите импорт.",
+    en: "CSV columns: author_name, rating, review_text, reviewed_at, original_url. JSON: either a list of reviews or a wrapper {version, reviews:[…]}. Accepted aliases: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned. Up to {rows} rows and {mb} MB per file. Nothing is saved until you pick the rows, tick the rights box and confirm.",
+    es: "Columnas CSV: author_name, rating, review_text, reviewed_at, original_url. JSON: una lista de reseñas o un envoltorio {version, reviews:[…]}. Alias aceptados: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned. Máximo {rows} filas y {mb} MB por archivo. No se guarda nada hasta que elijas las filas, marques la casilla de derechos y confirmes.",
+    ru: "Столбцы CSV: author_name, rating, review_text, reviewed_at, original_url. JSON: список отзывов или обёртка {version, reviews:[…]}. Допустимые псевдонимы: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned. Не более {rows} строк и {mb} МБ на файл. Ничего не сохраняется, пока вы не выберете строки, не отметите подтверждение прав и не подтвердите импорт.",
   },
   template: { en: "Download CSV template", es: "Descargar plantilla CSV", ru: "Скачать шаблон CSV" },
   choose: { en: "Choose file", es: "Elegir archivo", ru: "Выбрать файл" },
@@ -176,6 +176,38 @@ const COPY = {
   colDate: { en: "Date", es: "Fecha", ru: "Дата" },
   colText: { en: "Review", es: "Reseña", ru: "Отзыв" },
   colState: { en: "Status", es: "Estado", ru: "Статус" },
+  colLink: { en: "Original link", es: "Enlace original", ru: "Ссылка на оригинал" },
+  colPin: { en: "Pinned in file", es: "Fijada en el archivo", ru: "Закреплена в файле" },
+  linkYes: { en: "https link", es: "enlace https", ru: "https-ссылка" },
+  linkNo: { en: "No link", es: "Sin enlace", ru: "Нет ссылки" },
+  pinFileYes: { en: "Yes", es: "Sí", ru: "Да" },
+  pinFileNo: { en: "No", es: "No", ru: "Нет" },
+  pinChoice: { en: "Pinning after import", es: "Fijado después de importar", ru: "Закрепление после импорта" },
+  pinNone: {
+    en: "Import without pinning anything (recommended)",
+    es: "Importar sin fijar ninguna reseña (recomendado)",
+    ru: "Импортировать без закрепления (рекомендуется)",
+  },
+  pinKeep: {
+    en: "Keep the featured/pinned flag from the file",
+    es: "Mantener el indicador featured/pinned del archivo",
+    ru: "Сохранить featured/pinned из файла",
+  },
+  pinNoneNote: {
+    en: "Every imported review arrives unpinned; you can pin them one by one later.",
+    es: "Cada reseña importada llega sin fijar; puedes fijarlas una a una después.",
+    ru: "Все импортированные отзывы будут без закрепления; закрепить можно позже вручную.",
+  },
+  pinKeepNote: {
+    en: "Rows marked featured/pinned in the file will be pinned to the top of the homepage.",
+    es: "Las filas marcadas como featured/pinned en el archivo se fijarán arriba en la portada.",
+    ru: "Строки с featured/pinned из файла будут закреплены вверху на главной.",
+  },
+  pinSelectedCount: {
+    en: "{n} of the selected rows are marked featured/pinned in the file.",
+    es: "{n} de las filas seleccionadas están marcadas como featured/pinned en el archivo.",
+    ru: "Отмечено featured/pinned в файле: {n} из выбранных строк.",
+  },
   stNew: { en: "Ready", es: "Lista", ru: "Готова" },
   stDupFile: { en: "Duplicate in file", es: "Duplicada en el archivo", ru: "Дубликат в файле" },
   stDupDb: { en: "Already saved", es: "Ya guardada", ru: "Уже сохранена" },
@@ -268,6 +300,8 @@ const DashboardReviews = () => {
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   /** Publication is decided here and nowhere else — never by the file. */
   const [publishNow, setPublishNow] = useState(false);
+  /** Pinning is decided here and nowhere else — the safe default ignores the file. */
+  const [keepPinned, setKeepPinned] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
   const importing = useRef(false);
@@ -386,6 +420,7 @@ const DashboardReviews = () => {
     setAnchor(null);
     setRightsConfirmed(false);
     setPublishNow(false);
+    setKeepPinned(false);
     setProgress(null);
     setReport(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -400,6 +435,7 @@ const DashboardReviews = () => {
       setSelected(new Set());
       setRightsConfirmed(false);
       setPublishNow(false);
+      setKeepPinned(false);
       return;
     }
     const result = parseReviewImport(await file.text(), knownKeys);
@@ -411,6 +447,7 @@ const DashboardReviews = () => {
     // again from the safe "import hidden" default.
     setRightsConfirmed(false);
     setPublishNow(false);
+    setKeepPinned(false);
   };
 
   const rows = preview?.rows ?? [];
@@ -437,6 +474,9 @@ const DashboardReviews = () => {
     [importable, selected],
   );
 
+  /** How many selected rows carry featured/pinned in the file — shown before importing. */
+  const selectedPinnedCount = useMemo(() => selectedRows.filter((r) => r.pinned).length, [selectedRows]);
+
   /**
    * Insert in batches so one bad batch never loses the rest of the file.
    *
@@ -462,6 +502,9 @@ const DashboardReviews = () => {
         imported_at: stamp,
         // Visibility comes from the explicit UI choice only — never from the file.
         visible: publishNow,
+        // Same for pinning: the file's featured/pinned flag only applies when
+        // the owner explicitly asked to keep it.
+        pinned: keepPinned ? r.pinned : false,
       }));
       const { data, error } = await reviewsTable()
         .upsert(payload, { onConflict: "dedupe_key", ignoreDuplicates: true })
@@ -748,6 +791,8 @@ const DashboardReviews = () => {
                     <th className="p-2 font-medium">{c("colRating")}</th>
                     <th className="p-2 font-medium">{c("colDate")}</th>
                     <th className="p-2 font-medium">{c("colText")}</th>
+                    <th className="p-2 font-medium">{c("colLink")}</th>
+                    <th className="p-2 font-medium">{c("colPin")}</th>
                     <th className="p-2 font-medium">{c("colState")}</th>
                   </tr>
                 </thead>
@@ -793,6 +838,12 @@ const DashboardReviews = () => {
                           {r.row?.reviewed_at ? new Date(r.row.reviewed_at).toLocaleDateString() : r.raw.reviewed_at || "—"}
                         </td>
                         <td className="p-2 text-muted-foreground max-w-md">{r.raw.review_text}</td>
+                        <td className="p-2 whitespace-nowrap text-muted-foreground" data-testid={`import-link-${r.line}`}>
+                          {r.row?.original_url ? c("linkYes") : c("linkNo")}
+                        </td>
+                        <td className="p-2 whitespace-nowrap text-muted-foreground" data-testid={`import-pin-${r.line}`}>
+                          {r.row?.pinned ? c("pinFileYes") : c("pinFileNo")}
+                        </td>
                         <td className="p-2 whitespace-nowrap">
                           <span className={r.status === "invalid" ? "text-destructive" : "text-muted-foreground"}>
                             {c(STATUS_LABEL[r.status])}
@@ -841,6 +892,38 @@ const DashboardReviews = () => {
               </p>
             </fieldset>
 
+            <fieldset className="space-y-1" data-testid="import-pinning">
+              <legend className="text-xs font-medium text-foreground mb-1">{c("pinChoice")}</legend>
+              <label className="flex items-start gap-2 text-xs text-foreground min-h-11 py-1">
+                <input
+                  type="radio"
+                  name="import-pinning"
+                  className="mt-0.5 w-5 h-5"
+                  checked={!keepPinned}
+                  onChange={() => setKeepPinned(false)}
+                  data-testid="import-pin-none"
+                />
+                <span>{c("pinNone")}</span>
+              </label>
+              <label className="flex items-start gap-2 text-xs text-foreground min-h-11 py-1">
+                <input
+                  type="radio"
+                  name="import-pinning"
+                  className="mt-0.5 w-5 h-5"
+                  checked={keepPinned}
+                  onChange={() => setKeepPinned(true)}
+                  data-testid="import-pin-keep"
+                />
+                <span>{c("pinKeep")}</span>
+              </label>
+              <p className="text-[11px] text-muted-foreground" data-testid="import-pinning-note">
+                {keepPinned ? c("pinKeepNote") : c("pinNoneNote")}
+              </p>
+              <p className="text-[11px] text-muted-foreground" aria-live="polite" data-testid="import-pinned-count">
+                {c("pinSelectedCount", { n: String(selectedPinnedCount) })}
+              </p>
+            </fieldset>
+
             <label className="flex items-start gap-2 text-xs text-foreground">
               <input
                 type="checkbox"
@@ -871,7 +954,7 @@ const DashboardReviews = () => {
                 {c("importCancel")}
               </Button>
               <span className="text-[11px] text-muted-foreground" data-testid="import-mode-reminder">
-                {publishNow ? c("visPublish") : c("visHidden")}
+                {publishNow ? c("visPublish") : c("visHidden")} · {keepPinned ? c("pinKeep") : c("pinNone")}
               </span>
               {!rightsConfirmed && <span className="text-[11px] text-muted-foreground">{c("importNeedsRights")}</span>}
             </div>

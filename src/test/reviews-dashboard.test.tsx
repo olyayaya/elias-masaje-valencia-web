@@ -441,3 +441,70 @@ describe("manual import — preview, selection and rights confirmation", () => {
     expect(screen.queryByTestId("import-preview")).toBeNull();
   });
 });
+
+describe("manual import — pinning is an explicit choice", () => {
+  const PINNED_CSV =
+    "author_name,rating,review_text,featured,original_url\n" +
+    "Ana,5,uno,true,https://maps.example/a\n" +
+    "Bea,5,dos,false,\n";
+
+  beforeEach(() => {
+    h.state.items = [];
+    h.upsert.mockImplementation((rows: unknown[]) => {
+      const echoed = (rows as { dedupe_key: string }[]).map((r) => ({ dedupe_key: r.dedupe_key }));
+      h.upsertSelect.mockImplementation(async () => ({ data: echoed, error: null }));
+      return { select: h.upsertSelect };
+    });
+  });
+
+  it("marks the original link and the file's featured flag in the preview", async () => {
+    mount();
+    await upload(PINNED_CSV);
+    expect(screen.getByTestId("import-link-1").textContent).toMatch(/https|ссылка/i);
+    expect(screen.getByTestId("import-link-2").textContent).toMatch(/no link|sin enlace|нет ссылки/i);
+    expect(screen.getByTestId("import-pin-1").textContent).toMatch(/yes|sí|да/i);
+    expect(screen.getByTestId("import-pin-2").textContent).toMatch(/no|нет/i);
+    // The count warns before a whole featured file gets pinned by accident.
+    expect(screen.getByTestId("import-pinned-count").textContent).toMatch(/1/);
+  });
+
+  it("imports unpinned by default even when the file says featured", async () => {
+    mount();
+    await upload(PINNED_CSV);
+    expect((screen.getByTestId("import-pin-none") as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByTestId("import-pin-keep") as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(screen.getByTestId("import-rights"));
+    fireEvent.click(screen.getByRole("button", { name: /import 2|importar 2|импортировать 2/i }));
+    await waitFor(() => expect(h.upsert).toHaveBeenCalledTimes(1));
+    const rows = h.upsert.mock.calls[0][0] as Record<string, unknown>[];
+    expect(rows.map((r) => r.pinned)).toEqual([false, false]);
+    // Visibility stays a separate, independent decision.
+    expect(rows.every((r) => r.visible === false)).toBe(true);
+  });
+
+  it("keeps the file's featured flag only when that mode is picked", async () => {
+    mount();
+    await upload(PINNED_CSV);
+    fireEvent.click(screen.getByTestId("import-pin-keep"));
+    expect(screen.getByTestId("import-mode-reminder").textContent).toMatch(/featured|archivo|файла/i);
+    fireEvent.click(screen.getByTestId("import-rights"));
+    fireEvent.click(screen.getByRole("button", { name: /import 2|importar 2|импортировать 2/i }));
+    await waitFor(() => expect(h.upsert).toHaveBeenCalledTimes(1));
+    const rows = h.upsert.mock.calls[0][0] as Record<string, unknown>[];
+    expect(rows.map((r) => r.pinned)).toEqual([true, false]);
+    expect(rows.every((r) => r.visible === false)).toBe(true);
+  });
+
+  it("resets the pinning choice for a new file and on discard", async () => {
+    mount();
+    await upload(PINNED_CSV);
+    fireEvent.click(screen.getByTestId("import-pin-keep"));
+    await upload("author_name,rating,review_text,featured\nCleo,5,tres,true\n");
+    expect((screen.getByTestId("import-pin-none") as HTMLInputElement).checked).toBe(true);
+
+    fireEvent.click(screen.getByTestId("import-pin-keep"));
+    fireEvent.click(screen.getByRole("button", { name: /discard|descartar|отменить/i }));
+    await upload(PINNED_CSV);
+    expect((screen.getByTestId("import-pin-none") as HTMLInputElement).checked).toBe(true);
+  });
+});
