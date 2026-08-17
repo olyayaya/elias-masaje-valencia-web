@@ -132,14 +132,47 @@ function decodeBase64(b64: string): Uint8Array {
   return out;
 }
 
-/** Reads only the first bytes of a stored object so container sniffing never buffers a whole video. */
+/**
+ * Reads only the first bytes of a stored object so container sniffing never buffers a whole
+ * video. A server that ignores the Range header answers 200 with the full body — in that case
+ * we read a single stream chunk and cancel, so a 250 MB object never lands in memory.
+ */
 async function readHead(admin: Client, name: string, bytes = 64): Promise<Uint8Array> {
   const { data, error } = await admin.storage.from("media").createSignedUrl(name, 60);
   if (error || !data?.signedUrl) throw new Error(`Could not read uploaded file: ${error?.message ?? "no url"}`);
   const res = await fetch(data.signedUrl, { headers: { Range: `bytes=0-${bytes - 1}` } });
   if (!res.ok && res.status !== 206) throw new Error(`Could not read uploaded file (${res.status})`);
-  return new Uint8Array(await res.arrayBuffer());
+
+  const body = res.body;
+  if (!body) return new Uint8Array(0);
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (total < bytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value?.length) continue;
+      chunks.push(value);
+      total += value.length;
+    }
+  } finally {
+    // Stops the download immediately — nothing beyond the head is ever transferred.
+    await reader.cancel().catch(() => undefined);
+  }
+
+  const head = new Uint8Array(Math.min(total, bytes));
+  let offset = 0;
+  for (const c of chunks) {
+    if (offset >= head.length) break;
+    head.set(c.subarray(0, head.length - offset), offset);
+    offset += c.length;
+  }
+  return head;
 }
+
+/** Supabase caps a plain select at 1000 rows — page explicitly or usage silently under-counts. */
+const PAGE_SIZE = 1000;
 
 /**
  * One pass over every scanned table that counts references for MANY filenames at once.
@@ -150,20 +183,29 @@ async function usageCounts(admin: Client, names: string[]): Promise<Record<strin
   const variants = names.map((n) => ({ n, needles: nameVariants(n) }));
   for (const scan of SCANS) {
     const cols = Array.from(new Set(["id", ...scan.fields])).join(",");
-    const { data, error } = await admin.from(scan.table).select(cols);
-    if (error) throw new Error(`${scan.table}: ${error.message}`);
-    for (const row of (data ?? []) as Record<string, unknown>[]) {
-      for (const f of scan.fields) {
-        const value = row[f];
-        if (typeof value !== "string" || !value) continue;
-        for (const { n, needles } of variants) {
-          if (needles.some((v) => value.includes(v))) counts[n] += 1;
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await admin
+        .from(scan.table)
+        .select(cols)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw new Error(`${scan.table}: ${error.message}`);
+      const rows = (data ?? []) as Record<string, unknown>[];
+      for (const row of rows) {
+        for (const f of scan.fields) {
+          const value = row[f];
+          if (typeof value !== "string" || !value) continue;
+          for (const { n, needles } of variants) {
+            if (needles.some((v) => value.includes(v))) counts[n] += 1;
+          }
         }
       }
+      if (rows.length < PAGE_SIZE) break;
     }
   }
   return counts;
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
