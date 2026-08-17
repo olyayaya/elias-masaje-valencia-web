@@ -1,16 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { buildSitemapXml, type ExtraUrl } from "./build-sitemap.ts";
 
-// The function is the single source of truth for the sitemap and always
-// declares application/xml; charset=utf-8.
-function xmlHeaders(): Headers {
-  const headers = new Headers();
-  headers.set("content-type", "application/xml; charset=utf-8");
-  headers.set("cache-control", "public, max-age=60, s-maxage=60");
-  headers.set("access-control-allow-origin", "*");
-  headers.set("x-content-type-options", "nosniff");
-  return headers;
-}
+import { xmlResponse, errorXml } from "./xml-response.ts";
+
+// The function is the single source of truth for the sitemap and always serves
+// an XML media type with UTF-8 bytes (see xml-response.ts for the header notes).
+
+
 
 Deno.serve(async (_req) => {
   try {
@@ -70,23 +66,10 @@ Deno.serve(async (_req) => {
 
     const xml = buildSitemapXml(posts ?? [], extraUrls, new Date(), { includeGallery });
 
-    return new Response(xml, { status: 200, headers: xmlHeaders() });
+    return xmlResponse(xml, 200, "public, max-age=60, s-maxage=60");
   } catch (err) {
     console.error("Sitemap error:", err);
     const message = err instanceof Error ? err.message : String(err);
-    return new Response(
-      `<?xml version="1.0" encoding="UTF-8"?>\n<error>${message
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")}</error>`,
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/xml; charset=utf-8",
-          "Cache-Control": "no-store",
-          "Access-Control-Allow-Origin": "*",
-        },
-      },
-    );
+    return xmlResponse(errorXml(message), 500, "no-store");
   }
 });

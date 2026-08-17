@@ -8,6 +8,11 @@ import {
   ROUTE_MAP as BUILDER_ROUTE_MAP,
   type BlogPostRow,
 } from "../../supabase/functions/sitemap/build-sitemap";
+import {
+  XML_CONTENT_TYPE,
+  xmlResponseHeaders,
+  errorXml,
+} from "../../supabase/functions/sitemap/xml-response";
 import * as APP_ROUTES from "@/config/routes";
 
 const NOW = new Date("2026-08-16T12:00:00.000Z");
@@ -229,5 +234,57 @@ describe("single sitemap mechanism", () => {
 
   it("has no cloudflare sitemap proxy", () => {
     expect(existsSync(resolve(__dirname, "../../infrastructure/cloudflare"))).toBe(false);
+  });
+});
+
+describe("sitemap edge function XML response path", () => {
+  const helpers = readFileSync(
+    resolve(__dirname, "../../supabase/functions/sitemap/xml-response.ts"),
+    "utf8",
+  );
+  const entry = readFileSync(
+    resolve(__dirname, "../../supabase/functions/sitemap/index.ts"),
+    "utf8",
+  );
+  const source = `${helpers}\n${entry}`;
+
+  it("declares an XML media type that survives the edge gateway", () => {
+    // Case-insensitive per RFC 9110 §8.3; the exact casing must stay because the
+    // gateway rewrites the all-lowercase spelling to text/plain on GET.
+    expect(source).toContain('export const XML_CONTENT_TYPE = "application/XML; charset=utf-8";');
+    expect(source).not.toMatch(/"application\/xml; charset=utf-8"/);
+    expect(source).not.toMatch(/"text\/xml/);
+    expect(XML_CONTENT_TYPE.toLowerCase()).toBe("application/xml; charset=utf-8");
+  });
+
+  it("sends UTF-8 bytes with a plain headers object", () => {
+    expect(source).toContain("new TextEncoder().encode(xml)");
+    expect(source).not.toContain("new Headers()");
+    expect(xmlResponseHeaders("no-store")).toEqual({
+      "content-type": XML_CONTENT_TYPE,
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*",
+      "x-content-type-options": "nosniff",
+    });
+  });
+
+  it("keeps cache-control, CORS and nosniff on the success path", () => {
+    expect(source).toContain('xmlResponse(xml, 200, "public, max-age=60, s-maxage=60")');
+    expect(xmlResponseHeaders("public, max-age=60, s-maxage=60")["cache-control"]).toBe(
+      "public, max-age=60, s-maxage=60",
+    );
+  });
+
+  it("serves the error path as escaped XML with the same content type", () => {
+    expect(source).toContain('xmlResponse(errorXml(message), 500, "no-store")');
+    const xml = errorXml('boom & <bad> "x"');
+    expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+    expect(xml).toContain("boom &amp; &lt;bad&gt;");
+    expect(xml).not.toMatch(/<(?!\/?error>|\?xml)/);
+  });
+
+  it("has no diagnostic content-type variants left behind", () => {
+    expect(source).not.toContain("__ctv");
+    expect(source).not.toContain("variant");
   });
 });
