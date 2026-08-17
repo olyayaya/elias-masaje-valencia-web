@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, Pause, Play } from "lucide-react";
 import { useI18n } from "@/i18n/context";
-import { useFadeIn } from "@/hooks/use-fade-in";
 import { usePublicReviews } from "@/hooks/use-reviews";
 import {
   displayReviews,
