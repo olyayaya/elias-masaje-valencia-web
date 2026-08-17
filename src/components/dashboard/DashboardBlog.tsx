@@ -992,11 +992,17 @@ const BlogEditor = ({
                           values,
                           decorative,
                         );
-                        if (Object.keys(patch).length > 0) {
-                          setDraft({ ...draftRef.current, ...patch });
-                        }
+                        // One atomic update: the editor's fresh HTML for the current
+                        // language plus the other-language patch, so neither can be
+                        // dropped by the editor's own onUpdate write.
+                        setDraft({
+                          ...draftRef.current,
+                          [contentKey]: editor.getHTML(),
+                          ...patch,
+                        });
                         setAltDialog(null);
                       }}
+
                     />
                   )}
 
