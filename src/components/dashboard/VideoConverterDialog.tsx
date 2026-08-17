@@ -26,8 +26,7 @@ import {
 } from "@/lib/video-convert";
 import { convertVideo, isConverterSupported, probeEncoders, probeVideoMeta } from "@/lib/video-ffmpeg";
 import { commitVideoReplacement } from "@/lib/media-usage";
-import { removeObject, uploadResumable } from "@/lib/video-upload";
-import { collisionSafeName } from "@/lib/media-kind";
+import { removeObject, stagedObjectName, uploadResumable } from "@/lib/video-upload";
 import type { LibraryT } from "./media/i18n";
 
 export interface ConverterFile {
@@ -41,6 +40,12 @@ interface Props {
   L: LibraryT;
   onClose: () => void;
   onReplaced: (result: { updatedReferences?: number; historyReferences?: number; aliased?: boolean; warning?: string }, newName: string) => void;
+  /**
+   * Honest optimization state for the Library filter: "canOptimize" as soon as a real
+   * >=10% saving was measured, "optimized" once the source is already at its best (or has
+   * just been replaced by the optimized output).
+   */
+  onVerdict?: (fileName: string, state: "canOptimize" | "optimized") => void;
 }
 
 type Phase = "loading" | "ready" | "converting" | "done" | "uploading" | "error";
@@ -52,7 +57,7 @@ const RESOLUTIONS: ResolutionChoice[] = ["original", "1080", "720", "480"];
  * rendered (see video-ffmpeg's dynamic imports), and every option is gated on the encoders
  * the loaded core actually reports.
  */
-const VideoConverterDialog = ({ file, L, onClose, onReplaced }: Props) => {
+const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props) => {
   const [phase, setPhase] = useState<Phase>("loading");
   const [error, setError] = useState<string | null>(null);
   const [meta, setMeta] = useState<VideoMeta | null>(null);
@@ -155,6 +160,8 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced }: Props) => {
       resultUrlRef.current = URL.createObjectURL(out.blob);
       setResult(out);
       setPhase("done");
+      // Tell the Library what the conversion actually proved about this file.
+      onVerdict?.(file.name, evaluateVideoSaving(file.size, out.size).ok ? "canOptimize" : "optimized");
     } catch (e) {
       if (!aliveRef.current) return;
       if ((e as DOMException)?.name === "AbortError") {
@@ -174,8 +181,9 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced }: Props) => {
   const replaceOriginal = async () => {
     if (!result || !verdict?.ok) return;
     const newName = outputNameFor(file.name, format);
-    const stagedName = collisionSafeName(`staged-${newName}`);
     const contentType = format === "mp4" ? "video/mp4" : "video/webm";
+    // Reserved, user-bound staging name — the server refuses anything else.
+    const stagedName = await stagedObjectName(format);
     const controller = new AbortController();
     abortRef.current = controller;
     setPhase("uploading");
@@ -194,6 +202,8 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced }: Props) => {
         enforceSaving: true,
       });
       if (!aliveRef.current) return;
+      // The replacement IS the optimized output — nothing left to squeeze.
+      onVerdict?.(commit.newName ?? newName, "optimized");
       onReplaced(commit, commit.newName ?? newName);
     } catch (e) {
       // Anything past a successful upload is cleaned server-side; a failed upload cleans itself.
