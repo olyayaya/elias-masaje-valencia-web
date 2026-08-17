@@ -388,9 +388,7 @@ describe("manual import — preview, selection and rights confirmation", () => {
   it("ignores a visible column inside the file", async () => {
     h.state.items = [];
     mount();
-    await upload("author_name,rating,review_text,visible
-Zoe,5,ok,true
-");
+    await upload("author_name,rating,review_text,visible\nZoe,5,ok,true\n");
     fireEvent.click(screen.getByTestId("import-rights"));
     fireEvent.click(screen.getByRole("button", { name: /import 1|importar 1|импортировать 1/i }));
     await waitFor(() => expect(h.upsert).toHaveBeenCalledTimes(1));
@@ -420,10 +418,7 @@ Zoe,5,ok,true
   it("reports exactly what the database wrote when only part of a batch lands", async () => {
     h.state.items = [];
     mount();
-    await upload("author_name,rating,review_text
-A,5,one
-B,5,two
-");
+    await upload("author_name,rating,review_text\nA,5,one\nB,5,two\n");
     h.upsert.mockImplementation((rows: unknown[]) => {
       const first = (rows as { dedupe_key: string }[])[0];
       h.upsertSelect.mockImplementation(async () => ({ data: [{ dedupe_key: first.dedupe_key }], error: null }));
