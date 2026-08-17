@@ -36,6 +36,62 @@ export const ALLOWED_VIDEO_OUTPUT: Record<string, string[]> = {
 /** Video objects are committed by direct resumable upload, so this bound is generous. */
 export const MAX_VIDEO_BYTES = 250 * 1024 * 1024;
 
+/** Containers accepted as *source* of a conversion (upload allowlist, server side). */
+export const ALLOWED_VIDEO_SOURCE: Record<string, string[]> = {
+  "video/mp4": ["mp4"],
+  "video/quicktime": ["mov"],
+  "video/x-m4v": ["m4v"],
+  "video/webm": ["webm"],
+};
+
+export const VIDEO_SOURCE_EXTS = ["mp4", "mov", "m4v", "webm"];
+
+export function validateVideoSourceName(name: string): string | null {
+  const bad = validateName(name);
+  if (bad) return bad;
+  if (!VIDEO_SOURCE_EXTS.includes(extOf(name))) {
+    return `Unsupported video source .${extOf(name)} — use MP4, MOV, M4V or WebM`;
+  }
+  return null;
+}
+
+const UUID = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+
+/**
+ * Staged objects are throwaway uploads awaiting promotion. The name is bound to the
+ * uploading user so one admin can never commit another admin's staged bytes, and the
+ * reserved prefix keeps them trivially identifiable (and never mistaken for real media).
+ */
+export const stagedPrefixFor = (userId: string) => `staged-${userId}-`;
+
+export function stagedNameFor(userId: string, uuid: string, ext: string): string {
+  return `${stagedPrefixFor(userId)}${uuid}.${ext.toLowerCase()}`;
+}
+
+/** Server-side gate: the staged object must belong to this user and be a real staged name. */
+export function validateStagedName(
+  stagedName: string,
+  userId: string,
+  conflicts: string[],
+): string | null {
+  if (stagedName.includes("/") || stagedName.includes("\\") || stagedName.includes("..")) {
+    return "Invalid staged object name";
+  }
+  const re = new RegExp(`^staged-${UUID}-${UUID}\\.[A-Za-z0-9]{2,5}$`);
+  if (!re.test(stagedName)) return "Invalid staged object name";
+  if (!stagedName.startsWith(stagedPrefixFor(userId))) return "Staged object does not belong to this user";
+  if (conflicts.some((c) => c && c === stagedName)) return "Staged object name collides with a real file";
+  return null;
+}
+
+/** Backup of an original kept only for the duration of a same-name replacement. */
+export const backupNameFor = (userId: string, uuid: string, original: string) =>
+  `backup-${userId}-${uuid}-${original}`;
+
+export const isServiceObject = (name: string) =>
+  name.startsWith("staged-") || name.startsWith("backup-");
+
+
 /** Rename may only change the basename — format changes must go through conversion. */
 export function validateRenameExtension(oldName: string, newName: string): string | null {
   if (extOf(oldName) !== extOf(newName)) {
