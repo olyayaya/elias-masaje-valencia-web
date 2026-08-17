@@ -18,7 +18,7 @@ export interface PromoteStorage {
 }
 
 export type PromoteResult =
-  | { ok: true }
+  | { ok: true; warning?: string }
   | { ok: false; error: string; restored: boolean; stagedKept: boolean };
 
 export async function promoteSameName(
@@ -76,7 +76,22 @@ export async function promoteSameName(
     };
   }
 
-  await storage.remove([backup]).catch(() => undefined);
-  await storage.remove([staged]).catch(() => undefined);
+  // The swap succeeded. Removing the two service objects can still fail, and a leftover
+  // backup-/staged- object shows up in the Library — report it instead of pretending the
+  // bucket is clean. They are deliberately NOT hidden, so the bytes stay recoverable.
+  const leftovers: string[] = [];
+  for (const name of [backup, staged]) {
+    const { error } = await storage.remove([name]).catch((e: unknown) => ({
+      error: { message: (e as Error)?.message ?? "unknown error" },
+    }));
+    if (error) leftovers.push(`${name} (${error.message})`);
+  }
+  if (leftovers.length) {
+    return {
+      ok: true,
+      warning: `Temporary object(s) could not be removed: ${leftovers.join(", ")}`,
+    };
+  }
   return { ok: true };
 }
+

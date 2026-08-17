@@ -6,6 +6,7 @@ import {
   validateStagedName,
   validateVideoSourceName,
   stagedNameFor,
+  readHeadFromStream,
 } from "../../supabase/functions/media-guard/rules";
 
 // ---------------------------------------------------------------------------
@@ -89,6 +90,15 @@ describe("convertVideo lifecycle", () => {
     await expect(promise).rejects.toMatchObject({ name: "AbortError" });
     expect(calls).not.toContain("exec");
     expect(calls).not.toContain("write:start");
+  });
+
+  it("always clears the virtual FS, even when writing the input fails", async () => {
+    const { convertVideo, terminateFFmpeg } = await import("@/lib/video-ffmpeg");
+    terminateFFmpeg();
+    ff.writeFile.mockImplementationOnce(async () => { throw new Error("no space"); });
+    await expect(convertVideo(fakeFile(), OPTS)).rejects.toThrow(/no space/);
+    // A half-written input still occupies wasm heap: it must be deleted regardless.
+    expect(calls).toContain("delete:in.mov");
   });
 
   it("rejects immediately for an already-aborted signal", async () => {
@@ -256,5 +266,119 @@ describe("optimization state", () => {
     expect(optStateOf(f("a.webp", "image/webp"), {})).toBe("notAnalyzed");
     expect(optStateOf(f("a.mp4", "video/mp4"), {})).toBe("notAnalyzed");
     expect(optStateOf(f("a.mp4", "video/mp4"), { "a.mp4": "canOptimize" })).toBe("canOptimize");
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Abortable engine loading / probing
+// ---------------------------------------------------------------------------
+describe("abortable ffmpeg initialization", () => {
+  it("does not probe encoders and leaves no loaded singleton when aborted mid-load", async () => {
+    const { probeEncoders, getFFmpeg, terminateFFmpeg } = await import("@/lib/video-ffmpeg");
+    terminateFFmpeg();
+    loadDelay = 30;
+    const controller = new AbortController();
+    const promise = probeEncoders(controller.signal);
+    // Abort while the core download is genuinely in flight (after the glue import).
+    await new Promise((r) => setTimeout(r, 5));
+    calls.length = 0;
+    controller.abort();
+    await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+    // No -encoders run, and the aborted instance is torn down + its log listener detached
+    // instead of being cached for the next caller.
+    expect(calls).not.toContain("exec");
+    expect(calls).toContain("terminate");
+    expect(calls).toContain("off");
+
+    // A later caller gets a genuinely fresh, fully loaded instance.
+    loadDelay = 0;
+    const ffmpeg = await getFFmpeg();
+    expect(ffmpeg.loaded).toBe(true);
+    terminateFFmpeg();
+  });
+
+  it("rejects an already-aborted probe without touching the engine", async () => {
+    const { probeEncoders, terminateFFmpeg } = await import("@/lib/video-ffmpeg");
+    terminateFFmpeg();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(probeEncoders(controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+    expect(calls).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bounded magic-byte read (server side)
+// ---------------------------------------------------------------------------
+describe("readHeadFromStream", () => {
+  const streamOf = (...chunks: Uint8Array[]) => {
+    let i = 0;
+    let cancelled = false;
+    const stream = {
+      getReader: () => ({
+        read: async () => (i < chunks.length ? { done: false, value: chunks[i++] } : { done: true, value: undefined }),
+        cancel: async () => { cancelled = true; },
+      }),
+    } as unknown as ReadableStream<Uint8Array>;
+    return { stream, read: () => i, wasCancelled: () => cancelled };
+  };
+
+  it("retains only the promised bytes from an oversized first chunk", async () => {
+    // Storage may ignore the Range header and start streaming the whole 10 MB object.
+    const big = new Uint8Array(10 * 1024 * 1024);
+    big.set([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
+    const s = streamOf(big);
+    const head = await s.stream ? await readHeadFromStream(s.stream, 64) : new Uint8Array();
+    expect(head.length).toBe(64);
+    expect([...head.subarray(4, 8)]).toEqual([0x66, 0x74, 0x79, 0x70]);
+    // One read, then the transfer is cancelled: the rest is never downloaded.
+    expect(s.read()).toBe(1);
+    expect(s.wasCancelled()).toBe(true);
+  });
+
+  it("assembles the head from several small chunks and stops at the limit", async () => {
+    const chunk = (v: number, n: number) => new Uint8Array(n).fill(v);
+    const s = streamOf(chunk(1, 30), chunk(2, 30), chunk(3, 30));
+    const head = await readHeadFromStream(s.stream, 64);
+    expect(head.length).toBe(64);
+    expect(head[63]).toBe(3);
+    expect(s.read()).toBe(3);
+  });
+
+  it("returns only what a short body provided", async () => {
+    const s = streamOf(new Uint8Array([1, 2, 3]));
+    expect((await readHeadFromStream(s.stream, 64)).length).toBe(3);
+    expect((await readHeadFromStream(null, 64)).length).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Service-object cleanup is reported, never silently swallowed
+// ---------------------------------------------------------------------------
+describe("promotion cleanup warnings", () => {
+  const opts = { staged: "staged-x.mp4", target: "clip.mp4", backup: "backup-x-clip.mp4" };
+
+  it("succeeds but warns when the backup cannot be removed", async () => {
+    const { storage, set } = fakeStorage(["clip.mp4", "staged-x.mp4"], { remove: "backup-" });
+    const res = await promoteSameName(storage, opts);
+    expect(res.ok).toBe(true);
+    // The leftover object shows up in the Library, so the admin has to be told about it.
+    expect((res as { warning?: string }).warning).toMatch(/backup-x-clip\.mp4/);
+    expect(set.has("backup-x-clip.mp4")).toBe(true);
+  });
+
+  it("succeeds but warns when the staged upload cannot be removed", async () => {
+    const { storage } = fakeStorage(["clip.mp4", "staged-x.mp4"], { remove: "staged-" });
+    const res = await promoteSameName(storage, opts);
+    expect(res.ok).toBe(true);
+    expect((res as { warning?: string }).warning).toMatch(/staged-x\.mp4/);
+  });
+
+  it("leaves no service objects and no warning on a clean run", async () => {
+    const { storage, set } = fakeStorage(["clip.mp4", "staged-x.mp4"]);
+    const res = await promoteSameName(storage, opts);
+    expect(res).toEqual({ ok: true });
+    expect([...set]).toEqual(["clip.mp4"]);
   });
 });

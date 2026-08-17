@@ -15,6 +15,7 @@ import {
   formatDuration,
   MAX_CONVERT_BYTES,
   MEMORY_WARN_BYTES,
+  MIME_BY_FORMAT,
   outputNameFor,
   smartPreset,
   targetDimensions,
@@ -23,6 +24,7 @@ import {
   type VideoFormat,
   type VideoMeta,
   type VideoQuality,
+  type VideoSavingVerdict,
 } from "@/lib/video-convert";
 import { convertVideo, isConverterSupported, probeEncoders, probeVideoMeta } from "@/lib/video-ffmpeg";
 import { commitVideoReplacement } from "@/lib/media-usage";
@@ -41,14 +43,32 @@ interface Props {
   onClose: () => void;
   onReplaced: (result: { updatedReferences?: number; historyReferences?: number; aliased?: boolean; warning?: string }, newName: string) => void;
   /**
-   * Honest optimization state for the Library filter: "canOptimize" as soon as a real
-   * >=10% saving was measured, "optimized" once the source is already at its best (or has
-   * just been replaced by the optimized output).
+   * Honest optimization state for the Library filter: "canOptimize" only once a real
+   * >=10% saving was measured, "optimized" when the source is provably already at its best
+   * (or has just been replaced by the optimized output). A merely *bigger* result proves
+   * nothing — in that case no verdict is reported at all.
    */
   onVerdict?: (fileName: string, state: "canOptimize" | "optimized") => void;
 }
 
 type Phase = "loading" | "ready" | "converting" | "done" | "uploading" | "error";
+
+/** Immutable snapshot of the settings the encoded bytes were actually produced with. */
+interface Settings {
+  format: VideoFormat;
+  resolution: ResolutionChoice;
+  quality: VideoQuality;
+}
+
+/**
+ * A finished conversion. The settings that produced these exact bytes travel WITH them, so
+ * the replacement can never be uploaded under a name/MIME the blob does not match.
+ */
+interface Done extends Settings {
+  blob: Blob;
+  size: number;
+  url: string;
+}
 
 const RESOLUTIONS: ResolutionChoice[] = ["original", "1080", "720", "480"];
 
@@ -69,21 +89,38 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
   const [quality, setQuality] = useState<VideoQuality>("balanced");
 
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<{ blob: Blob; size: number } | null>(null);
+  const [result, setResult] = useState<Done | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const aliveRef = useRef(true);
-  const resultUrlRef = useRef<string | null>(null);
 
   const tooLarge = file.size > MAX_CONVERT_BYTES;
+
+  /**
+   * Any settings change invalidates the encoded bytes: the object URL is revoked and
+   * Replace/Download disappear until Convert is run again with the new settings.
+   */
+  const dropResult = () => {
+    setResult((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+    setPhase((p) => (p === "done" ? "ready" : p));
+  };
+
+  const changeFormat = (v: VideoFormat) => { dropResult(); setFormat(v); };
+  const changeResolution = (v: ResolutionChoice) => { dropResult(); setResolution(v); };
+  const changeQuality = (v: VideoQuality) => { dropResult(); setQuality(v); };
 
   useEffect(() => {
     aliveRef.current = true;
     return () => {
       aliveRef.current = false;
       abortRef.current?.abort();
-      if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
     };
   }, []);
+
+  // Revoke the last object URL when the dialog goes away.
+  useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
 
   // Load the source bytes + probe the engine once, when the dialog opens.
   useEffect(() => {
@@ -97,16 +134,20 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
       setError(L("notSupported"));
       return;
     }
-    let cancelled = false;
+    // Closing the dialog while this runs must stop the source download (up to 250 MB) AND
+    // the ffmpeg core download (~32 MB) instead of finishing them into the void.
+    const init = new AbortController();
     (async () => {
       try {
-        const res = await fetch(file.url, { cache: "no-store" });
+        const res = await fetch(file.url, { cache: "no-store", signal: init.signal });
         if (!res.ok) throw new Error(`Could not read the video (${res.status})`);
         const blob = await res.blob();
+        if (init.signal.aborted) return;
         const asFile = new File([blob], file.name, { type: blob.type || "video/mp4" });
         const m = await probeVideoMeta(asFile);
-        const c = await probeEncoders();
-        if (cancelled || !aliveRef.current) return;
+        if (init.signal.aborted) return;
+        const c = await probeEncoders(init.signal);
+        if (init.signal.aborted || !aliveRef.current) return;
         setSource(asFile);
         setMeta(m);
         setCaps(c);
@@ -117,12 +158,14 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
         setQuality(preset.quality);
         setPhase("ready");
       } catch (e) {
-        if (cancelled || !aliveRef.current) return;
+        // A cancelled init is not a failure the admin needs to see.
+        if (init.signal.aborted || (e as DOMException)?.name === "AbortError") return;
+        if (!aliveRef.current) return;
         setPhase("error");
         setError((e as Error).message || L("engineFailed"));
       }
     })();
-    return () => { cancelled = true; };
+    return () => { init.abort(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file.url, file.name]);
 
@@ -133,6 +176,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
     if (!meta || !caps) return;
     const preset = smartPreset(meta, caps);
     if (!preset) return;
+    dropResult();
     setFormat(preset.format);
     setResolution(preset.resolution);
     setQuality(preset.quality);
@@ -142,26 +186,34 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
     if (!source || !meta || !caps) return;
     const controller = new AbortController();
     abortRef.current = controller;
+    // Freeze the settings this run encodes with, so a mid-run change cannot mislabel them.
+    const settings: Settings = { format, resolution, quality };
     setPhase("converting");
     setProgress(0);
     setError(null);
-    setResult(null);
+    dropResult();
     try {
       const out = await convertVideo(
         source,
-        { format, quality, resolution, meta, caps },
+        { ...settings, meta, caps },
         {
           signal: controller.signal,
           onProgress: (p) => aliveRef.current && setProgress(Math.round(p.ratio * 100)),
         },
       );
       if (!aliveRef.current) return;
-      if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
-      resultUrlRef.current = URL.createObjectURL(out.blob);
-      setResult(out);
+      setResult({ ...settings, blob: out.blob, size: out.size, url: URL.createObjectURL(out.blob) });
       setPhase("done");
-      // Tell the Library what the conversion actually proved about this file.
-      onVerdict?.(file.name, evaluateVideoSaving(file.size, out.size).ok ? "canOptimize" : "optimized");
+      // Tell the Library only what the conversion actually PROVED about this file.
+      // A merely bigger result ("notSmaller") proves nothing: these settings were simply
+      // worse, and smaller ones may still shrink the source — so no verdict is reported.
+      const verdictNow: VideoSavingVerdict = evaluateVideoSaving(file.size, out.size);
+      if (verdictNow.ok) {
+        onVerdict?.(file.name, "canOptimize");
+      } else if (verdictNow.ok === false && verdictNow.reason === "alreadyOptimized") {
+        onVerdict?.(file.name, "optimized");
+      }
+
     } catch (e) {
       if (!aliveRef.current) return;
       if ((e as DOMException)?.name === "AbortError") {
@@ -177,18 +229,23 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
   };
 
   const verdict = result ? evaluateVideoSaving(file.size, result.size) : null;
+  // Everything user-facing about the produced bytes comes from the snapshot, never from the
+  // (freely changeable) selects.
+  const resultName = result ? outputNameFor(file.name, result.format) : null;
 
   const replaceOriginal = async () => {
     if (!result || !verdict?.ok) return;
-    const newName = outputNameFor(file.name, format);
-    const contentType = format === "mp4" ? "video/mp4" : "video/webm";
-    // Reserved, user-bound staging name — the server refuses anything else.
-    const stagedName = await stagedObjectName(format);
+    const newName = outputNameFor(file.name, result.format);
+    const contentType = MIME_BY_FORMAT[result.format];
     const controller = new AbortController();
     abortRef.current = controller;
     setPhase("uploading");
     setProgress(0);
+    let stagedName: string | null = null;
     try {
+      // Inside the try: an expired session here must surface as a normal failure and leave
+      // the dialog back in the "done" state, not stuck on "uploading".
+      stagedName = await stagedObjectName(result.format);
       await uploadResumable(stagedName, result.blob, contentType, {
         signal: controller.signal,
         onProgress: (sent, total) =>
@@ -206,8 +263,8 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
       onVerdict?.(commit.newName ?? newName, "optimized");
       onReplaced(commit, commit.newName ?? newName);
     } catch (e) {
-      // Anything past a successful upload is cleaned server-side; a failed upload cleans itself.
-      await removeObject(stagedName);
+      // Only a staged object that was actually named can need cleaning up.
+      if (stagedName) await removeObject(stagedName);
       if (!aliveRef.current) return;
       if ((e as DOMException)?.name === "AbortError") {
         toast.info(L("uploadCancelled"));
@@ -219,6 +276,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
       abortRef.current = null;
     }
   };
+
 
   const dims = meta ? targetDimensions(meta.width, meta.height, resolution) : null;
 
@@ -260,7 +318,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="vc-format" className="text-xs">{L("format")}</Label>
-                <Select value={format} onValueChange={(v) => setFormat(v as VideoFormat)} disabled={busy}>
+                <Select value={format} onValueChange={(v) => changeFormat(v as VideoFormat)} disabled={busy}>
                   <SelectTrigger id="vc-format"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {formats.map((f) => (
@@ -271,7 +329,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vc-res" className="text-xs">{L("resolution")}</Label>
-                <Select value={resolution} onValueChange={(v) => setResolution(v as ResolutionChoice)} disabled={busy}>
+                <Select value={resolution} onValueChange={(v) => changeResolution(v as ResolutionChoice)} disabled={busy}>
                   <SelectTrigger id="vc-res"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {RESOLUTIONS.map((r) => (
@@ -282,7 +340,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vc-quality" className="text-xs">{L("quality")}</Label>
-                <Select value={quality} onValueChange={(v) => setQuality(v as VideoQuality)} disabled={busy}>
+                <Select value={quality} onValueChange={(v) => changeQuality(v as VideoQuality)} disabled={busy}>
                   <SelectTrigger id="vc-quality"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="high">{L("qHigh")}</SelectItem>
@@ -330,7 +388,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
                   size="sm"
                   asChild
                 >
-                  <a href={resultUrlRef.current ?? "#"} download={outputNameFor(file.name, format)}>
+                  <a href={result.url} download={resultName ?? file.name}>
                     <Download size={14} className="mr-1" />
                     {L("downloadResult")}
                   </a>

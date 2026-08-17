@@ -181,3 +181,35 @@ export const SCANS: { table: string; label: string; nameField: string; fields: s
   { table: "promotions", label: "Promotion", nameField: "badge_text", fields: ["badge_text", "badge_text_en", "badge_text_ru"] },
   { table: "testimonials", label: "Testimonial", nameField: "name", fields: ["quote", "quote_en", "quote_ru"] },
 ];
+
+/**
+ * Reads at most `bytes` bytes from a response body and stops the transfer.
+ *
+ * A storage backend is free to ignore our `Range` header and start streaming the whole
+ * object, so a single first chunk can be megabytes wide. Only the promised prefix of each
+ * chunk is ever copied into the fixed-size buffer, and the reader is cancelled as soon as
+ * the buffer is full — the function never retains (or downloads) more than `bytes`.
+ */
+export async function readHeadFromStream(
+  body: ReadableStream<Uint8Array> | null,
+  bytes = 64,
+): Promise<Uint8Array> {
+  if (!body) return new Uint8Array(0);
+  const reader = body.getReader();
+  const head = new Uint8Array(bytes);
+  let total = 0;
+  try {
+    while (total < bytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value?.length) continue;
+      const take = Math.min(value.length, bytes - total);
+      head.set(value.subarray(0, take), total);
+      total += take;
+    }
+  } finally {
+    // Stops the download immediately — nothing beyond the head is ever transferred.
+    await reader.cancel().catch(() => undefined);
+  }
+  return head.subarray(0, total);
+}

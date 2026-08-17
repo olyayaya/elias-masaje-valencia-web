@@ -16,6 +16,7 @@ import {
   validateStagedName,
   validateRenameExtension,
   backupNameFor,
+  readHeadFromStream,
   SCANS,
 } from "./rules.ts";
 import { promoteSameName } from "./promote.ts";
@@ -142,34 +143,9 @@ async function readHead(admin: Client, name: string, bytes = 64): Promise<Uint8A
   if (error || !data?.signedUrl) throw new Error(`Could not read uploaded file: ${error?.message ?? "no url"}`);
   const res = await fetch(data.signedUrl, { headers: { Range: `bytes=0-${bytes - 1}` } });
   if (!res.ok && res.status !== 206) throw new Error(`Could not read uploaded file (${res.status})`);
-
-  const body = res.body;
-  if (!body) return new Uint8Array(0);
-  const reader = body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  try {
-    while (total < bytes) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value?.length) continue;
-      chunks.push(value);
-      total += value.length;
-    }
-  } finally {
-    // Stops the download immediately — nothing beyond the head is ever transferred.
-    await reader.cancel().catch(() => undefined);
-  }
-
-  const head = new Uint8Array(Math.min(total, bytes));
-  let offset = 0;
-  for (const c of chunks) {
-    if (offset >= head.length) break;
-    head.set(c.subarray(0, head.length - offset), offset);
-    offset += c.length;
-  }
-  return head;
+  return await readHeadFromStream(res.body, bytes);
 }
+
 
 /** Supabase caps a plain select at 1000 rows — page explicitly or usage silently under-counts. */
 const PAGE_SIZE = 1000;
@@ -315,6 +291,7 @@ Deno.serve(async (req) => {
 
       const bucket = admin.storage.from("media");
       let updated = 0;
+      let warning: string | undefined;
 
       if (!renaming) {
         // Same name: back up first, and restore the original if the promotion fails.
@@ -327,6 +304,9 @@ Deno.serve(async (req) => {
           { staged: stagedName, target: fileName, backup },
         );
         if (!result.ok) return json({ error: result.error, restored: result.restored }, 500);
+        // A successful swap that could not clean its own service objects is still a
+        // success — but the admin is told, because those objects are now visible.
+        if (result.warning) warning = result.warning;
       } else {
         const { error: copyError } = await bucket.copy(stagedName, newName);
         if (copyError) {
@@ -343,12 +323,16 @@ Deno.serve(async (req) => {
       }
 
       const historyReferences = await countHistoryReferences(admin, fileName);
-      let warning: string | undefined;
       if (renaming) {
-        await cleanup();
+        const { error: stagedError } = await bucket.remove([stagedName]);
+        if (stagedError) warning = `Temporary object could not be removed: ${stagedError.message}`;
         const { error: rmError } = await bucket.remove([fileName]);
-        if (rmError) warning = `Old object could not be removed: ${rmError.message}`;
+        if (rmError) {
+          warning = [warning, `Old object could not be removed: ${rmError.message}`]
+            .filter(Boolean).join(" · ");
+        }
       }
+
       return json({
         fileName,
         newName,
