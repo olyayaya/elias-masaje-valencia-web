@@ -45,15 +45,42 @@ describe("review translations — additive migration", () => {
     expect(additive).toMatch(/\^\[a-z\]\{2,3\}\(-\[a-z0-9\]\{2,8\}\)\*\$/);
   });
 
-  it("keeps anon read-only and only widens the column-level SELECT", () => {
-    expect(additive).toMatch(
-      /REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public\.reviews FROM anon/,
-    );
-    expect(additive).toMatch(
-      /GRANT SELECT \(original_language, review_text_es, review_text_en, review_text_ru\)\s*\n\s*ON public\.reviews TO anon/,
-    );
-    expect(additive).not.toMatch(/GRANT\s+(ALL|INSERT|UPDATE|DELETE)[^;]*TO anon/i);
+  it("revokes every anon privilege before granting the single column-level SELECT", () => {
+    const revoke = additive.search(/REVOKE ALL PRIVILEGES ON TABLE public\.reviews FROM anon;/);
+    expect(revoke).toBeGreaterThan(-1);
+
+    const grants = additive.match(/GRANT SELECT \(([\s\S]*?)\)\s*ON public\.reviews TO anon;/g) ?? [];
+    expect(grants).toHaveLength(1);
+    expect(additive.indexOf(grants[0])).toBeGreaterThan(revoke);
+
+    const columns = (grants[0].match(/\(([\s\S]*?)\)/)?.[1] ?? "")
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+    expect(columns).toEqual([
+      "id",
+      "author_name",
+      "rating",
+      "review_text",
+      "original_language",
+      "review_text_es",
+      "review_text_en",
+      "review_text_ru",
+      "reviewed_at",
+      "original_url",
+      "pinned",
+      "manual_priority",
+    ]);
+    expect(columns).toHaveLength(12);
   });
+
+  it("never hands anon a table-level privilege", () => {
+    const anonGrants = additive.match(/GRANT[\s\S]*?TO anon;/g) ?? [];
+    expect(anonGrants).toHaveLength(1);
+    for (const grant of anonGrants) expect(grant).toMatch(/GRANT SELECT \(/);
+    expect(additive).not.toMatch(/GRANT\s+(ALL|INSERT|UPDATE|DELETE|SELECT)\s+ON[^;]*TO anon/i);
+  });
+
 
   it("adds no provider, key, cron or payload column", () => {
     expect(additive).not.toMatch(/source_payload|api_key|cron|http|extension/i);

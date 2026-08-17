@@ -203,7 +203,41 @@ describe("localized review text on the public page", () => {
     state.value.items = [translated];
     mount();
     expect(screen.getByTestId("review-card").textContent).toContain("Потрясающий массаж у Элиаса!");
-    expect(screen.getByTestId("review-translated-note").textContent).toBe("Перевод оригинала");
+    expect(screen.getByTestId("review-translated-note").textContent).toBe("Переведено с оригинала");
+  });
+
+  it("uses the exact English note on the English page", () => {
+    window.history.pushState({}, "", "/en");
+    state.value.items = [review({ id: "e", review_text: "Genial", original_language: "es", review_text_en: "Great" })];
+    mount();
+    expect(screen.getByTestId("review-translated-note").textContent).toBe("Translated from the original");
+  });
+
+  it("formats the date with the page language, not the browser locale", () => {
+    const withDate = review({ id: "d", review_text: "Genial", reviewed_at: "2026-03-04T00:00:00Z" });
+    state.value.items = [withDate];
+    mount();
+    expect(screen.getByTestId("review-card").textContent).toContain("4/3/2026");
+    cleanup();
+
+    window.history.pushState({}, "", "/en");
+    state.value.items = [withDate];
+    mount();
+    expect(screen.getByTestId("review-card").textContent).toContain("04/03/2026");
+    cleanup();
+
+    window.history.pushState({}, "", "/ru");
+    state.value.items = [withDate];
+    mount();
+    expect(screen.getByTestId("review-card").textContent).toContain("04.03.2026");
+  });
+
+  it("keeps the paragraph breaks of the shown text", () => {
+    state.value.items = [review({ id: "p", review_text: "Primera línea\n\nSegunda línea" })];
+    mount();
+    const p = screen.getByTestId("review-card").querySelector("blockquote p")!;
+    expect(p.className).toContain("whitespace-pre-line");
+    expect(p.textContent).toContain("Primera línea\n\nSegunda línea");
   });
 
   it("falls back to the original without a note when a translation is missing", () => {

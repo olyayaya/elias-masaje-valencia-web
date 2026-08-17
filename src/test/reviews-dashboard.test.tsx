@@ -547,6 +547,39 @@ describe("dashboard reviews — translation editor", () => {
     expect(values).not.toHaveProperty("dedupe_key");
   });
 
+  it("closes and reports success only after the row was really written", async () => {
+    h.state.items = [review({ id: "a", author_name: "Ana" })];
+    mount();
+    fireEvent.click(screen.getByTestId("tr-edit-a"));
+    fireEvent.change(screen.getByTestId("tr-editor-a").querySelectorAll("textarea")[0], {
+      target: { value: "Genial" },
+    });
+    fireEvent.click(screen.getByTestId("tr-save-a"));
+
+    await waitFor(() => expect(screen.queryByTestId("tr-editor-a")).toBeNull());
+    expect(h.toast.success).toHaveBeenCalled();
+    expect(h.toast.error).not.toHaveBeenCalled();
+  });
+
+  it("keeps the editor and the draft open on a database error, with no success toast", async () => {
+    h.updateEq.mockResolvedValueOnce({ data: null, error: { message: "permission denied" } });
+    h.state.items = [review({ id: "a", author_name: "Ana" })];
+    mount();
+    fireEvent.click(screen.getByTestId("tr-edit-a"));
+    fireEvent.change(screen.getByTestId("tr-editor-a").querySelectorAll("textarea")[0], {
+      target: { value: "Genial" },
+    });
+    fireEvent.click(screen.getByTestId("tr-save-a"));
+
+    await waitFor(() => expect(screen.getByTestId("tr-error-a")).toBeTruthy());
+    expect(screen.getByTestId("tr-editor-a")).toBeTruthy();
+    expect((screen.getByTestId("tr-editor-a").querySelectorAll("textarea")[0] as HTMLTextAreaElement).value).toBe(
+      "Genial",
+    );
+    expect(h.toast.success).not.toHaveBeenCalled();
+    expect(h.toast.error).toHaveBeenCalled();
+  });
+
   it("rejects a nonsense language tag without writing anything", () => {
     h.state.items = [review({ id: "a", author_name: "Ana" })];
     mount();
@@ -567,6 +600,14 @@ describe("dashboard reviews — translation editor", () => {
     fireEvent.click(screen.getByTestId("tr-cancel-a"));
     expect(screen.queryByTestId("tr-editor-a")).toBeNull();
     expect(h.update).not.toHaveBeenCalled();
+    expect(h.toast.success).not.toHaveBeenCalled();
+    expect(h.toast.error).not.toHaveBeenCalled();
+
+    // Reopening shows the stored value again, never the abandoned draft.
+    fireEvent.click(screen.getByTestId("tr-edit-a"));
+    expect((screen.getByTestId("tr-editor-a").querySelectorAll("textarea")[0] as HTMLTextAreaElement).value).toBe(
+      "Genial",
+    );
   });
 
   it("finds a review by the text of its translation", () => {
