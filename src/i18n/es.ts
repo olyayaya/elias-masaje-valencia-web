@@ -101,6 +101,7 @@ export const es: Translations = {
     next: "Reseñas siguientes",
     ratingAria: "{n} de 5 estrellas",
     carouselLabel: "Reseñas de clientes",
+    anonymousAuthor: "Cliente",
   },
   location: { title: "Ubicación" },
   faq: {

@@ -89,6 +89,7 @@ export interface Translations {
     next: string;
     ratingAria: string;
     carouselLabel: string;
+    anonymousAuthor: string;
   };
   location: {
     title: string;
