@@ -180,38 +180,57 @@ export function isoDuration(seconds: number | null | undefined): string | undefi
   return `PT${m > 0 ? `${m}M` : ""}${s}S`;
 }
 
-/** schema.org ImageGallery with ImageObject / VideoObject members. */
+/**
+ * schema.org ImageGallery with ImageObject / VideoObject members.
+ *
+ * A VideoObject is only emitted when every required property (name, thumbnailUrl,
+ * contentUrl, uploadDate) is actually present — an incomplete node is dropped rather
+ * than published. `duration` is included only when the real length is known.
+ */
 export function buildGallerySchema(items: GalleryItem[], locale: Locale) {
   const url = `${BASE_URL}${ROUTE_MAP.gallery[locale]}`;
+  const hasPart = items
+    .map((item) => {
+      const name = pickLocalized(item, "title", locale) || pickLocalized(item, "alt", locale);
+      const description = pickLocalized(item, "description", locale);
+      if (item.media_type === "video") {
+        const thumbnailUrl = (item.poster_url || "").trim();
+        const contentUrl = (item.media_url || "").trim();
+        const uploadDate = (item.created_at || "").trim();
+        const videoName = name || pickLocalized(item, "alt", locale);
+        if (!thumbnailUrl || !contentUrl || !uploadDate || !videoName) return null;
+        const duration = isoDuration(item.duration_seconds);
+        return {
+          "@type": "VideoObject",
+          name: videoName,
+          ...(description ? { description } : {}),
+          contentUrl,
+          thumbnailUrl,
+          uploadDate,
+          ...(duration ? { duration } : {}),
+        };
+      }
+      const contentUrl = (item.media_url || "").trim();
+      if (!contentUrl) return null;
+      const caption = pickLocalized(item, "alt", locale);
+      return {
+        "@type": "ImageObject",
+        contentUrl,
+        thumbnailUrl: storageThumbUrl(contentUrl) ?? contentUrl,
+        ...(name ? { name } : {}),
+        ...(description ? { description } : {}),
+        ...(caption ? { caption } : {}),
+        uploadDate: item.created_at,
+      };
+    })
+    .filter((n): n is NonNullable<typeof n> => n !== null);
+
   return {
     "@type": "ImageGallery",
     "@id": `${url}#gallery`,
     url,
     inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
-    hasPart: items.map((item) => {
-      const name = pickLocalized(item, "title", locale) || pickLocalized(item, "alt", locale);
-      const description = pickLocalized(item, "description", locale);
-      if (item.media_type === "video") {
-        const duration = isoDuration(item.duration_seconds);
-        return {
-          "@type": "VideoObject",
-          name: name || "Elias Masaje",
-          ...(description ? { description } : {}),
-          contentUrl: item.media_url,
-          thumbnailUrl: item.poster_url || undefined,
-          uploadDate: item.created_at,
-          ...(duration ? { duration } : {}),
-        };
-      }
-      return {
-        "@type": "ImageObject",
-        contentUrl: item.media_url,
-        thumbnailUrl: item.media_url,
-        ...(name ? { name } : {}),
-        ...(description ? { description } : {}),
-        ...(pickLocalized(item, "alt", locale) ? { caption: pickLocalized(item, "alt", locale) } : {}),
-        uploadDate: item.created_at,
-      };
-    }),
+    hasPart,
+
   };
 }
