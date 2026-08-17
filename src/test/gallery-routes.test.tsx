@@ -6,9 +6,9 @@ import { MemoryRouter } from "react-router-dom";
 import { I18nProvider } from "@/i18n/context";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { storageThumbUrl, type GalleryItem } from "@/lib/gallery";
-import es from "@/i18n/es";
-import en from "@/i18n/en";
-import ru from "@/i18n/ru";
+import { es } from "@/i18n/es";
+import { en } from "@/i18n/en";
+import { ru } from "@/i18n/ru";
 
 const SUPA_ORIGIN = new URL(import.meta.env.VITE_SUPABASE_URL as string).origin;
 const photoUrl = `${SUPA_ORIGIN}/storage/v1/object/public/media/sala.webp`;
