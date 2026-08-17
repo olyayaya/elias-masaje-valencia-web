@@ -87,7 +87,6 @@ const COPY = {
   },
   tripadvisorOpen: { en: "Open TripAdvisor profile", es: "Abrir perfil de TripAdvisor", ru: "Открыть профиль TripAdvisor" },
 
-  lastSync: { en: "Last sync: {v}", es: "Última sincronización: {v}", ru: "Последняя синхронизация: {v}" },
 
   importTitle: { en: "Import reviews (CSV or JSON)", es: "Importar reseñas (CSV o JSON)", ru: "Импорт отзывов (CSV или JSON)" },
   importHint: {
@@ -367,60 +366,6 @@ const DashboardReviews = () => {
             </select>
             <p className="text-[11px] text-muted-foreground mt-1">{c("publicSortHint")}</p>
           </div>
-        </div>
-      </DashboardCard>
-
-      {/* -------------------------------------------------------- sources --- */}
-      <DashboardCard title={c("syncTitle")}>
-        <p className="text-xs text-muted-foreground mb-3">
-          {c("lastSync", { v: lastSync ? new Date(lastSync).toLocaleString() : c("never") })}
-        </p>
-        <div className="space-y-3">
-          {(["google"] as const).map((src) => (
-            <div key={src} className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium w-28">{c(SOURCE_LABEL[src])}</span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={syncing !== null || missingTable}
-                onClick={() => void runSync(src)}
-              >
-                {syncing === src ? (
-                  <Loader2 size={13} className="mr-1.5 animate-spin" />
-                ) : (
-                  <RefreshCw size={13} className="mr-1.5" />
-                )}
-                {syncing === src ? c("syncing") : c("syncNow")}
-              </Button>
-              <span className="text-xs text-muted-foreground" data-testid={`sync-status-${src}`}>
-                {c(STATUS_LABEL[stateBySource.get(src)?.status ?? "never"])}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                {c("lastAttempt", {
-                  v: stateBySource.get(src)?.last_attempt_at
-                    ? new Date(stateBySource.get(src)!.last_attempt_at!).toLocaleString()
-                    : c("never"),
-                })}
-              </span>
-              <span className="text-[11px] text-muted-foreground" data-testid={`sync-counters-${src}`}>
-                {c("counters", {
-                  i: String(stateBySource.get(src)?.imported_count ?? 0),
-                  u: String(stateBySource.get(src)?.updated_count ?? 0),
-                  s: String(stateBySource.get(src)?.skipped_count ?? 0),
-                })}
-              </span>
-              {(stateBySource.get(src)?.status === "not_configured" || syncStatus[src] === "not_configured") && (
-                <span className="text-xs text-muted-foreground basis-full">
-                  {c("notConfigured")} ({REQUIRED_SYNC_SECRETS[src].join(", ")})
-                </span>
-              )}
-              {stateBySource.get(src)?.status === "error" && (
-                <span className="text-xs text-destructive basis-full">
-                  {stateBySource.get(src)?.error_message || c("syncFailed")}
-                </span>
-              )}
-            </div>
-          ))}
         </div>
       </DashboardCard>
 
