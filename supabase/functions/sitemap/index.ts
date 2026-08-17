@@ -2,18 +2,45 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { buildSitemapXml, type ExtraUrl } from "./build-sitemap.ts";
 
 // The function is the single source of truth for the sitemap and always
-// declares application/xml; charset=utf-8.
-function xmlHeaders(): Headers {
-  const headers = new Headers();
-  headers.set("content-type", "application/xml; charset=utf-8");
-  headers.set("cache-control", "public, max-age=60, s-maxage=60");
-  headers.set("access-control-allow-origin", "*");
-  headers.set("x-content-type-options", "nosniff");
-  return headers;
+// serves an XML media type with UTF-8 bytes.
+//
+// NOTE on the exact spelling of the media type: the Supabase edge gateway
+// rewrites a GET response declared as the all-lowercase `application/xml`
+// (and `text/xml`) to `text/plain` and adds a sandbox CSP, while HEAD keeps
+// the original header. The rewrite is a literal, case-sensitive string match,
+// so declaring the media type as `application/XML; charset=utf-8` survives the
+// gateway untouched. Media types are case-insensitive per RFC 9110 §8.3, so
+// this is the same `application/xml; charset=utf-8` for every client and
+// crawler — do not "normalize" it to lowercase or GET regresses to text/plain.
+export const XML_CONTENT_TYPE = "application/XML; charset=utf-8";
+
+export function xmlResponseHeaders(cacheControl: string): Record<string, string> {
+  // A plain object (not a Headers instance) so the runtime serializes exactly
+  // these values.
+  return {
+    "content-type": XML_CONTENT_TYPE,
+    "cache-control": cacheControl,
+    "access-control-allow-origin": "*",
+    "x-content-type-options": "nosniff",
+  };
 }
 
-Deno.serve(async (req) => {
-  const variant = new URL(req.url).searchParams.get("__ctv") ?? "";
+export function xmlResponse(xml: string, status: number, cacheControl: string): Response {
+  // Binary UTF-8 body: no runtime-side text encoding/sniffing in the way.
+  return new Response(new TextEncoder().encode(xml), {
+    status,
+    headers: xmlResponseHeaders(cacheControl),
+  });
+}
+
+export function errorXml(message: string): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<error>${message
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")}</error>`;
+}
+
+Deno.serve(async (_req) => {
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -71,68 +98,10 @@ Deno.serve(async (req) => {
 
     const xml = buildSitemapXml(posts ?? [], extraUrls, new Date(), { includeGallery });
 
-    const bytes = new TextEncoder().encode(xml);
-    const base = {
-      "cache-control": "public, max-age=60, s-maxage=60",
-      "access-control-allow-origin": "*",
-      "x-content-type-options": "nosniff",
-    };
-    if (variant === "1") {
-      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8" } });
-    }
-    if (variant === "2") {
-      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "text/xml; charset=utf-8" } });
-    }
-    if (variant === "3") {
-      return new Response(new Blob([bytes], { type: "application/xml" }), { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8", "content-disposition": "inline; filename=\"sitemap.xml\"" } });
-    }
-    if (variant === "13") {
-      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/XML; charset=utf-8" } });
-    }
-    if (variant === "9") {
-      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "Application/XML; charset=utf-8" } });
-    }
-    if (variant === "10") {
-      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/xml;charset=utf-8" } });
-    }
-    if (variant === "11") {
-      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/xml; charset=UTF-8 " } });
-    }
-    if (variant === "12") {
-      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/sitemap+xml; charset=utf-8" } });
-    }
-    if (variant === "5") {
-      return new Response("hello world", { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8" } });
-    }
-    if (variant === "6") {
-      return new Response("\uFEFF" + xml, { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8" } });
-    }
-    if (variant === "7") {
-      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/rss+xml; charset=utf-8" } });
-    }
-    if (variant === "8") {
-      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8", "content-disposition": "attachment; filename=\"sitemap.xml\"" } });
-    }
-    if (variant === "4") {
-      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/xml", "content-length": String(bytes.byteLength) } });
-    }
-    return new Response(xml, { status: 200, headers: xmlHeaders() });
+    return xmlResponse(xml, 200, "public, max-age=60, s-maxage=60");
   } catch (err) {
     console.error("Sitemap error:", err);
     const message = err instanceof Error ? err.message : String(err);
-    return new Response(
-      `<?xml version="1.0" encoding="UTF-8"?>\n<error>${message
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")}</error>`,
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/xml; charset=utf-8",
-          "Cache-Control": "no-store",
-          "Access-Control-Allow-Origin": "*",
-        },
-      },
-    );
+    return xmlResponse(errorXml(message), 500, "no-store");
   }
 });
