@@ -48,8 +48,9 @@ export const MIME_BY_FORMAT: Record<VideoFormat, string> = {
 };
 
 /**
- * The audio encoder actually used for a container, or null when the core has none for it
- * (in that case the output is muxed without audio rather than failing mid-encode).
+ * The audio encoder actually used for a container, or null when the core has none for it.
+ * A format with no audio encoder is never offered (see availableFormats), so in practice
+ * this only returns null for capability combinations the UI already refuses.
  */
 export function audioEncoderFor(format: VideoFormat, caps: EncoderCaps): string | null {
   if (format === "mp4") {
@@ -62,13 +63,20 @@ export function audioEncoderFor(format: VideoFormat, caps: EncoderCaps): string 
   return null;
 }
 
-/** A format is offerable only when its video encoder exists in this core build. */
+/**
+ * A format is offerable only when this core can write BOTH its video and a matching audio
+ * codec. Optimizing a video must never silently drop the soundtrack, so a container we
+ * could only produce muted is not an option at all:
+ *   MP4  → libx264   + (aac | libmp3lame)
+ *   WebM → libvpx-vp9 + (libopus | libvorbis)
+ */
 export function availableFormats(caps: EncoderCaps): VideoFormat[] {
   const out: VideoFormat[] = [];
-  if (caps.h264) out.push("mp4");
-  if (caps.vp9) out.push("webm");
+  if (caps.h264 && audioEncoderFor("mp4", caps)) out.push("mp4");
+  if (caps.vp9 && audioEncoderFor("webm", caps)) out.push("webm");
   return out;
 }
+
 
 
 const evenDown = (n: number) => Math.max(2, Math.floor(n / 2) * 2);
