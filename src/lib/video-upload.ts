@@ -64,6 +64,11 @@ export async function uploadResumable(
   let abortListener: (() => void) | null = null;
 
   await new Promise<void>((resolve, reject) => {
+    // Guards the tus lifecycle: once the upload is aborted (or has settled) no late
+    // callback may start it. findPreviousUploads() can resolve long after a cancel.
+    let settled = false;
+    let aborted = false;
+
     const upload = new tus.Upload(file, {
       endpoint: endpoint(),
       retryDelays: [0, 1000, 3000, 5000],
@@ -77,11 +82,21 @@ export async function uploadResumable(
         cacheControl: "3600",
       },
       chunkSize: CHUNK,
-      onError: (err) => { detach(); reject(err instanceof Error ? err : new Error(String(err))); },
+      onError: (err) => {
+        if (settled) return;
+        settled = true;
+        detach();
+        reject(err instanceof Error ? err : new Error(String(err)));
+      },
       onProgress: (sent, total) => handlers.onProgress?.(sent, total),
       // The listener is detached FIRST: a late abort must never delete an object that
       // has already been uploaded successfully.
-      onSuccess: () => { detach(); resolve(); },
+      onSuccess: () => {
+        if (settled) return;
+        settled = true;
+        detach();
+        resolve();
+      },
     });
 
     function detach() {
@@ -90,9 +105,12 @@ export async function uploadResumable(
     }
 
     const abort = () => {
+      aborted = true;
       detach();
       void upload.abort(true).finally(() => {
         void removeObject(objectName);
+        if (settled) return;
+        settled = true;
         reject(new DOMException("Cancelled", "AbortError"));
       });
     };
@@ -100,15 +118,22 @@ export async function uploadResumable(
     abortListener = abort;
     signal?.addEventListener("abort", abort, { once: true });
 
-    upload.findPreviousUploads().then((prev) => {
-      if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
+    // A resolve arriving after the cancel must not resurrect the transfer.
+    const start = () => {
+      if (aborted || settled || signal?.aborted) return;
       upload.start();
-    }).catch(() => upload.start());
+    };
+    upload.findPreviousUploads().then((prev) => {
+      if (aborted || settled || signal?.aborted) return;
+      if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
+      start();
+    }).catch(start);
   }).catch(async (err) => {
     if (abortListener) signal?.removeEventListener("abort", abortListener);
     if ((err as DOMException)?.name !== "AbortError") await removeObject(objectName);
     throw err;
   });
+
 }
 
 export const publicUrlOf = (name: string) =>
