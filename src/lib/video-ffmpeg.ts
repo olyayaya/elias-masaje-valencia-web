@@ -5,7 +5,10 @@
  * single-thread core is self-hosted at /ffmpeg/* by the ffmpegCore Vite plugin (never
  * bundled, never fetched from a CDN, no SharedArrayBuffer / COOP / COEP requirement).
  */
-import { FFMPEG_CORE_URL, FFMPEG_WASM_URL } from "../../vite-plugin-ffmpeg-core";
+// Kept in sync with vite-plugin-ffmpeg-core.ts (which emits these two files).
+const FFMPEG_CORE_URL = "/ffmpeg/ffmpeg-core.js";
+const FFMPEG_WASM_URL = "/ffmpeg/ffmpeg-core.wasm";
+
 import {
   buildFfmpegArgs,
   parseEncoderCaps,
