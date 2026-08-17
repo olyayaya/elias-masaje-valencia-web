@@ -7,7 +7,7 @@ import {
 import { useI18n } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  REVIEW_SORTS, REVIEW_SOURCES, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
+  REVIEW_SORTS, REVIEW_SOURCES, TRIPADVISOR_PROFILE_URL, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
   type ParsedImportRow, type Review, type ReviewSort, type ReviewSource, type ReviewSyncStateRow,
 } from "@/lib/reviews";
 import { useAdminReviews, reviewKeys } from "@/hooks/use-reviews";
@@ -18,9 +18,9 @@ import { Input } from "@/components/ui/input";
 
 const COPY = {
   intro: {
-    en: "Real reviews imported from Google and TripAdvisor. Nothing here is written by the site.",
-    es: "Reseñas reales importadas de Google y TripAdvisor. Nada de esto lo escribe la web.",
-    ru: "Реальные отзывы из Google и TripAdvisor. Ничего не пишется сайтом.",
+    en: "Real reviews from Google and from manual entries you hold the rights to. Nothing here is written by the site.",
+    es: "Reseñas reales de Google y entradas manuales sobre las que tienes derechos. Nada de esto lo escribe la web.",
+    ru: "Реальные отзывы из Google и ручные записи, на которые у вас есть права. Ничего не пишется сайтом.",
   },
   missingTable: {
     en: "The reviews storage is not set up yet. Ask your developer to apply the pending reviews migration. The legacy editor below stays available until then.",
@@ -31,7 +31,6 @@ const COPY = {
   search: { en: "Search author or text", es: "Buscar autor o texto", ru: "Поиск по автору или тексту" },
   sourceAll: { en: "All sources", es: "Todas las fuentes", ru: "Все источники" },
   sourceGoogle: { en: "Google", es: "Google", ru: "Google" },
-  sourceTripadvisor: { en: "TripAdvisor", es: "TripAdvisor", ru: "TripAdvisor" },
   sourceManual: { en: "Manual import", es: "Importación manual", ru: "Ручной импорт" },
   ratingAll: { en: "All ratings", es: "Todas las valoraciones", ru: "Все оценки" },
   visibilityAll: { en: "Visible and hidden", es: "Visibles y ocultas", ru: "Видимые и скрытые" },
@@ -84,11 +83,13 @@ const COPY = {
   lastAttempt: { en: "Last attempt: {v}", es: "Último intento: {v}", ru: "Последняя попытка: {v}" },
   counters: { en: "{i} new · {u} updated · {s} skipped", es: "{i} nuevas · {u} actualizadas · {s} omitidas", ru: "{i} новых · {u} обновлено · {s} пропущено" },
   rateLimited: { en: "Please wait {n}s before syncing this source again.", es: "Espera {n}s antes de volver a sincronizar esta fuente.", ru: "Подождите {n} с перед повторной синхронизацией." },
-  tripadvisorLimits: {
-    en: "The official TripAdvisor Content API returns only a limited set of the most recent reviews — it is not a full export.",
-    es: "La API oficial de contenido de TripAdvisor devuelve solo un conjunto limitado de las reseñas más recientes; no es una exportación completa.",
-    ru: "Официальный TripAdvisor Content API возвращает лишь ограниченный набор последних отзывов — это не полный экспорт.",
+  tripadvisorTitle: { en: "TripAdvisor", es: "TripAdvisor", ru: "TripAdvisor" },
+  tripadvisorBody: {
+    en: "TripAdvisor reviews are not imported or shown on the site. Their Content API terms do not allow filtering or sorting their reviews, or mixing them with reviews from other sources. Showing their content needs the official TripAdvisor widget or a separate written licence. Until then the profile is linked only.",
+    es: "Las reseñas de TripAdvisor no se importan ni se muestran en la web. Sus condiciones de la Content API no permiten filtrar ni ordenar sus reseñas, ni mezclarlas con reseñas de otras fuentes. Para mostrar su contenido hace falta el widget oficial de TripAdvisor o una licencia escrita aparte. Hasta entonces solo se enlaza el perfil.",
+    ru: "Отзывы TripAdvisor не импортируются и не показываются на сайте. Условия их Content API запрещают фильтровать и сортировать их отзывы, а также смешивать их с отзывами других источников. Для показа их контента нужен официальный виджет TripAdvisor или отдельное письменное разрешение. Пока доступна только ссылка на профиль.",
   },
+  tripadvisorOpen: { en: "Open TripAdvisor profile", es: "Abrir perfil de TripAdvisor", ru: "Открыть профиль TripAdvisor" },
 
   syncTitle: { en: "Sources", es: "Fuentes", ru: "Источники" },
   syncNow: { en: "Sync now", es: "Sincronizar", ru: "Синхронизировать" },
@@ -109,9 +110,9 @@ const COPY = {
 
   importTitle: { en: "Import an official export", es: "Importar una exportación oficial", ru: "Импорт официального экспорта" },
   importHint: {
-    en: "CSV or JSON with the columns source, external_review_id, author_name, rating, review_text, reviewed_at, original_url.",
-    es: "CSV o JSON con las columnas source, external_review_id, author_name, rating, review_text, reviewed_at, original_url.",
-    ru: "CSV или JSON со столбцами source, external_review_id, author_name, rating, review_text, reviewed_at, original_url.",
+    en: "CSV or JSON with the columns source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Allowed sources: google, manual. Copied TripAdvisor content is rejected.",
+    es: "CSV o JSON con las columnas source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Fuentes permitidas: google, manual. El contenido copiado de TripAdvisor se rechaza.",
+    ru: "CSV или JSON со столбцами source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Допустимые источники: google, manual. Скопированный контент TripAdvisor отклоняется.",
   },
   choose: { en: "Choose file", es: "Elegir archivo", ru: "Выбрать файл" },
   importPreview: { en: "{n} valid rows ready to import", es: "{n} filas válidas listas", ru: "Готово к импорту строк: {n}" },
@@ -150,12 +151,11 @@ const STATUS_LABEL: Record<string, keyof typeof COPY> = {
 
 const SOURCE_LABEL: Record<ReviewSource, keyof typeof COPY> = {
   google: "sourceGoogle",
-  tripadvisor: "sourceTripadvisor",
   manual: "sourceManual",
 };
 
 /** Secrets the server-side sync needs before it can run. Names only, never values. */
-export const REQUIRED_SYNC_SECRETS: Record<"google" | "tripadvisor", string[]> = {
+export const REQUIRED_SYNC_SECRETS: Record<"google", string[]> = {
   google: [
     "GOOGLE_BUSINESS_PROFILE_CLIENT_ID",
     "GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET",
@@ -163,7 +163,6 @@ export const REQUIRED_SYNC_SECRETS: Record<"google" | "tripadvisor", string[]> =
     "GOOGLE_BUSINESS_ACCOUNT_ID",
     "GOOGLE_BUSINESS_LOCATION_ID",
   ],
-  tripadvisor: ["TRIPADVISOR_CONTENT_API_KEY", "TRIPADVISOR_LOCATION_ID"],
 };
 
 const Stars = ({ n }: { n: number }) => (
@@ -277,6 +276,12 @@ const DashboardReviews = () => {
         setSyncStatus((s) => ({ ...s, [src]: "rate_limited" }));
         toast.warning(c("rateLimited", { n: String((res as { retry_after?: number }).retry_after ?? 60) }));
         refresh();
+        return;
+      }
+      if (res?.status === "compliance_required") {
+        // Defensive: the UI offers no button for a blocked source.
+        setSyncStatus((s) => ({ ...s, [src]: "compliance_required" }));
+        toast.warning(c("tripadvisorBody"));
         return;
       }
       if (res?.status === "not_configured") {
@@ -422,7 +427,7 @@ const DashboardReviews = () => {
           {c("lastSync", { v: lastSync ? new Date(lastSync).toLocaleString() : c("never") })}
         </p>
         <div className="space-y-3">
-          {(["google", "tripadvisor"] as const).map((src) => (
+          {(["google"] as const).map((src) => (
             <div key={src} className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-medium w-28">{c(SOURCE_LABEL[src])}</span>
               <Button
@@ -465,12 +470,26 @@ const DashboardReviews = () => {
                   {stateBySource.get(src)?.error_message || c("syncFailed")}
                 </span>
               )}
-              {src === "tripadvisor" && (
-                <span className="text-[11px] text-muted-foreground basis-full">{c("tripadvisorLimits")}</span>
-              )}
             </div>
           ))}
         </div>
+      </DashboardCard>
+
+      {/* --------------------------------------------- tripadvisor (link) --- */}
+      {/* Deliberately separate from the Google/manual block above: no shared
+          filters, no shared list, no imported content. */}
+      <DashboardCard title={c("tripadvisorTitle")}>
+        <p className="text-xs text-muted-foreground mb-3" data-testid="tripadvisor-compliance">
+          {c("tripadvisorBody")}
+        </p>
+        <a
+          href={TRIPADVISOR_PROFILE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm text-foreground underline underline-offset-2 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+        >
+          <ExternalLink size={13} /> {c("tripadvisorOpen")}
+        </a>
       </DashboardCard>
 
       {/* --------------------------------------------------------- import --- */}

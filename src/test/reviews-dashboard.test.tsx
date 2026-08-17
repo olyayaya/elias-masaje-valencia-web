@@ -79,7 +79,7 @@ beforeEach(() => {
   h.updateEq.mockImplementation(async () => ({ data: null, error: null }));
   h.state.items = [
     review({ id: "a", author_name: "Ana", rating: 5, source: "google" }),
-    review({ id: "b", author_name: "Bea", rating: 3, source: "tripadvisor", visible: false }),
+    review({ id: "b", author_name: "Bea", rating: 3, source: "manual", visible: false }),
   ];
   h.state.settings = { id: "s", updated_at: "", ...DEFAULT_REVIEW_SETTINGS };
   h.state.syncState = [];
@@ -145,7 +145,7 @@ describe("dashboard reviews — persisted display settings", () => {
     mount();
     fireEvent.click(screen.getByLabelText(/show reviews from google|mostrar reseñas de google|отзывы из google/i));
     await waitFor(() =>
-      expect(h.settingsUpdate).toHaveBeenCalledWith({ allowed_sources: ["tripadvisor", "manual"] }),
+      expect(h.settingsUpdate).toHaveBeenCalledWith({ allowed_sources: ["manual"] }),
     );
 
     fireEvent.change(screen.getByLabelText(/order on the homepage|orden en la portada|порядок на главной/i), {
@@ -179,24 +179,36 @@ describe("dashboard reviews — per-source status", () => {
         error_message: null,
         updated_at: "",
       },
-      {
-        source: "tripadvisor",
-        last_attempt_at: null,
-        last_success_at: null,
-        status: "not_configured",
-        imported_count: 0,
-        updated_count: 0,
-        skipped_count: 0,
-        error_code: "not_configured",
-        error_message: null,
-        updated_at: "",
-      },
     ];
     mount();
     expect(screen.getByTestId("sync-status-google").textContent).toMatch(/connected|conectado|подключено/i);
     expect(screen.getByTestId("sync-counters-google").textContent).toMatch(/3/);
-    expect(screen.getByTestId("sync-status-tripadvisor").textContent).toMatch(/not connected|sin conectar|не подключ/i);
-    // The Content API limitation is stated plainly instead of promising everything.
-    expect(screen.getByText(/limited set|conjunto limitado|ограниченный набор/i)).toBeTruthy();
+    // TripAdvisor is not a synced source at all — there is no sync row for it.
+    expect(screen.queryByTestId("sync-status-tripadvisor")).toBeNull();
+  });
+});
+
+describe("tripadvisor compliance card", () => {
+  it("is a separate, filter-free card that only links the profile", () => {
+    mount();
+    const note = screen.getByTestId("tripadvisor-compliance");
+    expect(note.textContent).toMatch(/widget|licen|лиценз/i);
+    const link = screen.getByRole("link", { name: /tripadvisor/i });
+    expect(link.getAttribute("href")).toContain(
+      "tripadvisor.com/Attraction_Review-g187529-d34031094-Reviews-Elias_Massage_Valencia",
+    );
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+    // No sync button and no source toggle for TripAdvisor anywhere.
+    expect(screen.queryByLabelText(/reviews from tripadvisor|reseñas de tripadvisor|отзывы из tripadvisor/i)).toBeNull();
+  });
+
+  it("offers rating bands and sources only for Google and manual reviews", () => {
+    mount();
+    for (const n of [1, 2, 3, 4, 5]) {
+      expect(screen.getByLabelText(new RegExp(`${n}★`))).toBeTruthy();
+    }
+    const sourceSelect = screen.getByLabelText(/all sources|todas las fuentes|все источники/i) as HTMLSelectElement;
+    expect(Array.from(sourceSelect.options).map((o) => o.value)).toEqual(["all", "google", "manual"]);
   });
 });

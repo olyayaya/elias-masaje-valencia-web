@@ -1,6 +1,7 @@
 import {
   REVIEW_SOURCES,
   REVIEW_SORTS,
+  TRIPADVISOR_PROFILE_URL,
   reviewSettingsTable,
   reviewSyncStateTable,
   reviewsTable,
@@ -14,14 +15,26 @@ import {
 } from "@/integrations/supabase/pending-reviews";
 
 /* ------------------------------------------------------------------ *
- * Real customer reviews — Google Business Profile / TripAdvisor / manual
+ * Real customer reviews — Google Business Profile and manual entries the owner
+ * holds the rights to.
+ *
+ * TripAdvisor is intentionally not a stored source: their Content API terms
+ * forbid selective filtering/sorting and commingling their licensed content with
+ * third-party reviews. The dashboard links to the TripAdvisor profile instead.
  *
  * The `reviews`, `review_display_settings` and `review_sync_state` tables ship
  * ahead of their migration, so "table not there yet" degrades to an empty list
  * exactly like the gallery does. Nothing in this module ever invents a review.
  * ------------------------------------------------------------------ */
 
-export { REVIEW_SOURCES, REVIEW_SORTS, reviewSettingsTable, reviewSyncStateTable, reviewsTable };
+export {
+  REVIEW_SOURCES,
+  REVIEW_SORTS,
+  TRIPADVISOR_PROFILE_URL,
+  reviewSettingsTable,
+  reviewSyncStateTable,
+  reviewsTable,
+};
 export type { ReviewSort, ReviewSource, ReviewSyncStateRow, ReviewSyncStatus };
 
 export type Review = ReviewRow;
@@ -33,8 +46,6 @@ export type ReviewDisplaySettings = ReviewDisplaySettingsRow;
  */
 export const SOURCE_PROFILE_URL: Record<ReviewSource, string | null> = {
   google: "https://maps.app.goo.gl/uyR3ZRdYUFiYSwXt5",
-  tripadvisor:
-    "https://www.tripadvisor.com/Attraction_Review-g187529-d34031094-Reviews-Elias_Massage_Valencia-Valencia_Province_of_Valencia_Valencian_Community.html",
   manual: null,
 };
 
@@ -94,6 +105,9 @@ export function publicReviews(list: Review[], settings: ReviewDisplaySettings | 
   if (!s.section_enabled) return [];
   return list.filter(
     (r) =>
+      // Hard gate: only licensed sources can ever reach the public section, no
+      // matter what a stale settings row or a cached response says.
+      (REVIEW_SOURCES as readonly string[]).includes(r.source) &&
       r.visible &&
       (s.allowed_ratings ?? []).includes(r.rating) &&
       (s.allowed_sources ?? []).includes(r.source),
@@ -173,6 +187,14 @@ export function parseCsv(text: string): string[][] {
 
 const normalizeRecord = (rec: Record<string, unknown>, index: number, errors: string[]): ParsedImportRow | null => {
   const rawSource = clean(rec.source).toLowerCase();
+  if (rawSource === "tripadvisor") {
+    // Copied TripAdvisor content cannot be re-published here. There is no flag
+    // that turns this into an allowed mode by accident.
+    errors.push(
+      `Row ${index + 1}: TripAdvisor review content cannot be imported. Use source "manual" with an original_url only for reviews you hold the rights to.`,
+    );
+    return null;
+  }
   const source = (REVIEW_SOURCES as readonly string[]).includes(rawSource)
     ? (rawSource as ReviewSource)
     : null;

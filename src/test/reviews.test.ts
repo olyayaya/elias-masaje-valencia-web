@@ -54,8 +54,18 @@ describe("review display rules", () => {
   });
 
   it("filters by allowed source", () => {
-    const list = [review({ id: "a", source: "google" }), review({ id: "b", source: "tripadvisor" })];
+    const list = [review({ id: "a", source: "google" }), review({ id: "b", source: "manual" })];
     expect(publicReviews(list, settings({ allowed_sources: ["google"] })).map((r) => r.id)).toEqual(["a"]);
+  });
+
+  it("never shows a tripadvisor row, even if one somehow reaches the client", () => {
+    // Not a supported source: no importer writes it and the DB CHECK forbids it.
+    const rogue = { ...review({ id: "t" }), source: "tripadvisor" } as unknown as Review;
+    expect(DEFAULT_REVIEW_SETTINGS.allowed_sources).toEqual(["google", "manual"]);
+    expect(publicReviews([rogue], settings())).toEqual([]);
+    expect(
+      publicReviews([rogue], settings({ allowed_sources: ["google", "manual", "tripadvisor"] as never })),
+    ).toEqual([]);
   });
 
   it("never invents cards when there is no data", () => {
@@ -82,18 +92,38 @@ describe("sortReviews", () => {
   });
 });
 
+describe("tripadvisor import gating", () => {
+  it("rejects a tripadvisor source with an explanatory error and imports nothing", () => {
+    const { rows, errors } = parseReviewImport(
+      "source,author_name,rating,review_text\ntripadvisor,Ana,5,Great\n",
+    );
+    expect(rows).toHaveLength(0);
+    expect(errors[0]).toMatch(/TripAdvisor/);
+    expect(errors[0]).toMatch(/manual/);
+  });
+
+  it("accepts the same text as a manual entry with an original_url", () => {
+    const { rows, errors } = parseReviewImport(
+      "source,author_name,rating,review_text,original_url\nmanual,Ana,5,Great,https://ok.example\n",
+    );
+    expect(errors).toEqual([]);
+    expect(rows[0].source).toBe("manual");
+    expect(rows[0].original_url).toBe("https://ok.example/");
+  });
+});
+
 describe("parseReviewImport", () => {
   const csv =
     "source,external_review_id,author_name,rating,review_text,reviewed_at,original_url\n" +
     'google,g1,Ana,5,"Great, really",2026-02-01,https://maps.google.com/x\n' +
-    "tripadvisor,t1,Bob,4,Nice,2026-03-01,https://tripadvisor.com/y\n";
+    "manual,m1,Bob,4,Nice,2026-03-01,https://example.com/y\n";
 
   it("parses a CSV export", () => {
     const { rows, errors } = parseReviewImport(csv);
     expect(errors).toEqual([]);
     expect(rows).toHaveLength(2);
     expect(rows[0].review_text).toBe("Great, really");
-    expect(rows[1].source).toBe("tripadvisor");
+    expect(rows[1].source).toBe("manual");
   });
 
   it("parses a JSON export", () => {

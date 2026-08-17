@@ -1,7 +1,11 @@
 -- ============================================================================
 -- PENDING — NOT APPLIED. Reviewed and applied only during the separate rollout.
 --
--- Real customer reviews (Google Business Profile / TripAdvisor / manual import)
+-- Real customer reviews: Google Business Profile and manual entries the owner
+-- holds the rights to. TripAdvisor is intentionally NOT a storable source — its
+-- Content API terms forbid selective filtering/sorting and commingling licensed
+-- reviews with third-party content, so the CHECK constraints below make such a
+-- row impossible at the database level.
 -- Additive only: nothing existing is dropped or rewritten. The legacy
 -- public.testimonials table keeps working until the new section is rolled out.
 -- ============================================================================
@@ -12,10 +16,12 @@
 -- product needs it.
 CREATE TABLE IF NOT EXISTS public.reviews (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  source            text NOT NULL CHECK (source IN ('google', 'tripadvisor', 'manual')),
+  source            text NOT NULL CHECK (source IN ('google', 'manual')),
   -- Stable id from the source system; for manual imports a deterministic hash.
   external_review_id text NOT NULL CHECK (btrim(external_review_id) <> ''),
-  author_name       text NOT NULL DEFAULT '' CHECK (length(author_name) <= 200),
+  -- Never empty: an incomplete provider record is skipped, never stored with an
+  -- invented placeholder author.
+  author_name       text NOT NULL CHECK (btrim(author_name) <> '' AND length(author_name) <= 200),
   author_avatar_url text CHECK (author_avatar_url IS NULL OR author_avatar_url ~ '^https://'),
   rating            integer NOT NULL CHECK (rating BETWEEN 1 AND 5),
   review_text       text NOT NULL DEFAULT '' CHECK (length(review_text) <= 8000),
@@ -43,8 +49,8 @@ CREATE TABLE IF NOT EXISTS public.review_display_settings (
   -- Only 5-star reviews are shown until the owner turns the lower bands on.
   allowed_ratings  integer[] NOT NULL DEFAULT '{5}'
                      CHECK (allowed_ratings <@ ARRAY[1,2,3,4,5]),
-  allowed_sources  text[] NOT NULL DEFAULT '{google,tripadvisor,manual}'
-                     CHECK (allowed_sources <@ ARRAY['google','tripadvisor','manual']),
+  allowed_sources  text[] NOT NULL DEFAULT '{google,manual}'
+                     CHECK (allowed_sources <@ ARRAY['google','manual']),
   -- Persisted public ordering. Pinned reviews always come first regardless.
   sort_mode        text NOT NULL DEFAULT 'newest'
                      CHECK (sort_mode IN ('newest','oldest','rating_high','rating_low','manual')),
@@ -73,7 +79,8 @@ ON CONFLICT (singleton) DO NOTHING;
 -- One persistent row per automated source: what the last attempt did, and when.
 -- Admin-only: anon must never learn whether a provider is connected.
 CREATE TABLE IF NOT EXISTS public.review_sync_state (
-  source          text PRIMARY KEY CHECK (source IN ('google', 'tripadvisor')),
+  -- Google is the only automated source; TripAdvisor is never synced.
+  source          text PRIMARY KEY CHECK (source = 'google'),
   last_attempt_at timestamptz,
   last_success_at timestamptz,
   status          text NOT NULL DEFAULT 'never'
@@ -87,7 +94,7 @@ CREATE TABLE IF NOT EXISTS public.review_sync_state (
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
-INSERT INTO public.review_sync_state (source) VALUES ('google'), ('tripadvisor')
+INSERT INTO public.review_sync_state (source) VALUES ('google')
 ON CONFLICT (source) DO NOTHING;
 
 -- ------------------------------------------------------------- visibility ---

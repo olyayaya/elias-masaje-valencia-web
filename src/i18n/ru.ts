@@ -101,6 +101,7 @@ export const ru: Translations = {
     next: "Следующие отзывы",
     ratingAria: "{n} из 5 звёзд",
     carouselLabel: "Отзывы клиентов",
+    anonymousAuthor: "Клиент",
   },
   location: { title: "Расположение" },
   faq: {
