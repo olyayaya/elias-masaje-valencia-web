@@ -48,7 +48,15 @@ const COPY = {
     es: "La traducción falló — el texto alternativo en {l} sigue disponible",
     ru: "Перевод не удался — alt-текст на {l} сохраняется",
   },
+  retry: { en: "Translate again", es: "Traducir de nuevo", ru: "Перевести снова" },
+  sourceOnly: { en: "Save {l} only", es: "Guardar solo {l}", ru: "Сохранить только {l}" },
+  reviewFirst: {
+    en: "Translate & review",
+    es: "Traducir y revisar",
+    ru: "Перевести и проверить",
+  },
 } as const;
+
 
 const fill = (s: string, vars: Record<string, string | number>) =>
   Object.entries(vars).reduce((acc, [k, v]) => acc.split(`{${k}}`).join(String(v)), s);
