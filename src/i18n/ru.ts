@@ -95,6 +95,12 @@ export const ru: Translations = {
   },
   testimonials: {
     title: "Отзывы клиентов",
+    readMore: "Читать полностью",
+    showLess: "Свернуть",
+    prev: "Предыдущие отзывы",
+    next: "Следующие отзывы",
+    ratingAria: "{n} из 5 звёзд",
+    carouselLabel: "Отзывы клиентов",
   },
   location: { title: "Расположение" },
   faq: {

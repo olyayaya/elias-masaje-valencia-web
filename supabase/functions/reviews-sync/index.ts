@@ -1,5 +1,19 @@
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import {
+  MAX_PAGES,
+  MAX_REVIEWS,
+  RATE_LIMIT_MS,
+  asArray,
+  cooldownRemainingMs,
+  dedupe,
+  googleLocationPath,
+  isUsable,
+  nextPageToken,
+  normalizeGoogleReview,
+  normalizeTripadvisorReview,
+  readJsonLimited,
+  type NormalizedReview,
+} from './normalize.ts';
 
 /**
  * Admin-only review sync.
@@ -7,13 +21,20 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
  * Credentials live exclusively in Edge Function secrets — nothing is ever
  * returned to the browser but counters and a status string. When a source is
  * not connected the function answers `not_configured` instead of guessing or
- * scraping. No review is ever invented here.
+ * scraping. No review is ever invented here, and no provider body, header or
+ * token is ever logged.
  */
 
-const json = (body: unknown, status = 200) =>
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...extra },
   });
 
 const REQUIRED: Record<string, string[]> = {
@@ -28,31 +49,6 @@ const REQUIRED: Record<string, string[]> = {
 };
 
 const TIMEOUT_MS = 15_000;
-const MAX_REVIEWS = 200;
-
-interface NormalizedReview {
-  source: string;
-  external_review_id: string;
-  author_name: string;
-  author_avatar_url: string | null;
-  rating: number;
-  review_text: string;
-  review_language: string | null;
-  reviewed_at: string | null;
-  original_url: string | null;
-}
-
-const httpsOnly = (v: unknown): string | null => {
-  if (typeof v !== 'string' || !v) return null;
-  try {
-    const u = new URL(v);
-    return u.protocol === 'https:' ? u.toString() : null;
-  } catch {
-    return null;
-  }
-};
-
-const clip = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 const fetchWithTimeout = async (url: string, init: RequestInit) => {
   const ac = new AbortController();
@@ -63,8 +59,6 @@ const fetchWithTimeout = async (url: string, init: RequestInit) => {
     clearTimeout(timer);
   }
 };
-
-const STAR_WORDS: Record<string, number> = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 };
 
 async function googleAccessToken(): Promise<string> {
   const body = new URLSearchParams({
@@ -78,121 +72,176 @@ async function googleAccessToken(): Promise<string> {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
   });
-  if (!res.ok) throw new Error('google token exchange failed');
-  const data = await res.json();
-  if (!data.access_token) throw new Error('google token missing');
-  return data.access_token as string;
+  if (!res.ok) throw new SyncError('google_auth_failed', 'Google rejected the stored credentials.');
+  const data = await readJsonLimited(res);
+  const token = data.access_token;
+  if (typeof token !== 'string' || !token) {
+    throw new SyncError('google_auth_failed', 'Google returned no access token.');
+  }
+  return token;
+}
+
+class SyncError extends Error {
+  constructor(public code: string, message: string) {
+    super(message);
+  }
 }
 
 async function fetchGoogle(): Promise<NormalizedReview[]> {
   const token = await googleAccessToken();
-  const account = Deno.env.get('GOOGLE_BUSINESS_ACCOUNT_ID')!;
-  const location = Deno.env.get('GOOGLE_BUSINESS_LOCATION_ID')!;
-  const url = `https://mybusiness.googleapis.com/v4/accounts/${encodeURIComponent(account)}/locations/${encodeURIComponent(location)}/reviews?pageSize=50`;
-  const res = await fetchWithTimeout(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`google reviews request failed (${res.status})`);
-  const data = await res.json();
-  const list = Array.isArray(data.reviews) ? data.reviews : [];
-  return list.slice(0, MAX_REVIEWS).map((r: Record<string, any>) => ({
-    source: 'google',
-    external_review_id: clip(r.reviewId ?? r.name, 200),
-    author_name: clip(r.reviewer?.displayName, 120) || 'Google user',
-    author_avatar_url: httpsOnly(r.reviewer?.profilePhotoUrl),
-    rating: STAR_WORDS[String(r.starRating)] ?? 0,
-    review_text: clip(r.comment, 5000),
-    review_language: null,
-    reviewed_at: r.createTime ?? null,
-    original_url: httpsOnly(r.reviewReply?.uri) ?? null,
-  }));
+  const path = googleLocationPath(
+    Deno.env.get('GOOGLE_BUSINESS_ACCOUNT_ID')!,
+    Deno.env.get('GOOGLE_BUSINESS_LOCATION_ID')!,
+  );
+  const out: NormalizedReview[] = [];
+  let pageToken: string | null = null;
+  for (let page = 0; page < MAX_PAGES && out.length < MAX_REVIEWS; page++) {
+    const url =
+      `https://mybusiness.googleapis.com/v4/${path}/reviews?pageSize=50` +
+      (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
+    const res = await fetchWithTimeout(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) {
+      throw new SyncError('google_request_failed', `Google reviews request failed (${res.status}).`);
+    }
+    const data = await readJsonLimited(res);
+    const batch = asArray(data.reviews).map(normalizeGoogleReview);
+    if (batch.length === 0 && !nextPageToken(data)) break;
+    out.push(...batch);
+    pageToken = nextPageToken(data);
+    if (!pageToken) break;
+  }
+  return dedupe(out).slice(0, MAX_REVIEWS);
 }
 
 async function fetchTripadvisor(): Promise<NormalizedReview[]> {
   const key = Deno.env.get('TRIPADVISOR_CONTENT_API_KEY')!;
-  const loc = Deno.env.get('TRIPADVISOR_LOCATION_ID')!;
-  const url = `https://api.content.tripadvisor.com/api/v1/location/${encodeURIComponent(loc)}/reviews?key=${encodeURIComponent(key)}&language=en`;
+  const loc = Deno.env.get('TRIPADVISOR_LOCATION_ID')!.trim();
+  const url =
+    `https://api.content.tripadvisor.com/api/v1/location/${encodeURIComponent(loc)}/reviews` +
+    `?key=${encodeURIComponent(key)}&language=en`;
   const res = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } });
-  if (!res.ok) throw new Error(`tripadvisor request failed (${res.status})`);
-  const data = await res.json();
-  const list = Array.isArray(data.data) ? data.data : [];
-  return list.slice(0, MAX_REVIEWS).map((r: Record<string, any>) => ({
-    source: 'tripadvisor',
-    external_review_id: clip(String(r.id ?? ''), 200),
-    author_name: clip(r.user?.username, 120) || 'TripAdvisor user',
-    author_avatar_url: httpsOnly(r.user?.avatar?.small?.url),
-    rating: Number(r.rating) || 0,
-    review_text: clip(r.text, 5000),
-    review_language: clip(r.lang, 12) || null,
-    reviewed_at: r.published_date ?? null,
-    original_url: httpsOnly(r.url),
-  }));
+  if (!res.ok) {
+    throw new SyncError('tripadvisor_request_failed', `TripAdvisor request failed (${res.status}).`);
+  }
+  const data = await readJsonLimited(res);
+  // The official Content API returns a limited window of reviews per location;
+  // this is the provider's cap, not a bug in the sync.
+  return dedupe(asArray(data.data).map(normalizeTripadvisorReview)).slice(0, MAX_REVIEWS);
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+  // Authenticate first: method shape, secrets and state are all admin-only info.
+  const authHeader = req.headers.get('Authorization') ?? '';
+  if (!authHeader.startsWith('Bearer ')) return json({ error: 'unauthorized' }, 401);
+
+  const authed = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: userData } = await authed.auth.getUser();
+  const user = userData?.user;
+  if (!user) return json({ error: 'unauthorized' }, 401);
+
+  const { data: isAdmin } = await authed.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+  if (!isAdmin) return json({ error: 'forbidden' }, 403);
+
+  if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, { Allow: 'POST, OPTIONS' });
+
+  const admin = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  let source = '';
+
+  const writeState = async (values: Record<string, unknown>) => {
+    await admin.from('review_sync_state').upsert({ source, ...values }, { onConflict: 'source' });
+  };
+
   try {
-    const authHeader = req.headers.get('Authorization') ?? '';
-    if (!authHeader.startsWith('Bearer ')) return json({ error: 'unauthorized' }, 401);
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const authed = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData } = await authed.auth.getUser();
-    const user = userData?.user;
-    if (!user) return json({ error: 'unauthorized' }, 401);
-
-    const { data: isAdmin } = await authed.rpc('has_role', { _user_id: user.id, _role: 'admin' });
-    if (!isAdmin) return json({ error: 'forbidden' }, 403);
-
     const body = await req.json().catch(() => ({}));
-    const source = String((body as { source?: string }).source ?? '');
+    source = String((body as { source?: string }).source ?? '');
     if (!REQUIRED[source]) return json({ error: 'invalid source' }, 400);
+
+    // Durable cooldown: the gap is enforced from the stored attempt timestamp,
+    // so a restarted instance cannot be used to hammer a provider.
+    const { data: state } = await admin
+      .from('review_sync_state')
+      .select('last_attempt_at')
+      .eq('source', source)
+      .maybeSingle();
+    const remaining = cooldownRemainingMs((state as { last_attempt_at?: string } | null)?.last_attempt_at);
+    if (remaining > 0) {
+      const retryAfter = Math.ceil(remaining / 1000);
+      await writeState({ status: 'rate_limited', error_code: 'rate_limited', error_message: null });
+      return json(
+        { status: 'rate_limited', source, retry_after: retryAfter, cooldown_seconds: RATE_LIMIT_MS / 1000 },
+        429,
+        { 'Retry-After': String(retryAfter) },
+      );
+    }
+
+    await writeState({ last_attempt_at: new Date().toISOString(), error_code: null, error_message: null });
 
     const missing = REQUIRED[source].filter((name) => !Deno.env.get(name));
     if (missing.length) {
+      // Only an authenticated admin ever sees this, and only secret *names*.
+      await writeState({
+        status: 'not_configured',
+        error_code: 'not_configured',
+        error_message: 'Missing credentials.',
+      });
       return json({ status: 'not_configured', source, missing_secrets: missing });
     }
 
     const fetched = source === 'google' ? await fetchGoogle() : await fetchTripadvisor();
-    const valid = fetched.filter(
-      (r) => r.external_review_id && r.author_name && r.rating >= 1 && r.rating <= 5,
-    );
+    const valid = fetched.filter(isUsable);
     const skipped = fetched.length - valid.length;
-
-    const admin = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
     const { data: existing, error: readErr } = await admin
       .from('reviews')
       .select('external_review_id')
       .eq('source', source);
-    if (readErr) throw new Error('reviews table unavailable');
-    const known = new Set((existing ?? []).map((r: { external_review_id: string }) => r.external_review_id));
+    if (readErr) throw new SyncError('storage_unavailable', 'The reviews table is not available.');
+    const known = new Set(
+      (existing ?? []).map((r: { external_review_id: string }) => r.external_review_id),
+    );
 
     const now = new Date().toISOString();
-    // Upsert on (source, external_review_id): visible / pinned stay untouched
-    // because they are simply not part of the payload.
-    const { error: upsertErr } = await admin
-      .from('reviews')
-      .upsert(
-        valid.map((r) => ({ ...r, last_synced_at: now })),
-        { onConflict: 'source,external_review_id' },
-      );
-    if (upsertErr) throw new Error('failed to store reviews');
+    // Upsert on (source, external_review_id). visible / pinned / manual_priority
+    // are deliberately absent from the payload, so a re-sync can never undo a
+    // moderation decision.
+    if (valid.length) {
+      const { error: upsertErr } = await admin
+        .from('reviews')
+        .upsert(valid.map((r) => ({ ...r, last_synced_at: now })), {
+          onConflict: 'source,external_review_id',
+        });
+      if (upsertErr) throw new SyncError('storage_write_failed', 'Failed to store reviews.');
+    }
 
     const imported = valid.filter((r) => !known.has(r.external_review_id)).length;
+    const updated = valid.length - imported;
 
-    return json({
+    await writeState({
       status: 'ok',
-      source,
-      imported,
-      updated: valid.length - imported,
-      skipped,
+      last_success_at: now,
+      imported_count: imported,
+      updated_count: updated,
+      skipped_count: skipped,
+      error_code: null,
+      error_message: null,
     });
+
+    return json({ status: 'ok', source, imported, updated, skipped });
   } catch (e) {
+    const code = e instanceof SyncError ? e.code : 'sync_failed';
+    const message = e instanceof SyncError ? e.message : 'The sync could not be completed.';
     // Message only — never headers, tokens or request bodies.
-    console.error('reviews-sync failed:', e instanceof Error ? e.message : 'unknown error');
-    return json({ status: 'error', error: 'sync failed' }, 500);
+    console.error('reviews-sync failed:', code);
+    if (source) {
+      await writeState({ status: 'error', error_code: code, error_message: message }).catch(() => {});
+    }
+    return json({ status: 'error', source, error_code: code, error: message }, 500);
   }
 });

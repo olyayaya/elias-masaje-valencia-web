@@ -2,13 +2,13 @@ import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ExternalLink, Eye, EyeOff, Loader2, Pin, PinOff, RefreshCw, Star, Upload,
+  AlertTriangle, ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff, Loader2, Pin, PinOff, RefreshCw, Star, Upload,
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  REVIEW_SOURCES, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
-  type ParsedImportRow, type Review, type ReviewSort, type ReviewSource,
+  REVIEW_SORTS, REVIEW_SOURCES, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
+  type ParsedImportRow, type Review, type ReviewSort, type ReviewSource, type ReviewSyncStateRow,
 } from "@/lib/reviews";
 import { useAdminReviews, reviewKeys } from "@/hooks/use-reviews";
 import DashboardCard from "./DashboardCard";
@@ -66,6 +66,29 @@ const COPY = {
   sectionEnabled: { en: "Show the reviews section", es: "Mostrar la sección de reseñas", ru: "Показывать раздел отзывов" },
   starsToggle: { en: "{n}★ reviews", es: "Reseñas de {n}★", ru: "Отзывы на {n}★" },
   settingsSaved: { en: "Display settings saved", es: "Ajustes guardados", ru: "Настройки сохранены" },
+  sourcesToggle: { en: "Show reviews from {v}", es: "Mostrar reseñas de {v}", ru: "Показывать отзывы из {v}" },
+  publicSort: { en: "Order on the homepage", es: "Orden en la portada", ru: "Порядок на главной" },
+  publicSortHint: {
+    en: "Saved and used by the public site. Pinned reviews always come first.",
+    es: "Se guarda y lo usa la web pública. Las reseñas fijadas siempre van primero.",
+    ru: "Сохраняется и применяется на публичном сайте. Закреплённые всегда первыми.",
+  },
+  listSort: { en: "Order in this list only", es: "Orden solo en esta lista", ru: "Порядок только в этом списке" },
+  priority: { en: "Manual order value", es: "Valor de orden manual", ru: "Значение ручного порядка" },
+  priorityUp: { en: "Move up in manual order", es: "Subir en el orden manual", ru: "Поднять в ручном порядке" },
+  priorityDown: { en: "Move down in manual order", es: "Bajar en el orden manual", ru: "Опустить в ручном порядке" },
+  statusNever: { en: "Never synced", es: "Nunca sincronizado", ru: "Ещё не синхронизировано" },
+  statusOk: { en: "Connected", es: "Conectado", ru: "Подключено" },
+  statusError: { en: "Last attempt failed", es: "El último intento falló", ru: "Последняя попытка не удалась" },
+  statusRateLimited: { en: "Cooling down — try again in a minute", es: "En espera — inténtalo en un minuto", ru: "Пауза — повторите через минуту" },
+  lastAttempt: { en: "Last attempt: {v}", es: "Último intento: {v}", ru: "Последняя попытка: {v}" },
+  counters: { en: "{i} new · {u} updated · {s} skipped", es: "{i} nuevas · {u} actualizadas · {s} omitidas", ru: "{i} новых · {u} обновлено · {s} пропущено" },
+  rateLimited: { en: "Please wait {n}s before syncing this source again.", es: "Espera {n}s antes de volver a sincronizar esta fuente.", ru: "Подождите {n} с перед повторной синхронизацией." },
+  tripadvisorLimits: {
+    en: "The official TripAdvisor Content API returns only a limited set of the most recent reviews — it is not a full export.",
+    es: "La API oficial de contenido de TripAdvisor devuelve solo un conjunto limitado de las reseñas más recientes; no es una exportación completa.",
+    ru: "Официальный TripAdvisor Content API возвращает лишь ограниченный набор последних отзывов — это не полный экспорт.",
+  },
 
   syncTitle: { en: "Sources", es: "Fuentes", ru: "Источники" },
   syncNow: { en: "Sync now", es: "Sincronizar", ru: "Синхронизировать" },
@@ -109,6 +132,22 @@ const useCopy = () => {
   return (k: keyof typeof COPY, vars: Record<string, string> = {}) => fill(COPY[k][ui], vars);
 };
 
+const SORT_LABEL: Record<ReviewSort, keyof typeof COPY> = {
+  newest: "sortNewest",
+  oldest: "sortOldest",
+  rating_high: "sortRatingHigh",
+  rating_low: "sortRatingLow",
+  manual: "sortManual",
+};
+
+const STATUS_LABEL: Record<string, keyof typeof COPY> = {
+  never: "statusNever",
+  ok: "statusOk",
+  error: "statusError",
+  not_configured: "notConfigured",
+  rate_limited: "statusRateLimited",
+};
+
 const SOURCE_LABEL: Record<ReviewSource, keyof typeof COPY> = {
   google: "sourceGoogle",
   tripadvisor: "sourceTripadvisor",
@@ -138,7 +177,7 @@ const Stars = ({ n }: { n: number }) => (
 const DashboardReviews = () => {
   const c = useCopy();
   const qc = useQueryClient();
-  const { items, settings, missingTable, isPending } = useAdminReviews();
+  const { items, settings, syncState, missingTable, isPending } = useAdminReviews();
 
   const [search, setSearch] = useState("");
   const [source, setSource] = useState<"all" | ReviewSource>("all");
@@ -148,6 +187,11 @@ const DashboardReviews = () => {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState<null | ReviewSource>(null);
   const [syncStatus, setSyncStatus] = useState<Record<string, string>>({});
+  const stateBySource = useMemo(() => {
+    const map = new Map<string, ReviewSyncStateRow>();
+    for (const row of syncState) map.set(row.source, row);
+    return map;
+  }, [syncState]);
   const [importRows, setImportRows] = useState<ParsedImportRow[] | null>(null);
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
@@ -157,6 +201,7 @@ const DashboardReviews = () => {
     void qc.invalidateQueries({ queryKey: reviewKeys.adminList });
     void qc.invalidateQueries({ queryKey: reviewKeys.publicList });
     void qc.invalidateQueries({ queryKey: reviewKeys.settings });
+    void qc.invalidateQueries({ queryKey: reviewKeys.syncState });
   };
 
   const filtered = useMemo(() => {
@@ -200,6 +245,16 @@ const DashboardReviews = () => {
     void saveSettings({ allowed_ratings: next });
   };
 
+  const toggleSource = (src: ReviewSource) => {
+    const cur = settings.allowed_sources ?? [];
+    const next = cur.includes(src) ? cur.filter((s) => s !== src) : [...cur, src];
+    void saveSettings({ allowed_sources: next });
+  };
+
+  /** Manual order nudge: ±1 keeps the numbers readable for a non-technical owner. */
+  const bumpPriority = (r: Review, delta: number) =>
+    void patch(r.id, { manual_priority: Math.max(-999, Math.min(999, r.manual_priority + delta)) });
+
   /**
    * Server-side sync. The Edge Function owns every credential; the browser only
    * ever sees counters and a status string — never a token.
@@ -218,9 +273,16 @@ const DashboardReviews = () => {
         skipped?: number;
         error?: string;
       };
+      if (res?.status === "rate_limited") {
+        setSyncStatus((s) => ({ ...s, [src]: "rate_limited" }));
+        toast.warning(c("rateLimited", { n: String((res as { retry_after?: number }).retry_after ?? 60) }));
+        refresh();
+        return;
+      }
       if (res?.status === "not_configured") {
         setSyncStatus((s) => ({ ...s, [src]: "not_configured" }));
         toast.warning(c("notConfigured"));
+        refresh();
         return;
       }
       if (res?.status !== "ok") throw new Error(res?.error || "sync failed");
@@ -319,6 +381,38 @@ const DashboardReviews = () => {
               </label>
             ))}
           </div>
+          <div className="flex flex-wrap gap-3 pt-1">
+            {REVIEW_SOURCES.map((src) => (
+              <label key={src} className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={(settings.allowed_sources ?? []).includes(src)}
+                  disabled={missingTable}
+                  onChange={() => toggleSource(src)}
+                  aria-label={c("sourcesToggle", { v: c(SOURCE_LABEL[src]) })}
+                />
+                {c("sourcesToggle", { v: c(SOURCE_LABEL[src]) })}
+              </label>
+            ))}
+          </div>
+          <div className="pt-2">
+            <label className="block text-xs text-muted-foreground mb-1" htmlFor="public-sort">
+              {c("publicSort")}
+            </label>
+            <select
+              id="public-sort"
+              className={selectClass}
+              value={settings.sort_mode}
+              disabled={missingTable}
+              aria-label={c("publicSort")}
+              onChange={(e) => void saveSettings({ sort_mode: e.target.value as ReviewSort })}
+            >
+              {REVIEW_SORTS.map((m) => (
+                <option key={m} value={m}>{c(SORT_LABEL[m])}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-muted-foreground mt-1">{c("publicSortHint")}</p>
+          </div>
         </div>
       </DashboardCard>
 
@@ -344,13 +438,35 @@ const DashboardReviews = () => {
                 )}
                 {syncing === src ? c("syncing") : c("syncNow")}
               </Button>
-              {syncStatus[src] === "not_configured" && (
-                <span className="text-xs text-muted-foreground" data-testid={`sync-status-${src}`}>
+              <span className="text-xs text-muted-foreground" data-testid={`sync-status-${src}`}>
+                {c(STATUS_LABEL[stateBySource.get(src)?.status ?? "never"])}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                {c("lastAttempt", {
+                  v: stateBySource.get(src)?.last_attempt_at
+                    ? new Date(stateBySource.get(src)!.last_attempt_at!).toLocaleString()
+                    : c("never"),
+                })}
+              </span>
+              <span className="text-[11px] text-muted-foreground" data-testid={`sync-counters-${src}`}>
+                {c("counters", {
+                  i: String(stateBySource.get(src)?.imported_count ?? 0),
+                  u: String(stateBySource.get(src)?.updated_count ?? 0),
+                  s: String(stateBySource.get(src)?.skipped_count ?? 0),
+                })}
+              </span>
+              {(stateBySource.get(src)?.status === "not_configured" || syncStatus[src] === "not_configured") && (
+                <span className="text-xs text-muted-foreground basis-full">
                   {c("notConfigured")} ({REQUIRED_SYNC_SECRETS[src].join(", ")})
                 </span>
               )}
-              {syncStatus[src] === "error" && (
-                <span className="text-xs text-destructive">{c("syncFailed")}</span>
+              {stateBySource.get(src)?.status === "error" && (
+                <span className="text-xs text-destructive basis-full">
+                  {stateBySource.get(src)?.error_message || c("syncFailed")}
+                </span>
+              )}
+              {src === "tripadvisor" && (
+                <span className="text-[11px] text-muted-foreground basis-full">{c("tripadvisorLimits")}</span>
               )}
             </div>
           ))}
@@ -450,7 +566,7 @@ const DashboardReviews = () => {
         <select
           className={selectClass}
           value={sort}
-          aria-label={c("sortNewest")}
+          aria-label={c("listSort")}
           onChange={(e) => setSort(e.target.value as ReviewSort)}
         >
           <option value="newest">{c("sortNewest")}</option>
@@ -531,6 +647,33 @@ const DashboardReviews = () => {
                   >
                     {r.pinned ? <PinOff size={14} /> : <Pin size={14} />}
                   </button>
+                  <div className="flex flex-col">
+                    <button
+                      onClick={() => bumpPriority(r, 1)}
+                      disabled={busyId === r.id}
+                      title={c("priorityUp")}
+                      aria-label={c("priorityUp")}
+                      className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-secondary"
+                    >
+                      <ArrowUp size={12} />
+                    </button>
+                    <button
+                      onClick={() => bumpPriority(r, -1)}
+                      disabled={busyId === r.id}
+                      title={c("priorityDown")}
+                      aria-label={c("priorityDown")}
+                      className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-secondary"
+                    >
+                      <ArrowDown size={12} />
+                    </button>
+                  </div>
+                  <span
+                    className="self-center text-[11px] text-muted-foreground tabular-nums"
+                    title={c("priority")}
+                    data-testid={`priority-${r.id}`}
+                  >
+                    {r.manual_priority}
+                  </span>
                 </div>
               </div>
             </DashboardCard>

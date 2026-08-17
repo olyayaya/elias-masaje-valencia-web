@@ -1,8 +1,7 @@
-import { useRef, useEffect, useState, useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useDbServices, useDbFaqs, useDbTestimonials, resolveField } from "@/hooks/use-db-content";
-import { usePublicReviews } from "@/hooks/use-reviews";
-import { publicReviews } from "@/lib/reviews";
+import { useDbServices, useDbFaqs, resolveField } from "@/hooks/use-db-content";
+import ReviewsSection from "@/components/reviews/ReviewsSection";
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
 
@@ -36,7 +35,7 @@ import { WHATSAPP_URL } from "@/config/contact";
 import { trackWhatsAppClick } from "@/lib/analytics";
 import BookingDialog from "@/components/BookingDialog";
 import ContentError from "@/components/ContentError";
-import { ServiceRowSkeletonList, RatingLineSkeleton, TestimonialCardSkeleton, FaqSkeleton, HeroTextSkeleton } from "@/components/skeletons/ContentSkeletons";
+import { ServiceRowSkeletonList, FaqSkeleton, HeroTextSkeleton } from "@/components/skeletons/ContentSkeletons";
 
 
 const OrganicHome = () => {
@@ -49,13 +48,10 @@ const OrganicHome = () => {
   const servicesTitle = useFadeIn(0);
   const storyText = useFadeIn(0);
   const storyImg = useFadeIn(0.15);
-  const testimonialsTitle = useFadeIn(0);
   const ctaBlock = useFadeIn(0);
 
   const servicesState = useDbServices();
   const faqState = useDbFaqs();
-  const testimonialsState = useDbTestimonials();
-  const reviewsState = usePublicReviews();
   const { content: sc, status: scStatus, retry: scRetry } = useSiteContent();
   const { images: customHomeCarousel, loaded: homeCarouselLoaded } = usePageImages("home_carousel");
   const defaultHomeCarousel = [
@@ -94,38 +90,6 @@ const OrganicHome = () => {
     (faqState.data ?? []).map(f => ({ question: resolveField(f, "question", locale), answer: resolveField(f, "answer", locale) })),
     [faqState.data, locale]
   );
-
-  // Real imported reviews win as soon as the reviews storage exists. Until the
-  // migration lands we keep rendering the previously curated entries — we never
-  // fabricate a card either way.
-  const reviewItems = useMemo(
-    () =>
-      publicReviews(reviewsState.items, reviewsState.settings).map((r) => ({
-        quote: r.review_text,
-        name: r.author_name,
-        source: r.source === "tripadvisor" ? "TripAdvisor" : r.source === "google" ? "Google" : "",
-        rating: r.rating,
-        date: r.reviewed_at,
-        url: r.original_url,
-      })),
-    [reviewsState.items, reviewsState.settings],
-  );
-
-  const legacyItems = useMemo(
-    () =>
-      (testimonialsState.data ?? []).map((tt) => ({
-        quote: resolveField(tt, "quote", locale),
-        name: tt.name,
-        source: tt.source,
-        rating: 0,
-        date: null as string | null,
-        url: null as string | null,
-      })),
-    [testimonialsState.data, locale],
-  );
-
-  const testimonialItems = reviewsState.missingTable ? legacyItems : reviewItems;
-
 
   const previewServices = services.slice(0, 3);
 
@@ -345,183 +309,6 @@ const OrganicHome = () => {
 
       <CurvedDivider from="bg-organic-dark" to="bg-background" />
 
-      {/* ═══════════ TESTIMONIALS — Auto-sliding single row ═══════════ */}
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28">
-        <div className="max-w-5xl mx-auto">
-          <div ref={testimonialsTitle.ref} style={testimonialsTitle.style} className="text-center mb-4">
-            <h2 className="font-display text-3xl md:text-4xl mb-2">{t.testimonials.title}</h2>
-            <div className="mb-1 min-h-[20px] flex items-center justify-center">
-              {scStatus === "loading" ? (
-                <RatingLineSkeleton />
-              ) : sc.google_rating && sc.google_review_count ? (
-                <p className="text-sm text-muted-foreground font-body">{sc.google_rating} ★ — {sc.google_review_count}+ Google &amp; TripAdvisor reviews</p>
-              ) : null}
-            </div>
-
-            <div className="w-12 h-px bg-primary mx-auto mt-3" />
-          </div>
-        </div>
-
-        {/* Full-width auto-sliding marquee */}
-        {(() => {
-          const TestimonialsMarquee = () => {
-            const trackRef = useRef<HTMLDivElement>(null);
-            const offsetRef = useRef(0);
-            const rafRef = useRef<number>(0);
-            const isDragging = useRef(false);
-            const dragStartX = useRef(0);
-            const dragOffset = useRef(0);
-            const velocity = useRef(0);
-            const [, setTick] = useState(0);
-
-            const items = testimonialItems;
-            const dupeCount = 4;
-            const allItems = Array.from({ length: dupeCount }, () => items).flat();
-            const CARD_WIDTH = 320;
-            const GAP = 20;
-            const itemWidth = CARD_WIDTH + GAP;
-            const totalWidth = items.length * itemWidth;
-            const SPEED = 0.35;
-
-            const animate = useCallback(() => {
-              if (!isDragging.current) {
-                // Apply any remaining drag velocity
-                if (Math.abs(velocity.current) > 0.1) {
-                  offsetRef.current += velocity.current;
-                  velocity.current *= 0.95;
-                } else {
-                  velocity.current = 0;
-                  offsetRef.current -= SPEED;
-                }
-              }
-              // Loop
-              if (Math.abs(offsetRef.current) >= totalWidth) {
-                offsetRef.current += totalWidth;
-              }
-              if (offsetRef.current > 0) {
-                offsetRef.current -= totalWidth;
-              }
-              setTick((t) => t + 1);
-              rafRef.current = requestAnimationFrame(animate);
-            }, [totalWidth]);
-
-            useEffect(() => {
-              rafRef.current = requestAnimationFrame(animate);
-              return () => cancelAnimationFrame(rafRef.current);
-            }, [animate]);
-
-            const handlePointerDown = (e: React.PointerEvent) => {
-              isDragging.current = true;
-              dragStartX.current = e.clientX;
-              dragOffset.current = offsetRef.current;
-              velocity.current = 0;
-              (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-            };
-
-            const handlePointerMove = (e: React.PointerEvent) => {
-              if (!isDragging.current) return;
-              const dx = e.clientX - dragStartX.current;
-              offsetRef.current = dragOffset.current + dx;
-              velocity.current = dx * 0.05;
-            };
-
-            const handlePointerUp = () => {
-              isDragging.current = false;
-            };
-
-            return (
-              <div
-                className="mt-10 overflow-hidden cursor-grab active:cursor-grabbing select-none"
-                style={{ width: "100vw", position: "relative", left: "50%", transform: "translateX(-50%)" }}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerLeave={handlePointerUp}
-              >
-                <div
-                  ref={trackRef}
-                  className="flex"
-                  style={{
-                    transform: `translateX(${offsetRef.current}px)`,
-                    gap: GAP,
-                    willChange: "transform",
-                  }}
-                >
-                  {allItems.map((item, i) => (
-                    <div
-                      key={i}
-                      className="bg-secondary/60 rounded-2xl border border-border/50 p-6 shrink-0"
-                      style={{ width: CARD_WIDTH }}
-                    >
-                      {item.rating > 0 && (
-                        <div className="flex gap-0.5 mb-2" aria-label={`${item.rating}/5`}>
-                          {Array.from({ length: 5 }).map((_, s) => (
-                            <span
-                              key={s}
-                              aria-hidden="true"
-                              className={`text-xs ${s < item.rating ? "text-yellow-500" : "text-muted-foreground/30"}`}
-                            >
-                              ★
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <p className="text-sm text-muted-foreground font-body leading-relaxed italic mb-4">
-                        "{item.quote}"
-                      </p>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-body font-medium">— {item.name}</p>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {item.date && (
-                            <span className="text-[10px] font-body text-muted-foreground/60">
-                              {new Date(item.date).toLocaleDateString()}
-                            </span>
-                          )}
-                          {item.source &&
-                            (item.url ? (
-                              <a
-                                href={item.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider underline-offset-2 hover:underline"
-                              >
-                                {item.source}
-                              </a>
-                            ) : (
-                              <span className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider">
-                                {item.source}
-                              </span>
-                            ))}
-                        </div>
-                      </div>
-
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          };
-          if (testimonialsState.status === "loading") {
-            return (
-              <div className="mt-10 flex gap-5 overflow-hidden px-6" aria-hidden="true">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <TestimonialCardSkeleton key={i} />
-                ))}
-              </div>
-            );
-          }
-          if (testimonialsState.status === "error") {
-            return (
-              <div className="max-w-5xl mx-auto px-6">
-                <ContentError onRetry={testimonialsState.retry} />
-              </div>
-            );
-          }
-          if (!testimonialItems.length) return null;
-          return <TestimonialsMarquee />;
-
-        })()}
-      </section>
 
       {/* ═══════════ LOCATION ═══════════ */}
       <section className="relative overflow-hidden">
@@ -655,6 +442,9 @@ const OrganicHome = () => {
       </section>
 
       <CurvedDivider from="bg-organic-dark" to="bg-background" flip />
+
+      {/* ═══════════ REVIEWS — real imported reviews only ═══════════ */}
+      <ReviewsSection />
 
       {/* ═══════════ FINAL CTA — Quiet confidence ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-24 md:py-32 relative overflow-hidden">

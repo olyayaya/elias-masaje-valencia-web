@@ -1,72 +1,74 @@
-import { supabase } from "@/integrations/supabase/client";
+import {
+  REVIEW_SOURCES,
+  REVIEW_SORTS,
+  reviewSettingsTable,
+  reviewSyncStateTable,
+  reviewsTable,
+  type PendingError,
+  type ReviewDisplaySettingsRow,
+  type ReviewRow,
+  type ReviewSort,
+  type ReviewSource,
+  type ReviewSyncStateRow,
+  type ReviewSyncStatus,
+} from "@/integrations/supabase/pending-reviews";
 
 /* ------------------------------------------------------------------ *
  * Real customer reviews — Google Business Profile / TripAdvisor / manual
  *
- * The `reviews` and `review_display_settings` tables ship ahead of their
- * migration, so "table not there yet" degrades to an empty list exactly like
- * the gallery does. Nothing in this module ever invents a review.
+ * The `reviews`, `review_display_settings` and `review_sync_state` tables ship
+ * ahead of their migration, so "table not there yet" degrades to an empty list
+ * exactly like the gallery does. Nothing in this module ever invents a review.
  * ------------------------------------------------------------------ */
 
-export const REVIEW_SOURCES = ["google", "tripadvisor", "manual"] as const;
-export type ReviewSource = (typeof REVIEW_SOURCES)[number];
+export { REVIEW_SOURCES, REVIEW_SORTS, reviewSettingsTable, reviewSyncStateTable, reviewsTable };
+export type { ReviewSort, ReviewSource, ReviewSyncStateRow, ReviewSyncStatus };
 
-export interface Review {
-  id: string;
-  source: ReviewSource;
-  external_review_id: string;
-  author_name: string;
-  author_avatar_url: string | null;
-  rating: number;
-  review_text: string;
-  review_language: string | null;
-  reviewed_at: string | null;
-  original_url: string | null;
-  visible: boolean;
-  pinned: boolean;
-  manual_priority: number;
-  created_at: string;
-  updated_at: string;
-  last_synced_at: string | null;
-}
+export type Review = ReviewRow;
+export type ReviewDisplaySettings = ReviewDisplaySettingsRow;
 
-export interface ReviewDisplaySettings {
-  id: string;
-  section_enabled: boolean;
-  allowed_ratings: number[];
-  allowed_sources: ReviewSource[];
-  updated_at: string;
-}
+/**
+ * Public profile pages. Used as the *source* link when a provider does not hand
+ * out a per-review permalink — never presented as the individual review URL.
+ */
+export const SOURCE_PROFILE_URL: Record<ReviewSource, string | null> = {
+  google: "https://maps.app.goo.gl/uyR3ZRdYUFiYSwXt5",
+  tripadvisor:
+    "https://www.tripadvisor.com/Attraction_Review-g187529-d34031094-Reviews-Elias_Massage_Valencia-Valencia_Province_of_Valencia_Valencian_Community.html",
+  manual: null,
+};
 
-/** source_payload is deliberately excluded — it is never read by the client. */
 export const REVIEW_COLUMNS =
   "id, source, external_review_id, author_name, author_avatar_url, rating, review_text, review_language, reviewed_at, original_url, visible, pinned, manual_priority, created_at, updated_at, last_synced_at";
 
+/** Ordering inputs (pinned / manual_priority) are part of the public read. */
 export const PUBLIC_REVIEW_COLUMNS =
-  "id, source, author_name, author_avatar_url, rating, review_text, review_language, reviewed_at, original_url";
+  "id, source, author_name, author_avatar_url, rating, review_text, review_language, reviewed_at, original_url, pinned, manual_priority";
+
+export const REVIEW_SETTINGS_COLUMNS =
+  "id, section_enabled, allowed_ratings, allowed_sources, sort_mode, updated_at";
+
+export const REVIEW_SYNC_STATE_COLUMNS =
+  "source, last_attempt_at, last_success_at, status, imported_count, updated_count, skipped_count, error_code, error_message, updated_at";
 
 export const DEFAULT_REVIEW_SETTINGS: Omit<ReviewDisplaySettings, "id" | "updated_at"> = {
   section_enabled: true,
   // Only 5★ is on by default; 1–4 are opt-in.
   allowed_ratings: [5],
   allowed_sources: [...REVIEW_SOURCES],
+  sort_mode: "newest",
 };
 
-export const isMissingReviewsTable = (error: { code?: string; message?: string } | null) =>
+export const isReviewSort = (v: unknown): v is ReviewSort =>
+  typeof v === "string" && (REVIEW_SORTS as readonly string[]).includes(v);
+
+export const isMissingReviewsTable = (error: PendingError | null) =>
   !!error &&
   (error.code === "42P01" ||
     error.code === "PGRST205" ||
     /does not exist|find the table/i.test(error.message ?? ""));
 
-/** Untyped accessors — the reviews tables are not in the generated types yet. */
-export const reviewsTable = () =>
-  (supabase as unknown as { from: (t: string) => any }).from("reviews");
-export const reviewSettingsTable = () =>
-  (supabase as unknown as { from: (t: string) => any }).from("review_display_settings");
-
 /* ------------------------------- display ------------------------------- */
-
-export type ReviewSort = "newest" | "oldest" | "rating_high" | "rating_low" | "manual";
 
 const time = (r: Review) => new Date(r.reviewed_at ?? r.created_at).getTime() || 0;
 
@@ -79,7 +81,8 @@ export function sortReviews(list: Review[], sort: ReviewSort): Review[] {
     rating_low: (a, b) => a.rating - b.rating || time(b) - time(a),
     manual: (a, b) => b.manual_priority - a.manual_priority || time(b) - time(a),
   };
-  return [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned) || by[sort](a, b));
+  const cmp = by[isReviewSort(sort) ? sort : "newest"];
+  return [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned) || cmp(a, b));
 }
 
 /**
@@ -90,8 +93,20 @@ export function publicReviews(list: Review[], settings: ReviewDisplaySettings | 
   const s = settings ?? { ...DEFAULT_REVIEW_SETTINGS, id: "", updated_at: "" };
   if (!s.section_enabled) return [];
   return list.filter(
-    (r) => r.visible && s.allowed_ratings.includes(r.rating) && s.allowed_sources.includes(r.source),
+    (r) =>
+      r.visible &&
+      (s.allowed_ratings ?? []).includes(r.rating) &&
+      (s.allowed_sources ?? []).includes(r.source),
   );
+}
+
+/**
+ * Exactly what the homepage renders: the public filter, then the persisted
+ * `sort_mode` the owner chose in the dashboard. Pinned reviews always lead.
+ */
+export function displayReviews(list: Review[], settings: ReviewDisplaySettings | null): Review[] {
+  const mode = settings && isReviewSort(settings.sort_mode) ? settings.sort_mode : DEFAULT_REVIEW_SETTINGS.sort_mode;
+  return sortReviews(publicReviews(list, settings), mode);
 }
 
 /* ---------------------------- manual import ---------------------------- */
