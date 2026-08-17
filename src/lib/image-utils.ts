@@ -8,7 +8,7 @@ const MAX_HEIGHT = 1920;
 const QUALITY = 0.82;
 const THUMB_SIZE = 400;
 
-function loadImage(file: File): Promise<HTMLImageElement> {
+function loadImage(file: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
