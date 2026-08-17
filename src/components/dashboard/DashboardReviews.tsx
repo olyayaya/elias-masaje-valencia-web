@@ -8,7 +8,7 @@ import {
 import { useI18n } from "@/i18n/context";
 import {
   CSV_TEMPLATE, GOOGLE_PROFILE_URL, IMPORT_BATCH_SIZE, MAX_IMPORT_ROWS, REVIEW_SORTS, TRIPADVISOR_PROFILE_URL,
-  checkImportFileSize, chunk, dedupeKey, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
+  checkImportFileSize, chunk, dedupeKey, httpsOnly, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
   type ImportIssue, type ImportPreview, type ParsedImportRow, type PreviewRow, type Review, type ReviewInsert,
   type ReviewSort,
 } from "@/lib/reviews";
@@ -131,6 +131,32 @@ const COPY = {
     es: "Las reseñas se guardan tal cual — nunca se editan, traducen ni inventan.",
     ru: "Отзывы сохраняются дословно — их не редактируют, не переводят и не выдумывают.",
   },
+  visibilityChoice: { en: "After importing", es: "Después de importar", ru: "После импорта" },
+  visHidden: {
+    en: "Import hidden — review them and switch them on later (recommended)",
+    es: "Importar ocultas — revísalas y actívalas después (recomendado)",
+    ru: "Импортировать скрытыми — проверить и включить позже (рекомендуется)",
+  },
+  visPublish: {
+    en: "Publish the selected reviews immediately",
+    es: "Publicar las reseñas seleccionadas inmediatamente",
+    ru: "Опубликовать выбранные сразу",
+  },
+  visHiddenNote: {
+    en: "Nothing will appear on the homepage until you switch each review on.",
+    es: "No aparecerá nada en la portada hasta que actives cada reseña.",
+    ru: "На главной ничего не появится, пока вы не включите каждый отзыв.",
+  },
+  visPublishNote: {
+    en: "The selected reviews go live on the homepage right away.",
+    es: "Las reseñas seleccionadas se publican en la portada de inmediato.",
+    ru: "Выбранные отзывы сразу появятся на главной.",
+  },
+  visIgnoresFile: {
+    en: "A visible/published column inside the file is ignored — only this choice decides.",
+    es: "Cualquier columna «visible/publicada» del archivo se ignora: solo decide esta opción.",
+    ru: "Колонка «visible/published» в файле игнорируется — решает только этот выбор.",
+  },
   importNeedsRights: { en: "Tick the confirmation above to enable the import.", es: "Marca la confirmación de arriba para poder importar.", ru: "Отметьте подтверждение выше, чтобы включить импорт." },
   importConfirm: { en: "Import {n}", es: "Importar {n}", ru: "Импортировать {n}" },
   importCancel: { en: "Discard", es: "Descartar", ru: "Отменить" },
@@ -157,6 +183,11 @@ const COPY = {
   lastImport: { en: "Last import: {v}", es: "Última importación: {v}", ru: "Последний импорт: {v}" },
   neverImported: { en: "never", es: "nunca", ru: "никогда" },
   saveFailed: { en: "Failed to save", es: "Error al guardar", ru: "Не удалось сохранить" },
+  manualUrlInvalid: {
+    en: "The link must be a full https:// address, or left empty.",
+    es: "El enlace debe ser una dirección https:// completa, o quedar vacío.",
+    ru: "Ссылка должна быть полным адресом https:// или пустой.",
+  },
 
   /* row / file problems */
   file_too_large: { en: "The file is larger than {max} MB.", es: "El archivo supera {max} MB.", ru: "Файл больше {max} МБ." },
@@ -227,12 +258,16 @@ const DashboardReviews = () => {
   // manual entry
   const [form, setForm] = useState({ author_name: "", rating: "5", review_text: "", reviewed_at: "", original_url: "" });
   const [adding, setAdding] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const addingRef = useRef(false);
 
   // import
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [anchor, setAnchor] = useState<number | null>(null);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  /** Publication is decided here and nowhere else — never by the file. */
+  const [publishNow, setPublishNow] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
   const importing = useRef(false);
@@ -291,20 +326,31 @@ const DashboardReviews = () => {
   /* ------------------------------------------------------ manual entry --- */
 
   const addManual = async () => {
+    if (addingRef.current) return;
     const author = form.author_name.trim();
     const text = form.review_text.trim();
     const stars = Number(form.rating);
     if (!author || !text || !Number.isInteger(stars) || stars < 1 || stars > 5) {
+      setFormError(c("manualIncomplete"));
       toast.error(c("manualIncomplete"));
+      return;
+    }
+    // A mistyped link is reported, never silently discarded.
+    const link = httpsOnly(form.original_url.trim());
+    if (link.bad) {
+      setFormError(c("manualUrlInvalid"));
+      toast.error(c("manualUrlInvalid"));
       return;
     }
     const reviewedAt = form.reviewed_at ? new Date(form.reviewed_at).toISOString() : null;
     const key = dedupeKey({ author_name: author, review_text: text, reviewed_at: reviewedAt });
     if (items.some((r) => r.dedupe_key === key)) {
+      setFormError(c("manualDuplicate"));
       toast.error(c("manualDuplicate"));
       return;
     }
-    const url = form.original_url.trim();
+    setFormError(null);
+    addingRef.current = true;
     setAdding(true);
     const { error } = await reviewsTable().insert([
       {
@@ -313,12 +359,13 @@ const DashboardReviews = () => {
         rating: stars,
         review_text: text,
         reviewed_at: reviewedAt,
-        original_url: url.startsWith("https://") ? url : null,
+        original_url: link.url,
         // Added hidden: the owner decides when it appears on the homepage.
         visible: false,
         imported_at: new Date().toISOString(),
       },
     ]);
+    addingRef.current = false;
     setAdding(false);
     if (error) {
       toast.error(c("saveFailed"));
@@ -338,6 +385,7 @@ const DashboardReviews = () => {
     setSelected(new Set());
     setAnchor(null);
     setRightsConfirmed(false);
+    setPublishNow(false);
     setProgress(null);
     setReport(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -351,6 +399,7 @@ const DashboardReviews = () => {
       setPreview({ rows: [], fileIssues: [tooBig], counts: { total: 0, valid: 0, duplicateFile: 0, duplicateExisting: 0, invalid: 0 } });
       setSelected(new Set());
       setRightsConfirmed(false);
+      setPublishNow(false);
       return;
     }
     const result = parseReviewImport(await file.text(), knownKeys);
@@ -358,8 +407,10 @@ const DashboardReviews = () => {
     // Importable rows start selected; everything else can never be selected.
     setSelected(new Set(result.rows.filter((r) => r.status === "new").map((r) => r.line)));
     setAnchor(null);
-    // Every new file needs its own explicit rights confirmation.
+    // Every new file needs its own explicit rights confirmation, and starts
+    // again from the safe "import hidden" default.
     setRightsConfirmed(false);
+    setPublishNow(false);
   };
 
   const rows = preview?.rows ?? [];
@@ -386,7 +437,14 @@ const DashboardReviews = () => {
     [importable, selected],
   );
 
-  /** Insert in batches so one bad batch never loses the rest of the file. */
+  /**
+   * Insert in batches so one bad batch never loses the rest of the file.
+   *
+   * `ignoreDuplicates` + `select("dedupe_key")` makes PostgREST return exactly
+   * the rows it really wrote, so a review inserted by someone else between the
+   * preview and the import is reported as skipped instead of being counted as
+   * added. A batch is never assumed successful without that proof.
+   */
   const runImport = async (list: ParsedImportRow[]) => {
     if (!list.length || !rightsConfirmed || importing.current) return;
     importing.current = true;
@@ -394,27 +452,61 @@ const DashboardReviews = () => {
     const stamp = new Date().toISOString();
     const batches = chunk(list, IMPORT_BATCH_SIZE);
     let added = 0;
+    let conflicts = 0;
     const failed: ParsedImportRow[] = [];
+    const storedKeys = new Set<string>();
     setProgress({ done: 0, total: list.length });
     for (const batch of batches) {
-      const payload: ReviewInsert[] = batch.map((r) => ({ ...r, imported_at: stamp }));
-      // ON CONFLICT DO NOTHING on dedupe_key: a re-import can never duplicate a
-      // review and never overwrites the owner's visible / pinned decisions.
-      const { error } = await reviewsTable().upsert(payload, { onConflict: "dedupe_key", ignoreDuplicates: true });
-      if (error) failed.push(...batch);
-      else added += batch.length;
+      const payload: ReviewInsert[] = batch.map((r) => ({
+        ...r,
+        imported_at: stamp,
+        // Visibility comes from the explicit UI choice only — never from the file.
+        visible: publishNow,
+      }));
+      const { data, error } = await reviewsTable()
+        .upsert(payload, { onConflict: "dedupe_key", ignoreDuplicates: true })
+        .select<{ dedupe_key: string }>("dedupe_key");
+      if (error) {
+        failed.push(...batch);
+      } else {
+        const inserted = data?.length ?? 0;
+        added += inserted;
+        conflicts += batch.length - inserted;
+        // Whatever the split, every key in this batch now exists in the table.
+        batch.forEach((r) => storedKeys.add(r.dedupe_key));
+      }
       setProgress((p) => ({ done: (p?.done ?? 0) + batch.length, total: list.length }));
     }
     importing.current = false;
     setProgress(null);
-    const skipped = (preview?.counts.duplicateExisting ?? 0) + (preview?.counts.duplicateFile ?? 0);
+
+    // Rows that reached the table can never be imported again: mark them and
+    // drop them from the selection, leaving only failed rows selectable.
+    if (storedKeys.size) {
+      setPreview((prev) => {
+        if (!prev) return prev;
+        const rowsNext = prev.rows.map((r) =>
+          r.row && storedKeys.has(r.row.dedupe_key) ? { ...r, status: "duplicate_existing" as const } : r,
+        );
+        return {
+          ...prev,
+          rows: rowsNext,
+          counts: {
+            ...prev.counts,
+            valid: rowsNext.filter((r) => r.status === "new").length,
+            duplicateExisting: rowsNext.filter((r) => r.status === "duplicate_existing").length,
+          },
+        };
+      });
+    }
+    const failedKeys = new Set(failed.map((r) => r.dedupe_key));
+    setSelected(new Set(rows.filter((r) => r.row && failedKeys.has(r.row.dedupe_key)).map((r) => r.line)));
+
+    const skipped = (preview?.counts.duplicateExisting ?? 0) + (preview?.counts.duplicateFile ?? 0) + conflicts;
     setReport({ added, skipped, failed });
     if (failed.length) toast.error(c("importFailed"));
     else toast.success(c("importDone", { n: String(added) }));
-    if (added) {
-      refresh();
-      setSelected(new Set(failed.map((r) => rows.find((p) => p.row?.dedupe_key === r.dedupe_key)?.line ?? -1)));
-    }
+    if (added) refresh();
   };
 
   const downloadTemplate = () => {
@@ -579,6 +671,11 @@ const DashboardReviews = () => {
             />
           </label>
         </div>
+        {formError && (
+          <p className="mt-3 text-xs text-destructive" role="alert" data-testid="manual-error">
+            {formError}
+          </p>
+        )}
         <Button size="sm" className="mt-3 min-h-11" disabled={adding || missingTable} onClick={() => void addManual()}>
           {adding ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : <Plus size={13} className="mr-1.5" />}
           {c("manualAdd")}
@@ -675,16 +772,19 @@ const DashboardReviews = () => {
                           isSelected ? "bg-primary/10" : ""
                         } ${r.status === "invalid" ? "opacity-70" : ""}`}
                       >
-                        <td className="p-2">
-                          <input
-                            type="checkbox"
-                            className="w-5 h-5"
-                            checked={isSelected}
-                            disabled={!selectable}
-                            aria-label={`${c("colSel")} ${r.line}`}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => toggleRow(r, e.nativeEvent as unknown as { shiftKey?: boolean })}
-                          />
+                        <td className="p-0">
+                          {/* 44x44 hit area around the 20x20 box: the whole cell is tappable. */}
+                          <label className="flex items-center justify-center min-w-11 min-h-11 w-11 h-11 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="w-5 h-5"
+                              checked={isSelected}
+                              disabled={!selectable}
+                              aria-label={`${c("colSel")} ${r.line}`}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => toggleRow(r, e.nativeEvent as unknown as { shiftKey?: boolean })}
+                            />
+                          </label>
                         </td>
                         <td className="p-2 tabular-nums text-muted-foreground min-h-11">{r.line}</td>
                         <td className="p-2 whitespace-nowrap">{r.raw.author_name || "—"}</td>
@@ -711,6 +811,35 @@ const DashboardReviews = () => {
                 </tbody>
               </table>
             </div>
+
+            <fieldset className="space-y-1" data-testid="import-visibility">
+              <legend className="text-xs font-medium text-foreground mb-1">{c("visibilityChoice")}</legend>
+              <label className="flex items-start gap-2 text-xs text-foreground min-h-11 py-1">
+                <input
+                  type="radio"
+                  name="import-visibility"
+                  className="mt-0.5 w-5 h-5"
+                  checked={!publishNow}
+                  onChange={() => setPublishNow(false)}
+                  data-testid="import-visible-hidden"
+                />
+                <span>{c("visHidden")}</span>
+              </label>
+              <label className="flex items-start gap-2 text-xs text-foreground min-h-11 py-1">
+                <input
+                  type="radio"
+                  name="import-visibility"
+                  className="mt-0.5 w-5 h-5"
+                  checked={publishNow}
+                  onChange={() => setPublishNow(true)}
+                  data-testid="import-visible-publish"
+                />
+                <span>{c("visPublish")}</span>
+              </label>
+              <p className="text-[11px] text-muted-foreground" data-testid="import-visibility-note">
+                {publishNow ? c("visPublishNote") : c("visHiddenNote")} {c("visIgnoresFile")}
+              </p>
+            </fieldset>
 
             <label className="flex items-start gap-2 text-xs text-foreground">
               <input
@@ -741,6 +870,9 @@ const DashboardReviews = () => {
               <Button size="sm" variant="ghost" className="min-h-11" onClick={resetImport}>
                 {c("importCancel")}
               </Button>
+              <span className="text-[11px] text-muted-foreground" data-testid="import-mode-reminder">
+                {publishNow ? c("visPublish") : c("visHidden")}
+              </span>
               {!rightsConfirmed && <span className="text-[11px] text-muted-foreground">{c("importNeedsRights")}</span>}
             </div>
           </div>

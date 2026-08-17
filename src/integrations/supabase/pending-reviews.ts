@@ -38,6 +38,12 @@ export interface SelectBuilder<T> extends PromiseLike<ListResult<T>> {
 export interface MutationBuilder extends PromiseLike<RowResult<unknown>> {
   eq(column: string, value: unknown): MutationBuilder;
   neq(column: string, value: unknown): MutationBuilder;
+  /**
+   * PostgREST returns the rows a mutation actually wrote. With
+   * `ignoreDuplicates: true` the conflicting rows are simply absent, which is
+   * the only honest way to count what an import really added.
+   */
+  select<T = unknown>(columns: string): PromiseLike<ListResult<T>>;
 }
 
 export interface PendingTable<Row, Insert = Partial<Row>> {

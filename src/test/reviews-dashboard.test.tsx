@@ -9,7 +9,9 @@ const h = vi.hoisted(() => ({
   updateEq: vi.fn(async () => ({ data: null, error: null as null | { message: string } })),
   update: vi.fn((_v: Record<string, unknown>) => ({ eq: h.updateEq, neq: h.updateEq })),
   settingsUpdate: vi.fn((_v: Record<string, unknown>) => ({ eq: h.updateEq, neq: h.updateEq })),
-  upsert: vi.fn(async (_rows: unknown[], _o?: unknown) => ({ data: null, error: null as null | { message: string } })),
+  /** PostgREST returns the rows a mutation really wrote; the mock echoes them. */
+  upsertSelect: vi.fn(async () => ({ data: null as { dedupe_key: string }[] | null, error: null as null | { message: string } })),
+  upsert: vi.fn((_rows: unknown[], _o?: unknown) => ({ select: h.upsertSelect })),
   insert: vi.fn(async (_rows: unknown[]) => ({ data: null, error: null as null | { message: string } })),
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), message: vi.fn() },
   state: {
@@ -80,7 +82,11 @@ const upload = async (text: string, name = "reviews.csv") => {
 beforeEach(() => {
   vi.clearAllMocks();
   h.updateEq.mockImplementation(async () => ({ data: null, error: null }));
-  h.upsert.mockImplementation(async () => ({ data: null, error: null }));
+  h.upsert.mockImplementation((rows: unknown[]) => {
+    const echoed = (rows as { dedupe_key: string }[]).map((r) => ({ dedupe_key: r.dedupe_key }));
+    h.upsertSelect.mockImplementation(async () => ({ data: echoed, error: null }));
+    return { select: h.upsertSelect };
+  });
   h.insert.mockImplementation(async () => ({ data: null, error: null }));
   h.state.items = [
     review({ id: "a", author_name: "Ana", rating: 5 }),
@@ -198,6 +204,47 @@ describe("manual entry", () => {
     expect(row.dedupe_key).toBe(dedupeKey({ author_name: "Carla", review_text: "Muy bien", reviewed_at: null }));
   });
 
+  it("rejects an invalid original link instead of dropping it", async () => {
+    mount();
+    fireEvent.change(screen.getByLabelText(/customer name|nombre del cliente|имя клиента/i), {
+      target: { value: "Nina" },
+    });
+    fireEvent.change(screen.getByLabelText(/review text|texto de la reseña|текст отзыва/i), {
+      target: { value: "great" },
+    });
+    fireEvent.change(screen.getByLabelText(/link|enlace|ссылка/i), { target: { value: "http://example.com/x" } });
+    fireEvent.click(screen.getByRole("button", { name: /add review|añadir reseña|добавить отзыв/i }));
+    await waitFor(() => expect(screen.getByTestId("manual-error").textContent).toMatch(/https/i));
+    expect(h.insert).not.toHaveBeenCalled();
+  });
+
+  it("writes once when the add button is double-clicked", async () => {
+    let resolve: (v: { data: null; error: null }) => void = () => {};
+    h.insert.mockImplementation(() => new Promise((r) => { resolve = r as typeof resolve; }));
+    mount();
+    fireEvent.change(screen.getByLabelText(/customer name|nombre del cliente|имя клиента/i), {
+      target: { value: "Nina" },
+    });
+    fireEvent.change(screen.getByLabelText(/review text|texto de la reseña|текст отзыва/i), {
+      target: { value: "great" },
+    });
+    const btn = screen.getByRole("button", { name: /add review|añadir reseña|добавить отзыв/i });
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    await waitFor(() => expect(h.insert).toHaveBeenCalledTimes(1));
+    resolve({ data: null, error: null });
+  });
+
+  it("gives every import checkbox a 44px tap area", async () => {
+    h.state.items = [];
+    mount();
+    await upload("author_name,rating,review_text\nA,5,one\n");
+    const box = screen.getByLabelText(/select 1|seleccionar 1|выбрать 1/i);
+    expect(box.parentElement?.className).toMatch(/min-h-11/);
+    expect(box.parentElement?.className).toMatch(/min-w-11/);
+  });
+
   it("refuses a duplicate of a review already stored", async () => {
     const key = dedupeKey({ author_name: "Ana", review_text: "text", reviewed_at: null });
     h.state.items = [review({ id: "a", author_name: "Ana", review_text: "text", dedupe_key: key })];
@@ -290,16 +337,99 @@ describe("manual import — preview, selection and rights confirmation", () => {
   });
 
   it("keeps failed rows retryable instead of losing them", async () => {
-    h.upsert.mockImplementation(async () => ({ data: null, error: { message: "boom" } }));
+    h.upsert.mockImplementation(() => ({ select: h.upsertSelect }));
+    h.upsertSelect.mockImplementation(async () => ({ data: null, error: { message: "boom" } }));
     mount();
     await upload(CSV);
     fireEvent.click(screen.getByTestId("import-rights"));
     fireEvent.click(screen.getByRole("button", { name: /import 1|importar 1|импортировать 1/i }));
     await waitFor(() => expect(h.toast.error).toHaveBeenCalled());
     const retry = await screen.findByRole("button", { name: /retry|reintentar|повторить/i });
-    h.upsert.mockImplementation(async () => ({ data: null, error: null }));
+    h.upsert.mockImplementation((rows: unknown[]) => {
+    const echoed = (rows as { dedupe_key: string }[]).map((r) => ({ dedupe_key: r.dedupe_key }));
+    h.upsertSelect.mockImplementation(async () => ({ data: echoed, error: null }));
+    return { select: h.upsertSelect };
+  });
     fireEvent.click(retry);
     await waitFor(() => expect(h.upsert).toHaveBeenCalledTimes(2));
+  });
+
+  it("imports hidden by default and only publishes when that is chosen", async () => {
+    mount();
+    await upload(CSV);
+    // The safe option is preselected and the mode is spelled out next to the button.
+    expect((screen.getByTestId("import-visible-hidden") as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByTestId("import-visible-publish") as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByTestId("import-mode-reminder").textContent).toMatch(/hidden|ocultas|скрыт/i);
+
+    fireEvent.click(screen.getByTestId("import-rights"));
+    fireEvent.click(screen.getByRole("button", { name: /import 1|importar 1|импортировать 1/i }));
+    await waitFor(() => expect(h.upsert).toHaveBeenCalledTimes(1));
+    expect((h.upsert.mock.calls[0][0] as Record<string, unknown>[])[0]).toMatchObject({ visible: false });
+
+    // Publishing straight away has to be picked deliberately.
+    cleanup();
+    vi.clearAllMocks();
+    h.upsert.mockImplementation((rows: unknown[]) => {
+      const echoed = (rows as { dedupe_key: string }[]).map((r) => ({ dedupe_key: r.dedupe_key }));
+      h.upsertSelect.mockImplementation(async () => ({ data: echoed, error: null }));
+      return { select: h.upsertSelect };
+    });
+    mount();
+    await upload(CSV);
+    fireEvent.click(screen.getByTestId("import-visible-publish"));
+    expect(screen.getByTestId("import-mode-reminder").textContent).toMatch(/immediately|inmediat|сразу/i);
+    fireEvent.click(screen.getByTestId("import-rights"));
+    fireEvent.click(screen.getByRole("button", { name: /import 1|importar 1|импортировать 1/i }));
+    await waitFor(() => expect(h.upsert).toHaveBeenCalledTimes(1));
+    expect((h.upsert.mock.calls[0][0] as Record<string, unknown>[])[0]).toMatchObject({ visible: true });
+  });
+
+  it("ignores a visible column inside the file", async () => {
+    h.state.items = [];
+    mount();
+    await upload("author_name,rating,review_text,visible\nZoe,5,ok,true\n");
+    fireEvent.click(screen.getByTestId("import-rights"));
+    fireEvent.click(screen.getByRole("button", { name: /import 1|importar 1|импортировать 1/i }));
+    await waitFor(() => expect(h.upsert).toHaveBeenCalledTimes(1));
+    expect((h.upsert.mock.calls[0][0] as Record<string, unknown>[])[0]).toMatchObject({ visible: false });
+  });
+
+  it("counts a row that was inserted elsewhere between preview and import as skipped", async () => {
+    // The database refuses the row (ON CONFLICT DO NOTHING) → nothing returned.
+    h.upsert.mockImplementation(() => ({ select: h.upsertSelect }));
+    h.upsertSelect.mockImplementation(async () => ({ data: [], error: null }));
+    mount();
+    await upload(CSV);
+    fireEvent.click(screen.getByTestId("import-rights"));
+    fireEvent.click(screen.getByRole("button", { name: /import 1|importar 1|импортировать 1/i }));
+
+    // added 0 · skipped 3 (1 already saved + 1 in-file duplicate + 1 conflict) · failed 0
+    await waitFor(() => {
+      expect(screen.getByTestId("import-report").textContent?.match(/\d+/g)).toEqual(["0", "3", "0"]);
+    });
+    // The row is now known to exist, so it drops out of the selection.
+    expect(screen.getByTestId("import-selected").textContent).toMatch(/0/);
+    expect(screen.getByTestId("import-row-2").textContent).toMatch(/already saved|ya guardada|уже сохранена/i);
+    expect(screen.queryByRole("button", { name: /import 1|importar 1|импортировать 1/i })).toBeNull();
+    expect(h.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports exactly what the database wrote when only part of a batch lands", async () => {
+    h.state.items = [];
+    mount();
+    await upload("author_name,rating,review_text\nA,5,one\nB,5,two\n");
+    h.upsert.mockImplementation((rows: unknown[]) => {
+      const first = (rows as { dedupe_key: string }[])[0];
+      h.upsertSelect.mockImplementation(async () => ({ data: [{ dedupe_key: first.dedupe_key }], error: null }));
+      return { select: h.upsertSelect };
+    });
+    fireEvent.click(screen.getByTestId("import-rights"));
+    fireEvent.click(screen.getByRole("button", { name: /import 2|importar 2|импортировать 2/i }));
+    // added 1 · skipped 1 (the conflicting one) · failed 0
+    await waitFor(() => {
+      expect(screen.getByTestId("import-report").textContent?.match(/\d+/g)).toEqual(["1", "1", "0"]);
+    });
   });
 
   it("stops an oversized file before reading it", async () => {
