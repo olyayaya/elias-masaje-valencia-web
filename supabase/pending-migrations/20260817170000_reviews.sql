@@ -89,6 +89,11 @@ REVOKE EXECUTE ON FUNCTION public.review_is_public(integer, boolean) FROM PUBLIC
 GRANT EXECUTE ON FUNCTION public.review_is_public(integer, boolean) TO anon, authenticated, service_role;
 
 -- ----------------------------------------------------------------- grants ---
+-- Supabase default privileges hand anon/authenticated broad table rights on new
+-- public tables. Strip them first so only the targeted grants below survive.
+REVOKE ALL PRIVILEGES ON TABLE public.reviews FROM anon, authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.review_display_settings FROM anon, authenticated;
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.reviews TO authenticated;
 GRANT ALL ON public.reviews TO service_role;
 -- Anon reads exactly the public card fields (plus the two ordering inputs).
