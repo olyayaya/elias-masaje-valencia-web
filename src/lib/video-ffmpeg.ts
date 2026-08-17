@@ -11,11 +11,14 @@ const FFMPEG_WASM_URL = "/ffmpeg/ffmpeg-core.wasm";
 
 import {
   buildFfmpegArgs,
+  buildStripAudioArgs,
+  logHasAudioStream,
   parseEncoderCaps,
   type ConvertOptions,
   type EncoderCaps,
   type VideoMeta,
 } from "./video-convert";
+
 
 type FFmpegInstance = {
   loaded: boolean;
@@ -261,3 +264,85 @@ export async function convertVideo(
 }
 
 
+
+// ---------------------------------------------------------------------------
+// Audio removal (mute)
+// ---------------------------------------------------------------------------
+
+export interface StripAudioResult {
+  blob: Blob;
+  size: number;
+  /** false when the source had no audio stream at all (honest "nothing to remove"). */
+  hadAudio: boolean;
+}
+
+/**
+ * Removes every audio stream locally by remuxing (video bitstream copied verbatim).
+ * The container/extension and MIME are preserved, nothing is re-encoded, and the wasm
+ * virtual FS is always cleaned — including on abort or failure.
+ */
+export async function stripAudio(
+  file: File | Blob,
+  options: { fileName: string; mimeType: string },
+  handlers: { onProgress?: (ratio: number) => void; signal?: AbortSignal } = {},
+): Promise<StripAudioResult> {
+  const { onProgress, signal } = handlers;
+  if (signal?.aborted) throw cancelled();
+
+  let log = "";
+  const collect = (line: string) => { log += `${line}\n`; };
+
+  const abortDuringLoad = () => terminateFFmpeg();
+  signal?.addEventListener("abort", abortDuringLoad, { once: true });
+  let ff: FFmpegInstance;
+  try {
+    ff = await getFFmpeg(collect, signal);
+  } finally {
+    signal?.removeEventListener("abort", abortDuringLoad);
+  }
+  if (signal?.aborted) {
+    detachLog(ff, collect);
+    throw cancelled();
+  }
+
+  const ext = (options.fileName.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "mp4").toLowerCase();
+  const inputName = `mute-in.${ext}`;
+  const outputName = `mute-out.${ext}`;
+  const args = buildStripAudioArgs({ inputName, outputName });
+
+  const onProg = ((e: { progress: number }) =>
+    onProgress?.(Math.min(1, Math.max(0, e.progress)))) as never;
+  ff.on("progress", onProg);
+  const abort = () => terminateFFmpeg();
+  signal?.addEventListener("abort", abort, { once: true });
+
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (signal?.aborted) throw cancelled();
+    await ff.writeFile(inputName, bytes);
+    if (signal?.aborted) throw cancelled();
+    await ff.exec(args);
+    if (signal?.aborted) throw cancelled();
+    const data = await ff.readFile(outputName);
+    const out = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const buffer = out.slice().buffer as ArrayBuffer;
+    const blob = new Blob([buffer], { type: options.mimeType });
+    if (!blob.size) throw new Error("Audio removal produced an empty file");
+    return { blob, size: blob.size, hadAudio: logHasAudioStream(log) };
+  } finally {
+    signal?.removeEventListener("abort", abort);
+    detachLog(ff, collect);
+    try {
+      ff.off("progress", onProg);
+    } catch {
+      /* instance already terminated by cancel */
+    }
+    for (const name of [inputName, outputName]) {
+      try {
+        await ff.deleteFile(name);
+      } catch {
+        /* file absent or instance terminated */
+      }
+    }
+  }
+}
