@@ -210,7 +210,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
       const verdictNow: VideoSavingVerdict = evaluateVideoSaving(file.size, out.size);
       if (verdictNow.ok) {
         onVerdict?.(file.name, "canOptimize");
-      } else if (verdictNow.reason === "alreadyOptimized") {
+      } else if (!verdictNow.ok && verdictNow.reason === "alreadyOptimized") {
         onVerdict?.(file.name, "optimized");
       }
 
