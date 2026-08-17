@@ -216,10 +216,15 @@ Deno.serve(async (req) => {
       const contentType = typeof body?.contentType === "string" ? body.contentType.toLowerCase() : "";
       const enforceSaving = body?.enforceSaving !== false;
 
-      const stagedInvalid = validateName(stagedName);
-      if (stagedInvalid) return json({ error: `Staged file: ${stagedInvalid}` }, 400);
+      // The staged object must carry the reserved prefix bound to THIS user, and can never
+      // be an existing media name.
+      const stagedInvalid = validateStagedName(stagedName, user.id, [fileName, newName]);
+      if (stagedInvalid) return json({ error: stagedInvalid }, 400);
       const invalidNew = validateName(newName);
       if (invalidNew) return json({ error: invalidNew }, 400);
+      // The *source* being replaced must itself be a container we support.
+      const sourceInvalid = validateVideoSourceName(fileName);
+      if (sourceInvalid) return json({ error: sourceInvalid }, 400);
       const typeError = validateVideoOutputType(contentType, newName);
       if (typeError) {
         await admin.storage.from("media").remove([stagedName]);
@@ -235,7 +240,7 @@ Deno.serve(async (req) => {
         return json({ error: `Video is too large — the limit is ${MAX_VIDEO_BYTES / (1024 * 1024)} MB` }, 413);
       }
 
-      // The bytes really in storage must match the declared container.
+      // The bytes really in storage must match the declared container (client MIME is never trusted).
       const head = await readHead(admin, stagedName);
       if (!videoMagicMatches(contentType, head)) {
         await cleanup();
@@ -261,37 +266,40 @@ Deno.serve(async (req) => {
         return json({ error: "A file with that name already exists" }, 409);
       }
 
-      if (!renaming) {
-        // Same name: the old object must go before the staged copy can take its place.
-        const { error: rmOld } = await admin.storage.from("media").remove([fileName]);
-        if (rmOld) {
-          await cleanup();
-          return json({ error: rmOld.message }, 500);
-        }
-      }
-
-      const { error: copyError } = await admin.storage.from("media").copy(stagedName, newName);
-      if (copyError) {
-        // Staged object is deliberately kept so nothing is lost if the swap failed.
-        return json({ error: `${copyError.message} — the uploaded file is still available as ${stagedName}` }, 500);
-      }
-
+      const bucket = admin.storage.from("media");
       let updated = 0;
-      if (renaming) {
+
+      if (!renaming) {
+        // Same name: back up first, and restore the original if the promotion fails.
+        const backup = backupNameFor(user.id, crypto.randomUUID(), fileName);
+        const result = await promoteSameName(
+          {
+            copy: (from, to) => bucket.copy(from, to).then((r) => ({ error: r.error ? { message: r.error.message } : null })),
+            remove: (names) => bucket.remove(names).then((r) => ({ error: r.error ? { message: r.error.message } : null })),
+          },
+          { staged: stagedName, target: fileName, backup },
+        );
+        if (!result.ok) return json({ error: result.error, restored: result.restored }, 500);
+      } else {
+        const { error: copyError } = await bucket.copy(stagedName, newName);
+        if (copyError) {
+          // Staged object is deliberately kept so nothing is lost if the swap failed.
+          return json({ error: `${copyError.message} — the uploaded file is still available as ${stagedName}` }, 500);
+        }
         try {
           updated = await rewriteReferences(admin, fileName, newName, user.id);
         } catch (e) {
-          await admin.storage.from("media").remove([newName]);
+          await bucket.remove([newName]);
           await cleanup();
           return json({ error: `Video replacement rolled back: ${(e as Error).message}` }, 500);
         }
       }
 
       const historyReferences = await countHistoryReferences(admin, fileName);
-      await cleanup();
       let warning: string | undefined;
       if (renaming) {
-        const { error: rmError } = await admin.storage.from("media").remove([fileName]);
+        await cleanup();
+        const { error: rmError } = await bucket.remove([fileName]);
         if (rmError) warning = `Old object could not be removed: ${rmError.message}`;
       }
       return json({
@@ -306,6 +314,7 @@ Deno.serve(async (req) => {
         ...(warning ? { warning } : {}),
       });
     }
+
 
     if (action === "check" || action === "delete") {
       const usages = await findUsages(admin, fileName);
