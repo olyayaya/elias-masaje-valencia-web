@@ -153,7 +153,7 @@ describe("image alt dialog", () => {
   it("translates first and only inserts on the second confirm", async () => {
     const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup();
-    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+    setInputValue(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
 
     // First click runs the translation and keeps the dialog open for review.
     await user.click(screen.getByRole("button", { name: /insert image/i }));
@@ -172,11 +172,11 @@ describe("image alt dialog", () => {
   it("invalidates the translation when the source text changes again", async () => {
     const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup();
-    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+    setInputValue(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
     await screen.findByLabelText("alt-ru");
 
-    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), " deep");
+    setInputValue(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage deep");
     expect(screen.queryByLabelText("alt-ru")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /insert image/i }));
     expect(onConfirm).not.toHaveBeenCalled();
@@ -187,7 +187,7 @@ describe("image alt dialog", () => {
     const user = userEvent.setup({ delay: null });
     vi.mocked(translateAlt).mockRejectedValueOnce(new Error("offline"));
     const { onConfirm } = setup();
-    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+    setInputValue(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
 
     const only = await screen.findByRole("button", { name: /save en only/i });
@@ -198,7 +198,7 @@ describe("image alt dialog", () => {
   it("ignores machine translations when auto-translate is switched off", async () => {
     const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup({ initialOthers: { es: "Alt manual", ru: "" } });
-    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+    setInputValue(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
     expect(await screen.findByLabelText("alt-ru")).toHaveValue("Массаж спины");
 
