@@ -385,6 +385,7 @@ const DashboardReviews = () => {
     setSelected(new Set());
     setAnchor(null);
     setRightsConfirmed(false);
+    setPublishNow(false);
     setProgress(null);
     setReport(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -398,6 +399,7 @@ const DashboardReviews = () => {
       setPreview({ rows: [], fileIssues: [tooBig], counts: { total: 0, valid: 0, duplicateFile: 0, duplicateExisting: 0, invalid: 0 } });
       setSelected(new Set());
       setRightsConfirmed(false);
+      setPublishNow(false);
       return;
     }
     const result = parseReviewImport(await file.text(), knownKeys);
@@ -405,8 +407,10 @@ const DashboardReviews = () => {
     // Importable rows start selected; everything else can never be selected.
     setSelected(new Set(result.rows.filter((r) => r.status === "new").map((r) => r.line)));
     setAnchor(null);
-    // Every new file needs its own explicit rights confirmation.
+    // Every new file needs its own explicit rights confirmation, and starts
+    // again from the safe "import hidden" default.
     setRightsConfirmed(false);
+    setPublishNow(false);
   };
 
   const rows = preview?.rows ?? [];
@@ -433,7 +437,14 @@ const DashboardReviews = () => {
     [importable, selected],
   );
 
-  /** Insert in batches so one bad batch never loses the rest of the file. */
+  /**
+   * Insert in batches so one bad batch never loses the rest of the file.
+   *
+   * `ignoreDuplicates` + `select("dedupe_key")` makes PostgREST return exactly
+   * the rows it really wrote, so a review inserted by someone else between the
+   * preview and the import is reported as skipped instead of being counted as
+   * added. A batch is never assumed successful without that proof.
+   */
   const runImport = async (list: ParsedImportRow[]) => {
     if (!list.length || !rightsConfirmed || importing.current) return;
     importing.current = true;
@@ -441,27 +452,61 @@ const DashboardReviews = () => {
     const stamp = new Date().toISOString();
     const batches = chunk(list, IMPORT_BATCH_SIZE);
     let added = 0;
+    let conflicts = 0;
     const failed: ParsedImportRow[] = [];
+    const storedKeys = new Set<string>();
     setProgress({ done: 0, total: list.length });
     for (const batch of batches) {
-      const payload: ReviewInsert[] = batch.map((r) => ({ ...r, imported_at: stamp }));
-      // ON CONFLICT DO NOTHING on dedupe_key: a re-import can never duplicate a
-      // review and never overwrites the owner's visible / pinned decisions.
-      const { error } = await reviewsTable().upsert(payload, { onConflict: "dedupe_key", ignoreDuplicates: true });
-      if (error) failed.push(...batch);
-      else added += batch.length;
+      const payload: ReviewInsert[] = batch.map((r) => ({
+        ...r,
+        imported_at: stamp,
+        // Visibility comes from the explicit UI choice only — never from the file.
+        visible: publishNow,
+      }));
+      const { data, error } = await reviewsTable()
+        .upsert(payload, { onConflict: "dedupe_key", ignoreDuplicates: true })
+        .select<{ dedupe_key: string }>("dedupe_key");
+      if (error) {
+        failed.push(...batch);
+      } else {
+        const inserted = data?.length ?? 0;
+        added += inserted;
+        conflicts += batch.length - inserted;
+        // Whatever the split, every key in this batch now exists in the table.
+        batch.forEach((r) => storedKeys.add(r.dedupe_key));
+      }
       setProgress((p) => ({ done: (p?.done ?? 0) + batch.length, total: list.length }));
     }
     importing.current = false;
     setProgress(null);
-    const skipped = (preview?.counts.duplicateExisting ?? 0) + (preview?.counts.duplicateFile ?? 0);
+
+    // Rows that reached the table can never be imported again: mark them and
+    // drop them from the selection, leaving only failed rows selectable.
+    if (storedKeys.size) {
+      setPreview((prev) => {
+        if (!prev) return prev;
+        const rowsNext = prev.rows.map((r) =>
+          r.row && storedKeys.has(r.row.dedupe_key) ? { ...r, status: "duplicate_existing" as const } : r,
+        );
+        return {
+          ...prev,
+          rows: rowsNext,
+          counts: {
+            ...prev.counts,
+            valid: rowsNext.filter((r) => r.status === "new").length,
+            duplicateExisting: rowsNext.filter((r) => r.status === "duplicate_existing").length,
+          },
+        };
+      });
+    }
+    const failedKeys = new Set(failed.map((r) => r.dedupe_key));
+    setSelected(new Set(rows.filter((r) => r.row && failedKeys.has(r.row.dedupe_key)).map((r) => r.line)));
+
+    const skipped = (preview?.counts.duplicateExisting ?? 0) + (preview?.counts.duplicateFile ?? 0) + conflicts;
     setReport({ added, skipped, failed });
     if (failed.length) toast.error(c("importFailed"));
     else toast.success(c("importDone", { n: String(added) }));
-    if (added) {
-      refresh();
-      setSelected(new Set(failed.map((r) => rows.find((p) => p.row?.dedupe_key === r.dedupe_key)?.line ?? -1)));
-    }
+    if (added) refresh();
   };
 
   const downloadTemplate = () => {
