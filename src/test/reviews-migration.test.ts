@@ -82,6 +82,31 @@ describe("reviews migration — RLS and grants", () => {
   });
 });
 
+describe("reviews migration — default privileges are revoked first", () => {
+  const revokeIdx = (t: string) =>
+    sql.search(new RegExp(`REVOKE ALL PRIVILEGES ON TABLE public\\.${t} FROM anon, authenticated;`));
+
+  it("revokes Supabase default grants on both tables", () => {
+    expect(revokeIdx("reviews")).toBeGreaterThan(-1);
+    expect(revokeIdx("review_display_settings")).toBeGreaterThan(-1);
+  });
+
+  it("revokes before any targeted GRANT on those tables", () => {
+    const firstGrant = sql.search(/GRANT SELECT, INSERT, UPDATE, DELETE ON public\.reviews TO authenticated;/);
+    expect(revokeIdx("reviews")).toBeLessThan(firstGrant);
+    expect(revokeIdx("review_display_settings")).toBeLessThan(firstGrant);
+  });
+
+  it("never grants anon table-level writes or TRUNCATE", () => {
+    const anonGrants = sql.match(/GRANT[\s\S]*?TO anon;/g) ?? [];
+    for (const g of anonGrants) {
+      expect(g).not.toMatch(/INSERT|UPDATE|DELETE|TRUNCATE|REFERENCES|TRIGGER|ALL/i);
+      expect(g).toMatch(/GRANT SELECT \(/);
+    }
+    expect(sql).not.toMatch(/GRANT ALL[\s\S]{0,80}TO anon/i);
+  });
+});
+
 describe("reviews migration — manual priority range", () => {
   it("bounds manual_priority to the range the dashboard allows", () => {
     expect(sql).toMatch(/manual_priority\s+integer NOT NULL DEFAULT 0 CHECK \(manual_priority BETWEEN -999 AND 999\)/);
