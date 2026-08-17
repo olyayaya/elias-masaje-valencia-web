@@ -1,0 +1,1 @@
+DELETE FROM public.site_content WHERE content_key = 'robots_txt';
