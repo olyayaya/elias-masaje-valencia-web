@@ -2,13 +2,13 @@ import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff, Loader2, Pin, PinOff, RefreshCw, Star, Upload,
+  AlertTriangle, ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff, Loader2, Pin, PinOff, Star, Upload,
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
-import { supabase } from "@/integrations/supabase/client";
 import {
-  REVIEW_SORTS, REVIEW_SOURCES, TRIPADVISOR_PROFILE_URL, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
-  type ParsedImportRow, type Review, type ReviewSort, type ReviewSource, type ReviewSyncStateRow,
+  REVIEW_SORTS, REVIEW_SOURCES, TRIPADVISOR_PROFILE_URL, parseReviewImport, planImport, reviewSettingsTable,
+  reviewsTable, sortReviews,
+  type ParsedImportRow, type Review, type ReviewSort, type ReviewSource,
 } from "@/lib/reviews";
 import { useAdminReviews, reviewKeys } from "@/hooks/use-reviews";
 import DashboardCard from "./DashboardCard";
@@ -18,9 +18,9 @@ import { Input } from "@/components/ui/input";
 
 const COPY = {
   intro: {
-    en: "Real reviews from Google and from manual entries you hold the rights to. Nothing here is written by the site.",
-    es: "Reseñas reales de Google y entradas manuales sobre las que tienes derechos. Nada de esto lo escribe la web.",
-    ru: "Реальные отзывы из Google и ручные записи, на которые у вас есть права. Ничего не пишется сайтом.",
+    en: "Real reviews you add yourself by importing a CSV or JSON file. There is no automatic connection to Google or TripAdvisor: nothing is fetched, copied or written by the site.",
+    es: "Reseñas reales que añades tú importando un archivo CSV o JSON. No hay conexión automática con Google ni TripAdvisor: la web no descarga, copia ni escribe nada.",
+    ru: "Реальные отзывы, которые вы добавляете сами, импортируя файл CSV или JSON. Автоматического подключения к Google или TripAdvisor нет: сайт ничего не загружает, не копирует и не пишет сам.",
   },
   missingTable: {
     en: "The reviews storage is not set up yet. Ask your developer to apply the pending reviews migration. The legacy editor below stays available until then.",
@@ -76,10 +76,6 @@ const COPY = {
   priority: { en: "Manual order value", es: "Valor de orden manual", ru: "Значение ручного порядка" },
   priorityUp: { en: "Move up in manual order", es: "Subir en el orden manual", ru: "Поднять в ручном порядке" },
   priorityDown: { en: "Move down in manual order", es: "Bajar en el orden manual", ru: "Опустить в ручном порядке" },
-  statusNever: { en: "Never synced", es: "Nunca sincronizado", ru: "Ещё не синхронизировано" },
-  statusOk: { en: "Connected", es: "Conectado", ru: "Подключено" },
-  statusError: { en: "Last attempt failed", es: "El último intento falló", ru: "Последняя попытка не удалась" },
-  statusRateLimited: { en: "Cooling down — try again in a minute", es: "En espera — inténtalo en un minuto", ru: "Пауза — повторите через минуту" },
   lastAttempt: { en: "Last attempt: {v}", es: "Último intento: {v}", ru: "Последняя попытка: {v}" },
   counters: { en: "{i} new · {u} updated · {s} skipped", es: "{i} nuevas · {u} actualizadas · {s} omitidas", ru: "{i} новых · {u} обновлено · {s} пропущено" },
   rateLimited: { en: "Please wait {n}s before syncing this source again.", es: "Espera {n}s antes de volver a sincronizar esta fuente.", ru: "Подождите {n} с перед повторной синхронизацией." },
@@ -91,29 +87,43 @@ const COPY = {
   },
   tripadvisorOpen: { en: "Open TripAdvisor profile", es: "Abrir perfil de TripAdvisor", ru: "Открыть профиль TripAdvisor" },
 
-  syncTitle: { en: "Sources", es: "Fuentes", ru: "Источники" },
-  syncNow: { en: "Sync now", es: "Sincronizar", ru: "Синхронизировать" },
-  syncing: { en: "Syncing…", es: "Sincronizando…", ru: "Синхронизация…" },
-  lastSync: { en: "Last sync: {v}", es: "Última sincronización: {v}", ru: "Последняя синхронизация: {v}" },
-  never: { en: "never", es: "nunca", ru: "никогда" },
-  notConfigured: {
-    en: "Not connected — credentials are missing. Ask your developer to add the secrets listed below.",
-    es: "Sin conectar — faltan credenciales. Pide que se añadan los secretos indicados abajo.",
-    ru: "Не подключено — нет учётных данных. Попросите добавить перечисленные ниже секреты.",
-  },
-  syncResult: {
-    en: "Imported {imported}, updated {updated}, skipped {skipped}",
-    es: "Importadas {imported}, actualizadas {updated}, omitidas {skipped}",
-    ru: "Импортировано {imported}, обновлено {updated}, пропущено {skipped}",
-  },
-  syncFailed: { en: "Sync failed", es: "Error de sincronización", ru: "Ошибка синхронизации" },
 
-  importTitle: { en: "Import an official export", es: "Importar una exportación oficial", ru: "Импорт официального экспорта" },
+  importTitle: { en: "Import reviews (CSV or JSON)", es: "Importar reseñas (CSV o JSON)", ru: "Импорт отзывов (CSV или JSON)" },
   importHint: {
-    en: "CSV or JSON with the columns source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Allowed sources: google, manual. Copied TripAdvisor content is rejected.",
-    es: "CSV o JSON con las columnas source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Fuentes permitidas: google, manual. El contenido copiado de TripAdvisor se rechaza.",
-    ru: "CSV или JSON со столбцами source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Допустимые источники: google, manual. Скопированный контент TripAdvisor отклоняется.",
+    en: "CSV or JSON with the columns source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Allowed sources: google, manual. Copied TripAdvisor content is rejected. Nothing is saved until you check the rights box and confirm.",
+    es: "CSV o JSON con las columnas source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Fuentes permitidas: google, manual. El contenido copiado de TripAdvisor se rechaza. No se guarda nada hasta que marques la casilla de derechos y confirmes.",
+    ru: "CSV или JSON со столбцами source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Допустимые источники: google, manual. Скопированный контент TripAdvisor отклоняется. Ничего не сохраняется, пока вы не отметите подтверждение прав и не подтвердите импорт.",
   },
+  importSummary: {
+    en: "{n} valid rows · {fresh} new · {upd} already stored (will be refreshed) · {dupe} duplicates in the file skipped",
+    es: "{n} filas válidas · {fresh} nuevas · {upd} ya guardadas (se actualizarán) · {dupe} duplicados del archivo omitidos",
+    ru: "Корректных строк: {n} · новых: {fresh} · уже сохранено: {upd} (будут обновлены) · дубликатов в файле пропущено: {dupe}",
+  },
+  importRights: {
+    en: "I confirm these are real customer reviews and that I have the right to publish this text on my site.",
+    es: "Confirmo que son reseñas reales de clientes y que tengo derecho a publicar este texto en mi web.",
+    ru: "Подтверждаю, что это реальные отзывы клиентов и что у меня есть право публиковать этот текст на моём сайте.",
+  },
+  importRightsHint: {
+    en: "Reviews are stored exactly as written — never edited, translated or invented.",
+    es: "Las reseñas se guardan tal cual — nunca se editan, traducen ni inventan.",
+    ru: "Отзывы сохраняются дословно — их не редактируют, не переводят и не выдумывают.",
+  },
+  importNeedsRights: {
+    en: "Tick the confirmation above to enable the import.",
+    es: "Marca la confirmación de arriba para poder importar.",
+    ru: "Отметьте подтверждение выше, чтобы включить импорт.",
+  },
+  colAuthor: { en: "Author", es: "Autor", ru: "Автор" },
+  colRating: { en: "Rating", es: "Valoración", ru: "Оценка" },
+  colSource: { en: "Source", es: "Fuente", ru: "Источник" },
+  colDate: { en: "Date", es: "Fecha", ru: "Дата" },
+  colText: { en: "Review", es: "Reseña", ru: "Отзыв" },
+  colState: { en: "Status", es: "Estado", ru: "Статус" },
+  rowNew: { en: "New", es: "Nueva", ru: "Новая" },
+  rowUpdate: { en: "Update", es: "Actualización", ru: "Обновление" },
+  lastImport: { en: "Last import: {v}", es: "Última importación: {v}", ru: "Последний импорт: {v}" },
+  neverImported: { en: "never", es: "nunca", ru: "никогда" },
   choose: { en: "Choose file", es: "Elegir archivo", ru: "Выбрать файл" },
   importPreview: { en: "{n} valid rows ready to import", es: "{n} filas válidas listas", ru: "Готово к импорту строк: {n}" },
   importConfirm: { en: "Import {n}", es: "Importar {n}", ru: "Импортировать {n}" },
@@ -141,28 +151,9 @@ const SORT_LABEL: Record<ReviewSort, keyof typeof COPY> = {
   manual: "sortManual",
 };
 
-const STATUS_LABEL: Record<string, keyof typeof COPY> = {
-  never: "statusNever",
-  ok: "statusOk",
-  error: "statusError",
-  not_configured: "notConfigured",
-  rate_limited: "statusRateLimited",
-};
-
 const SOURCE_LABEL: Record<ReviewSource, keyof typeof COPY> = {
   google: "sourceGoogle",
   manual: "sourceManual",
-};
-
-/** Secrets the server-side sync needs before it can run. Names only, never values. */
-export const REQUIRED_SYNC_SECRETS: Record<"google", string[]> = {
-  google: [
-    "GOOGLE_BUSINESS_PROFILE_CLIENT_ID",
-    "GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET",
-    "GOOGLE_BUSINESS_PROFILE_REFRESH_TOKEN",
-    "GOOGLE_BUSINESS_ACCOUNT_ID",
-    "GOOGLE_BUSINESS_LOCATION_ID",
-  ],
 };
 
 const Stars = ({ n }: { n: number }) => (
@@ -176,7 +167,7 @@ const Stars = ({ n }: { n: number }) => (
 const DashboardReviews = () => {
   const c = useCopy();
   const qc = useQueryClient();
-  const { items, settings, syncState, missingTable, isPending } = useAdminReviews();
+  const { items, settings, missingTable, isPending } = useAdminReviews();
 
   const [search, setSearch] = useState("");
   const [source, setSource] = useState<"all" | ReviewSource>("all");
@@ -184,15 +175,10 @@ const DashboardReviews = () => {
   const [visibility, setVisibility] = useState<"all" | "visible" | "hidden">("all");
   const [sort, setSort] = useState<ReviewSort>("newest");
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState<null | ReviewSource>(null);
-  const [syncStatus, setSyncStatus] = useState<Record<string, string>>({});
-  const stateBySource = useMemo(() => {
-    const map = new Map<string, ReviewSyncStateRow>();
-    for (const row of syncState) map.set(row.source, row);
-    return map;
-  }, [syncState]);
   const [importRows, setImportRows] = useState<ParsedImportRow[] | null>(null);
   const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importDupes, setImportDupes] = useState(0);
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -200,7 +186,6 @@ const DashboardReviews = () => {
     void qc.invalidateQueries({ queryKey: reviewKeys.adminList });
     void qc.invalidateQueries({ queryKey: reviewKeys.publicList });
     void qc.invalidateQueries({ queryKey: reviewKeys.settings });
-    void qc.invalidateQueries({ queryKey: reviewKeys.syncState });
   };
 
   const filtered = useMemo(() => {
@@ -254,75 +239,40 @@ const DashboardReviews = () => {
   const bumpPriority = (r: Review, delta: number) =>
     void patch(r.id, { manual_priority: Math.max(-999, Math.min(999, r.manual_priority + delta)) });
 
-  /**
-   * Server-side sync. The Edge Function owns every credential; the browser only
-   * ever sees counters and a status string — never a token.
-   */
-  const runSync = async (src: ReviewSource) => {
-    setSyncing(src);
-    try {
-      const { data, error } = await supabase.functions.invoke("reviews-sync", {
-        body: { source: src },
-      });
-      if (error) throw error;
-      const res = data as {
-        status?: string;
-        imported?: number;
-        updated?: number;
-        skipped?: number;
-        error?: string;
-      };
-      if (res?.status === "rate_limited") {
-        setSyncStatus((s) => ({ ...s, [src]: "rate_limited" }));
-        toast.warning(c("rateLimited", { n: String((res as { retry_after?: number }).retry_after ?? 60) }));
-        refresh();
-        return;
-      }
-      if (res?.status === "compliance_required") {
-        // Defensive: the UI offers no button for a blocked source.
-        setSyncStatus((s) => ({ ...s, [src]: "compliance_required" }));
-        toast.warning(c("tripadvisorBody"));
-        return;
-      }
-      if (res?.status === "not_configured") {
-        setSyncStatus((s) => ({ ...s, [src]: "not_configured" }));
-        toast.warning(c("notConfigured"));
-        refresh();
-        return;
-      }
-      if (res?.status !== "ok") throw new Error(res?.error || "sync failed");
-      setSyncStatus((s) => ({ ...s, [src]: "ok" }));
-      toast.success(
-        c("syncResult", {
-          imported: String(res.imported ?? 0),
-          updated: String(res.updated ?? 0),
-          skipped: String(res.skipped ?? 0),
-        }),
-      );
-      refresh();
-    } catch {
-      setSyncStatus((s) => ({ ...s, [src]: "error" }));
-      toast.error(c("syncFailed"));
-    } finally {
-      setSyncing(null);
-    }
+  const resetImport = () => {
+    setImportRows(null);
+    setImportErrors([]);
+    setImportDupes(0);
+    setRightsConfirmed(false);
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     const text = await file.text();
-    const { rows, errors } = parseReviewImport(text);
+    const { rows, errors, duplicatesInFile } = parseReviewImport(text);
     setImportRows(rows);
     setImportErrors(errors);
+    setImportDupes(duplicatesInFile);
+    // Every new file needs its own explicit rights confirmation.
+    setRightsConfirmed(false);
   };
 
+  /** New vs. already-stored rows, computed before anything is written. */
+  const plan = useMemo(() => planImport(importRows ?? [], items), [importRows, items]);
+  const isUpdate = useMemo(
+    () => new Set(plan.updates.map((r) => `${r.source}|${r.external_review_id}`)),
+    [plan],
+  );
+
   const confirmImport = async () => {
-    if (!importRows?.length) return;
+    // Belt and braces: the button is disabled, and the write refuses anyway.
+    if (!importRows?.length || !rightsConfirmed) return;
     setImporting(true);
     // Upsert on (source, external_review_id): a re-import never duplicates and
     // never touches the moderator's own visible / pinned decisions.
     const { error } = await reviewsTable().upsert(
-      importRows.map((r) => ({ ...r, last_synced_at: new Date().toISOString() })),
+      importRows.map((r) => ({ ...r, imported_at: new Date().toISOString() })),
       { onConflict: "source,external_review_id", ignoreDuplicates: false },
     );
     setImporting(false);
@@ -331,14 +281,12 @@ const DashboardReviews = () => {
       return;
     }
     toast.success(c("importDone", { n: String(importRows.length) }));
-    setImportRows(null);
-    setImportErrors([]);
-    if (fileRef.current) fileRef.current.value = "";
+    resetImport();
     refresh();
   };
 
-  const lastSync = useMemo(() => {
-    const stamps = items.map((r) => r.last_synced_at).filter(Boolean) as string[];
+  const lastImport = useMemo(() => {
+    const stamps = items.map((r) => r.imported_at).filter(Boolean) as string[];
     if (!stamps.length) return null;
     return stamps.sort().at(-1) ?? null;
   }, [items]);
@@ -421,60 +369,6 @@ const DashboardReviews = () => {
         </div>
       </DashboardCard>
 
-      {/* -------------------------------------------------------- sources --- */}
-      <DashboardCard title={c("syncTitle")}>
-        <p className="text-xs text-muted-foreground mb-3">
-          {c("lastSync", { v: lastSync ? new Date(lastSync).toLocaleString() : c("never") })}
-        </p>
-        <div className="space-y-3">
-          {(["google"] as const).map((src) => (
-            <div key={src} className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium w-28">{c(SOURCE_LABEL[src])}</span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={syncing !== null || missingTable}
-                onClick={() => void runSync(src)}
-              >
-                {syncing === src ? (
-                  <Loader2 size={13} className="mr-1.5 animate-spin" />
-                ) : (
-                  <RefreshCw size={13} className="mr-1.5" />
-                )}
-                {syncing === src ? c("syncing") : c("syncNow")}
-              </Button>
-              <span className="text-xs text-muted-foreground" data-testid={`sync-status-${src}`}>
-                {c(STATUS_LABEL[stateBySource.get(src)?.status ?? "never"])}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                {c("lastAttempt", {
-                  v: stateBySource.get(src)?.last_attempt_at
-                    ? new Date(stateBySource.get(src)!.last_attempt_at!).toLocaleString()
-                    : c("never"),
-                })}
-              </span>
-              <span className="text-[11px] text-muted-foreground" data-testid={`sync-counters-${src}`}>
-                {c("counters", {
-                  i: String(stateBySource.get(src)?.imported_count ?? 0),
-                  u: String(stateBySource.get(src)?.updated_count ?? 0),
-                  s: String(stateBySource.get(src)?.skipped_count ?? 0),
-                })}
-              </span>
-              {(stateBySource.get(src)?.status === "not_configured" || syncStatus[src] === "not_configured") && (
-                <span className="text-xs text-muted-foreground basis-full">
-                  {c("notConfigured")} ({REQUIRED_SYNC_SECRETS[src].join(", ")})
-                </span>
-              )}
-              {stateBySource.get(src)?.status === "error" && (
-                <span className="text-xs text-destructive basis-full">
-                  {stateBySource.get(src)?.error_message || c("syncFailed")}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      </DashboardCard>
-
       {/* --------------------------------------------- tripadvisor (link) --- */}
       {/* Deliberately separate from the Google/manual block above: no shared
           filters, no shared list, no imported content. */}
@@ -511,34 +405,79 @@ const DashboardReviews = () => {
           </ul>
         )}
         {importRows && importRows.length > 0 && (
-          <div className="mt-3 space-y-2" data-testid="import-preview">
+          <div className="mt-3 space-y-3" data-testid="import-preview">
             <p className="text-xs text-muted-foreground">{c("importPreview", { n: String(importRows.length) })}</p>
-            <ul className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-y-auto">
-              {importRows.slice(0, 5).map((r) => (
-                <li key={`${r.source}-${r.external_review_id}`}>
-                  {r.author_name} · {r.rating}★ · {r.review_text.slice(0, 60)}
-                </li>
-              ))}
-            </ul>
-            <div className="flex gap-2">
-              <Button size="sm" disabled={importing || missingTable} onClick={() => void confirmImport()}>
+            <p className="text-xs text-muted-foreground" data-testid="import-summary">
+              {c("importSummary", {
+                n: String(importRows.length),
+                fresh: String(plan.fresh.length),
+                upd: String(plan.updates.length),
+                dupe: String(importDupes),
+              })}
+            </p>
+            {/* Full preview — the owner sees every row exactly as it will be stored. */}
+            <div className="max-h-72 overflow-auto border border-border rounded-lg">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-muted/80 backdrop-blur">
+                  <tr className="text-left">
+                    <th className="p-2 font-medium">{c("colAuthor")}</th>
+                    <th className="p-2 font-medium">{c("colRating")}</th>
+                    <th className="p-2 font-medium">{c("colSource")}</th>
+                    <th className="p-2 font-medium">{c("colDate")}</th>
+                    <th className="p-2 font-medium">{c("colText")}</th>
+                    <th className="p-2 font-medium">{c("colState")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importRows.map((r) => (
+                    <tr key={`${r.source}-${r.external_review_id}`} className="border-t border-border align-top">
+                      <td className="p-2 whitespace-nowrap">{r.author_name}</td>
+                      <td className="p-2"><Stars n={r.rating} /></td>
+                      <td className="p-2">{c(SOURCE_LABEL[r.source])}</td>
+                      <td className="p-2 whitespace-nowrap text-muted-foreground">
+                        {r.reviewed_at ? new Date(r.reviewed_at).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="p-2 text-muted-foreground max-w-md">{r.review_text}</td>
+                      <td className="p-2 whitespace-nowrap">
+                        {isUpdate.has(`${r.source}|${r.external_review_id}`) ? c("rowUpdate") : c("rowNew")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <label className="flex items-start gap-2 text-xs text-foreground">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={rightsConfirmed}
+                onChange={(e) => setRightsConfirmed(e.target.checked)}
+                data-testid="import-rights"
+              />
+              <span>
+                {c("importRights")}
+                <span className="block text-muted-foreground">{c("importRightsHint")}</span>
+              </span>
+            </label>
+            <div className="flex gap-2 items-center flex-wrap">
+              <Button
+                size="sm"
+                disabled={importing || missingTable || !rightsConfirmed}
+                onClick={() => void confirmImport()}
+              >
                 {importing ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : <Upload size={13} className="mr-1.5" />}
                 {c("importConfirm", { n: String(importRows.length) })}
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setImportRows(null);
-                  setImportErrors([]);
-                  if (fileRef.current) fileRef.current.value = "";
-                }}
-              >
+              <Button size="sm" variant="ghost" onClick={resetImport}>
                 {c("importCancel")}
               </Button>
+              {!rightsConfirmed && <span className="text-[11px] text-muted-foreground">{c("importNeedsRights")}</span>}
             </div>
           </div>
         )}
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          {c("lastImport", { v: lastImport ? new Date(lastImport).toLocaleString() : c("neverImported") })}
+        </p>
       </DashboardCard>
 
       {/* -------------------------------------------------------- filters --- */}

@@ -35,25 +35,21 @@ describe("reviews migration — structure", () => {
   });
 });
 
-describe("reviews migration — per-source sync state", () => {
-  it("creates one admin-only row per automated source", () => {
-    expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS public\.review_sync_state/);
-    expect(sql).toMatch(/last_attempt_at|last_success_at/);
-    expect(sql).toMatch(/imported_count[\s\S]*updated_count[\s\S]*skipped_count/);
-    expect(sql).toMatch(/status IN \('never','ok','error','not_configured','rate_limited'\)/);
-    expect(sql).toMatch(/INSERT INTO public\.review_sync_state \(source\) VALUES \('google'\)/);
+describe("reviews migration — manual import only", () => {
+  it("keeps no sync state table and no automated-source plumbing", () => {
+    expect(sql).not.toMatch(/review_sync_state/);
+    expect(sql).not.toMatch(/last_attempt_at|imported_count|rate_limited/);
   });
 
-  it("never grants anon access to the sync state", () => {
-    const grants = sql.match(/GRANT[^;]*review_sync_state[^;]*;/gi) ?? [];
-    expect(grants.length).toBeGreaterThan(0);
-    expect(grants.some((g) => /anon/i.test(g))).toBe(false);
+  it("tracks when a row last arrived through a manual import", () => {
+    expect(sql).toMatch(/imported_at\s+timestamptz/);
+    expect(sql).not.toMatch(/last_synced_at/);
   });
 });
 
 describe("reviews migration — RLS and grants", () => {
-  it("enables RLS on all three tables", () => {
-    for (const t of ["reviews", "review_display_settings", "review_sync_state"]) {
+  it("enables RLS on both tables", () => {
+    for (const t of ["reviews", "review_display_settings"]) {
       expect(sql).toMatch(new RegExp(`ALTER TABLE public\\.${t} ENABLE ROW LEVEL SECURITY`));
     }
   });
@@ -71,7 +67,6 @@ describe("reviews migration — RLS and grants", () => {
   it("gates the anon read behind the visibility function and gives admins full control", () => {
     expect(sql).toMatch(/USING \(public\.review_is_public\(rating, source, visible\)\)/);
     expect(sql).toMatch(/Admins manage reviews[\s\S]*has_role\(auth\.uid\(\), 'admin'::app_role\)/);
-    expect(sql).toMatch(/Admins read review sync state[\s\S]*has_role/);
   });
 
   it("pins search_path and revokes the definer function from PUBLIC", () => {
@@ -81,9 +76,8 @@ describe("reviews migration — RLS and grants", () => {
 });
 
 describe("reviews migration — tripadvisor is not a storable source", () => {
-  it("forbids tripadvisor rows, settings and sync state at the database level", () => {
+  it("forbids tripadvisor rows and settings at the database level", () => {
     expect(sql).toMatch(/source\s+text NOT NULL CHECK \(source IN \('google', 'manual'\)\)/);
-    expect(sql).toMatch(/source\s+text PRIMARY KEY CHECK \(source = 'google'\)/);
     expect(sql).toMatch(/allowed_sources\s+text\[\] NOT NULL DEFAULT '\{google,manual\}'/);
   });
 

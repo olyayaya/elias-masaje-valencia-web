@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 import {
   DEFAULT_REVIEW_SETTINGS,
   parseReviewImport,
@@ -25,7 +26,7 @@ const review = (p: Partial<Review>): Review => ({
   manual_priority: p.manual_priority ?? 0,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
-  last_synced_at: null,
+  imported_at: null,
 });
 
 const settings = (p: Partial<ReviewDisplaySettings> = {}): ReviewDisplaySettings => ({
@@ -155,7 +156,6 @@ describe("parseReviewImport", () => {
 
 describe("prepared backend artefacts", () => {
   const sql = readFileSync("supabase/pending-migrations/20260817170000_reviews.sql", "utf8");
-  const fn = readFileSync("supabase/functions/reviews-sync/index.ts", "utf8");
 
   it("enforces rating bounds, dedupe key, RLS and grants", () => {
     expect(sql).toMatch(/rating\s+(smallint|integer)[^,]*check\s*\(\s*rating\s*(between|>=)/i);
@@ -164,12 +164,12 @@ describe("prepared backend artefacts", () => {
     expect(sql).toMatch(/grant/i);
   });
 
-  it("keeps the sync admin-only and leaks no secrets", () => {
-    expect(fn).toMatch(/has_role/);
-    expect(fn).toMatch(/not_configured/);
-    expect(fn).not.toMatch(/console\.log\([^)]*token/i);
-    // Moderation columns are never part of the upsert payload.
-    expect(fn).not.toMatch(/visible:\s*(true|false)/);
-    expect(fn).not.toMatch(/pinned:\s*(true|false)/);
+  it("ships no review sync edge function and no provider secrets", () => {
+    expect(existsSync("supabase/functions/reviews-sync")).toBe(false);
+    const tracked = execSync("git ls-files supabase src", { encoding: "utf8" });
+    expect(tracked).not.toMatch(/reviews-sync/);
+    expect(sql).not.toMatch(/review_sync_state/);
+    expect(sql).not.toMatch(/GOOGLE_BUSINESS/);
   });
 });
+
