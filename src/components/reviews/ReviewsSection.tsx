@@ -46,7 +46,7 @@ const Stars = ({ n, label }: { n: number; label: string }) => (
   </span>
 );
 
-const ReviewCard = ({ review }: { review: Review }) => {
+const ReviewCard = ({ review, clone = false }: { review: Review; clone?: boolean }) => {
   const { t, locale } = useI18n();
   const [expanded, setExpanded] = useState(false);
   // The page language decides which stored text is shown; the original is the
@@ -60,16 +60,17 @@ const ReviewCard = ({ review }: { review: Review }) => {
   return (
     <li
       className="snap-start shrink-0 w-[85vw] sm:w-[340px] bg-secondary/60 rounded-2xl border border-border/50 p-6"
-      data-testid="review-card"
+      data-testid={clone ? "review-card-clone" : "review-card"}
+      aria-hidden={clone || undefined}
     >
       {/* Name and date lead the card: one tidy row when they fit, the date
           moving down as a whole when they don't. */}
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3" data-testid="review-meta">
+      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
         <p className="min-w-0 flex-1 text-sm font-body font-medium not-italic">
           <cite
             className="not-italic block truncate whitespace-nowrap"
             title={authorName}
-            data-testid="review-author"
+            data-testid={clone ? undefined : "review-author"}
           >
             {authorName}
           </cite>
@@ -111,7 +112,10 @@ const ReviewCard = ({ review }: { review: Review }) => {
           </a>
         )}
         {translated && (
-          <span className="text-[10px] font-body text-muted-foreground/50" data-testid="review-translated-note">
+          <span
+            className="text-[10px] font-body text-muted-foreground/50"
+            data-testid={clone ? undefined : "review-translated-note"}
+          >
             {t.testimonials.translatedNote}
           </span>
         )}
@@ -205,19 +209,7 @@ const ReviewsSection = () => {
             {reviews.map((r) => (
               <ReviewCard key={r.id} review={r} />
             ))}
-            {running &&
-              reviews.map((r) => (
-                <li
-                  key={`clone-${r.id}`}
-                  aria-hidden="true"
-                  className="contents"
-                  data-testid="review-card-clone"
-                >
-                  <ul className="contents">
-                    <ReviewCard review={r} />
-                  </ul>
-                </li>
-              ))}
+            {running && reviews.map((r) => <ReviewCard key={`clone-${r.id}`} review={r} clone />)}
           </ul>
 
           {reviews.length > 1 && (
