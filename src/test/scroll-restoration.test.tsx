@@ -166,12 +166,13 @@ describe("language switch scroll preservation", () => {
   });
 
   it("uses the saved position on Back/Forward, not the language-switch state", () => {
-    sessionStorage.setItem(scrollKey("/", ""), "410");
     const { getByText } = mountLang("/", "/en", "/unused");
     atY(900);
     act(() => {
       getByText("switch").click();
     });
+    // The page "/" is later remembered at a different offset.
+    sessionStorage.setItem(scrollKey("/", ""), "410");
     scrollSpy.mockClear();
     act(() => {
       getByText("back").click();
