@@ -671,6 +671,11 @@ const DashboardReviews = () => {
             />
           </label>
         </div>
+        {formError && (
+          <p className="mt-3 text-xs text-destructive" role="alert" data-testid="manual-error">
+            {formError}
+          </p>
+        )}
         <Button size="sm" className="mt-3 min-h-11" disabled={adding || missingTable} onClick={() => void addManual()}>
           {adding ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : <Plus size={13} className="mr-1.5" />}
           {c("manualAdd")}
@@ -767,16 +772,19 @@ const DashboardReviews = () => {
                           isSelected ? "bg-primary/10" : ""
                         } ${r.status === "invalid" ? "opacity-70" : ""}`}
                       >
-                        <td className="p-2">
-                          <input
-                            type="checkbox"
-                            className="w-5 h-5"
-                            checked={isSelected}
-                            disabled={!selectable}
-                            aria-label={`${c("colSel")} ${r.line}`}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => toggleRow(r, e.nativeEvent as unknown as { shiftKey?: boolean })}
-                          />
+                        <td className="p-0">
+                          {/* 44x44 hit area around the 20x20 box: the whole cell is tappable. */}
+                          <label className="flex items-center justify-center min-w-11 min-h-11 w-11 h-11 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="w-5 h-5"
+                              checked={isSelected}
+                              disabled={!selectable}
+                              aria-label={`${c("colSel")} ${r.line}`}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => toggleRow(r, e.nativeEvent as unknown as { shiftKey?: boolean })}
+                            />
+                          </label>
                         </td>
                         <td className="p-2 tabular-nums text-muted-foreground min-h-11">{r.line}</td>
                         <td className="p-2 whitespace-nowrap">{r.raw.author_name || "—"}</td>
@@ -803,6 +811,35 @@ const DashboardReviews = () => {
                 </tbody>
               </table>
             </div>
+
+            <fieldset className="space-y-1" data-testid="import-visibility">
+              <legend className="text-xs font-medium text-foreground mb-1">{c("visibilityChoice")}</legend>
+              <label className="flex items-start gap-2 text-xs text-foreground min-h-11 py-1">
+                <input
+                  type="radio"
+                  name="import-visibility"
+                  className="mt-0.5 w-5 h-5"
+                  checked={!publishNow}
+                  onChange={() => setPublishNow(false)}
+                  data-testid="import-visible-hidden"
+                />
+                <span>{c("visHidden")}</span>
+              </label>
+              <label className="flex items-start gap-2 text-xs text-foreground min-h-11 py-1">
+                <input
+                  type="radio"
+                  name="import-visibility"
+                  className="mt-0.5 w-5 h-5"
+                  checked={publishNow}
+                  onChange={() => setPublishNow(true)}
+                  data-testid="import-visible-publish"
+                />
+                <span>{c("visPublish")}</span>
+              </label>
+              <p className="text-[11px] text-muted-foreground" data-testid="import-visibility-note">
+                {publishNow ? c("visPublishNote") : c("visHiddenNote")} {c("visIgnoresFile")}
+              </p>
+            </fieldset>
 
             <label className="flex items-start gap-2 text-xs text-foreground">
               <input
@@ -833,6 +870,9 @@ const DashboardReviews = () => {
               <Button size="sm" variant="ghost" className="min-h-11" onClick={resetImport}>
                 {c("importCancel")}
               </Button>
+              <span className="text-[11px] text-muted-foreground" data-testid="import-mode-reminder">
+                {publishNow ? c("visPublish") : c("visHidden")}
+              </span>
               {!rightsConfirmed && <span className="text-[11px] text-muted-foreground">{c("importNeedsRights")}</span>}
             </div>
           </div>
