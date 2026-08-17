@@ -26,6 +26,7 @@ interface MediaFile {
 type DeleteTarget = {
   name: string;
   usages: MediaUsage[];
+  historyReferences: number;
 };
 
 const DashboardMedia = () => {
@@ -87,7 +88,7 @@ const DashboardMedia = () => {
     setChecking(name);
     try {
       const result = await checkMediaUsage(name);
-      setTarget({ name, usages: result.usages ?? [] });
+      setTarget({ name, usages: result.usages ?? [], historyReferences: result.historyReferences ?? 0 });
     } catch (err: any) {
       toast.error(err.message || "Couldn't verify where this file is used");
     } finally {
@@ -106,7 +107,7 @@ const DashboardMedia = () => {
         fetchFiles();
       } else {
         // Became used between check and delete
-        setTarget({ name: target.name, usages: result.usages ?? [] });
+        setTarget({ name: target.name, usages: result.usages ?? [], historyReferences: result.historyReferences ?? 0 });
         toast.error("File is now in use — deletion blocked");
       }
     } catch (err: any) {
@@ -208,6 +209,14 @@ const DashboardMedia = () => {
                 : "No content references this file. Deleting it is permanent and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {!blocked && (target?.historyReferences ?? 0) > 0 && (
+            <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
+              Heads-up: {target?.historyReferences} archived version
+              {target?.historyReferences === 1 ? "" : "s"} in the change history still reference this file. Restoring
+              one of those older versions after deletion would show a broken image. Live content is not affected.
+            </p>
+          )}
 
           {blocked && (
             <div className="max-h-64 overflow-auto space-y-2 text-xs border border-border rounded-lg p-3">
