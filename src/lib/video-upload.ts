@@ -24,14 +24,21 @@ async function accessToken(): Promise<string> {
 
 const endpoint = () => `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`;
 
-/** Best-effort cleanup of a partially/fully uploaded object. Never throws. */
-export async function removeObject(name: string): Promise<void> {
+/**
+ * Best-effort cleanup of a partially/fully uploaded object. Never throws, but reports
+ * honestly whether the object is actually gone — callers must not claim a clean state
+ * when Storage refused the delete.
+ */
+export async function removeObject(name: string): Promise<boolean> {
   try {
-    await supabase.storage.from(BUCKET).remove([name]);
+    const { error } = await supabase.storage.from(BUCKET).remove([name]);
+    return !error;
   } catch {
     /* nothing else we can do client-side; the server-side commit also cleans up */
+    return false;
   }
 }
+
 
 /**
  * Reserved, user-bound name for a throwaway upload awaiting server promotion.
