@@ -162,7 +162,11 @@ export interface ImportPreview {
 
 const clean = (v: unknown) => (typeof v === "string" ? v.trim() : v == null ? "" : String(v).trim());
 
-const httpsOnly = (v: string): { url: string | null; bad: boolean } => {
+/**
+ * HTTPS-only link policy, shared by the import parser and the manual form so a
+ * bad link is reported the same way in both places instead of being dropped.
+ */
+export const httpsOnly = (v: string): { url: string | null; bad: boolean } => {
   if (!v) return { url: null, bad: false };
   try {
     const u = new URL(v);
