@@ -30,9 +30,9 @@ export class MediaGuardError extends Error {
   }
 }
 
-type Action = "check" | "delete" | "rename" | "replace";
+type Action = "check" | "delete" | "rename" | "replace" | "usage-batch" | "commit-video";
 
-const invoke = async (action: Action, body: Record<string, unknown>): Promise<MediaGuardResult> => {
+const invoke = async <T = MediaGuardResult>(action: Action, body: Record<string, unknown>): Promise<T> => {
   const { data, error } = await supabase.functions.invoke("media-guard", {
     body: { action, ...body },
   });
@@ -42,7 +42,7 @@ const invoke = async (action: Action, body: Record<string, unknown>): Promise<Me
     const ctx = (error as unknown as { context?: Response }).context;
     if (ctx && typeof ctx.json === "function") {
       const payload = await ctx.json().catch(() => null);
-      if (payload && typeof payload === "object" && "usages" in payload) return payload as MediaGuardResult;
+      if (payload && typeof payload === "object" && "usages" in payload) return payload as T;
       if (payload && typeof payload === "object" && "error" in payload) {
         const p = payload as { error: string; alreadyCompressed?: boolean };
         throw new MediaGuardError(String(p.error), { alreadyCompressed: !!p.alreadyCompressed });
@@ -51,7 +51,7 @@ const invoke = async (action: Action, body: Record<string, unknown>): Promise<Me
     throw new MediaGuardError(error.message || "Media check failed");
   }
   if (data && (data as { error?: string }).error) throw new MediaGuardError((data as { error: string }).error);
-  return data as MediaGuardResult;
+  return data as T;
 };
 
 /** Fresh server-side usage lookup across all content tables. */
@@ -75,3 +75,23 @@ export const replaceMediaFile = (args: {
   contentType: string;
   originalSize: number;
 }) => invoke("replace", args);
+
+/**
+ * One server-side scan that counts live references for many files at once — used by the
+ * library's used/unused filter so the UI never fires N usage requests.
+ */
+export const checkMediaUsageBatch = (fileNames: string[]) =>
+  invoke<{ usage: Record<string, number> }>("usage-batch", { fileNames });
+
+/**
+ * Promotes a resumably-uploaded video object over an existing one. The server re-verifies
+ * container magic bytes, the real stored sizes and (for smart conversion) the 10% / 10 KB
+ * threshold, then rewrites every content reference + alias in one transaction.
+ */
+export const commitVideoReplacement = (args: {
+  fileName: string;
+  stagedName: string;
+  newName: string;
+  contentType: string;
+  enforceSaving?: boolean;
+}) => invoke("commit-video", args);

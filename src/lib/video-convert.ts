@@ -1,0 +1,171 @@
+/**
+ * Pure decision logic for the browser-side video converter.
+ * Everything here is runtime-agnostic (no ffmpeg import) so the whole policy —
+ * never upscale, even dimensions, codec availability, smart preset, saving threshold —
+ * is unit-testable and can never diverge from what actually runs.
+ */
+
+export type VideoFormat = "mp4" | "webm";
+export type VideoQuality = "high" | "balanced" | "small";
+export type ResolutionChoice = "original" | "1080" | "720" | "480";
+
+/** Hard ceiling for the local converter: bigger sources may only be uploaded as-is. */
+export const MAX_CONVERT_BYTES = 250 * 1024 * 1024;
+/** Above this the browser tab is likely to run out of memory during a wasm transcode. */
+export const MEMORY_WARN_BYTES = 120 * 1024 * 1024;
+/** Smart mode must save at least this much, mirroring the image thresholds. */
+export const MIN_SAVING_RATIO = 0.1;
+export const MIN_SAVING_BYTES = 10 * 1024;
+/** Web-friendly frame-rate cap applied by the smart preset. */
+export const FPS_CAP = 30;
+
+export interface VideoMeta {
+  width: number;
+  height: number;
+  duration: number;
+  size: number;
+  fps?: number;
+}
+
+/** Encoders the loaded ffmpeg core actually reports. Options are gated on this. */
+export interface EncoderCaps {
+  h264: boolean;
+  vp9: boolean;
+  aac: boolean;
+  opus: boolean;
+}
+
+export const EXT_BY_FORMAT: Record<VideoFormat, string> = { mp4: "mp4", webm: "webm" };
+export const MIME_BY_FORMAT: Record<VideoFormat, string> = {
+  mp4: "video/mp4",
+  webm: "video/webm",
+};
+
+/** A format is offerable only when its video encoder exists in this core build. */
+export function availableFormats(caps: EncoderCaps): VideoFormat[] {
+  const out: VideoFormat[] = [];
+  if (caps.h264) out.push("mp4");
+  if (caps.vp9) out.push("webm");
+  return out;
+}
+
+const evenDown = (n: number) => Math.max(2, Math.floor(n / 2) * 2);
+
+/**
+ * Target dimensions for a resolution choice.
+ * - never upscales (a 480p source stays 480p even if 1080p is requested)
+ * - preserves aspect ratio
+ * - both dimensions are even (required by yuv420p)
+ * The limit applies to the *short* side so portrait video is handled correctly.
+ */
+export function targetDimensions(
+  width: number,
+  height: number,
+  choice: ResolutionChoice,
+): { width: number; height: number } {
+  const w = Math.max(1, Math.round(width));
+  const h = Math.max(1, Math.round(height));
+  if (choice === "original") return { width: evenDown(w), height: evenDown(h) };
+  const limit = Number(choice);
+  const short = Math.min(w, h);
+  if (short <= limit) return { width: evenDown(w), height: evenDown(h) };
+  const scale = limit / short;
+  return { width: evenDown(w * scale), height: evenDown(h * scale) };
+}
+
+const CRF: Record<VideoFormat, Record<VideoQuality, number>> = {
+  mp4: { high: 20, balanced: 24, small: 28 },
+  webm: { high: 30, balanced: 34, small: 38 },
+};
+
+const AUDIO_KBPS: Record<VideoQuality, number> = { high: 160, balanced: 128, small: 96 };
+
+export interface ConvertOptions {
+  inputName: string;
+  outputName: string;
+  format: VideoFormat;
+  quality: VideoQuality;
+  resolution: ResolutionChoice;
+  meta: Pick<VideoMeta, "width" | "height">;
+  caps: EncoderCaps;
+  fpsCap?: number;
+}
+
+/**
+ * Builds the exact ffmpeg argv. Single-thread core, so no -threads juggling.
+ * MP4 always gets +faststart (metadata first → starts playing while downloading).
+ */
+export function buildFfmpegArgs(o: ConvertOptions): string[] {
+  const { width, height } = targetDimensions(o.meta.width, o.meta.height, o.resolution);
+  const fps = o.fpsCap ?? FPS_CAP;
+  const args = ["-i", o.inputName, "-vf", `scale=${width}:${height}`, "-r", String(fps)];
+
+  if (o.format === "mp4") {
+    args.push("-c:v", "libx264", "-preset", "veryfast", "-crf", String(CRF.mp4[o.quality]));
+    args.push("-pix_fmt", "yuv420p", "-movflags", "+faststart");
+    args.push("-c:a", o.caps.aac ? "aac" : "libmp3lame", "-b:a", `${AUDIO_KBPS[o.quality]}k`);
+  } else {
+    args.push("-c:v", "libvpx-vp9", "-b:v", "0", "-crf", String(CRF.webm[o.quality]));
+    args.push("-row-mt", "1", "-pix_fmt", "yuv420p");
+    args.push("-c:a", o.caps.opus ? "libopus" : "libvorbis", "-b:a", `${AUDIO_KBPS[o.quality]}k`);
+  }
+  args.push("-y", o.outputName);
+  return args;
+}
+
+/**
+ * Smart preset: compatible container, max 1080p, capped fps, sensible quality by source size.
+ * Falls back to whatever the core can actually encode.
+ */
+export function smartPreset(
+  meta: VideoMeta,
+  caps: EncoderCaps,
+): { format: VideoFormat; resolution: ResolutionChoice; quality: VideoQuality } | null {
+  const formats = availableFormats(caps);
+  if (!formats.length) return null;
+  const format: VideoFormat = formats.includes("mp4") ? "mp4" : "webm";
+  const short = Math.min(meta.width, meta.height);
+  const resolution: ResolutionChoice = short > 1080 ? "1080" : "original";
+  const perSecond = meta.duration > 0 ? meta.size / meta.duration : 0;
+  // > ~1.5 MB/s of source is clearly unoptimized footage → push harder.
+  const quality: VideoQuality = perSecond > 1.5 * 1024 * 1024 ? "small" : "balanced";
+  return { format, resolution, quality };
+}
+
+export type VideoSavingVerdict =
+  | { ok: true; savedBytes: number; savedPercent: number }
+  | { ok: false; reason: "notSmaller" | "alreadyOptimized"; savedBytes: number };
+
+/** Same 10% / 10 KB contract as image compression, evaluated on real byte sizes. */
+export function evaluateVideoSaving(originalSize: number, newSize: number): VideoSavingVerdict {
+  const saved = originalSize - newSize;
+  if (saved <= 0) return { ok: false, reason: "notSmaller", savedBytes: saved };
+  if (saved < MIN_SAVING_BYTES || saved / originalSize < MIN_SAVING_RATIO) {
+    return { ok: false, reason: "alreadyOptimized", savedBytes: saved };
+  }
+  return { ok: true, savedBytes: saved, savedPercent: Math.round((saved / originalSize) * 100) };
+}
+
+/** Output filename derived from the source basename + the produced container. */
+export function outputNameFor(sourceName: string, format: VideoFormat): string {
+  const base = sourceName.replace(/\.[^.]+$/, "") || "video";
+  return `${base}.${EXT_BY_FORMAT[format]}`;
+}
+
+/** Parses `ffmpeg -encoders` output into the capability flags we gate options on. */
+export function parseEncoderCaps(log: string): EncoderCaps {
+  const has = (name: string) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "m").test(log);
+  return {
+    h264: has("libx264"),
+    vp9: has("libvpx-vp9"),
+    aac: has("aac"),
+    opus: has("libopus"),
+  };
+}
+
+export const formatDuration = (seconds: number): string => {
+  if (!Number.isFinite(seconds) || seconds < 0) return "—";
+  const s = Math.round(seconds);
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, "0")}`;
+};
