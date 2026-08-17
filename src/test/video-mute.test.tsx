@@ -125,14 +125,14 @@ vi.mock("@/lib/media-usage", () => ({
 
 vi.mock("@/components/dashboard/VideoConverterDialog", () => ({ default: () => null }));
 
-const uploadResumable = vi.fn(async () => undefined);
+const uploadResumable = vi.fn(async (..._a: unknown[]) => undefined);
 vi.mock("@/lib/video-upload", () => ({
   uploadResumable: (...a: unknown[]) => uploadResumable(...(a as [])),
   removeObject: vi.fn(async () => true),
   stagedObjectName: vi.fn(async () => "staged-x.mp4"),
 }));
 
-const imageUpload = vi.fn(async () => ({ error: null }));
+const imageUpload = vi.fn(async (..._a: unknown[]) => ({ error: null }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     storage: {
