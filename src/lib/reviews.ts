@@ -100,6 +100,50 @@ export function displayReviews(list: Review[], settings: ReviewDisplaySettings |
   return sortReviews(publicReviews(list, settings), mode);
 }
 
+/* ------------------------------ languages ------------------------------ */
+
+/** The three languages the public site is written in. */
+export const SITE_LOCALES = ["es", "en", "ru"] as const;
+export type SiteLocale = (typeof SITE_LOCALES)[number];
+
+export const isSiteLocale = (v: unknown): v is SiteLocale =>
+  typeof v === "string" && (SITE_LOCALES as readonly string[]).includes(v);
+
+/** Lowercase BCP-47-ish tag, or null when the file said nothing usable. */
+export const normalizeLanguage = (v: unknown): string | null => {
+  const raw = typeof v === "string" ? v.trim().toLowerCase().replace(/_/g, "-") : "";
+  return /^[a-z]{2,3}(-[a-z0-9]{2,8})*$/.test(raw) ? raw : null;
+};
+
+/** "pt-br" → "pt". Used only to decide whether a translation is a translation. */
+export const baseLanguage = (v: string | null | undefined): string | null =>
+  normalizeLanguage(v)?.split("-")[0] ?? null;
+
+export interface LocalizedReviewText {
+  /** What the card renders. */
+  text: string;
+  /** True only when a stored translation is shown for a different original language. */
+  translated: boolean;
+}
+
+type TranslatableReview = Pick<
+  Review,
+  "review_text" | "review_text_es" | "review_text_en" | "review_text_ru" | "original_language"
+>;
+
+/**
+ * The text for the current page language: the stored human translation when it
+ * exists, otherwise the untouched original. Nothing is translated at runtime.
+ */
+export function localizedReviewText(review: TranslatableReview, locale: SiteLocale): LocalizedReviewText {
+  const column =
+    locale === "es" ? review.review_text_es : locale === "en" ? review.review_text_en : review.review_text_ru;
+  const text = (column ?? "").trim();
+  if (!text) return { text: review.review_text, translated: false };
+  const origin = baseLanguage(review.original_language);
+  return { text: column as string, translated: !!origin && origin !== locale };
+}
+
 /* ---------------------------- manual import ---------------------------- */
 
 /** Hard limits, enforced before a single byte is parsed or written. */
@@ -137,7 +181,14 @@ export interface ParsedImportRow {
   dedupe_key: string;
   author_name: string;
   rating: number;
+  /** The original, kept byte-for-byte (after trim) whatever its language is. */
   review_text: string;
+  /** Language of `review_text`, when the file said so. */
+  original_language: string | null;
+  /** Human translations from the file; the original language column is filled in. */
+  review_text_es: string | null;
+  review_text_en: string | null;
+  review_text_ru: string | null;
   reviewed_at: string | null;
   original_url: string | null;
   /** From `pinned`/`featured` in the file. Visibility is never taken from the file. */
@@ -153,7 +204,7 @@ export interface PreviewRow {
   /** Present unless the row is invalid. */
   row: ParsedImportRow | null;
   /** What the file said, so an invalid row is still recognisable in the preview. */
-  raw: { author_name: string; rating: string; review_text: string; reviewed_at: string };
+  raw: { author_name: string; rating: string; review_text: string; reviewed_at: string; original_language: string };
   issues: ImportIssue[];
 }
 
@@ -267,6 +318,7 @@ const FIELD_ALIASES: Record<keyof PreviewRow["raw"], string[]> = {
   rating: ["rating", "stars", "score", "valoracion", "valoración", "puntuacion", "оценка", "рейтинг"],
   review_text: ["review_text", "text", "review", "comment", "content", "texto", "reseña", "resena", "отзыв", "текст"],
   reviewed_at: ["reviewed_at", "date", "created_at", "published_at", "fecha", "дата"],
+  original_language: ["original_language", "language", "lang", "idioma", "lengua", "язык"],
 };
 
 const pick = (rec: Record<string, unknown>, field: keyof PreviewRow["raw"]) => {
@@ -285,12 +337,33 @@ const truthy = (v: unknown): boolean => {
   return ["true", "1", "yes", "si", "sí", "да"].includes(clean(v).toLowerCase());
 };
 
+/**
+ * Translations the file may carry: `review_text_xx`, `text_xx` or a
+ * `translations: { es, en, ru }` object. Anything empty stays null.
+ */
+const pickTranslations = (rec: Record<string, unknown>): Record<SiteLocale, string | null> => {
+  const nested = rec.translations && typeof rec.translations === "object" ? (rec.translations as Record<string, unknown>) : {};
+  const out = { es: null, en: null, ru: null } as Record<SiteLocale, string | null>;
+  for (const loc of SITE_LOCALES) {
+    const candidates = [rec[`review_text_${loc}`], rec[`text_${loc}`], nested[loc], nested[`review_text_${loc}`]];
+    for (const candidate of candidates) {
+      const value = clean(candidate);
+      if (value) {
+        out[loc] = value;
+        break;
+      }
+    }
+  }
+  return out;
+};
+
 const normalizeRow = (rec: Record<string, unknown>, line: number): PreviewRow => {
   const raw = {
     author_name: pick(rec, "author_name"),
     rating: pick(rec, "rating"),
     review_text: pick(rec, "review_text"),
     reviewed_at: pick(rec, "reviewed_at"),
+    original_language: pick(rec, "original_language"),
   };
   const issues: ImportIssue[] = [];
 
@@ -318,10 +391,21 @@ const normalizeRow = (rec: Record<string, unknown>, line: number): PreviewRow =>
 
   if (issues.length) return { line, status: "invalid", row: null, raw, issues };
 
+  const language = normalizeLanguage(raw.original_language);
+  const translations = pickTranslations(rec);
+  const origin = baseLanguage(language);
+  // The original language always carries the original text, so a page in that
+  // language never falls back and never shows a re-worded version.
+  if (isSiteLocale(origin) && !translations[origin]) translations[origin] = raw.review_text;
+
   const row: ParsedImportRow = {
     author_name: raw.author_name,
     rating,
     review_text: raw.review_text,
+    original_language: language,
+    review_text_es: translations.es,
+    review_text_en: translations.en,
+    review_text_ru: translations.ru,
     reviewed_at: reviewedAt,
     original_url: original.url,
     pinned: truthy(rec.pinned ?? rec.featured),
