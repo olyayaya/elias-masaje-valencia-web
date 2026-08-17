@@ -13,7 +13,7 @@ import VideoConverterDialog from "@/components/dashboard/VideoConverterDialog";
 const CAPS = { h264: true, vp9: true, aac: true, opus: true, mp3lame: true, vorbis: true };
 
 const probeEncoders = vi.fn((_signal?: AbortSignal) => Promise.resolve(CAPS));
-const probeVideoMeta = vi.fn(async () => ({ width: 1920, height: 1080, duration: 12, size: 1000 }));
+const probeVideoMeta = vi.fn(async (_f?: File) => ({ width: 1920, height: 1080, duration: 12, size: 1000 }));
 const convertVideo = vi.fn(async () => ({ blob: new Blob(["x"]), size: 2_000_000 }));
 
 vi.mock("@/lib/video-ffmpeg", () => ({
