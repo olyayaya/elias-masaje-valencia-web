@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { usePublicReviews } from "@/hooks/use-reviews";
-import { displayReviews, type Review } from "@/lib/reviews";
+import { displayReviews, isSiteLocale, localizedReviewText, type Review } from "@/lib/reviews";
 
 /* ------------------------------------------------------------------ *
  * Public reviews — real, manually imported reviews only.
@@ -35,9 +35,12 @@ const Stars = ({ n, label }: { n: number; label: string }) => (
 );
 
 const ReviewCard = ({ review }: { review: Review }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [expanded, setExpanded] = useState(false);
-  const longText = review.review_text.length > CLAMP_CHARS;
+  // The page language decides which stored text is shown; the original is the
+  // fallback and is never overwritten.
+  const { text, translated } = localizedReviewText(review, isSiteLocale(locale) ? locale : "es");
+  const longText = text.length > CLAMP_CHARS;
 
   return (
     <li
@@ -46,7 +49,7 @@ const ReviewCard = ({ review }: { review: Review }) => {
     >
       <Stars n={review.rating} label={t.testimonials.ratingAria.replace("{n}", String(review.rating))} />
       <blockquote className="text-sm text-muted-foreground font-body leading-relaxed italic">
-        <p className={!expanded && longText ? "line-clamp-4" : undefined}>{review.review_text}</p>
+        <p className={!expanded && longText ? "line-clamp-4" : undefined}>{text}</p>
       </blockquote>
       {longText && (
         <button
@@ -62,6 +65,11 @@ const ReviewCard = ({ review }: { review: Review }) => {
           <cite className="not-italic">{review.author_name}</cite>
         </p>
         <div className="flex items-center gap-2 shrink-0">
+          {translated && (
+            <span className="text-[10px] font-body text-muted-foreground/50" data-testid="review-translated-note">
+              {t.testimonials.translatedNote}
+            </span>
+          )}
           {review.reviewed_at && (
             <span className="text-[10px] font-body text-muted-foreground/60">
               {new Date(review.reviewed_at).toLocaleDateString()}
