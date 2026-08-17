@@ -6,8 +6,11 @@ export type MediaGuardResult = {
   fileName: string;
   inUse: boolean;
   usages: MediaUsage[];
+  /** Non-blocking: how many archived content versions still reference this file. */
+  historyReferences?: number;
   deleted?: boolean;
 };
+
 
 const invoke = async (action: "check" | "delete", fileName: string): Promise<MediaGuardResult> => {
   const { data, error } = await supabase.functions.invoke("media-guard", {
