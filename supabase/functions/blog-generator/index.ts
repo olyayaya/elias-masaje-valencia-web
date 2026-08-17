@@ -240,7 +240,9 @@ INSTRUCTIONS:
 - Keep the same structure (headings, lists, paragraphs)
 - Maintain the Elias Masaje brand voice: calm, warm, professional, holistic
 - Adapt SEO keywords for ${langName}-speaking audience searching in Valencia
-- Keep HTML formatting: <h2>, <h3>, <p>, <ul><li>, <ol><li>, <strong>, <em>
+- Keep HTML formatting: <h2>, <h3>, <p>, <ul><li>, <ol><li>, <strong>, <em>, <img>
+- Keep every <img> tag with its exact src and any data-decorative attribute unchanged
+- Translate the alt attribute of every <img> into ${langName} — never leave the source-language alt text
 - Do NOT add or remove sections — keep the same structure
 - The meta description must be under 155 characters in ${langName}
 

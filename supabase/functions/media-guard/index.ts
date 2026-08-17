@@ -10,6 +10,7 @@ import {
   validateName,
   validateOutputType,
   validateRenameExtension,
+  SCANS,
 } from "./rules.ts";
 
 
@@ -19,21 +20,6 @@ const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 type Usage = { entity: string; label: string; id: string; field: string };
 
-// Every public table + column that a dashboard editor can put a media URL/filename into.
-// Audited against the production schema — no speculative columns. Kept in sync with
-// public.rewrite_media_references (same tables, same columns).
-// Deliberately NOT scanned:
-//   booking_leads / conversion_events → visitor-submitted data, never an editor image source
-//   content_history                   → immutable audit log; handled through media_aliases instead
-const SCANS: { table: string; label: string; nameField: string; fields: string[] }[] = [
-  { table: "blog_posts", label: "Blog post", nameField: "title", fields: ["content", "content_en", "content_ru", "meta_description", "meta_description_en", "meta_description_ru"] },
-  { table: "site_content", label: "Site content", nameField: "label", fields: ["value_es", "value_en", "value_ru"] },
-  { table: "page_images", label: "Image / carousel", nameField: "collection_key", fields: ["image_url", "alt_text"] },
-  { table: "services", label: "Service", nameField: "title", fields: ["description", "description_en", "description_ru"] },
-  { table: "faqs", label: "FAQ", nameField: "question", fields: ["question", "question_en", "question_ru", "answer", "answer_en", "answer_ru"] },
-  { table: "promotions", label: "Promotion", nameField: "badge_text", fields: ["badge_text", "badge_text_en", "badge_text_ru"] },
-  { table: "testimonials", label: "Testimonial", nameField: "name", fields: ["quote", "quote_en", "quote_ru"] },
-];
 
 type Client = ReturnType<typeof createClient>;
 

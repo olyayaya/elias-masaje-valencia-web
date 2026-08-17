@@ -17,9 +17,35 @@ import { queryKeys } from "@/lib/query-keys";
 import DashboardCard from "./DashboardCard";
 import ImagePicker from "./ImagePicker";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
+import ImageAltDialog from "./ImageAltDialog";
+import { countMissingAlt, countNonLocalizedAlt, DECORATIVE_ATTR, type AltLang } from "@/lib/alt-text";
 import { AI_ENABLED } from "@/config/features";
 import { slugify, isValidSlug } from "@/lib/blog-slugs";
 import { toast } from "sonner";
+
+/**
+ * Image node that keeps the alt text AND an explicit decorative marker, so an
+ * intentional alt="" is never confused with a forgotten SEO description.
+ */
+const ImageWithAlt = ImageExt.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      [DECORATIVE_ATTR]: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute(DECORATIVE_ATTR),
+        renderHTML: (attributes: Record<string, unknown>) =>
+          attributes[DECORATIVE_ATTR] ? { [DECORATIVE_ATTR]: "true" } : {},
+      },
+    };
+  },
+});
+
+export const buildImageAttrs = (src: string, alt: string, decorative: boolean) => ({
+  src,
+  alt: decorative ? "" : alt,
+  [DECORATIVE_ATTR]: decorative ? "true" : null,
+});
 
 interface BlogPost {
   id: string;
@@ -407,6 +433,12 @@ const DashboardBlog = () => {
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">{langVal(p, "meta_description", lang) || p.meta_description}</p>
+              {countMissingAlt(langVal(p, "content", lang)) > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                  <ImageIcon size={11} />
+                  {countMissingAlt(langVal(p, "content", lang))} image(s) without alt text ({lang.toUpperCase()})
+                </p>
+              )}
               <div className="flex gap-1.5 mt-2 flex-wrap">
                 {(p[kwKey(lang)] || p.seo_keywords).map((kw) => (
                   <span key={kw} className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded">{kw}</span>
@@ -470,6 +502,9 @@ const BlogEditor = ({
   const [regenerating, setRegenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [altDialog, setAltDialog] = useState<
+    { src: string; alt: string; decorative: boolean; mode: "insert" | "edit" } | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -483,7 +518,7 @@ const BlogEditor = ({
         heading: { levels: [1, 2, 3] },
       }),
       Link.configure({ openOnClick: false }),
-      ImageExt,
+      ImageWithAlt,
       Placeholder.configure({ placeholder: "Start writing your post…" }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
@@ -523,8 +558,8 @@ const BlogEditor = ({
       const { error } = await supabase.storage.from("media").upload(path, file, { contentType: file.type });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-      editor.chain().focus().setImage({ src: urlData.publicUrl }).run();
-      toast.success("Image inserted");
+      // Alt text is required before the image lands in the article.
+      setAltDialog({ src: urlData.publicUrl, alt: "", decorative: false, mode: "insert" });
     } catch (err: any) {
       toast.error(err.message || "Upload failed");
     } finally {
@@ -564,6 +599,9 @@ const BlogEditor = ({
   const currentTitle = (draft[titleKey] as string) || "";
   const currentContent = (draft[contentKey] as string) || "";
   const currentIsEmpty = !currentTitle.trim() && !currentContent.trim();
+  // SEO alt health for the language currently being edited.
+  const missingAltCount = countMissingAlt(currentContent);
+  const nonLocalizedAltCount = lang === "es" ? 0 : countNonLocalizedAlt((draft.content as string) || "", currentContent);
 
   const sourceLang = currentIsEmpty
     ? allLangs.find((l) => {
@@ -613,6 +651,16 @@ const BlogEditor = ({
       editor?.commands.setContent((updated[contentKey] as string) || "", { emitUpdate: false });
       await autoSaveDraft(updated);
       toast.success(`${langLabels[lang]} version generated and saved`);
+      const carried = countNonLocalizedAlt(
+        (draft[langKey("content", srcLang) as keyof BlogPost] as string) || "",
+        (updated[contentKey] as string) || "",
+      );
+      const missing = countMissingAlt((updated[contentKey] as string) || "");
+      if (carried > 0 || missing > 0) {
+        toast.warning(
+          `Check image alt text in ${langLabels[lang]}: ${carried} not translated, ${missing} missing.`,
+        );
+      }
     } catch (e: any) {
       toast.error(e.message || "Translation failed");
     } finally {
@@ -739,6 +787,32 @@ const BlogEditor = ({
         </DashboardCard>
       )}
 
+      {(missingAltCount > 0 || nonLocalizedAltCount > 0) && (
+        <DashboardCard>
+          <div className="space-y-1">
+            {missingAltCount > 0 && (
+              <p className="text-xs text-foreground flex items-start gap-2">
+                <ImageIcon size={14} className="text-primary mt-0.5 shrink-0" />
+                <span>
+                  {missingAltCount} image{missingAltCount === 1 ? "" : "s"} without alt text in the {lang.toUpperCase()} version.
+                  Click the image in the editor, then use the pencil button in the toolbar to describe it
+                  (or mark it as decorative).
+                </span>
+              </p>
+            )}
+            {nonLocalizedAltCount > 0 && (
+              <p className="text-xs text-muted-foreground flex items-start gap-2">
+                <Languages size={14} className="text-primary mt-0.5 shrink-0" />
+                <span>
+                  {nonLocalizedAltCount} image{nonLocalizedAltCount === 1 ? "" : "s"} still carry the Spanish alt text in the{" "}
+                  {lang.toUpperCase()} version — review and translate them.
+                </span>
+              </p>
+            )}
+          </div>
+        </DashboardCard>
+      )}
+
       <DashboardCard>
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -817,6 +891,25 @@ const BlogEditor = ({
                   <ToolbarBtn onClick={() => setMediaPickerOpen(true)} active={false} title="Insert from media library">
                     <FolderOpen size={14} />
                   </ToolbarBtn>
+                  <ToolbarBtn
+                    onClick={() => {
+                      if (!editor.isActive("image")) {
+                        toast.info("Select an image in the text first");
+                        return;
+                      }
+                      const a = editor.getAttributes("image");
+                      setAltDialog({
+                        src: a.src || "",
+                        alt: a.alt || "",
+                        decorative: String(a[DECORATIVE_ATTR] ?? "") === "true",
+                        mode: "edit",
+                      });
+                    }}
+                    active={editor.isActive("image")}
+                    title="Edit alt text of the selected image"
+                  >
+                    <Pencil size={14} />
+                  </ToolbarBtn>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -827,11 +920,30 @@ const BlogEditor = ({
                   <ImagePicker
                     open={mediaPickerOpen}
                     onClose={() => setMediaPickerOpen(false)}
-                    onSelect={(url) => {
-                      editor?.chain().focus().setImage({ src: url }).run();
-                      toast.success("Image inserted from library");
-                    }}
+                    onSelect={(url) => setAltDialog({ src: url, alt: "", decorative: false, mode: "insert" })}
                   />
+                  {altDialog && (
+                    <ImageAltDialog
+                      open
+                      src={altDialog.src}
+                      lang={lang as AltLang}
+                      initialAlt={altDialog.alt}
+                      initialDecorative={altDialog.decorative}
+                      mode={altDialog.mode}
+                      onCancel={() => setAltDialog(null)}
+                      onConfirm={(alt, decorative) => {
+                        const attrs = buildImageAttrs(altDialog.src, alt, decorative);
+                        if (altDialog.mode === "edit") {
+                          editor.chain().focus().updateAttributes("image", attrs).run();
+                          toast.success("Alt text updated");
+                        } else {
+                          editor.chain().focus().setImage(attrs).run();
+                          toast.success("Image inserted");
+                        }
+                        setAltDialog(null);
+                      }}
+                    />
+                  )}
 
                   <ToolbarSep />
 

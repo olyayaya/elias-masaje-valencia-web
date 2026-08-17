@@ -266,6 +266,8 @@ export type Database = {
       page_images: {
         Row: {
           alt_text: string
+          alt_text_en: string | null
+          alt_text_ru: string | null
           collection_key: string
           created_at: string
           id: string
@@ -275,6 +277,8 @@ export type Database = {
         }
         Insert: {
           alt_text?: string
+          alt_text_en?: string | null
+          alt_text_ru?: string | null
           collection_key: string
           created_at?: string
           id?: string
@@ -284,6 +288,8 @@ export type Database = {
         }
         Update: {
           alt_text?: string
+          alt_text_en?: string | null
+          alt_text_ru?: string | null
           collection_key?: string
           created_at?: string
           id?: string
