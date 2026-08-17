@@ -126,17 +126,16 @@ BEGIN
   END IF;
 
   -- ONE locking statement in a deterministic (id) order — never caller order.
-  WITH locked AS (
-    SELECT id FROM public.gallery_items
-    WHERE id IN (_a, _b)
-    ORDER BY id
-    FOR UPDATE
-  )
-  SELECT count(*) INTO locked_count FROM locked;
+  PERFORM id FROM public.gallery_items
+   WHERE id IN (_a, _b)
+   ORDER BY id
+     FOR UPDATE;
+  GET DIAGNOSTICS locked_count = ROW_COUNT;
 
   IF locked_count <> 2 THEN
     RAISE EXCEPTION 'gallery item not found';
   END IF;
+
 
   SELECT sort_order INTO order_a FROM public.gallery_items WHERE id = _a;
   SELECT sort_order INTO order_b FROM public.gallery_items WHERE id = _b;
