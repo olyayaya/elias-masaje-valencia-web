@@ -23,7 +23,7 @@ describe("reviews migration — structure", () => {
     expect(sql).toMatch(/author_avatar_url IS NULL OR author_avatar_url ~ '\^https:\/\/'/);
     expect(sql).toMatch(/original_url IS NULL OR original_url ~ '\^https:\/\/'/);
     expect(sql).toMatch(/allowed_ratings <@ ARRAY\[1,2,3,4,5\]/);
-    expect(sql).toMatch(/allowed_sources <@ ARRAY\['google','tripadvisor','manual'\]/);
+    expect(sql).toMatch(/allowed_sources <@ ARRAY\['google','manual'\]/);
     expect(sql).toMatch(/sort_mode IN \('newest','oldest','rating_high','rating_low','manual'\)/);
     expect(sql).toMatch(/UNIQUE \(source, external_review_id\)/);
   });
@@ -41,7 +41,7 @@ describe("reviews migration — per-source sync state", () => {
     expect(sql).toMatch(/last_attempt_at|last_success_at/);
     expect(sql).toMatch(/imported_count[\s\S]*updated_count[\s\S]*skipped_count/);
     expect(sql).toMatch(/status IN \('never','ok','error','not_configured','rate_limited'\)/);
-    expect(sql).toMatch(/INSERT INTO public\.review_sync_state \(source\) VALUES \('google'\), \('tripadvisor'\)/);
+    expect(sql).toMatch(/INSERT INTO public\.review_sync_state \(source\) VALUES \('google'\)/);
   });
 
   it("never grants anon access to the sync state", () => {
@@ -77,5 +77,17 @@ describe("reviews migration — RLS and grants", () => {
   it("pins search_path and revokes the definer function from PUBLIC", () => {
     expect(sql).toMatch(/SECURITY DEFINER[\s\S]*SET search_path = public/);
     expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.review_is_public\(integer, text, boolean\) FROM PUBLIC/);
+  });
+});
+
+describe("reviews migration — tripadvisor is not a storable source", () => {
+  it("forbids tripadvisor rows, settings and sync state at the database level", () => {
+    expect(sql).toMatch(/source\s+text NOT NULL CHECK \(source IN \('google', 'manual'\)\)/);
+    expect(sql).toMatch(/source\s+text PRIMARY KEY CHECK \(source = 'google'\)/);
+    expect(sql).toMatch(/allowed_sources\s+text\[\] NOT NULL DEFAULT '\{google,manual\}'/);
+  });
+
+  it("never stores an empty author name", () => {
+    expect(sql).toMatch(/author_name[^,]*btrim\(author_name\) <> ''/);
   });
 });
