@@ -323,7 +323,7 @@ describe("review card layout and carousel controls", () => {
     expect(scroller.className).toContain("overflow-x-auto");
   });
 
-  it("toggles autoplay with a localized stop / play button", () => {
+  it("toggles autoplay with a localized stop / play button and keeps the clone track mounted", () => {
     state.value.items = [review({ id: "a" }), review({ id: "b", author_name: "Bea" })];
     mount();
     const toggle = screen.getByTestId("reviews-autoplay-toggle");
@@ -331,11 +331,27 @@ describe("review card layout and carousel controls", () => {
     expect(screen.getAllByTestId("review-card-clone").length).toBe(2);
     fireEvent.click(toggle);
     expect(toggle.getAttribute("aria-label")).toBe("Reanudar el carrusel");
-    expect(screen.queryAllByTestId("review-card-clone").length).toBe(0);
+    // The duplicated half must survive the pause — removing it would resize the
+    // track and make the carousel jump.
+    expect(screen.getAllByTestId("review-card-clone").length).toBe(2);
     // arrows keep working while stopped
     expect(screen.getByRole("button", { name: "Reseñas siguientes" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Reseñas anteriores" })).toBeTruthy();
   });
+
+  it("keeps scrollLeft untouched across pause and play so motion resumes in place", () => {
+    state.value.items = [review({ id: "a" }), review({ id: "b", author_name: "Bea" })];
+    mount();
+    const scroller = screen.getByTestId("reviews-scroller");
+    scroller.scrollLeft = 137;
+    const toggle = screen.getByTestId("reviews-autoplay-toggle");
+    fireEvent.click(toggle); // pause
+    expect(scroller.scrollLeft).toBe(137);
+    expect(screen.getAllByTestId("review-card-clone").length).toBe(2);
+    fireEvent.click(toggle); // play again
+    expect(scroller.scrollLeft).toBe(137);
+  });
+
 
   it("localizes the carousel buttons and the original link in English and Russian", () => {
     const two = [

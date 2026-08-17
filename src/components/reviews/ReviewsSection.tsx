@@ -139,29 +139,41 @@ const ReviewsSection = () => {
   const reviews = displayReviews(items, settings);
   const canAutoplay = !reducedMotion && reviews.length > 1;
   const running = playing && canAutoplay;
+  // The duplicated half is part of the layout, not of the play state: it stays
+  // mounted while paused so nothing reflows, jumps or resets scrollLeft.
+  const duplicated = !reducedMotion && reviews.length > 1;
 
   // Continuous right-to-left drift. The list is rendered twice, so wrapping is a
-  // silent subtraction of half the track — no jump, no snap-back.
+  // silent subtraction of half the track — no jump, no snap-back. Only the
+  // requestAnimationFrame loop starts and stops; the DOM never changes.
   useEffect(() => {
     if (!running) return;
     const el = scroller.current;
     if (!el || typeof requestAnimationFrame !== "function") return;
     let raf = 0;
     let last = performance.now();
+    // Sub-pixel accumulator: writing rounded values every frame is what makes
+    // the motion look stuttery at slow speeds.
+    let pos = el.scrollLeft;
     const step = (now: number) => {
       const dt = Math.min(now - last, 100);
       last = now;
       if (!hovering.current && now >= suspendUntil.current) {
+        // A manual scroll/swipe in between wins over the accumulator.
+        if (Math.abs(el.scrollLeft - pos) > 2) pos = el.scrollLeft;
         const half = el.scrollWidth / 2;
-        let next = el.scrollLeft + (AUTOPLAY_PX_PER_SEC * dt) / 1000;
-        if (half > 0 && next >= half) next -= half;
-        el.scrollLeft = next;
+        pos += (AUTOPLAY_PX_PER_SEC * dt) / 1000;
+        if (half > 0 && pos >= half) pos -= half;
+        el.scrollLeft = pos;
+      } else {
+        pos = el.scrollLeft;
       }
       raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [running]);
+
 
   const scrollBy = useCallback((dir: 1 | -1) => {
     const el = scroller.current;
@@ -196,12 +208,13 @@ const ReviewsSection = () => {
             onMouseEnter={() => { hovering.current = true; }}
             onMouseLeave={() => { hovering.current = false; }}
             onPointerDown={() => { suspendUntil.current = (typeof performance !== "undefined" ? performance.now() : 0) + MANUAL_PAUSE_MS; }}
-            className="no-scrollbar flex gap-5 overflow-x-auto snap-x snap-mandatory pb-4 -mx-2 px-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-2xl"
+            className="no-scrollbar flex gap-5 overflow-x-auto pb-4 -mx-2 px-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-2xl"
           >
             {reviews.map((r) => (
               <ReviewCard key={r.id} review={r} />
             ))}
-            {running && reviews.map((r) => <ReviewCard key={`clone-${r.id}`} review={r} clone />)}
+            {duplicated && reviews.map((r) => <ReviewCard key={`clone-${r.id}`} review={r} clone />)}
+
           </ul>
 
           {reviews.length > 1 && (
