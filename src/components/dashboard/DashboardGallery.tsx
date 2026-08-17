@@ -395,6 +395,35 @@ const DashboardGallery = () => {
                           )}
                           {posterBusy ? c("generating") : c("generateCover")}
                         </Button>
+                        {posterBusy && (
+                          <div className="space-y-1" data-testid="cover-progress">
+                            <div
+                              role="progressbar"
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-valuenow={posterProgress}
+                              aria-label={c("generating")}
+                              className="h-1.5 w-full rounded-full bg-secondary overflow-hidden"
+                            >
+                              <div
+                                className="h-full bg-primary transition-all"
+                                style={{ width: `${posterProgress}%` }}
+                              />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground" aria-live="polite">
+                              {c("coverProgress", { p: String(posterProgress) })}
+                            </p>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="w-full text-destructive"
+                              onClick={cancelCover}
+                            >
+                              <X size={13} className="mr-1.5" /> {c("coverCancel")}
+                            </Button>
+                          </div>
+                        )}
+
                         <Button
                           size="sm"
                           variant="outline"
