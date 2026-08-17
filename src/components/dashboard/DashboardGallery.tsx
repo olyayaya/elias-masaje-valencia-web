@@ -353,7 +353,9 @@ const DashboardGallery = () => {
         <div className="space-y-4">
           {items.map((item, idx) => {
             const busy = busyId === item.id;
-            const posterBusy = posterBusyId === item.id;
+            const posterBusy = poster?.id === item.id;
+            const posterProgress = poster?.id === item.id ? poster.progress : 0;
+
             const thumb = item.media_type === "video" ? item.poster_url : item.media_url;
             const issues = publishIssues(item);
             return (
