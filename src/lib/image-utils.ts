@@ -1,12 +1,41 @@
 /**
  * Client-side image optimization utilities.
  * Resizes and compresses images before upload.
+ *
+ * Format contract: the returned blob's MIME type, the reported extension and the actual
+ * encoded bytes ALWAYS agree. A PNG source is never silently written out as JPEG bytes
+ * under a .png name — when WebP is unavailable, PNG stays PNG so alpha survives.
  */
 
 const MAX_WIDTH = 1920;
 const MAX_HEIGHT = 1920;
 const QUALITY = 0.82;
 const THUMB_SIZE = 400;
+
+export function supportsWebp(): boolean {
+  try {
+    return document.createElement("canvas").toDataURL("image/webp").startsWith("data:image/webp");
+  } catch {
+    return false;
+  }
+}
+
+export const EXT_BY_MIME: Record<string, string> = {
+  "image/webp": "webp",
+  "image/png": "png",
+  "image/jpeg": "jpg",
+};
+
+/**
+ * Picks the output encoding for a source image.
+ * - WebP when the browser can encode it (keeps alpha, best ratio)
+ * - otherwise PNG for PNG sources (lossless, keeps alpha) and JPEG for everything else
+ */
+export function pickEncodeTarget(sourceType?: string): { mime: string; ext: string } {
+  if (supportsWebp()) return { mime: "image/webp", ext: "webp" };
+  if ((sourceType || "").toLowerCase() === "image/png") return { mime: "image/png", ext: "png" };
+  return { mime: "image/jpeg", ext: "jpg" };
+}
 
 function loadImage(file: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -48,6 +77,9 @@ function drawResized(
 
 export interface OptimizedImage {
   blob: Blob;
+  /** Extension matching the encoded bytes — always consistent with blob.type. */
+  ext: string;
+  mime: string;
   width: number;
   height: number;
   originalSize: number;
@@ -55,16 +87,19 @@ export interface OptimizedImage {
 }
 
 /**
- * Optimize an image file: resize to max dimensions and compress as WebP.
+ * Optimize an image: resize to max dimensions and re-encode with an alpha-safe format.
  */
 export async function optimizeImage(file: Blob): Promise<OptimizedImage> {
   const img = await loadImage(file);
-  const supportsWebp = document.createElement("canvas").toDataURL("image/webp").startsWith("data:image/webp");
-  const format = supportsWebp ? "image/webp" : "image/jpeg";
-  const blob = await drawResized(img, MAX_WIDTH, MAX_HEIGHT, QUALITY, format);
+  const target = pickEncodeTarget(file.type);
+  const blob = await drawResized(img, MAX_WIDTH, MAX_HEIGHT, QUALITY, target.mime);
   URL.revokeObjectURL(img.src);
+  // Some engines fall back to PNG if a format is unsupported — trust the produced bytes.
+  const mime = (blob.type || target.mime).toLowerCase();
   return {
     blob,
+    mime,
+    ext: EXT_BY_MIME[mime] ?? target.ext,
     width: Math.min(img.naturalWidth, MAX_WIDTH),
     height: Math.min(img.naturalHeight, MAX_HEIGHT),
     originalSize: file.size,
@@ -77,19 +112,18 @@ export async function optimizeImage(file: Blob): Promise<OptimizedImage> {
  */
 export async function generateThumbnail(file: Blob): Promise<Blob> {
   const img = await loadImage(file);
-  const supportsWebp = document.createElement("canvas").toDataURL("image/webp").startsWith("data:image/webp");
-  const format = supportsWebp ? "image/webp" : "image/jpeg";
-  const blob = await drawResized(img, THUMB_SIZE, THUMB_SIZE, 0.75, format);
+  const target = pickEncodeTarget(file.type);
+  const blob = await drawResized(img, THUMB_SIZE, THUMB_SIZE, 0.75, target.mime);
   URL.revokeObjectURL(img.src);
   return blob;
 }
 
 /**
- * Get optimized extension based on browser support
+ * Extension for a freshly optimized upload. Pass the source MIME so PNG sources
+ * keep transparency when WebP encoding is unavailable.
  */
-export function getOptimizedExtension(): string {
-  const supportsWebp = document.createElement("canvas").toDataURL("image/webp").startsWith("data:image/webp");
-  return supportsWebp ? "webp" : "jpg";
+export function getOptimizedExtension(sourceType?: string): string {
+  return pickEncodeTarget(sourceType).ext;
 }
 
 export function formatFileSize(bytes: number): string {
