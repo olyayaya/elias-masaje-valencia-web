@@ -100,13 +100,6 @@ async function testSentryDsn(raw: string): Promise<TestResult> {
   }
 }
 
-function testSeoKey(v: string): TestResult {
-  const t = v.trim();
-  if (t.length < 16) return { ok: false, error: "Key looks too short — most provider keys are 20+ characters" };
-  if (/\s/.test(t)) return { ok: false, error: "Key contains whitespace — copy/paste error?" };
-  return { ok: true, details: `Key stored (${t.length} chars). Provider call will validate at first use.` };
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -126,7 +119,6 @@ Deno.serve(async (req) => {
       case "integration_google_workspace_verification": result = await testMetaTag("google-site-verification", value); break;
       case "integration_tripadvisor_url": result = await testTripadvisorUrl(value); break;
       case "integration_sentry_dsn": result = await testSentryDsn(value); break;
-      case "integration_seo_api_key": result = testSeoKey(value); break;
       default: result = { ok: false, error: `Unknown integration: ${kind}` };
     }
 

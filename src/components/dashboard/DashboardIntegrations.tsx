@@ -222,6 +222,8 @@ const DashboardIntegrations = () => {
       .from("site_content")
       .select("content_key, value_es")
       .eq("category", "integrations")
+      // Defensive: the removed secret-like SEO API key must never resurface.
+      .neq("content_key", "integration_seo_api_key")
       .then(({ data, error }) => {
         const map: Record<string, string> = {};
         (data || []).forEach((r: any) => { map[r.content_key] = r.value_es || ""; });
