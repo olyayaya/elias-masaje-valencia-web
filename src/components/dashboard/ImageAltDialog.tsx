@@ -308,20 +308,11 @@ const ImageAltDialog = ({
             <X size={14} className="mr-1.5" />
             {L("cancel")}
           </Button>
-          <Button
-            size="sm"
-            disabled={!!error}
-            onClick={() =>
-              onConfirm(
-                decorative ? "" : alt.trim(),
-                decorative,
-                decorative ? { es: "", en: "", ru: "" } : values,
-              )
-            }
-          >
-            <Check size={14} className="mr-1.5" />
+          <Button size="sm" disabled={!!error || busy} onClick={() => void handleSave()}>
+            {busy ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Check size={14} className="mr-1.5" />}
             {mode === "edit" ? L("save") : L("insert")}
           </Button>
+
         </div>
       </DialogContent>
     </Dialog>
