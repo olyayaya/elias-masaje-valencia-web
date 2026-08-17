@@ -35,12 +35,19 @@ describe("paginated storage listing", () => {
     expect((list as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBe(2);
   });
 
-  it("never exceeds the page ceiling", async () => {
+  it("rejects instead of returning a silently truncated list at the ceiling", async () => {
     const list = vi.fn(async (_p: string, o: { offset: number }) =>
       page([`f${o.offset}.webp`, `g${o.offset}.webp`]),
     ) as unknown as StorageListFn;
-    await listAllMediaNames({ pageSize: 2, maxPages: 3, list });
+    await expect(listAllMediaNames({ pageSize: 2, maxPages: 3, list })).rejects.toThrow(/incomplete/i);
     expect((list as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBe(3);
+  });
+
+  it("returns normally when the ceiling page is the last, short page", async () => {
+    const list = vi.fn(async (_p: string, o: { offset: number }) =>
+      o.offset === 0 ? page(["a.webp", "b.webp"]) : page(["c.webp"]),
+    ) as unknown as StorageListFn;
+    await expect(listAllMediaNames({ pageSize: 2, maxPages: 2, list })).resolves.toEqual(["a.webp", "b.webp", "c.webp"]);
   });
 
   it("surfaces a storage error instead of pretending the bucket is empty", async () => {

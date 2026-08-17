@@ -46,10 +46,26 @@ describe("media guard covers gallery media", () => {
   });
 });
 
+/** Only the body of swap_gallery_order, up to its own closing $function$. */
+const swapBody = (() => {
+  const start = MIGRATION.indexOf("CREATE OR REPLACE FUNCTION public.swap_gallery_order");
+  const bodyStart = MIGRATION.indexOf("$function$", start) + "$function$".length;
+  const bodyEnd = MIGRATION.indexOf("$function$", bodyStart);
+  return MIGRATION.slice(bodyStart, bodyEnd);
+})();
+
 describe("pending gallery migration", () => {
   it("defaults items to unpublished and constrains the media type", () => {
     expect(MIGRATION).toMatch(/published\s+boolean\s+not null\s+default\s+false/i);
     expect(MIGRATION).toMatch(/check\s*\(\s*media_type\s+in\s*\(\s*'photo'\s*,\s*'video'\s*\)\s*\)/i);
+  });
+
+  it("rejects blank media, negative durations and published videos without a cover", () => {
+    expect(MIGRATION).toMatch(/gallery_items_media_url_not_blank check \(length\(btrim\(media_url\)\) > 0\)/i);
+    expect(MIGRATION).toMatch(/duration_seconds is null or duration_seconds >= 0/i);
+    expect(MIGRATION).toMatch(
+      /media_type <> 'video' or published = false or length\(btrim\(poster_url\)\) > 0/i,
+    );
   });
 
   it("exposes only published items to anonymous readers", () => {
@@ -57,20 +73,23 @@ describe("pending gallery migration", () => {
     expect(MIGRATION).toMatch(/using\s*\(\s*published\s*=\s*true\s*\)/i);
     expect(MIGRATION).toMatch(/grant select on public\.gallery_items to anon/i);
     expect(MIGRATION).toMatch(/has_role\(auth\.uid\(\),\s*'admin'::app_role\)/i);
+    // anon gets read-only access; writes stay with authenticated admins / service_role.
+    expect(MIGRATION).not.toMatch(/grant[^;]*(insert|update|delete)[^;]*to anon/i);
   });
 
   it("locks both rows in a single deterministic statement when reordering", () => {
-    const fn = MIGRATION.slice(MIGRATION.indexOf("swap_gallery_order"));
-    expect(fn).toMatch(/where id in \(_a, _b\)[\s\S]{0,80}order by id[\s\S]{0,40}for update/i);
-    expect(fn).toMatch(/ROW_COUNT/i);
+    expect(swapBody).toMatch(
+      /perform id from public\.gallery_items\s+where id in \(_a, _b\)\s+order by id\s+for update;/i,
+    );
+    expect(swapBody).toMatch(/get diagnostics\s+locked_count\s*=\s*row_count;/i);
+    expect(swapBody).toMatch(/locked_count <> 2/i);
     // No caller-ordered per-row locking left behind.
-    expect(fn).not.toMatch(/where id = _a[\s\S]{0,60}for update/i);
+    expect(swapBody).not.toMatch(/where id = _a[\s\S]{0,60}for update/i);
   });
 
   it("restricts the reorder RPC to admins or the service role and revokes anon", () => {
-    const fn = MIGRATION.slice(MIGRATION.indexOf("swap_gallery_order"));
-    expect(fn).toMatch(/service_role/);
-    expect(fn).toMatch(/has_role\(auth\.uid\(\), 'admin'::app_role\)/);
+    expect(swapBody).toMatch(/jwt_role = 'service_role'/);
+    expect(swapBody).toMatch(/has_role\(auth\.uid\(\), 'admin'::app_role\)/);
     expect(MIGRATION).toMatch(/revoke all on function public\.swap_gallery_order[\s\S]{0,80}from public/i);
     expect(MIGRATION).not.toMatch(/grant execute on function public\.swap_gallery_order[^;]*to anon/i);
   });
@@ -82,6 +101,7 @@ describe("pending gallery migration", () => {
     }
   });
 });
+
 
 describe("bundle shape", () => {
   const app = readFileSync("src/App.tsx", "utf8");

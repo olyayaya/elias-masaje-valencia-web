@@ -6,6 +6,9 @@ import { MemoryRouter } from "react-router-dom";
 import { I18nProvider } from "@/i18n/context";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { storageThumbUrl, type GalleryItem } from "@/lib/gallery";
+import { es } from "@/i18n/es";
+import { en } from "@/i18n/en";
+import { ru } from "@/i18n/ru";
 
 const SUPA_ORIGIN = new URL(import.meta.env.VITE_SUPABASE_URL as string).origin;
 const photoUrl = `${SUPA_ORIGIN}/storage/v1/object/public/media/sala.webp`;
@@ -77,9 +80,9 @@ const head = () => ({
 
 describe("gallery routes", () => {
   const cases = [
-    { path: "/galeria", h1: "Galería", canonical: "https://eliasmas.es/galeria" },
-    { path: "/en/gallery", h1: "Gallery", canonical: "https://eliasmas.es/en/gallery" },
-    { path: "/ru/galereya", h1: "Галерея", canonical: "https://eliasmas.es/ru/galereya" },
+    { path: "/galeria", h1: es.gallery.title, title: es.gallery.metaTitle, canonical: "https://eliasmas.es/galeria" },
+    { path: "/en/gallery", h1: en.gallery.title, title: en.gallery.metaTitle, canonical: "https://eliasmas.es/en/gallery" },
+    { path: "/ru/galereya", h1: ru.gallery.title, title: ru.gallery.metaTitle, canonical: "https://eliasmas.es/ru/galereya" },
   ];
 
   for (const cse of cases) {
@@ -87,7 +90,7 @@ describe("gallery routes", () => {
       renderPage(cse.path);
       expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(cse.h1);
       await waitFor(() => expect(head().canonical).toBe(cse.canonical));
-      expect(document.title.length).toBeGreaterThan(0);
+      await waitFor(() => expect(document.title).toBe(cse.title));
       const alts = head().alternates;
       expect(alts.map((a) => a.hreflang).sort()).toEqual(["en", "es", "ru", "x-default"]);
       expect(alts.find((a) => a.hreflang === "es")?.href).toBe("https://eliasmas.es/galeria");

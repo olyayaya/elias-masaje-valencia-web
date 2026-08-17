@@ -29,8 +29,11 @@ const h = vi.hoisted(() => {
       source: "canvas" as const,
     }),
   );
-  return { insert, update, updateEq, del, rpc, list, upload, remove, generatePoster };
+  const toast = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), message: vi.fn() };
+  return { insert, update, updateEq, del, rpc, list, upload, remove, generatePoster, toast };
 });
+
+vi.mock("sonner", () => ({ toast: h.toast }));
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -114,6 +117,7 @@ beforeEach(() => {
   h.updateEq.mockImplementation(async () => ({ error: null }));
   h.upload.mockImplementation(async () => ({ error: null }));
   h.rpc.mockImplementation(async () => ({ error: null }));
+  h.remove.mockImplementation(async () => ({ data: null, error: null }));
 });
 afterEach(cleanup);
 
@@ -284,6 +288,34 @@ describe("cover generation", () => {
     clickGenerate();
     await waitFor(() => expect(h.remove).toHaveBeenCalledWith(["new-cover.webp"]));
     expect(h.remove).toHaveBeenCalledTimes(1);
+  });
+
+  it("touches Storage not at all when cancelled while the listing is still pending", async () => {
+    let releaseList: (() => void) | undefined;
+    h.list.mockImplementation(
+      () => new Promise((resolve) => { releaseList = () => resolve(pageOf(["a.webp"])); }),
+    );
+    wrap();
+    clickGenerate();
+    const progress = await screen.findByTestId("cover-progress");
+    await waitFor(() => expect(h.list).toHaveBeenCalled());
+    fireEvent.click(within(progress).getByRole("button"));
+    releaseList!();
+    await waitFor(() => expect(screen.queryByTestId("cover-progress")).toBeNull());
+    expect(h.upload).not.toHaveBeenCalled();
+    expect(h.update).not.toHaveBeenCalled();
+    expect(h.remove).not.toHaveBeenCalled();
+  });
+
+  it("warns the admin when the temporary cover cannot be cleaned up", async () => {
+    h.updateEq.mockImplementation(async () => ({ error: { message: "denied" } }));
+    h.remove.mockImplementation(async () => ({ data: null, error: { message: "nope" } }));
+    wrap();
+    clickGenerate();
+    await waitFor(() => expect(h.remove).toHaveBeenCalledWith(["new-cover.webp"]));
+    expect(h.remove).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(h.toast.warning).toHaveBeenCalled());
+    expect(String(h.toast.warning.mock.calls[0][0])).toContain("new-cover.webp");
   });
 
   it("stores the cover and never lists a single truncated page", async () => {
