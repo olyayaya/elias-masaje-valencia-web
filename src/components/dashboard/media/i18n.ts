@@ -31,7 +31,7 @@ export const COPY = {
   },
   removingAudio: { en: "Removing audio from {f} — {p}%", es: "Eliminando audio de {f} — {p}%", ru: "Удаление аудио из {f} — {p}%" },
   audioRemoved: { en: "Audio removed from {f}", es: "Audio eliminado de {f}", ru: "Аудио удалено из {f}" },
-  noAudioTrack: { en: "{f} had no audio track — uploaded unchanged", es: "{f} no tenía pista de audio: se subió sin cambios", ru: "В {f} не было аудиодорожки — загружено без изменений" },
+  noAudioTrack: { en: "{f} had no audio track — uploaded without audio", es: "{f} no tenía pista de audio: se subió sin audio", ru: "В {f} не было аудиодорожки — видео загружено без аудио" },
   audioRemovalFailed: { en: "Could not remove the audio from {f} — the file was not uploaded", es: "No se pudo eliminar el audio de {f}: el archivo no se subió", ru: "Не удалось удалить аудио из {f} — файл не загружен" },
   audioRemovalCancelled: { en: "Audio removal cancelled — {f} was not uploaded", es: "Eliminación de audio cancelada: {f} no se subió", ru: "Удаление аудио отменено — {f} не загружен" },
   audioRemovalUnsupported: {
