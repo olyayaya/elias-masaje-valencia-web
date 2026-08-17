@@ -791,6 +791,8 @@ const DashboardReviews = () => {
                     <th className="p-2 font-medium">{c("colRating")}</th>
                     <th className="p-2 font-medium">{c("colDate")}</th>
                     <th className="p-2 font-medium">{c("colText")}</th>
+                    <th className="p-2 font-medium">{c("colLink")}</th>
+                    <th className="p-2 font-medium">{c("colPin")}</th>
                     <th className="p-2 font-medium">{c("colState")}</th>
                   </tr>
                 </thead>
