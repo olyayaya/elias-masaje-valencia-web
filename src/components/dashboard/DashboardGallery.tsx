@@ -540,6 +540,8 @@ const DashboardGallery = () => {
         emptyLabel={c("pickerEmpty")}
         searchPlaceholder={c("pickerSearch")}
         noMatchLabel={c("pickerNoMatch")}
+        errorLabel={c("pickerError")}
+        retryLabel={c("retry")}
         cancelLabel={c("cancel")}
         selectLabel={c("select")}
         currentUrl={picker && picker.mode !== "add" ? picker.currentUrl : undefined}
@@ -552,20 +554,17 @@ const DashboardGallery = () => {
             // A cover belongs to one specific video file: replacing the file must
             // never leave the previous video's frame (and a published video without
             // a cover is not allowed, so it is unpublished in the same write).
+            // A photo never owns a cover, so its poster_url is explicitly cleared.
             const changed = !!target && target.media_url !== url;
             const clearPoster = changed && target?.media_type === "video";
-            const values: Record<string, unknown> = { media_url: url };
-            if (clearPoster) {
-              values.poster_url = "";
-              values.published = false;
-            } else if (changed && target?.media_type === "photo") {
-              values.poster_url = url;
-            }
+            const values: Record<string, unknown> = { media_url: url, poster_url: "" };
+            if (clearPoster) values.published = false;
             if (await patch(picker.id, values)) {
               toast.success(c("saved"));
               if (clearPoster) toast.warning(c("posterCleared"));
             }
           } else if (await patch(picker.id, { poster_url: url })) toast.success(c("saved"));
+
           setPicker(null);
         }}
       />
