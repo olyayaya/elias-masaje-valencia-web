@@ -293,8 +293,11 @@ const DashboardSiteContent = () => {
       .from("site_content")
       .select("*")
       // robots.txt is shipped as a static file (public/robots.txt); never editable here.
-      .neq("content_key", "robots_txt")
+      // integration_seo_api_key is a removed secret-like field: never surface it,
+      // even if a legacy row reappears in the table.
+      .not("content_key", "in", '("robots_txt","integration_seo_api_key")')
       .order("sort_order", { ascending: true });
+
     if (data) {
       setItems(data as SiteContentRow[]);
       const d: Record<string, string> = {};
