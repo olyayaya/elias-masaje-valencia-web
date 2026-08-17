@@ -166,14 +166,6 @@ describe("dashboard missing-table notice", () => {
 describe("lightbox accessibility", () => {
   it("restores focus to the element that opened it", async () => {
     const items: GalleryItem[] = [base];
-    const Harness = () => {
-      const [open, setOpen] = (globalThis as unknown as { React: typeof import("react") }).React
-        ? [false, () => {}]
-        : [false, () => {}];
-      void open; void setOpen;
-      return null;
-    };
-    void Harness;
 
     const opener = document.createElement("button");
     opener.textContent = "open";
