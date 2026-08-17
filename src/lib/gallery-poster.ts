@@ -91,6 +91,11 @@ export async function captureFrameWithCanvas(opts: PosterOptions): Promise<Poste
   video.playsInline = true;
 
   const cleanup = () => {
+    // Every handler is detached before the element is dropped: a late `seeked` or
+    // `error` from a cancelled capture must not resolve or reject anything.
+    video.onerror = null;
+    video.onloadedmetadata = null;
+    video.onseeked = null;
     video.removeAttribute("src");
     try {
       video.load();
@@ -99,9 +104,10 @@ export async function captureFrameWithCanvas(opts: PosterOptions): Promise<Poste
     }
   };
 
+  let onAbort: (() => void) | null = null;
   try {
     await new Promise<void>((resolve, reject) => {
-      const onAbort = () => reject(new PosterAbortError());
+      onAbort = () => reject(new PosterAbortError());
       signal?.addEventListener("abort", onAbort, { once: true });
       video.onerror = () => reject(new Error("The browser could not decode this video"));
       video.onloadedmetadata = () => {
@@ -136,6 +142,8 @@ export async function captureFrameWithCanvas(opts: PosterOptions): Promise<Poste
     opts.onProgress?.(1);
     return { blob, width: canvas.width, height: canvas.height, ext, mimeType, source: "canvas" };
   } finally {
+    // The abort listener is scoped to this capture only — it is removed on every exit.
+    if (onAbort) signal?.removeEventListener("abort", onAbort);
     cleanup();
   }
 }
@@ -146,55 +154,69 @@ export async function captureFrameWithFFmpeg(opts: PosterOptions): Promise<Poste
   throwIfAborted(signal);
 
   // Separate chunk: the WASM core is only fetched once we get here.
-  const { getFFmpeg } = await import("@/lib/video-ffmpeg");
+  const { getFFmpeg, terminateFFmpeg } = await import("@/lib/video-ffmpeg");
   throwIfAborted(signal);
 
-  const ffmpeg = await getFFmpeg(undefined, signal);
-  throwIfAborted(signal);
+  // Same pattern as the converter: cancelling during the ~30 MB core download (or during
+  // the exec) terminates the instance instead of leaving the wasm heap allocated.
+  const abortEngine = () => terminateFFmpeg();
+  signal?.addEventListener("abort", abortEngine, { once: true });
 
   const token = Math.random().toString(36).slice(2, 10);
   const ext = extOf(videoUrl.split("?")[0]) || "mp4";
   const inName = `poster-${token}-in.${ext}`;
   const outName = `poster-${token}-out.jpg`;
 
-  const res = await fetch(videoUrl, { signal });
-  if (!res.ok) throw new Error(`Could not download the video (${res.status})`);
-  const bytes = new Uint8Array(await res.arrayBuffer());
-  throwIfAborted(signal);
-  opts.onProgress?.(0.5);
-
+  let ffmpeg: Awaited<ReturnType<typeof getFFmpeg>>;
   try {
-    await ffmpeg.writeFile(inName, bytes);
-    const code = await ffmpeg.exec([
-      "-ss", String(Math.max(0, atSeconds)),
-      "-i", inName,
-      "-frames:v", "1",
-      "-vf", `scale='min(${maxWidth},iw)':-2`,
-      "-q:v", "3",
-      outName,
-    ]);
-    if (typeof code === "number" && code !== 0) throw new Error(`Frame extraction failed (code ${code})`);
-    const data = (await ffmpeg.readFile(outName)) as Uint8Array;
-    if (!data || data.length === 0) throw new Error("Frame extraction produced no data");
-    opts.onProgress?.(1);
-    return {
-      blob: new Blob([data as BlobPart], { type: "image/jpeg" }),
-      width: 0,
-      height: 0,
-      ext: "jpg",
-      mimeType: "image/jpeg",
-      source: "ffmpeg",
-    };
-  } finally {
-    for (const f of [inName, outName]) {
-      try {
-        await ffmpeg.deleteFile(f);
-      } catch {
-        /* best effort */
+    ffmpeg = await getFFmpeg(undefined, signal);
+    throwIfAborted(signal);
+
+    const res = await fetch(videoUrl, { signal });
+    if (!res.ok) throw new Error(`Could not download the video (${res.status})`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    throwIfAborted(signal);
+    opts.onProgress?.(0.5);
+
+    try {
+      await ffmpeg.writeFile(inName, bytes);
+      throwIfAborted(signal);
+      const code = await ffmpeg.exec([
+        "-ss", String(Math.max(0, atSeconds)),
+        "-i", inName,
+        "-frames:v", "1",
+        "-vf", `scale='min(${maxWidth},iw)':-2`,
+        "-q:v", "3",
+        outName,
+      ]);
+      throwIfAborted(signal);
+      if (typeof code === "number" && code !== 0) throw new Error(`Frame extraction failed (code ${code})`);
+      const data = (await ffmpeg.readFile(outName)) as Uint8Array;
+      if (!data || data.length === 0) throw new Error("Frame extraction produced no data");
+      opts.onProgress?.(1);
+      return {
+        blob: new Blob([data as BlobPart], { type: "image/jpeg" }),
+        width: 0,
+        height: 0,
+        ext: "jpg",
+        mimeType: "image/jpeg",
+        source: "ffmpeg",
+      };
+    } finally {
+      // The virtual FS is always cleaned, including on abort and on failure.
+      for (const f of [inName, outName]) {
+        try {
+          await ffmpeg.deleteFile(f);
+        } catch {
+          /* best effort — file absent or instance terminated */
+        }
       }
     }
+  } finally {
+    signal?.removeEventListener("abort", abortEngine);
   }
 }
+
 
 /**
  * Extract a cover frame, preferring the zero-cost canvas path and only paying for
