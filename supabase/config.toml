@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.llms]
 verify_jwt = false
+
+[functions.media-guard]
+verify_jwt = true

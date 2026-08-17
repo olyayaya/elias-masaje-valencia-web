@@ -1,9 +1,20 @@
 import { useState, useEffect, useRef } from "react";
-import { Upload, Trash2, FileImage, Loader2, Copy, Check } from "lucide-react";
+import { Upload, Trash2, Loader2, Copy, Check, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { optimizeImage, getOptimizedExtension, formatFileSize } from "@/lib/image-utils";
+import { checkMediaUsage, deleteMediaFile, type MediaUsage } from "@/lib/media-usage";
 import { toast } from "sonner";
 import DashboardCard from "./DashboardCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface MediaFile {
   name: string;
@@ -12,6 +23,11 @@ interface MediaFile {
   created_at: string;
 }
 
+type DeleteTarget = {
+  name: string;
+  usages: MediaUsage[];
+};
+
 const DashboardMedia = () => {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +35,9 @@ const DashboardMedia = () => {
   const [copied, setCopied] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [checking, setChecking] = useState<string | null>(null);
+  const [target, setTarget] = useState<DeleteTarget | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchFiles = async () => {
     const { data } = await supabase.storage.from("media").list("", {
@@ -64,9 +83,37 @@ const DashboardMedia = () => {
     fetchFiles();
   };
 
-  const remove = async (name: string) => {
-    await supabase.storage.from("media").remove([name]);
-    fetchFiles();
+  const requestDelete = async (name: string) => {
+    setChecking(name);
+    try {
+      const result = await checkMediaUsage(name);
+      setTarget({ name, usages: result.usages ?? [] });
+    } catch (err: any) {
+      toast.error(err.message || "Couldn't verify where this file is used");
+    } finally {
+      setChecking(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!target || target.usages.length > 0) return;
+    setDeleting(true);
+    try {
+      const result = await deleteMediaFile(target.name);
+      if (result.deleted) {
+        toast.success(`Deleted ${target.name}`);
+        setTarget(null);
+        fetchFiles();
+      } else {
+        // Became used between check and delete
+        setTarget({ name: target.name, usages: result.usages ?? [] });
+        toast.error("File is now in use — deletion blocked");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Delete failed");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const copyUrl = (url: string) => {
@@ -82,6 +129,8 @@ const DashboardMedia = () => {
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
+
+  const blocked = (target?.usages.length ?? 0) > 0;
 
   return (
     <div className="space-y-6">
@@ -133,13 +182,61 @@ const DashboardMedia = () => {
               <button onClick={() => copyUrl(f.url)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary" title="Copy URL">
                 {copied === f.url ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
               </button>
-              <button onClick={() => remove(f.name)} className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-secondary">
-                <Trash2 size={14} />
+              <button
+                onClick={() => void requestDelete(f.name)}
+                disabled={checking === f.name}
+                aria-label={`Delete ${f.name}`}
+                title="Delete"
+                className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-secondary disabled:opacity-50"
+              >
+                {checking === f.name ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
               </button>
             </div>
           ))}
         </div>
       </DashboardCard>
+
+      <AlertDialog open={!!target} onOpenChange={(open) => { if (!open && !deleting) setTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {blocked ? "This file is still in use" : `Delete ${target?.name}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {blocked
+                ? `“${target?.name}” is referenced by ${target?.usages.length} item${target?.usages.length === 1 ? "" : "s"}. Replace the image there first — deletion is blocked to avoid breaking published content.`
+                : "No content references this file. Deleting it is permanent and cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {blocked && (
+            <div className="max-h-64 overflow-auto space-y-2 text-xs border border-border rounded-lg p-3">
+              {target?.usages.map((u, i) => (
+                <div key={`${u.id}-${u.field}-${i}`} className="flex items-start gap-2">
+                  <AlertTriangle size={12} className="mt-0.5 shrink-0 text-destructive" />
+                  <span className="text-foreground">
+                    <strong>{u.entity}</strong> · {u.label}{" "}
+                    <span className="text-muted-foreground">({u.field} · {u.id.slice(0, 8)})</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{blocked ? "Close" : "Cancel"}</AlertDialogCancel>
+            {!blocked && (
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); void confirmDelete(); }}
+                disabled={deleting}
+              >
+                {deleting ? <Loader2 size={14} className="animate-spin mr-1" /> : <Trash2 size={14} className="mr-1" />}
+                Delete permanently
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

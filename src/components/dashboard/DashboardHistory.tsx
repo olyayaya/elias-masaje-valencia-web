@@ -14,6 +14,8 @@ const TABLE_TO_QUERY_KEY: Record<string, readonly unknown[]> = {
   faqs: queryKeys.faqs,
   testimonials: queryKeys.testimonials,
   blog_posts: queryKeys.blogPosts,
+  site_content: queryKeys.siteContent,
+  promotions: queryKeys.promotions,
 };
 
 interface HistoryEntry {
@@ -22,6 +24,7 @@ interface HistoryEntry {
   record_id: string;
   snapshot: Record<string, any>;
   action: string;
+  changed_by?: string | null;
   changed_at: string;
 }
 
@@ -30,6 +33,8 @@ const TABLE_LABELS: Record<string, string> = {
   faqs: "FAQ",
   testimonials: "Testimonials",
   blog_posts: "Blog Posts",
+  site_content: "Site Content",
+  promotions: "Promotions",
 };
 
 const DISPLAY_FIELD: Record<string, string> = {
@@ -37,6 +42,8 @@ const DISPLAY_FIELD: Record<string, string> = {
   faqs: "question",
   testimonials: "name",
   blog_posts: "title",
+  site_content: "label",
+  promotions: "badge_text",
 };
 
 const DashboardHistory = () => {
@@ -206,7 +213,8 @@ const DashboardHistory = () => {
       {filtered.map((entry) => {
         const isExpanded = expandedId === entry.id;
         const displayField = DISPLAY_FIELD[entry.table_name] || "id";
-        const itemName = entry.snapshot[displayField] || entry.record_id.slice(0, 8);
+        const itemName =
+          entry.snapshot[displayField] || entry.snapshot.content_key || entry.record_id.slice(0, 8);
 
         return (
           <DashboardCard key={entry.id}>
@@ -283,7 +291,8 @@ const DashboardHistory = () => {
           </AlertDialogHeader>
           <div className="max-h-64 overflow-auto space-y-1 text-xs border border-border rounded-lg p-3">
             {entries.filter((e) => selected.has(e.id)).map((e) => {
-              const name = e.snapshot[DISPLAY_FIELD[e.table_name] || "id"] || e.record_id.slice(0, 8);
+              const name =
+                e.snapshot[DISPLAY_FIELD[e.table_name] || "id"] || e.snapshot.content_key || e.record_id.slice(0, 8);
               return (
                 <div key={e.id} className="flex items-center justify-between gap-2">
                   <span className="truncate text-foreground">{name}</span>

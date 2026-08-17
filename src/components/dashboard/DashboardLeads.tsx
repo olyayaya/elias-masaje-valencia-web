@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, RefreshCw, MessageCircle, Trash2, Download, Check } from "lucide-react";
+import { Loader2, RefreshCw, MessageCircle, Trash2, Download, Check, PhoneOff } from "lucide-react";
 import DashboardCard from "./DashboardCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/context";
-import { whatsappUrl } from "@/config/contact";
+import { leadWhatsAppUrl } from "@/lib/phone";
 import { toast } from "sonner";
+
 
 type Lead = {
   id: string;
@@ -41,7 +42,9 @@ const COPY = {
   loadError: { en: "Couldn't load leads", es: "No se pudieron cargar las solicitudes", ru: "Не удалось загрузить заявки" },
   total: { en: "Total", es: "Total", ru: "Всего" },
   pending: { en: "Pending", es: "Pendientes", ru: "В ожидании" },
+  noPhone: { en: "No valid phone", es: "Teléfono no válido", ru: "Некорректный номер" },
 } as const;
+
 
 const DashboardLeads = () => {
   const { locale } = useI18n();
@@ -125,7 +128,15 @@ const DashboardLeads = () => {
         <p className="text-sm text-muted-foreground font-body py-8">{L("empty")}</p>
       ) : (
         <div className="space-y-3">
-          {leads.map((l) => (
+          {leads.map((l) => {
+            const reply = [
+              `Hola ${l.name}, soy Elias (Elias Masaje).`,
+              "",
+              `Sobre tu solicitud: ${[l.service, l.duration, l.price].filter(Boolean).join(" · ")}`,
+              `Horario preferido: ${l.preferred_time}`,
+            ].join("\n");
+            const waHref = leadWhatsAppUrl(l.phone, reply);
+            return (
             <DashboardCard key={l.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -147,14 +158,24 @@ const DashboardLeads = () => {
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <a
-                    href={whatsappUrl(l.message)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs border border-border rounded-lg px-3 py-2 hover:bg-secondary transition-colors"
-                  >
-                    <MessageCircle size={13} /> {L("contact")}
-                  </a>
+                  {waHref ? (
+                    <a
+                      href={waHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs border border-border rounded-lg px-3 py-2 hover:bg-secondary transition-colors"
+                    >
+                      <MessageCircle size={13} /> {L("contact")}
+                    </a>
+                  ) : (
+                    <span
+                      title={L("noPhone")}
+                      className="inline-flex items-center gap-1.5 text-xs border border-border rounded-lg px-3 py-2 text-muted-foreground opacity-60 cursor-not-allowed"
+                    >
+                      <PhoneOff size={13} /> {L("noPhone")}
+                    </span>
+                  )}
+
                   {l.status !== "handled" && (
                     <button onClick={() => void setStatus(l.id, "handled")} className="inline-flex items-center gap-1.5 text-xs border border-border rounded-lg px-3 py-2 hover:bg-secondary transition-colors">
                       <Check size={13} /> {L("markDone")}
@@ -170,7 +191,9 @@ const DashboardLeads = () => {
                 <pre className="mt-2 whitespace-pre-wrap text-xs font-body bg-secondary/50 rounded-lg p-3">{l.message}</pre>
               </details>
             </DashboardCard>
-          ))}
+            );
+          })}
+
         </div>
       )}
     </div>

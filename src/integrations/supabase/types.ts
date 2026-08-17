@@ -144,6 +144,7 @@ export type Database = {
         Row: {
           action: string
           changed_at: string
+          changed_by: string | null
           id: string
           record_id: string
           snapshot: Json
@@ -152,6 +153,7 @@ export type Database = {
         Insert: {
           action?: string
           changed_at?: string
+          changed_by?: string | null
           id?: string
           record_id: string
           snapshot: Json
@@ -160,6 +162,7 @@ export type Database = {
         Update: {
           action?: string
           changed_at?: string
+          changed_by?: string | null
           id?: string
           record_id?: string
           snapshot?: Json
