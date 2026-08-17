@@ -954,7 +954,7 @@ const DashboardReviews = () => {
                 {c("importCancel")}
               </Button>
               <span className="text-[11px] text-muted-foreground" data-testid="import-mode-reminder">
-                {publishNow ? c("visPublish") : c("visHidden")}
+                {publishNow ? c("visPublish") : c("visHidden")} · {keepPinned ? c("pinKeep") : c("pinNone")}
               </span>
               {!rightsConfirmed && <span className="text-[11px] text-muted-foreground">{c("importNeedsRights")}</span>}
             </div>
