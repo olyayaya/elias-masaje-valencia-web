@@ -3,6 +3,16 @@
 // single PostgreSQL transaction (rewrite_media_references), so references can never be half-updated.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  ALLOWED_OUTPUT,
+  evaluateSaving,
+  extOf,
+  magicMatches,
+  MAX_UPLOAD_BYTES,
+  validateName,
+  validateOutputType,
+  validateRenameExtension,
+} from "./rules.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -28,11 +38,6 @@ const SCANS: { table: string; label: string; nameField: string; fields: string[]
 
 type Client = ReturnType<typeof createClient>;
 
-/** 15 MB decoded — far above any real dashboard image, low enough to bound memory. */
-const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
-/** Server-side compression thresholds, mirrored in src/lib/media-compress.ts. */
-const MIN_SAVING_RATIO = 0.1;
-const MIN_SAVING_BYTES = 10 * 1024;
 
 const nameVariants = (name: string) => Array.from(new Set([name, encodeURIComponent(name)]));
 
@@ -110,40 +115,6 @@ async function countHistoryReferences(admin: Client, fileName: string): Promise<
   return typeof data === "number" ? data : 0;
 }
 
-const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
-
-function validateName(name: string): string | null {
-  if (!name) return "Name cannot be empty";
-  if (name.includes("/") || name.includes("\\") || name.includes("..")) return "Name cannot contain paths";
-  if (!NAME_RE.test(name)) return "Use letters, numbers, dot, dash and underscore only";
-  if (!/\.[A-Za-z0-9]{2,5}$/.test(name)) return "Name must keep a file extension";
-  return null;
-}
-
-const extOf = (name: string) => (name.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "").toLowerCase();
-
-/** Raster formats we are allowed to write. GIF/SVG/AVIF are never re-encoded. */
-const ALLOWED_OUTPUT: Record<string, string[]> = {
-  "image/webp": ["webp"],
-  "image/jpeg": ["jpg", "jpeg"],
-  "image/png": ["png"],
-};
-
-function magicMatches(type: string, b: Uint8Array): boolean {
-  if (type === "image/png") {
-    return b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 &&
-      b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a;
-  }
-  if (type === "image/jpeg") {
-    return b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
-  }
-  if (type === "image/webp") {
-    return b.length > 12 &&
-      b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
-      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50;
-  }
-  return false;
-}
 
 type Stat = { found: boolean; size: number };
 
