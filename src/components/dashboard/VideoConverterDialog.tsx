@@ -206,13 +206,13 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
       // Tell the Library only what the conversion actually PROVED about this file.
       // A merely bigger result ("notSmaller") proves nothing: these settings were simply
       // worse, and smaller ones may still shrink the source — so no verdict is reported.
-      const verdictNow = evaluateVideoSaving(file.size, out.size);
-      const state = verdictNow.ok
-        ? "canOptimize"
-        : verdictNow.reason === "alreadyOptimized"
-          ? "optimized"
-          : null;
-      if (state) onVerdict?.(file.name, state);
+      const verdictNow: VideoSavingVerdict = evaluateVideoSaving(file.size, out.size);
+      if (verdictNow.ok) {
+        onVerdict?.(file.name, "canOptimize");
+      } else if (verdictNow.reason === "alreadyOptimized") {
+        onVerdict?.(file.name, "optimized");
+      }
+
     } catch (e) {
       if (!aliveRef.current) return;
       if ((e as DOMException)?.name === "AbortError") {
