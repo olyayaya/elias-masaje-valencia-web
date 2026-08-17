@@ -192,7 +192,7 @@ const ReviewsSection = () => {
   return (
     <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28" data-testid="reviews-section">
       <div className="max-w-5xl mx-auto">
-        <div ref={heading.ref} style={heading.style} className="text-center mb-8">
+        <div className="text-center mb-8">
           <h2 className="font-display text-3xl md:text-4xl mb-2">{t.testimonials.title}</h2>
           <div className="w-12 h-px bg-primary mx-auto mt-3" />
         </div>
