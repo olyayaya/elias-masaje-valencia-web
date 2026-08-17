@@ -1,33 +1,22 @@
 import { useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { useFadeIn } from "@/hooks/use-fade-in";
-import ContentError from "@/components/ContentError";
-import { TestimonialCardSkeleton } from "@/components/skeletons/ContentSkeletons";
 import { usePublicReviews } from "@/hooks/use-reviews";
-import { SOURCE_PROFILE_URL, displayReviews, type Review } from "@/lib/reviews";
+import { displayReviews, type Review } from "@/lib/reviews";
 
 /* ------------------------------------------------------------------ *
- * Public reviews — real imported reviews only.
+ * Public reviews — real, manually imported reviews only.
  *
- * There is no legacy fallback and no invented card: when the storage is not
- * there, the section is switched off, or nothing passes the owner's filters,
- * the whole block (heading, divider, cards) is simply absent from the page.
+ * No provider branding, no source badges, no legacy fallback and no invented
+ * card. When the storage is missing, still loading, failing, switched off or
+ * empty after the owner's filters, the whole block (heading, divider, cards) is
+ * simply absent from the page — never an error box or a skeleton.
  *
  * The row is a plain scroll-snap list: no autoplay, no duplicated cards, no
  * requestAnimationFrame. That makes touch swipe, keyboard scrolling and
  * prefers-reduced-motion the browser's job instead of ours.
  * ------------------------------------------------------------------ */
-
-/**
- * Only licensed sources are ever rendered here. TripAdvisor content is not
- * stored, not filtered and not shown in this block — the dashboard links to the
- * TripAdvisor profile instead.
- */
-const SOURCE_LABEL: Record<Review["source"], string> = {
-  google: "Google",
-  manual: "",
-};
 
 const CLAMP_CHARS = 180;
 
@@ -49,10 +38,6 @@ const ReviewCard = ({ review }: { review: Review }) => {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const longText = review.review_text.length > CLAMP_CHARS;
-  const sourceLabel = SOURCE_LABEL[review.source] ?? "";
-  // A per-review permalink when the provider gives one, otherwise the public
-  // profile of that source. Never presented as "this exact review".
-  const href = review.original_url ?? SOURCE_PROFILE_URL[review.source];
 
   return (
     <li
@@ -74,7 +59,7 @@ const ReviewCard = ({ review }: { review: Review }) => {
       )}
       <footer className="flex items-center justify-between gap-2 mt-4">
         <p className="text-sm font-body font-medium not-italic">
-          <cite className="not-italic">{review.author_name.trim() || t.testimonials.anonymousAuthor}</cite>
+          <cite className="not-italic">{review.author_name}</cite>
         </p>
         <div className="flex items-center gap-2 shrink-0">
           {review.reviewed_at && (
@@ -82,21 +67,18 @@ const ReviewCard = ({ review }: { review: Review }) => {
               {new Date(review.reviewed_at).toLocaleDateString()}
             </span>
           )}
-          {sourceLabel &&
-            (href ? (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded"
-              >
-                {sourceLabel}
-              </a>
-            ) : (
-              <span className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider">
-                {sourceLabel}
-              </span>
-            ))}
+          {review.original_url && (
+            <a
+              href={review.original_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t.testimonials.openOriginal}
+              className="inline-flex items-center gap-1 text-[10px] font-body text-muted-foreground/60 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded"
+            >
+              <ExternalLink size={10} aria-hidden="true" />
+              {t.testimonials.openOriginal}
+            </a>
+          )}
         </div>
       </footer>
     </li>
@@ -107,35 +89,14 @@ const ReviewsSection = () => {
   const { t } = useI18n();
   const heading = useFadeIn(0);
   const scroller = useRef<HTMLUListElement>(null);
-  const { items, settings, missingTable, isPending, isError, retry } = usePublicReviews();
+  const { items, settings, missingTable, isPending, isError } = usePublicReviews();
 
-  // The storage is not there yet → the section does not exist. No legacy cards.
-  if (missingTable) return null;
-
-  if (isError) {
-    return (
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28" data-testid="reviews-section">
-        <div className="max-w-5xl mx-auto">
-          <ContentError onRetry={retry} />
-        </div>
-      </section>
-    );
-  }
-
-  if (isPending) {
-    return (
-      <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28" data-testid="reviews-section">
-        <div className="max-w-5xl mx-auto flex gap-5 overflow-hidden" aria-hidden="true">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <TestimonialCardSkeleton key={i} />
-          ))}
-        </div>
-      </section>
-    );
-  }
+  // Nothing to show yet, or something went wrong → the section does not exist.
+  // A marketing page never shows an error box where reviews should be.
+  if (missingTable || isPending || isError) return null;
 
   const reviews = displayReviews(items, settings);
-  // Section disabled, or nothing passes the owner's filters → render nothing at all.
+  // Section disabled, or nothing passes the owner's filters → render nothing.
   if (reviews.length === 0) return null;
 
   const scrollBy = (dir: 1 | -1) => {

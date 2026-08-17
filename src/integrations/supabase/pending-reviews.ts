@@ -53,19 +53,21 @@ const pendingTable = <Row, Insert = Partial<Row>>(name: string): PendingTable<Ro
 /* --------------------------------------------------------------- rows --- */
 
 /**
- * Sources a review can carry. Both are *manual* entries: the owner imports an
- * export or a hand-kept list of reviews they hold the rights to. There is no
- * provider API, no crawler and no background job anywhere in this app — the only
- * way a review reaches the database is an admin-confirmed CSV/JSON import.
+ * There is no review "source" in this product any more.
  *
- * TripAdvisor is deliberately absent: their Content API terms forbid selectively
- * filtering / sorting their reviews and commingling them with third-party
- * reviews. TripAdvisor content is never imported, stored, filtered or shown.
+ * Every review is a manual entry: the owner types or uploads reviews they hold
+ * the rights to publish, and confirms that before anything is written. No
+ * provider API, no OAuth, no API keys, no background job, no scraping and no
+ * third-party branding anywhere in the pipeline. A review reaches the database
+ * exactly one way — an admin-confirmed CSV/JSON import.
  */
-export const REVIEW_SOURCES = ["google", "manual"] as const;
-export type ReviewSource = (typeof REVIEW_SOURCES)[number];
 
-/** Public TripAdvisor profile. A link target only — never a content source. */
+/**
+ * Public profile links the dashboard may show as plain "where reviews live"
+ * pointers. They are never used as a content source and never rendered as the
+ * origin of a stored review.
+ */
+export const GOOGLE_PROFILE_URL = "https://maps.app.goo.gl/uyR3ZRdYUFiYSwXt5";
 export const TRIPADVISOR_PROFILE_URL =
   "https://www.tripadvisor.com/Attraction_Review-g187529-d34031094-Reviews-Elias_Massage_Valencia-Valencia_Province_of_Valencia_Valencian_Community.html";
 
@@ -74,13 +76,11 @@ export type ReviewSort = (typeof REVIEW_SORTS)[number];
 
 export interface ReviewRow {
   id: string;
-  source: ReviewSource;
-  external_review_id: string;
+  /** Deterministic content hash (author + text + date). The only identity. */
+  dedupe_key: string;
   author_name: string;
-  author_avatar_url: string | null;
   rating: number;
   review_text: string;
-  review_language: string | null;
   reviewed_at: string | null;
   original_url: string | null;
   visible: boolean;
@@ -88,20 +88,20 @@ export interface ReviewRow {
   manual_priority: number;
   created_at: string;
   updated_at: string;
-  /** When this row last arrived through a manual import. */
+  /** When this row arrived through a manual import. */
   imported_at: string | null;
 }
 
 export interface ReviewInsert {
-  source: ReviewSource;
-  external_review_id: string;
+  dedupe_key: string;
   author_name: string;
-  author_avatar_url?: string | null;
   rating: number;
   review_text: string;
-  review_language?: string | null;
   reviewed_at?: string | null;
   original_url?: string | null;
+  visible?: boolean;
+  pinned?: boolean;
+  manual_priority?: number;
   imported_at?: string | null;
 }
 
@@ -109,7 +109,6 @@ export interface ReviewDisplaySettingsRow {
   id: string;
   section_enabled: boolean;
   allowed_ratings: number[];
-  allowed_sources: ReviewSource[];
   sort_mode: ReviewSort;
   updated_at: string;
 }

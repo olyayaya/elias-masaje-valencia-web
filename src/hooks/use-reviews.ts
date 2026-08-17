@@ -41,7 +41,7 @@ async function loadReviews(adminView: boolean): Promise<ReviewsResult> {
       visible: true,
       pinned: false,
       manual_priority: 0,
-      external_review_id: "",
+      dedupe_key: "",
       created_at: r.reviewed_at ?? "",
       updated_at: "",
       imported_at: null,

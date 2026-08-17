@@ -2,7 +2,12 @@ import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import {
+  CSV_TEMPLATE,
   DEFAULT_REVIEW_SETTINGS,
+  MAX_IMPORT_ROWS,
+  checkImportFileSize,
+  chunk,
+  dedupeKey,
   parseReviewImport,
   publicReviews,
   sortReviews,
@@ -12,13 +17,10 @@ import {
 
 const review = (p: Partial<Review>): Review => ({
   id: p.id ?? "1",
-  source: p.source ?? "google",
-  external_review_id: p.external_review_id ?? "x",
+  dedupe_key: p.dedupe_key ?? "k",
   author_name: p.author_name ?? "Ana",
-  author_avatar_url: null,
   rating: p.rating ?? 5,
   review_text: p.review_text ?? "text",
-  review_language: null,
   reviewed_at: p.reviewed_at ?? "2026-01-01T00:00:00Z",
   original_url: p.original_url ?? null,
   visible: p.visible ?? true,
@@ -54,19 +56,9 @@ describe("review display rules", () => {
     expect(publicReviews(list, settings({ section_enabled: false }))).toHaveLength(0);
   });
 
-  it("filters by allowed source", () => {
-    const list = [review({ id: "a", source: "google" }), review({ id: "b", source: "manual" })];
-    expect(publicReviews(list, settings({ allowed_sources: ["google"] })).map((r) => r.id)).toEqual(["a"]);
-  });
-
-  it("never shows a tripadvisor row, even if one somehow reaches the client", () => {
-    // Not a supported source: no importer writes it and the DB CHECK forbids it.
-    const rogue = { ...review({ id: "t" }), source: "tripadvisor" } as unknown as Review;
-    expect(DEFAULT_REVIEW_SETTINGS.allowed_sources).toEqual(["google", "manual"]);
-    expect(publicReviews([rogue], settings())).toEqual([]);
-    expect(
-      publicReviews([rogue], settings({ allowed_sources: ["google", "manual", "tripadvisor"] as never })),
-    ).toEqual([]);
+  it("drops incomplete rows instead of inventing an author or an empty card", () => {
+    const list = [review({ id: "a" }), review({ id: "b", author_name: "  " }), review({ id: "c", review_text: "" })];
+    expect(publicReviews(list, settings()).map((r) => r.id)).toEqual(["a"]);
   });
 
   it("never invents cards when there is no data", () => {
@@ -93,83 +85,143 @@ describe("sortReviews", () => {
   });
 });
 
-describe("tripadvisor import gating", () => {
-  it("rejects a tripadvisor source with an explanatory error and imports nothing", () => {
-    const { rows, errors } = parseReviewImport(
-      "source,author_name,rating,review_text\ntripadvisor,Ana,5,Great\n",
-    );
-    expect(rows).toHaveLength(0);
-    expect(errors[0]).toMatch(/TripAdvisor/);
-    expect(errors[0]).toMatch(/manual/);
+describe("dedupeKey", () => {
+  const base = { author_name: "Ana García", review_text: "Muy buen masaje", reviewed_at: "2026-02-01T00:00:00Z" };
+
+  it("is deterministic and case/whitespace insensitive", () => {
+    expect(dedupeKey(base)).toBe(dedupeKey(base));
+    expect(dedupeKey({ ...base, author_name: "  ana   garcía " })).toBe(dedupeKey(base));
+    expect(dedupeKey({ ...base, review_text: "Muy  buen\nmasaje" })).toBe(dedupeKey(base));
   });
 
-  it("accepts the same text as a manual entry with an original_url", () => {
-    const { rows, errors } = parseReviewImport(
-      "source,author_name,rating,review_text,original_url\nmanual,Ana,5,Great,https://ok.example\n",
-    );
-    expect(errors).toEqual([]);
-    expect(rows[0].source).toBe("manual");
-    expect(rows[0].original_url).toBe("https://ok.example/");
+  it("ignores the time of day but not the day", () => {
+    expect(dedupeKey({ ...base, reviewed_at: "2026-02-01T23:59:00Z" })).toBe(dedupeKey(base));
+    expect(dedupeKey({ ...base, reviewed_at: "2026-02-02T00:00:00Z" })).not.toBe(dedupeKey(base));
+  });
+
+  it("changes when the author or the text changes", () => {
+    expect(dedupeKey({ ...base, author_name: "Bea" })).not.toBe(dedupeKey(base));
+    expect(dedupeKey({ ...base, review_text: "Otra cosa" })).not.toBe(dedupeKey(base));
   });
 });
 
 describe("parseReviewImport", () => {
   const csv =
-    "source,external_review_id,author_name,rating,review_text,reviewed_at,original_url\n" +
-    'google,g1,Ana,5,"Great, really",2026-02-01,https://maps.google.com/x\n' +
-    "manual,m1,Bob,4,Nice,2026-03-01,https://example.com/y\n";
+    "author_name,rating,review_text,reviewed_at,original_url\n" +
+    'Ana,5,"Great, really",2026-02-01,https://maps.example/x\n' +
+    "Bob,4,Nice,2026-03-01,https://example.com/y\n";
 
-  it("parses a CSV export", () => {
-    const { rows, errors } = parseReviewImport(csv);
-    expect(errors).toEqual([]);
-    expect(rows).toHaveLength(2);
-    expect(rows[0].review_text).toBe("Great, really");
-    expect(rows[1].source).toBe("manual");
+  it("parses a CSV file into a per-row preview", () => {
+    const { rows, fileIssues, counts } = parseReviewImport(csv);
+    expect(fileIssues).toEqual([]);
+    expect(counts).toMatchObject({ total: 2, valid: 2, invalid: 0 });
+    expect(rows[0].row?.review_text).toBe("Great, really");
+    expect(rows[0].line).toBe(1);
+    expect(rows[1].row?.original_url).toBe("https://example.com/y");
   });
 
-  it("parses a JSON export", () => {
+  it("parses a JSON file and accepts common column aliases", () => {
+    const { rows, counts } = parseReviewImport(
+      JSON.stringify([{ name: "Cy", stars: "5", text: "ok", date: "2026-01-05" }]),
+    );
+    expect(counts.valid).toBe(1);
+    expect(rows[0].row?.author_name).toBe("Cy");
+    expect(rows[0].row?.rating).toBe(5);
+  });
+
+  it("flags bad rows individually instead of dropping the whole file", () => {
+    const { rows, counts } = parseReviewImport(
+      "author_name,rating,review_text,reviewed_at\n" +
+        "Ann,9,hi,\n" + // rating out of range
+        ",5,hi,\n" + // no author
+        "Ann,5,,\n" + // no text
+        "Ann,5,hi,not-a-date\n" +
+        "Ann,5,ok,2026-01-01\n",
+    );
+    expect(counts).toMatchObject({ total: 5, valid: 1, invalid: 4 });
+    expect(rows[0].issues[0].code).toBe("rating_invalid");
+    expect(rows[1].issues[0].code).toBe("author_required");
+    expect(rows[2].issues[0].code).toBe("text_required");
+    expect(rows[3].issues[0].code).toBe("date_invalid");
+    expect(rows[4].status).toBe("new");
+  });
+
+  it("rejects non-https links", () => {
     const { rows } = parseReviewImport(
-      JSON.stringify([{ source: "google", external_review_id: "g9", author_name: "Cy", rating: 5, review_text: "ok" }]),
+      "author_name,rating,review_text,original_url\nAna,5,hi,http://insecure.example\n",
     );
-    expect(rows).toHaveLength(1);
-    expect(rows[0].external_review_id).toBe("g9");
+    expect(rows[0].status).toBe("invalid");
+    expect(rows[0].issues[0].code).toBe("url_invalid");
   });
 
-  it("rejects bad ratings, unknown sources and missing authors", () => {
-    const { rows, errors } = parseReviewImport(
-      "source,author_name,rating,review_text\nyelp,Ann,5,hi\ngoogle,Ann,9,hi\ngoogle,,5,hi\n",
+  it("marks in-file duplicates and rows already stored", () => {
+    const stored = dedupeKey({ author_name: "Ana", review_text: "hi", reviewed_at: "2026-01-01T00:00:00.000Z" });
+    const { rows, counts } = parseReviewImport(
+      "author_name,rating,review_text,reviewed_at\n" +
+        "Ana,5,hi,2026-01-01\n" +
+        "Bea,5,hey,2026-01-02\n" +
+        "Bea,5,hey,2026-01-02\n",
+      [stored],
     );
-    expect(rows).toHaveLength(0);
-    expect(errors).toHaveLength(3);
+    expect(rows.map((r) => r.status)).toEqual(["duplicate_existing", "new", "duplicate_file"]);
+    expect(counts).toMatchObject({ valid: 1, duplicateExisting: 1, duplicateFile: 1 });
   });
 
-  it("drops non-https urls and in-file duplicates", () => {
-    const { rows } = parseReviewImport(
-      "source,external_review_id,author_name,rating,review_text,original_url\n" +
-        "google,g1,Ana,5,hi,http://insecure.example\n" +
-        "google,g1,Ana,5,hi,https://ok.example\n",
-    );
-    expect(rows).toHaveLength(1);
-    expect(rows[0].original_url).toBeNull();
+  it("guards the file size and the row ceiling", () => {
+    expect(checkImportFileSize(1024)).toBeNull();
+    expect(checkImportFileSize(5 * 1024 * 1024)?.code).toBe("file_too_large");
+    const many =
+      "author_name,rating,review_text\n" +
+      Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, i) => `A${i},5,text ${i}`).join("\n");
+    const { fileIssues, rows } = parseReviewImport(many);
+    expect(rows).toEqual([]);
+    expect(fileIssues[0].code).toBe("too_many_rows");
+  });
+
+  it("reports empty and unparsable files", () => {
+    expect(parseReviewImport("  ").fileIssues[0].code).toBe("file_empty");
+    expect(parseReviewImport("{bad json").fileIssues[0].code).toBe("invalid_json");
+    expect(parseReviewImport('{"reviews": 3}').fileIssues[0].code).toBe("json_not_array");
+    expect(parseReviewImport("author_name,rating\n").fileIssues[0].code).toBe("csv_no_rows");
+  });
+
+  it("ships a template with the documented columns", () => {
+    expect(CSV_TEMPLATE).toMatch(/author_name,rating,review_text,reviewed_at,original_url/);
+    expect(parseReviewImport(CSV_TEMPLATE).counts.valid).toBe(2);
   });
 });
 
-describe("prepared backend artefacts", () => {
-  const sql = readFileSync("supabase/pending-migrations/20260817170000_reviews.sql", "utf8");
-
-  it("enforces rating bounds, dedupe key, RLS and grants", () => {
-    expect(sql).toMatch(/rating\s+(smallint|integer)[^,]*check\s*\(\s*rating\s*(between|>=)/i);
-    expect(sql).toMatch(/unique\s*\(\s*source\s*,\s*external_review_id\s*\)/i);
-    expect(sql).toMatch(/enable row level security/i);
-    expect(sql).toMatch(/grant/i);
+describe("batching", () => {
+  it("splits rows into fixed-size batches without losing any", () => {
+    const list = Array.from({ length: 250 }, (_, i) => i);
+    const batches = chunk(list, 100);
+    expect(batches.map((b) => b.length)).toEqual([100, 100, 50]);
+    expect(batches.flat()).toEqual(list);
   });
+});
+
+describe("no external review integration anywhere", () => {
+  const sql = readFileSync("supabase/pending-migrations/20260817170000_reviews.sql", "utf8");
 
   it("ships no review sync edge function and no provider secrets", () => {
     expect(existsSync("supabase/functions/reviews-sync")).toBe(false);
     const tracked = execSync("git ls-files supabase src", { encoding: "utf8" });
     expect(tracked).not.toMatch(/reviews-sync/);
     expect(sql).not.toMatch(/review_sync_state/);
-    expect(sql).not.toMatch(/GOOGLE_BUSINESS/);
+    expect(sql).not.toMatch(/GOOGLE_BUSINESS|TRIPADVISOR_API|PLACES_API/);
+  });
+
+  it("keeps no provider client code in the review modules", () => {
+    const lib = readFileSync("src/lib/reviews.ts", "utf8");
+    const dash = readFileSync("src/components/dashboard/DashboardReviews.tsx", "utf8");
+    for (const src of [lib, dash]) {
+      expect(src).not.toMatch(/googleapis|places\/v1|api_key|apiKey|access_token/i);
+      expect(src).not.toMatch(/functions\.invoke/);
+    }
+  });
+
+  it("stores no source column: nothing can imply a third-party origin", () => {
+    expect(sql).not.toMatch(/\bsource\b/i);
+    expect(readFileSync("src/lib/reviews.ts", "utf8")).not.toMatch(/allowed_sources/);
   });
 });
-

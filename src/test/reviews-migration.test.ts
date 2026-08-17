@@ -17,15 +17,15 @@ describe("reviews migration — structure", () => {
     expect(sql).not.toMatch(/source_payload/);
   });
 
-  it("constrains ids, ratings, urls and the sort mode", () => {
-    expect(sql).toMatch(/btrim\(external_review_id\) <> ''/);
+  it("constrains the dedupe key, ratings, texts, urls and the sort mode", () => {
+    expect(sql).toMatch(/btrim\(dedupe_key\) <> ''/);
+    expect(sql).toMatch(/UNIQUE \(dedupe_key\)/);
     expect(sql).toMatch(/rating\s+integer NOT NULL CHECK \(rating BETWEEN 1 AND 5\)/);
-    expect(sql).toMatch(/author_avatar_url IS NULL OR author_avatar_url ~ '\^https:\/\/'/);
+    expect(sql).toMatch(/btrim\(author_name\) <> ''/);
+    expect(sql).toMatch(/btrim\(review_text\) <> ''/);
     expect(sql).toMatch(/original_url IS NULL OR original_url ~ '\^https:\/\/'/);
     expect(sql).toMatch(/allowed_ratings <@ ARRAY\[1,2,3,4,5\]/);
-    expect(sql).toMatch(/allowed_sources <@ ARRAY\['google','manual'\]/);
     expect(sql).toMatch(/sort_mode IN \('newest','oldest','rating_high','rating_low','manual'\)/);
-    expect(sql).toMatch(/UNIQUE \(source, external_review_id\)/);
   });
 
   it("defaults to 5★ only, the section on and newest first", () => {
@@ -35,13 +35,18 @@ describe("reviews migration — structure", () => {
   });
 });
 
-describe("reviews migration — manual import only", () => {
-  it("keeps no sync state table and no automated-source plumbing", () => {
+describe("reviews migration — manual entries only", () => {
+  it("keeps no source column, no sync state and no automated plumbing", () => {
     expect(sql).not.toMatch(/review_sync_state/);
     expect(sql).not.toMatch(/last_attempt_at|imported_count|rate_limited/);
+    expect(sql).not.toMatch(/allowed_sources/);
+    expect(sql).not.toMatch(/external_review_id/);
+    // No column, constraint or policy can carry a provider name.
+    expect(sql).not.toMatch(/\bsource\b/i);
+    expect(sql).not.toMatch(/tripadvisor|google/i);
   });
 
-  it("tracks when a row last arrived through a manual import", () => {
+  it("tracks when a row was added by an admin", () => {
     expect(sql).toMatch(/imported_at\s+timestamptz/);
     expect(sql).not.toMatch(/last_synced_at/);
   });
@@ -59,29 +64,20 @@ describe("reviews migration — RLS and grants", () => {
     expect(anonGrant).toBeTruthy();
     const cols = anonGrant![1];
     expect(cols).not.toMatch(/visible/);
-    expect(cols).not.toMatch(/external_review_id/);
+    expect(cols).not.toMatch(/dedupe_key/);
     expect(cols).toMatch(/pinned/);
     expect(cols).toMatch(/manual_priority/);
   });
 
   it("gates the anon read behind the visibility function and gives admins full control", () => {
-    expect(sql).toMatch(/USING \(public\.review_is_public\(rating, source, visible\)\)/);
+    expect(sql).toMatch(/USING \(public\.review_is_public\(rating, visible\)\)/);
     expect(sql).toMatch(/Admins manage reviews[\s\S]*has_role\(auth\.uid\(\), 'admin'::app_role\)/);
+    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.review_is_public/);
   });
 
-  it("pins search_path and revokes the definer function from PUBLIC", () => {
-    expect(sql).toMatch(/SECURITY DEFINER[\s\S]*SET search_path = public/);
-    expect(sql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.review_is_public\(integer, text, boolean\) FROM PUBLIC/);
-  });
-});
-
-describe("reviews migration — tripadvisor is not a storable source", () => {
-  it("forbids tripadvisor rows and settings at the database level", () => {
-    expect(sql).toMatch(/source\s+text NOT NULL CHECK \(source IN \('google', 'manual'\)\)/);
-    expect(sql).toMatch(/allowed_sources\s+text\[\] NOT NULL DEFAULT '\{google,manual\}'/);
-  });
-
-  it("never stores an empty author name", () => {
-    expect(sql).toMatch(/author_name[^,]*btrim\(author_name\) <> ''/);
+  it("grants the tables to authenticated and service_role", () => {
+    expect(sql).toMatch(/GRANT SELECT, INSERT, UPDATE, DELETE ON public\.reviews TO authenticated;/);
+    expect(sql).toMatch(/GRANT ALL ON public\.reviews TO service_role;/);
+    expect(sql).toMatch(/GRANT ALL ON public\.review_display_settings TO service_role;/);
   });
 });

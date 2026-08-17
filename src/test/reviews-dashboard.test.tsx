@@ -3,16 +3,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "@/i18n/context";
-import {
-  DEFAULT_REVIEW_SETTINGS,
-  type Review,
-  type ReviewDisplaySettings,
-} from "@/lib/reviews";
+import { DEFAULT_REVIEW_SETTINGS, dedupeKey, type Review, type ReviewDisplaySettings } from "@/lib/reviews";
 
 const h = vi.hoisted(() => ({
   updateEq: vi.fn(async () => ({ data: null, error: null as null | { message: string } })),
   update: vi.fn((_v: Record<string, unknown>) => ({ eq: h.updateEq, neq: h.updateEq })),
   settingsUpdate: vi.fn((_v: Record<string, unknown>) => ({ eq: h.updateEq, neq: h.updateEq })),
+  upsert: vi.fn(async (_rows: unknown[], _o?: unknown) => ({ data: null, error: null as null | { message: string } })),
+  insert: vi.fn(async (_rows: unknown[]) => ({ data: null, error: null as null | { message: string } })),
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), message: vi.fn() },
   state: {
     items: [] as Review[],
@@ -29,7 +27,7 @@ vi.mock("@/integrations/supabase/pending-reviews", async (orig) => {
   const actual = await orig<typeof import("@/integrations/supabase/pending-reviews")>();
   return {
     ...actual,
-    reviewsTable: () => ({ update: h.update }),
+    reviewsTable: () => ({ update: h.update, upsert: h.upsert, insert: h.insert }),
     reviewSettingsTable: () => ({ update: h.settingsUpdate }),
   };
 });
@@ -42,14 +40,11 @@ import DashboardReviews from "@/components/dashboard/DashboardReviews";
 
 const review = (p: Partial<Review>): Review => ({
   id: p.id ?? "1",
-  source: p.source ?? "google",
-  external_review_id: "x",
+  dedupe_key: p.dedupe_key ?? `k-${p.id ?? "1"}`,
   author_name: p.author_name ?? "Ana",
-  author_avatar_url: null,
   rating: p.rating ?? 5,
   review_text: p.review_text ?? "text",
-  review_language: null,
-  reviewed_at: "2026-01-01T00:00:00Z",
+  reviewed_at: p.reviewed_at ?? "2026-01-01T00:00:00Z",
   original_url: null,
   visible: p.visible ?? true,
   pinned: p.pinned ?? false,
@@ -68,12 +63,28 @@ const mount = () =>
     </QueryClientProvider>,
   );
 
+/** jsdom's File has no .text(); the component reads the file that way. */
+const file = (text: string, name = "reviews.csv", size?: number) => {
+  const f = new File([text], name, { type: name.endsWith(".json") ? "application/json" : "text/csv" });
+  Object.defineProperty(f, "text", { value: async () => text });
+  Object.defineProperty(f, "size", { value: size ?? text.length });
+  return f;
+};
+
+const upload = async (text: string, name = "reviews.csv") => {
+  const input = screen.getByLabelText(/choose|elegir|выбрать/i) as HTMLInputElement;
+  fireEvent.change(input, { target: { files: [file(text, name)] } });
+  await waitFor(() => expect(screen.getByTestId("import-preview")).toBeTruthy());
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   h.updateEq.mockImplementation(async () => ({ data: null, error: null }));
+  h.upsert.mockImplementation(async () => ({ data: null, error: null }));
+  h.insert.mockImplementation(async () => ({ data: null, error: null }));
   h.state.items = [
-    review({ id: "a", author_name: "Ana", rating: 5, source: "google" }),
-    review({ id: "b", author_name: "Bea", rating: 3, source: "manual", visible: false }),
+    review({ id: "a", author_name: "Ana", rating: 5 }),
+    review({ id: "b", author_name: "Bea", rating: 3, visible: false }),
   ];
   h.state.settings = { id: "s", updated_at: "", ...DEFAULT_REVIEW_SETTINGS };
   h.state.missingTable = false;
@@ -81,7 +92,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("dashboard reviews — filters", () => {
-  it("filters by search, source, rating and visibility", () => {
+  it("filters by search, rating and visibility", () => {
     mount();
     expect(screen.getAllByRole("heading", { level: 4 })).toHaveLength(2);
 
@@ -89,12 +100,6 @@ describe("dashboard reviews — filters", () => {
     expect(screen.getAllByRole("heading", { level: 4 })[0].textContent).toBe("Bea");
 
     fireEvent.change(screen.getByLabelText(/search|buscar|поиск/i), { target: { value: "" } });
-    fireEvent.change(screen.getByLabelText(/all sources|todas las fuentes|все источники/i), {
-      target: { value: "google" },
-    });
-    expect(screen.getAllByRole("heading", { level: 4 })).toHaveLength(1);
-
-    fireEvent.change(screen.getByLabelText(/all sources|todas las fuentes|все источники/i), { target: { value: "all" } });
     fireEvent.change(screen.getByLabelText(/all ratings|todas las valoraciones|все оценки/i), { target: { value: "3" } });
     expect(screen.getAllByRole("heading", { level: 4 })[0].textContent).toBe("Bea");
 
@@ -103,6 +108,11 @@ describe("dashboard reviews — filters", () => {
       target: { value: "hidden" },
     });
     expect(screen.getAllByRole("heading", { level: 4 })[0].textContent).toBe("Bea");
+  });
+
+  it("offers no source filter at all", () => {
+    mount();
+    expect(screen.queryByLabelText(/all sources|todas las fuentes|все источники/i)).toBeNull();
   });
 });
 
@@ -134,13 +144,9 @@ describe("dashboard reviews — persisted display settings", () => {
     await waitFor(() => expect(h.settingsUpdate).toHaveBeenCalledWith({ allowed_ratings: [4, 5] }));
   });
 
-  it("persists source toggles and the homepage sort mode", async () => {
+  it("persists the homepage sort mode and keeps no source toggles", async () => {
     mount();
-    fireEvent.click(screen.getByLabelText(/show reviews from google|mostrar reseñas de google|отзывы из google/i));
-    await waitFor(() =>
-      expect(h.settingsUpdate).toHaveBeenCalledWith({ allowed_sources: ["manual"] }),
-    );
-
+    expect(screen.queryByLabelText(/reviews from|reseñas de google|отзывы из/i)).toBeNull();
     fireEvent.change(screen.getByLabelText(/order on the homepage|orden en la portada|порядок на главной/i), {
       target: { value: "manual" },
     });
@@ -157,94 +163,151 @@ describe("dashboard reviews — persisted display settings", () => {
   });
 });
 
-describe("dashboard reviews — no automated sync surface", () => {
+describe("dashboard reviews — no automated integration surface", () => {
   it("offers no sync button, no provider status and no secret names", () => {
     mount();
     expect(screen.queryByTestId("sync-status-google")).toBeNull();
     expect(screen.queryByRole("button", { name: /sync|sincroniz|синхрон/i })).toBeNull();
-    expect(document.body.textContent).not.toMatch(/GOOGLE_BUSINESS/);
-  });
-});
-
-describe("tripadvisor compliance card", () => {
-  it("is a separate, filter-free card that only links the profile", () => {
-    mount();
-    const note = screen.getByTestId("tripadvisor-compliance");
-    expect(note.textContent).toMatch(/widget|licen|лиценз/i);
-    const link = screen.getByRole("link", { name: /tripadvisor/i });
-    expect(link.getAttribute("href")).toContain(
-      "tripadvisor.com/Attraction_Review-g187529-d34031094-Reviews-Elias_Massage_Valencia",
-    );
-    expect(link.getAttribute("target")).toBe("_blank");
-    expect(link.getAttribute("rel")).toContain("noopener");
-    // No import and no source toggle for TripAdvisor anywhere.
-    expect(screen.queryByLabelText(/reviews from tripadvisor|reseñas de tripadvisor|отзывы из tripadvisor/i)).toBeNull();
+    expect(document.body.textContent).not.toMatch(/GOOGLE_BUSINESS|API key|clave de API|ключ API/);
   });
 
-  it("offers rating bands and sources only for Google and manual reviews", () => {
+  it("keeps the platform profiles as plain links with a no-import explanation", () => {
     mount();
-    for (const n of [1, 2, 3, 4, 5]) {
-      expect(screen.getByLabelText(new RegExp(`${n}★`))).toBeTruthy();
+    expect(screen.getByTestId("reviews-profiles-note").textContent).toMatch(/never downloaded|no se descarga|не загружается/i);
+    for (const name of [/google/i, /tripadvisor/i]) {
+      const link = screen.getByRole("link", { name });
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("rel")).toContain("noopener");
     }
-    const sourceSelect = screen.getByLabelText(/all sources|todas las fuentes|все источники/i) as HTMLSelectElement;
-    expect(Array.from(sourceSelect.options).map((o) => o.value)).toEqual(["all", "google", "manual"]);
   });
 });
 
-describe("manual import — preview, dedupe and rights confirmation", () => {
-  // jsdom's File has no .text(); the component reads the file that way.
-  const file = (text: string, name: string) => {
-    const f = new File([text], name, { type: name.endsWith(".json") ? "application/json" : "text/csv" });
-    Object.defineProperty(f, "text", { value: async () => text });
-    return f;
-  };
+describe("manual entry", () => {
+  it("saves a hand-typed review hidden, with a content dedupe key", async () => {
+    mount();
+    fireEvent.change(screen.getByLabelText(/customer name|nombre del cliente|имя клиента/i), {
+      target: { value: "Carla" },
+    });
+    fireEvent.change(screen.getByLabelText(/review text|texto de la reseña|текст отзыва/i), {
+      target: { value: "Muy bien" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /add review|añadir reseña|добавить отзыв/i }));
+    await waitFor(() => expect(h.insert).toHaveBeenCalled());
+    const row = (h.insert.mock.calls[0][0] as Record<string, unknown>[])[0];
+    expect(row).toMatchObject({ author_name: "Carla", review_text: "Muy bien", rating: 5, visible: false });
+    expect(row.dedupe_key).toBe(dedupeKey({ author_name: "Carla", review_text: "Muy bien", reviewed_at: null }));
+  });
 
-  const upload = async (text: string, name = "reviews.csv") => {
-    const input = screen.getByLabelText(/choose|elegir|выбрать/i) as HTMLInputElement;
-    fireEvent.change(input, { target: { files: [file(text, name)] } });
-    await waitFor(() => expect(screen.getByTestId("import-preview")).toBeTruthy());
-  };
+  it("refuses a duplicate of a review already stored", async () => {
+    const key = dedupeKey({ author_name: "Ana", review_text: "text", reviewed_at: null });
+    h.state.items = [review({ id: "a", author_name: "Ana", review_text: "text", dedupe_key: key })];
+    mount();
+    fireEvent.change(screen.getByLabelText(/customer name|nombre del cliente|имя клиента/i), {
+      target: { value: "Ana" },
+    });
+    fireEvent.change(screen.getByLabelText(/review text|texto de la reseña|текст отзыва/i), {
+      target: { value: "text" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /add review|añadir reseña|добавить отзыв/i }));
+    await waitFor(() => expect(h.toast.error).toHaveBeenCalled());
+    expect(h.insert).not.toHaveBeenCalled();
+  });
+});
 
+describe("manual import — preview, selection and rights confirmation", () => {
+  const stored = dedupeKey({ author_name: "Ana", review_text: "Muy bien", reviewed_at: "2026-01-01T00:00:00.000Z" });
   const CSV =
-    "source,external_review_id,author_name,rating,review_text,reviewed_at\n" +
-    "google,x,Ana,5,Muy bien,2026-01-01\n" + // already stored (id "x")
-    "google,new-1,Carla,4,Genial,2026-01-02\n" +
-    "google,new-1,Carla,4,Genial,2026-01-02\n"; // duplicate inside the file
+    "author_name,rating,review_text,reviewed_at\n" +
+    "Ana,5,Muy bien,2026-01-01\n" + // already stored
+    "Carla,4,Genial,2026-01-02\n" +
+    "Carla,4,Genial,2026-01-02\n" + // duplicate inside the file
+    "Dora,9,Mal,2026-01-03\n"; // invalid rating
 
-  it("previews every row and counts new, existing and in-file duplicates", async () => {
+  beforeEach(() => {
+    h.state.items = [review({ id: "a", author_name: "Ana", review_text: "Muy bien", dedupe_key: stored })];
+  });
+
+  it("previews every row with its status and counts", async () => {
     mount();
     await upload(CSV);
-    const summary = screen.getByTestId("import-summary").textContent ?? "";
-    // 2 valid rows · 1 new · 1 already stored · 1 in-file duplicate skipped
-    expect(summary.match(/\d+/g)).toEqual(["2", "1", "1", "1"]);
-    expect(screen.getByText("Carla")).toBeTruthy();
-    // "Ana" shows both in the stored list and in the preview table.
-    expect(screen.getAllByText("Ana").length).toBeGreaterThan(1);
+    expect(screen.getByTestId("import-summary").textContent?.match(/\d+/g)).toEqual(["4", "1", "1", "1", "1"]);
+    expect(screen.getByTestId("import-row-4").textContent).toMatch(/1.*5|1 to 5|1 a 5|1 до 5/);
+  });
+
+  it("selects importable rows only and supports ctrl and shift selection", async () => {
+    h.state.items = [];
+    mount();
+    await upload(
+      "author_name,rating,review_text\nA,5,one\nB,5,two\nC,5,three\nD,5,four\n",
+    );
+    // All four importable rows start selected.
+    expect(screen.getByTestId("import-selected").textContent).toMatch(/4/);
+    fireEvent.click(screen.getByRole("button", { name: /clear selection|quitar selección|снять выбор/i }));
+    expect(screen.getByTestId("import-selected").textContent).toMatch(/0/);
+
+    fireEvent.click(screen.getByTestId("import-row-2"));
+    fireEvent.click(screen.getByTestId("import-row-4"), { shiftKey: true });
+    expect(screen.getByTestId("import-selected").textContent).toMatch(/3/);
+
+    fireEvent.click(screen.getByTestId("import-row-1"), { ctrlKey: true });
+    expect(screen.getByTestId("import-selected").textContent).toMatch(/4/);
+
+    fireEvent.keyDown(screen.getByTestId("import-row-1"), { key: " " });
+    expect(screen.getByTestId("import-selected").textContent).toMatch(/3/);
+  });
+
+  it("never selects duplicate or invalid rows", async () => {
+    mount();
+    await upload(CSV);
+    expect(screen.getByTestId("import-selected").textContent).toMatch(/1/);
+    fireEvent.click(screen.getByRole("button", { name: /select all|seleccionar todas|выбрать все/i }));
+    expect(screen.getByTestId("import-selected").textContent).toMatch(/1/);
+    fireEvent.click(screen.getByTestId("import-row-3")); // in-file duplicate
+    fireEvent.click(screen.getByTestId("import-row-4")); // invalid
+    expect(screen.getByTestId("import-selected").textContent).toMatch(/1/);
   });
 
   it("refuses to write until the rights confirmation is ticked", async () => {
     mount();
     await upload(CSV);
-    const confirm = screen.getByRole("button", { name: /import 2|importar 2|импортировать 2/i });
+    const confirm = screen.getByRole("button", { name: /import 1|importar 1|импортировать 1/i });
     expect((confirm as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByTestId("import-rights"));
     expect((confirm as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("rejects a tripadvisor source row", async () => {
+  it("inserts with conflict-ignore on the dedupe key and reports the result", async () => {
+    mount();
+    await upload(CSV);
+    fireEvent.click(screen.getByTestId("import-rights"));
+    fireEvent.click(screen.getByRole("button", { name: /import 1|importar 1|импортировать 1/i }));
+    await waitFor(() => expect(h.upsert).toHaveBeenCalledTimes(1));
+    const [rows, options] = h.upsert.mock.calls[0];
+    expect(options).toEqual({ onConflict: "dedupe_key", ignoreDuplicates: true });
+    expect(rows).toHaveLength(1);
+    expect((rows as Record<string, unknown>[])[0]).toMatchObject({ author_name: "Carla" });
+    await waitFor(() => expect(screen.getByTestId("import-report").textContent).toMatch(/1/));
+  });
+
+  it("keeps failed rows retryable instead of losing them", async () => {
+    h.upsert.mockImplementation(async () => ({ data: null, error: { message: "boom" } }));
+    mount();
+    await upload(CSV);
+    fireEvent.click(screen.getByTestId("import-rights"));
+    fireEvent.click(screen.getByRole("button", { name: /import 1|importar 1|импортировать 1/i }));
+    await waitFor(() => expect(h.toast.error).toHaveBeenCalled());
+    const retry = await screen.findByRole("button", { name: /retry|reintentar|повторить/i });
+    h.upsert.mockImplementation(async () => ({ data: null, error: null }));
+    fireEvent.click(retry);
+    await waitFor(() => expect(h.upsert).toHaveBeenCalledTimes(2));
+  });
+
+  it("stops an oversized file before reading it", async () => {
     mount();
     const input = screen.getByLabelText(/choose|elegir|выбрать/i) as HTMLInputElement;
-    fireEvent.change(input, {
-      target: {
-        files: [
-          file(
-            "source,external_review_id,author_name,rating,review_text\ntripadvisor,t1,Ana,5,Nice\n",
-            "ta.csv",
-          ),
-        ],
-      },
-    });
-    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    const big = file("author_name,rating,review_text\nA,5,x\n", "big.csv", 5 * 1024 * 1024);
+    fireEvent.change(input, { target: { files: [big] } });
+    await waitFor(() => expect(screen.getByTestId("import-file-errors")).toBeTruthy());
     expect(screen.queryByTestId("import-preview")).toBeNull();
   });
 });
