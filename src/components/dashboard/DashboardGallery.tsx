@@ -43,12 +43,21 @@ const COPY = {
   pickerEmpty: { en: "No files of this type in the Library.", es: "No hay archivos de este tipo en la Biblioteca.", ru: "В Библиотеке нет файлов этого типа." },
   pickerSearch: { en: "Search by file name", es: "Buscar por nombre de archivo", ru: "Поиск по имени файла" },
   pickerNoMatch: { en: "No files match your search.", es: "Ningún archivo coincide con la búsqueda.", ru: "Нет файлов, подходящих под запрос." },
+  pickerError: {
+    en: "Could not load the Library files.",
+    es: "No se pudieron cargar los archivos de la Biblioteca.",
+    ru: "Не удалось загрузить файлы Библиотеки.",
+  },
+  retry: { en: "Retry", es: "Reintentar", ru: "Повторить" },
   cancel: { en: "Cancel", es: "Cancelar", ru: "Отмена" },
-  select: { en: "Select", es: "Seleccionar", ru: "Выбрать" },
+  select: { en: "Select", es: "Seleccionar", ru: "Выбrar" },
   changeMedia: { en: "Change file", es: "Cambiar archivo", ru: "Заменить файл" },
   poster: { en: "Video cover", es: "Portada del vídeo", ru: "Обложка видео" },
   generateCover: { en: "Generate cover", es: "Generar portada", ru: "Создать обложку" },
   generating: { en: "Generating cover…", es: "Generando portada…", ru: "Создание обложки…" },
+  coverProgress: { en: "Generating cover — {p}%", es: "Generando portada — {p}%", ru: "Создание обложки — {p}%" },
+  coverCancel: { en: "Cancel cover generation", es: "Cancelar la generación de portada", ru: "Отменить создание обложки" },
+  coverCancelled: { en: "Cover generation cancelled", es: "Generación de portada cancelada", ru: "Создание обложки отменено" },
   coverDone: { en: "Cover generated", es: "Portada generada", ru: "Обложка создана" },
   coverFailed: {
     en: "Could not generate a cover from this video. Pick an image instead.",
@@ -60,6 +69,12 @@ const COPY = {
     es: "Se ha borrado la portada porque cambió el vídeo — genera o elige una nueva.",
     ru: "Обложка сброшена, так как видео изменилось — создайте или выберите новую.",
   },
+  reorderFailed: {
+    en: "Could not reorder — the atomic reorder function is unavailable. Nothing was changed.",
+    es: "No se pudo reordenar: la función de reordenación atómica no está disponible. No se cambió nada.",
+    ru: "Не удалось изменить порядок: атомарная функция недоступна. Ничего не изменено.",
+  },
+
   issueMissingMedia: { en: "No file selected.", es: "Ningún archivo seleccionado.", ru: "Файл не выбран." },
   issueMissingPoster: {
     en: "A video needs a cover image before it can be published.",
