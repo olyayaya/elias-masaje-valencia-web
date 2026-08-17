@@ -18,6 +18,29 @@ export const COPY = {
   tooBig: { en: "{f} is larger than {m} MB", es: "{f} supera los {m} MB", ru: "{f} больше {m} МБ" },
   skippedUnsupported: { en: "{f} is not a supported photo or video", es: "{f} no es una foto o vídeo compatible", ru: "{f} — неподдерживаемый файл" },
 
+  // ---- remove audio on upload -----------------------------------------
+  removeAudio: {
+    en: "Remove audio from video before upload",
+    es: "Eliminar audio del vídeo antes de subirlo",
+    ru: "Удалить аудио из видео перед загрузкой",
+  },
+  removeAudioHint: {
+    en: "Applies to videos only. The audio track is removed in your browser first — the version with sound is never uploaded. Video quality is untouched.",
+    es: "Solo afecta a los vídeos. La pista de audio se elimina en tu navegador antes de subir: la versión con sonido nunca se envía. La calidad del vídeo no cambia.",
+    ru: "Только для видео. Аудиодорожка удаляется в браузере до загрузки — версия со звуком никогда не отправляется. Качество видео не меняется.",
+  },
+  removingAudio: { en: "Removing audio from {f} — {p}%", es: "Eliminando audio de {f} — {p}%", ru: "Удаление аудио из {f} — {p}%" },
+  audioRemoved: { en: "Audio removed from {f}", es: "Audio eliminado de {f}", ru: "Аудио удалено из {f}" },
+  noAudioTrack: { en: "{f} had no audio track — uploaded unchanged", es: "{f} no tenía pista de audio: se subió sin cambios", ru: "В {f} не было аудиодорожки — загружено без изменений" },
+  audioRemovalFailed: { en: "Could not remove the audio from {f} — the file was not uploaded", es: "No se pudo eliminar el audio de {f}: el archivo no se subió", ru: "Не удалось удалить аудио из {f} — файл не загружен" },
+  audioRemovalCancelled: { en: "Audio removal cancelled — {f} was not uploaded", es: "Eliminación de audio cancelada: {f} no se subió", ru: "Удаление аудио отменено — {f} не загружен" },
+  audioRemovalUnsupported: {
+    en: "This browser cannot remove audio (WebAssembly unavailable) — {f} was not uploaded",
+    es: "Este navegador no puede eliminar el audio (WebAssembly no disponible): {f} no se subió",
+    ru: "Этот браузер не может удалить аудио (нет WebAssembly) — {f} не загружен",
+  },
+
+
   // ---- library / tabs --------------------------------------------------
   library: { en: "Library", es: "Biblioteca", ru: "Библиотека" },
   all: { en: "All", es: "Todo", ru: "Все" },
