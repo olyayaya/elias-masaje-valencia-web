@@ -20,14 +20,14 @@ vi.mock("tus-js-client", () => ({
   },
 }));
 
-const remove = vi.fn(async () => ({ error: null as { message: string } | null }));
+const remove = vi.fn(async (_names: string[]) => ({ error: null as { message: string } | null }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: {
       getSession: async () => ({ data: { session: { access_token: "t" } } }),
       getUser: async () => ({ data: { user: { id: "u" } } }),
     },
-    storage: { from: () => ({ remove: (n: string[]) => remove(n as never) }) },
+    storage: { from: () => ({ remove: (n: string[]) => remove(n) }) },
   },
 }));
 
