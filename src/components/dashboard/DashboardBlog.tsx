@@ -17,9 +17,35 @@ import { queryKeys } from "@/lib/query-keys";
 import DashboardCard from "./DashboardCard";
 import ImagePicker from "./ImagePicker";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
+import ImageAltDialog from "./ImageAltDialog";
+import { countMissingAlt, countNonLocalizedAlt, DECORATIVE_ATTR, type AltLang } from "@/lib/alt-text";
 import { AI_ENABLED } from "@/config/features";
 import { slugify, isValidSlug } from "@/lib/blog-slugs";
 import { toast } from "sonner";
+
+/**
+ * Image node that keeps the alt text AND an explicit decorative marker, so an
+ * intentional alt="" is never confused with a forgotten SEO description.
+ */
+const ImageWithAlt = ImageExt.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      [DECORATIVE_ATTR]: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute(DECORATIVE_ATTR),
+        renderHTML: (attributes: Record<string, unknown>) =>
+          attributes[DECORATIVE_ATTR] ? { [DECORATIVE_ATTR]: "true" } : {},
+      },
+    };
+  },
+});
+
+export const buildImageAttrs = (src: string, alt: string, decorative: boolean) => ({
+  src,
+  alt: decorative ? "" : alt,
+  [DECORATIVE_ATTR]: decorative ? "true" : null,
+});
 
 interface BlogPost {
   id: string;
@@ -470,6 +496,9 @@ const BlogEditor = ({
   const [regenerating, setRegenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [altDialog, setAltDialog] = useState<
+    { src: string; alt: string; decorative: boolean; mode: "insert" | "edit" } | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -483,7 +512,7 @@ const BlogEditor = ({
         heading: { levels: [1, 2, 3] },
       }),
       Link.configure({ openOnClick: false }),
-      ImageExt,
+      ImageWithAlt,
       Placeholder.configure({ placeholder: "Start writing your post…" }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
@@ -523,8 +552,8 @@ const BlogEditor = ({
       const { error } = await supabase.storage.from("media").upload(path, file, { contentType: file.type });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-      editor.chain().focus().setImage({ src: urlData.publicUrl }).run();
-      toast.success("Image inserted");
+      // Alt text is required before the image lands in the article.
+      setAltDialog({ src: urlData.publicUrl, alt: "", decorative: false, mode: "insert" });
     } catch (err: any) {
       toast.error(err.message || "Upload failed");
     } finally {
@@ -817,6 +846,25 @@ const BlogEditor = ({
                   <ToolbarBtn onClick={() => setMediaPickerOpen(true)} active={false} title="Insert from media library">
                     <FolderOpen size={14} />
                   </ToolbarBtn>
+                  <ToolbarBtn
+                    onClick={() => {
+                      if (!editor.isActive("image")) {
+                        toast.info("Select an image in the text first");
+                        return;
+                      }
+                      const a = editor.getAttributes("image");
+                      setAltDialog({
+                        src: a.src || "",
+                        alt: a.alt || "",
+                        decorative: String(a[DECORATIVE_ATTR] ?? "") === "true",
+                        mode: "edit",
+                      });
+                    }}
+                    active={editor.isActive("image")}
+                    title="Edit alt text of the selected image"
+                  >
+                    <Pencil size={14} />
+                  </ToolbarBtn>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -827,10 +875,7 @@ const BlogEditor = ({
                   <ImagePicker
                     open={mediaPickerOpen}
                     onClose={() => setMediaPickerOpen(false)}
-                    onSelect={(url) => {
-                      editor?.chain().focus().setImage({ src: url }).run();
-                      toast.success("Image inserted from library");
-                    }}
+                    onSelect={(url) => setAltDialog({ src: url, alt: "", decorative: false, mode: "insert" })}
                   />
 
                   <ToolbarSep />
