@@ -152,28 +152,9 @@ const SORT_LABEL: Record<ReviewSort, keyof typeof COPY> = {
   manual: "sortManual",
 };
 
-const STATUS_LABEL: Record<string, keyof typeof COPY> = {
-  never: "statusNever",
-  ok: "statusOk",
-  error: "statusError",
-  not_configured: "notConfigured",
-  rate_limited: "statusRateLimited",
-};
-
 const SOURCE_LABEL: Record<ReviewSource, keyof typeof COPY> = {
   google: "sourceGoogle",
   manual: "sourceManual",
-};
-
-/** Secrets the server-side sync needs before it can run. Names only, never values. */
-export const REQUIRED_SYNC_SECRETS: Record<"google", string[]> = {
-  google: [
-    "GOOGLE_BUSINESS_PROFILE_CLIENT_ID",
-    "GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET",
-    "GOOGLE_BUSINESS_PROFILE_REFRESH_TOKEN",
-    "GOOGLE_BUSINESS_ACCOUNT_ID",
-    "GOOGLE_BUSINESS_LOCATION_ID",
-  ],
 };
 
 const Stars = ({ n }: { n: number }) => (
@@ -187,7 +168,7 @@ const Stars = ({ n }: { n: number }) => (
 const DashboardReviews = () => {
   const c = useCopy();
   const qc = useQueryClient();
-  const { items, settings, syncState, missingTable, isPending } = useAdminReviews();
+  const { items, settings, missingTable, isPending } = useAdminReviews();
 
   const [search, setSearch] = useState("");
   const [source, setSource] = useState<"all" | ReviewSource>("all");
@@ -195,15 +176,10 @@ const DashboardReviews = () => {
   const [visibility, setVisibility] = useState<"all" | "visible" | "hidden">("all");
   const [sort, setSort] = useState<ReviewSort>("newest");
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState<null | ReviewSource>(null);
-  const [syncStatus, setSyncStatus] = useState<Record<string, string>>({});
-  const stateBySource = useMemo(() => {
-    const map = new Map<string, ReviewSyncStateRow>();
-    for (const row of syncState) map.set(row.source, row);
-    return map;
-  }, [syncState]);
   const [importRows, setImportRows] = useState<ParsedImportRow[] | null>(null);
   const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importDupes, setImportDupes] = useState(0);
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -211,7 +187,6 @@ const DashboardReviews = () => {
     void qc.invalidateQueries({ queryKey: reviewKeys.adminList });
     void qc.invalidateQueries({ queryKey: reviewKeys.publicList });
     void qc.invalidateQueries({ queryKey: reviewKeys.settings });
-    void qc.invalidateQueries({ queryKey: reviewKeys.syncState });
   };
 
   const filtered = useMemo(() => {
@@ -265,75 +240,40 @@ const DashboardReviews = () => {
   const bumpPriority = (r: Review, delta: number) =>
     void patch(r.id, { manual_priority: Math.max(-999, Math.min(999, r.manual_priority + delta)) });
 
-  /**
-   * Server-side sync. The Edge Function owns every credential; the browser only
-   * ever sees counters and a status string — never a token.
-   */
-  const runSync = async (src: ReviewSource) => {
-    setSyncing(src);
-    try {
-      const { data, error } = await supabase.functions.invoke("reviews-sync", {
-        body: { source: src },
-      });
-      if (error) throw error;
-      const res = data as {
-        status?: string;
-        imported?: number;
-        updated?: number;
-        skipped?: number;
-        error?: string;
-      };
-      if (res?.status === "rate_limited") {
-        setSyncStatus((s) => ({ ...s, [src]: "rate_limited" }));
-        toast.warning(c("rateLimited", { n: String((res as { retry_after?: number }).retry_after ?? 60) }));
-        refresh();
-        return;
-      }
-      if (res?.status === "compliance_required") {
-        // Defensive: the UI offers no button for a blocked source.
-        setSyncStatus((s) => ({ ...s, [src]: "compliance_required" }));
-        toast.warning(c("tripadvisorBody"));
-        return;
-      }
-      if (res?.status === "not_configured") {
-        setSyncStatus((s) => ({ ...s, [src]: "not_configured" }));
-        toast.warning(c("notConfigured"));
-        refresh();
-        return;
-      }
-      if (res?.status !== "ok") throw new Error(res?.error || "sync failed");
-      setSyncStatus((s) => ({ ...s, [src]: "ok" }));
-      toast.success(
-        c("syncResult", {
-          imported: String(res.imported ?? 0),
-          updated: String(res.updated ?? 0),
-          skipped: String(res.skipped ?? 0),
-        }),
-      );
-      refresh();
-    } catch {
-      setSyncStatus((s) => ({ ...s, [src]: "error" }));
-      toast.error(c("syncFailed"));
-    } finally {
-      setSyncing(null);
-    }
+  const resetImport = () => {
+    setImportRows(null);
+    setImportErrors([]);
+    setImportDupes(0);
+    setRightsConfirmed(false);
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     const text = await file.text();
-    const { rows, errors } = parseReviewImport(text);
+    const { rows, errors, duplicatesInFile } = parseReviewImport(text);
     setImportRows(rows);
     setImportErrors(errors);
+    setImportDupes(duplicatesInFile);
+    // Every new file needs its own explicit rights confirmation.
+    setRightsConfirmed(false);
   };
 
+  /** New vs. already-stored rows, computed before anything is written. */
+  const plan = useMemo(() => planImport(importRows ?? [], items), [importRows, items]);
+  const isUpdate = useMemo(
+    () => new Set(plan.updates.map((r) => `${r.source}|${r.external_review_id}`)),
+    [plan],
+  );
+
   const confirmImport = async () => {
-    if (!importRows?.length) return;
+    // Belt and braces: the button is disabled, and the write refuses anyway.
+    if (!importRows?.length || !rightsConfirmed) return;
     setImporting(true);
     // Upsert on (source, external_review_id): a re-import never duplicates and
     // never touches the moderator's own visible / pinned decisions.
     const { error } = await reviewsTable().upsert(
-      importRows.map((r) => ({ ...r, last_synced_at: new Date().toISOString() })),
+      importRows.map((r) => ({ ...r, imported_at: new Date().toISOString() })),
       { onConflict: "source,external_review_id", ignoreDuplicates: false },
     );
     setImporting(false);
@@ -342,14 +282,12 @@ const DashboardReviews = () => {
       return;
     }
     toast.success(c("importDone", { n: String(importRows.length) }));
-    setImportRows(null);
-    setImportErrors([]);
-    if (fileRef.current) fileRef.current.value = "";
+    resetImport();
     refresh();
   };
 
-  const lastSync = useMemo(() => {
-    const stamps = items.map((r) => r.last_synced_at).filter(Boolean) as string[];
+  const lastImport = useMemo(() => {
+    const stamps = items.map((r) => r.imported_at).filter(Boolean) as string[];
     if (!stamps.length) return null;
     return stamps.sort().at(-1) ?? null;
   }, [items]);
