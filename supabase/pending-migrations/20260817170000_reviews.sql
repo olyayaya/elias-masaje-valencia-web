@@ -1,12 +1,12 @@
 -- ============================================================================
 -- PENDING — NOT APPLIED. Reviewed and applied only during the separate rollout.
 --
--- Real customer reviews, added by hand only. There is no provider integration
--- anywhere in this product: no Google API, no TripAdvisor Content API, no OAuth,
--- no API key, no scheduled job and no scraping. A row exists because an admin
--- typed it in or imported a CSV/JSON file and confirmed they hold the rights to
--- publish that text. Consequently there is no `source` column at all — nothing
--- in the schema can imply a third-party origin.
+-- Real customer reviews, added by hand only. There is no external integration
+-- anywhere in this product: no platform API, no OAuth, no API key, no scheduled
+-- job and no scraping. A row exists because an admin typed it in or imported a
+-- CSV/JSON file and confirmed they hold the rights to publish that text.
+-- Consequently the table carries no origin/provider column at all — nothing in
+-- the schema can imply a third-party origin.
 --
 -- Additive only: nothing existing is dropped or rewritten. The legacy
 -- public.testimonials table keeps working until the new section is rolled out.
@@ -19,7 +19,7 @@
 CREATE TABLE IF NOT EXISTS public.reviews (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   -- Deterministic content hash (author + text + calendar day) computed by the
-  -- importer. The UNIQUE constraint is what makes a re-import a no-op.
+  -- importer in the dashboard. The UNIQUE constraint is what makes a re-import a no-op.
   dedupe_key        text NOT NULL CHECK (btrim(dedupe_key) <> '' AND length(dedupe_key) <= 64),
   -- Never empty: an incomplete row is rejected, never stored with an invented
   -- placeholder author.

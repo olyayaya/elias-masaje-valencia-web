@@ -64,10 +64,10 @@ const mount = () =>
   );
 
 /** jsdom's File has no .text(); the component reads the file that way. */
-const file = (text: string, name = "reviews.csv") => {
+const file = (text: string, name = "reviews.csv", size?: number) => {
   const f = new File([text], name, { type: name.endsWith(".json") ? "application/json" : "text/csv" });
   Object.defineProperty(f, "text", { value: async () => text });
-  Object.defineProperty(f, "size", { value: text.length });
+  Object.defineProperty(f, "size", { value: size ?? text.length });
   return f;
 };
 
@@ -173,7 +173,7 @@ describe("dashboard reviews — no automated integration surface", () => {
 
   it("keeps the platform profiles as plain links with a no-import explanation", () => {
     mount();
-    expect(screen.getByTestId("reviews-profiles-note").textContent).toMatch(/never|nunca|не /i);
+    expect(screen.getByTestId("reviews-profiles-note").textContent).toMatch(/never downloaded|no se descarga|не загружается/i);
     for (const name of [/google/i, /tripadvisor/i]) {
       const link = screen.getByRole("link", { name });
       expect(link.getAttribute("target")).toBe("_blank");
@@ -185,12 +185,12 @@ describe("dashboard reviews — no automated integration surface", () => {
 describe("manual entry", () => {
   it("saves a hand-typed review hidden, with a content dedupe key", async () => {
     mount();
-    fireEvent.change(screen.getAllByRole("textbox")[1], { target: { value: "Carla" } });
-    fireEvent.change(screen.getByRole("textbox", { name: "" }) ?? document.createElement("input"), {
-      target: { value: "" },
+    fireEvent.change(screen.getByLabelText(/customer name|nombre del cliente|имя клиента/i), {
+      target: { value: "Carla" },
     });
-    const textarea = document.querySelector("textarea")!;
-    fireEvent.change(textarea, { target: { value: "Muy bien" } });
+    fireEvent.change(screen.getByLabelText(/review text|texto de la reseña|текст отзыва/i), {
+      target: { value: "Muy bien" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /add review|añadir reseña|добавить отзыв/i }));
     await waitFor(() => expect(h.insert).toHaveBeenCalled());
     const row = (h.insert.mock.calls[0][0] as Record<string, unknown>[])[0];
@@ -202,8 +202,12 @@ describe("manual entry", () => {
     const key = dedupeKey({ author_name: "Ana", review_text: "text", reviewed_at: null });
     h.state.items = [review({ id: "a", author_name: "Ana", review_text: "text", dedupe_key: key })];
     mount();
-    fireEvent.change(screen.getAllByRole("textbox")[1], { target: { value: "Ana" } });
-    fireEvent.change(document.querySelector("textarea")!, { target: { value: "text" } });
+    fireEvent.change(screen.getByLabelText(/customer name|nombre del cliente|имя клиента/i), {
+      target: { value: "Ana" },
+    });
+    fireEvent.change(screen.getByLabelText(/review text|texto de la reseña|текст отзыва/i), {
+      target: { value: "text" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /add review|añadir reseña|добавить отзыв/i }));
     await waitFor(() => expect(h.toast.error).toHaveBeenCalled());
     expect(h.insert).not.toHaveBeenCalled();
@@ -301,8 +305,7 @@ describe("manual import — preview, selection and rights confirmation", () => {
   it("stops an oversized file before reading it", async () => {
     mount();
     const input = screen.getByLabelText(/choose|elegir|выбрать/i) as HTMLInputElement;
-    const big = file("author_name,rating,review_text\nA,5,x\n");
-    Object.defineProperty(big, "size", { value: 5 * 1024 * 1024 });
+    const big = file("author_name,rating,review_text\nA,5,x\n", "big.csv", 5 * 1024 * 1024);
     fireEvent.change(input, { target: { files: [big] } });
     await waitFor(() => expect(screen.getByTestId("import-file-errors")).toBeTruthy());
     expect(screen.queryByTestId("import-preview")).toBeNull();
