@@ -9,8 +9,9 @@ import Header from "@/components/Header";
 
 afterEach(cleanup);
 
-const mount = (path: string) =>
-  render(
+const mount = (path: string) => {
+  window.history.replaceState({}, "", path);
+  return render(
     <I18nProvider>
       <ThemeProvider>
         <MemoryRouter initialEntries={[path]}>
@@ -19,6 +20,7 @@ const mount = (path: string) =>
       </ThemeProvider>
     </I18nProvider>,
   );
+};
 
 const cases = [
   { path: "/", services: "/servicios", gallery: "/galeria" },

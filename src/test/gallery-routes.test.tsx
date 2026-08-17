@@ -49,8 +49,10 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 import Galeria from "@/pages/Galeria";
 
-const renderPage = (path: string) =>
-  render(
+const renderPage = (path: string) => {
+  // The i18n provider resolves the locale from the real location, not the router.
+  window.history.replaceState({}, "", path);
+  return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <I18nProvider>
         <ThemeProvider>
@@ -61,6 +63,7 @@ const renderPage = (path: string) =>
       </I18nProvider>
     </QueryClientProvider>,
   );
+};
 
 afterEach(cleanup);
 

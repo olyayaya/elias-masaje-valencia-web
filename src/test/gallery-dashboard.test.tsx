@@ -104,6 +104,12 @@ const pageOf = (names: string[]) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // mockClear keeps implementations, so every mock that a test overrides must be
+  // restored here or the override leaks into the next test.
+  h.generatePoster.mockImplementation(async () => ({
+    blob: new Blob(["x"]), width: 10, height: 10, ext: "webp" as const, mimeType: "image/webp", source: "canvas" as const,
+  }));
+  h.insert.mockImplementation(async () => ({ error: null }));
   h.list.mockImplementation(async () => pageOf([]));
   h.updateEq.mockImplementation(async () => ({ error: null }));
   h.upload.mockImplementation(async () => ({ error: null }));
