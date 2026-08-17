@@ -70,10 +70,18 @@ export async function listAllMediaObjects(options: ListAllOptions = {}): Promise
     // Last page, or a backend that keeps returning the same rows: stop either way.
     if (rows.length < pageSize) break;
     if (added === 0) break;
+    // The ceiling was reached while the listing was still producing new objects:
+    // returning here would hand the caller a silently truncated "full" list.
+    if (page === maxPages - 1) {
+      throw new Error(
+        `Storage listing exceeded ${maxPages} pages — the file list is incomplete. Please retry.`,
+      );
+    }
   }
 
   return out;
 }
+
 
 /** Convenience wrapper for collision-safe naming, which only needs the names. */
 export async function listAllMediaNames(options: ListAllOptions = {}): Promise<string[]> {
