@@ -198,6 +198,17 @@ export function outputNameFor(sourceName: string, format: VideoFormat): string {
 const MOV_LIKE = new Set(["mp4", "m4v", "mov"]);
 
 /**
+ * Explicit output muxer per extension. Critical for `.m4v`, which ffmpeg otherwise
+ * resolves to the *raw* MPEG-4 video muxer instead of the ISO BMFF/MP4 container.
+ */
+const MUXER_BY_EXT: Record<string, string> = {
+  mp4: "mp4",
+  m4v: "mp4",
+  mov: "mov",
+  webm: "webm",
+};
+
+/**
  * argv for stripping every audio (and data/subtitle) stream while copying the video
  * bitstream untouched. No `-c:v` re-encode → no quality loss and near-instant remux.
  * The container/extension is preserved, so the resulting MIME stays valid.
@@ -206,9 +217,12 @@ export function buildStripAudioArgs(o: { inputName: string; outputName: string }
   const ext = (o.outputName.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "").toLowerCase();
   const args = ["-i", o.inputName, "-map", "0:v:0", "-c:v", "copy", "-an", "-sn", "-dn"];
   if (MOV_LIKE.has(ext)) args.push("-movflags", "+faststart");
+  const muxer = MUXER_BY_EXT[ext];
+  if (muxer) args.push("-f", muxer);
   args.push("-y", o.outputName);
   return args;
 }
+
 
 /**
  * True when the ffmpeg log for the source shows at least one audio stream.

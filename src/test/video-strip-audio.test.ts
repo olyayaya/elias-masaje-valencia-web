@@ -31,6 +31,8 @@ vi.mock("@ffmpeg/ffmpeg", () => ({
 const videoFile = (name = "clip.mp4") =>
   ({ name, size: 10, type: "video/mp4", arrayBuffer: async () => new Uint8Array([7]).buffer }) as unknown as File;
 
+const deleted = () => calls.filter((c) => c.startsWith("delete:")).map((c) => c.slice(7));
+
 describe("stripAudio runtime", () => {
   beforeEach(() => { calls.length = 0; vi.clearAllMocks(); });
 
@@ -41,8 +43,30 @@ describe("stripAudio runtime", () => {
     expect(out.size).toBeGreaterThan(0);
     expect(out.blob.type).toBe("video/mp4");
     expect(calls.some((c) => c.startsWith("exec:") && c.includes("-an"))).toBe(true);
-    expect(calls).toContain("delete:mute-in.mp4");
-    expect(calls).toContain("delete:mute-out.mp4");
+    const files = deleted();
+    expect(files).toHaveLength(2);
+    expect(files.every((f) => /^mute-[a-z0-9-]+-(in|out)\.mp4$/.test(f))).toBe(true);
+  });
+
+  it("uses a distinct temporary name for every operation", async () => {
+    const { stripAudio, terminateFFmpeg } = await import("@/lib/video-ffmpeg");
+    terminateFFmpeg();
+    await stripAudio(videoFile(), { fileName: "clip.mp4", mimeType: "video/mp4" });
+    const first = deleted();
+    calls.length = 0;
+    await stripAudio(videoFile(), { fileName: "clip.mp4", mimeType: "video/mp4" });
+    expect(deleted()).not.toEqual(first);
+  });
+
+  it("rejects on a non-zero ffmpeg exit code without reading the output", async () => {
+    const { stripAudio, terminateFFmpeg } = await import("@/lib/video-ffmpeg");
+    terminateFFmpeg();
+    ff.exec.mockImplementationOnce(async (a: string[]) => { calls.push(`exec:${a.join(" ")}`); return 1; });
+    await expect(stripAudio(videoFile(), { fileName: "clip.mp4", mimeType: "video/mp4" }))
+      .rejects.toThrow(/exit code 1/);
+    expect(ff.readFile).not.toHaveBeenCalled();
+    expect(deleted()).toHaveLength(2);
+    expect(ff.off).toHaveBeenCalled();
   });
 
   it("still deletes the input when the remux fails", async () => {
@@ -50,7 +74,7 @@ describe("stripAudio runtime", () => {
     terminateFFmpeg();
     ff.exec.mockImplementationOnce(async () => { throw new Error("boom"); });
     await expect(stripAudio(videoFile(), { fileName: "clip.mp4", mimeType: "video/mp4" })).rejects.toThrow(/boom/);
-    expect(calls).toContain("delete:mute-in.mp4");
+    expect(deleted().some((f) => f.endsWith("-in.mp4"))).toBe(true);
   });
 
   it("rejects an already-aborted request without running ffmpeg", async () => {
@@ -63,3 +87,4 @@ describe("stripAudio runtime", () => {
     expect(calls).toEqual([]);
   });
 });
+
