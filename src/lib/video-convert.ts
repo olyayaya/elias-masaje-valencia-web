@@ -188,8 +188,11 @@ export function parseEncoderCaps(log: string): EncoderCaps {
     vp9: has("libvpx-vp9"),
     aac: has("aac"),
     opus: has("libopus"),
+    mp3lame: has("libmp3lame"),
+    vorbis: has("libvorbis"),
   };
 }
+
 
 export const formatDuration = (seconds: number): string => {
   if (!Number.isFinite(seconds) || seconds < 0) return "—";
