@@ -85,14 +85,23 @@ describe("sitemap generator", () => {
     }
   });
 
-  it("emits 33 unique <loc> entries for 7 static route groups + 4 published articles", () => {
+  it("omits the gallery URLs until at least one item is published", () => {
     const all = locs();
+    expect(all).toHaveLength(30);
+    expect(new Set(all).size).toBe(30);
+    expect(all).not.toContain(`${BASE_URL}/galeria`);
+    expect(all).not.toContain(`${BASE_URL}/en/gallery`);
+    expect(all).not.toContain(`${BASE_URL}/ru/galereya`);
+  });
+
+  it("emits the gallery URLs once the section has published content", () => {
+    const all = buildSitemapEntries(POSTS, [], NOW, { includeGallery: true }).map((e) => e.loc);
     expect(all).toHaveLength(33);
-    expect(new Set(all).size).toBe(33);
     expect(all).toContain(`${BASE_URL}/galeria`);
     expect(all).toContain(`${BASE_URL}/en/gallery`);
     expect(all).toContain(`${BASE_URL}/ru/galereya`);
   });
+
 
   it("emits reciprocal article hreflang with Spanish x-default", () => {
     const entries = buildSitemapEntries(POSTS, [], NOW);
