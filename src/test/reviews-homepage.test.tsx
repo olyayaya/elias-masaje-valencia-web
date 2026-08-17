@@ -139,10 +139,10 @@ describe("public reviews section", () => {
     state.value.items = [review({ id: "a", review_text: "x".repeat(400) })];
     mount();
     const toggle = screen.getByRole("button", { name: /leer más|read more|читать полностью/i });
-    const paragraph = screen.getByTestId("review-card").querySelector("p")!;
+    const paragraph = screen.getByTestId("review-card").querySelector("blockquote p")!;
     expect(paragraph.className).toContain("line-clamp-4");
     fireEvent.click(toggle);
-    expect(screen.getByTestId("review-card").querySelector("p")!.className).not.toContain("line-clamp");
+    expect(screen.getByTestId("review-card").querySelector("blockquote p")!.className).not.toContain("line-clamp");
   });
 
   it("exposes an accessible star label and semantic markup", () => {
@@ -269,7 +269,7 @@ describe("localized review text on the public page", () => {
       review({ id: "c", review_text: "short", original_language: "en", review_text_es: "x".repeat(400) }),
     ];
     mount();
-    expect(screen.getByTestId("review-card").querySelector("p")!.className).toContain("line-clamp-4");
+    expect(screen.getByTestId("review-card").querySelector("blockquote p")!.className).toContain("line-clamp-4");
   });
 });
 
