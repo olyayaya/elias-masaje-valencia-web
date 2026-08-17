@@ -57,7 +57,6 @@ const DashboardHistory = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
-  const [aliases, setAliases] = useState<AliasMap>(new Map());
   const queryClient = useQueryClient();
 
   const invalidateFor = (tableName: string) => {
@@ -77,14 +76,22 @@ const DashboardHistory = () => {
 
   useEffect(() => {
     fetchHistory();
-    // Snapshots are immutable, so stale media names are resolved forward at restore time.
-    fetchAliasMap().then(setAliases).catch(() => setAliases(new Map()));
   }, []);
 
   const restore = async (entry: HistoryEntry) => {
     setRestoring(entry.id);
     try {
-      const remapped = await restoreEntry(entry);
+      // Aliases are re-read immediately before every write: one created after mount
+      // must still be applied, and a failed read must block the write entirely.
+      let aliases: AliasMap;
+      try {
+        aliases = await fetchAliasMap();
+      } catch (e) {
+        console.error("Alias load failed:", e);
+        toast.error("Restore blocked: could not load media aliases");
+        return;
+      }
+      const remapped = await restoreEntry(entry, aliases);
       toast.success(
         remapped > 0
           ? `Restored to previous version · ${remapped} media link(s) remapped to their current file`
@@ -100,22 +107,30 @@ const DashboardHistory = () => {
   };
 
   /** Resolves renamed/re-encoded media names forward before writing the snapshot back. */
-  const restoreEntry = async (entry: HistoryEntry): Promise<number> => {
+  const restoreEntry = async (entry: HistoryEntry, aliases: AliasMap): Promise<number> => {
     const { snapshot, remapped } = resolveSnapshotMedia(entry.snapshot, aliases);
     const { id, created_at, updated_at, ...fields } = snapshot;
-    if (entry.action === "delete") {
-      await supabase.from(entry.table_name as any).insert({ ...snapshot, id: entry.record_id } as any);
-    } else {
-      await supabase.from(entry.table_name as any).update(fields as any).eq("id", entry.record_id);
-    }
+    const { error } =
+      entry.action === "delete"
+        ? await supabase.from(entry.table_name as any).insert({ ...snapshot, id: entry.record_id } as any)
+        : await supabase.from(entry.table_name as any).update(fields as any).eq("id", entry.record_id);
+    if (error) throw new Error(error.message || "Restore write failed");
     invalidateFor(entry.table_name);
     return remapped;
   };
 
-
-
   const runBulkUndo = async () => {
     setBulkRunning(true);
+    let aliases: AliasMap;
+    try {
+      aliases = await fetchAliasMap();
+    } catch (e) {
+      console.error("Alias load failed:", e);
+      setBulkRunning(false);
+      setBulkOpen(false);
+      toast.error("Restore blocked: could not load media aliases");
+      return;
+    }
     // Restore newest-selected last so the final state is the oldest snapshot per record
     const ordered = entries
       .filter((e) => selected.has(e.id))
@@ -123,7 +138,7 @@ const DashboardHistory = () => {
     let ok = 0;
     for (const entry of ordered) {
       try {
-        await restoreEntry(entry);
+        await restoreEntry(entry, aliases);
         ok++;
       } catch (e) {
         console.error("Bulk undo failed for", entry.id, e);
@@ -132,7 +147,11 @@ const DashboardHistory = () => {
     setBulkRunning(false);
     setBulkOpen(false);
     setSelected(new Set());
-    toast.success(`Restored ${ok} of ${ordered.length} changes`);
+    if (ok === ordered.length) {
+      toast.success(`Restored ${ok} of ${ordered.length} changes`);
+    } else {
+      toast.error(`Restored ${ok} of ${ordered.length} changes`);
+    }
     fetchHistory();
   };
 
