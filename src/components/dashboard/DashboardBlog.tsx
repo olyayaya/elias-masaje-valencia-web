@@ -593,6 +593,9 @@ const BlogEditor = ({
   const currentTitle = (draft[titleKey] as string) || "";
   const currentContent = (draft[contentKey] as string) || "";
   const currentIsEmpty = !currentTitle.trim() && !currentContent.trim();
+  // SEO alt health for the language currently being edited.
+  const missingAltCount = countMissingAlt(currentContent);
+  const nonLocalizedAltCount = lang === "es" ? 0 : countNonLocalizedAlt((draft.content as string) || "", currentContent);
 
   const sourceLang = currentIsEmpty
     ? allLangs.find((l) => {
@@ -768,6 +771,32 @@ const BlogEditor = ({
         </DashboardCard>
       )}
 
+      {(missingAltCount > 0 || nonLocalizedAltCount > 0) && (
+        <DashboardCard>
+          <div className="space-y-1">
+            {missingAltCount > 0 && (
+              <p className="text-xs text-foreground flex items-start gap-2">
+                <ImageIcon size={14} className="text-primary mt-0.5 shrink-0" />
+                <span>
+                  {missingAltCount} image{missingAltCount === 1 ? "" : "s"} without alt text in the {lang.toUpperCase()} version.
+                  Click the image in the editor, then use the pencil button in the toolbar to describe it
+                  (or mark it as decorative).
+                </span>
+              </p>
+            )}
+            {nonLocalizedAltCount > 0 && (
+              <p className="text-xs text-muted-foreground flex items-start gap-2">
+                <Languages size={14} className="text-primary mt-0.5 shrink-0" />
+                <span>
+                  {nonLocalizedAltCount} image{nonLocalizedAltCount === 1 ? "" : "s"} still carry the Spanish alt text in the{" "}
+                  {lang.toUpperCase()} version — review and translate them.
+                </span>
+              </p>
+            )}
+          </div>
+        </DashboardCard>
+      )}
+
       <DashboardCard>
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -877,6 +906,28 @@ const BlogEditor = ({
                     onClose={() => setMediaPickerOpen(false)}
                     onSelect={(url) => setAltDialog({ src: url, alt: "", decorative: false, mode: "insert" })}
                   />
+                  {altDialog && (
+                    <ImageAltDialog
+                      open
+                      src={altDialog.src}
+                      lang={lang as AltLang}
+                      initialAlt={altDialog.alt}
+                      initialDecorative={altDialog.decorative}
+                      mode={altDialog.mode}
+                      onCancel={() => setAltDialog(null)}
+                      onConfirm={(alt, decorative) => {
+                        const attrs = buildImageAttrs(altDialog.src, alt, decorative);
+                        if (altDialog.mode === "edit") {
+                          editor.chain().focus().updateAttributes("image", attrs).run();
+                          toast.success("Alt text updated");
+                        } else {
+                          editor.chain().focus().setImage(attrs).run();
+                          toast.success("Image inserted");
+                        }
+                        setAltDialog(null);
+                      }}
+                    />
+                  )}
 
                   <ToolbarSep />
 
