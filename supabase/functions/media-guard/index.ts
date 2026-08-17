@@ -146,30 +146,27 @@ async function readHead(admin: Client, name: string, bytes = 64): Promise<Uint8A
   const body = res.body;
   if (!body) return new Uint8Array(0);
   const reader = body.getReader();
-  const chunks: Uint8Array[] = [];
+  const head = new Uint8Array(bytes);
   let total = 0;
   try {
     while (total < bytes) {
       const { done, value } = await reader.read();
       if (done) break;
       if (!value?.length) continue;
-      chunks.push(value);
-      total += value.length;
+      // Only the bytes we promised are ever retained: a server that ignores Range can hand
+      // us a 10 MB first chunk, and all but the first `bytes` of it are dropped right here.
+      const take = Math.min(value.length, bytes - total);
+      head.set(value.subarray(0, take), total);
+      total += take;
     }
   } finally {
     // Stops the download immediately — nothing beyond the head is ever transferred.
     await reader.cancel().catch(() => undefined);
   }
 
-  const head = new Uint8Array(Math.min(total, bytes));
-  let offset = 0;
-  for (const c of chunks) {
-    if (offset >= head.length) break;
-    head.set(c.subarray(0, head.length - offset), offset);
-    offset += c.length;
-  }
-  return head;
+  return head.subarray(0, total);
 }
+
 
 /** Supabase caps a plain select at 1000 rows — page explicitly or usage silently under-counts. */
 const PAGE_SIZE = 1000;
