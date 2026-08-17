@@ -9,6 +9,7 @@ export const ru: Translations = {
   nav: {
     home: "Главная",
     services: "Услуги",
+    gallery: "Галерея",
     about: "Обо мне",
     contact: "Контакты",
     blog: "Блог",
@@ -127,6 +128,19 @@ export const ru: Translations = {
     navigation: "Навигация",
     contact: "Контакты",
     rights: "Все права защищены.",
+  },
+  gallery: {
+    title: "Галерея",
+    subtitle: "Моменты студии: фото и видео пространства, процедур и деталей каждого дня.",
+    metaTitle: "Галерея — Elias Masaje Валенсия",
+    metaDescription: "Фото и видео массажной студии Elias в Валенсии: пространство, процедуры и детали, которые создают ощущение покоя.",
+    empty: "В галерее пока нет опубликованных материалов.",
+    playVideo: "Воспроизвести видео",
+    readMore: "Читать полностью",
+    close: "Закрыть",
+    prev: "Назад",
+    next: "Вперёд",
+    viewer: "Просмотр галереи",
   },
   a11y: {
     skipToContent: "Перейти к содержимому",

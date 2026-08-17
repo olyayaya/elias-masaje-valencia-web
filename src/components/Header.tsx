@@ -18,6 +18,7 @@ const Header = () => {
   const navItems = [
     { label: t.nav.home, path: lp("home") },
     { label: t.nav.services, path: lp("services") },
+    { label: t.nav.gallery, path: lp("gallery") },
     { label: t.nav.about, path: lp("about") },
     { label: t.nav.contact, path: lp("contact") },
     { label: t.nav.blog, path: lp("blog") },

@@ -15,4 +15,6 @@ export const queryKeys = {
   pageImagesAll: ["page_images"] as const,
   blogPosts: ["blog_posts"] as const,
   blogPost: (slug: string) => ["blog_posts", slug] as const,
+  gallery: ["gallery_items", "published"] as const,
+  galleryAdmin: ["gallery_items", "all"] as const,
 } as const;

@@ -172,10 +172,11 @@ export function evaluateSaving(actualSourceSize: number, newSize: number): Savin
  *   booking_leads / conversion_events -> visitor-submitted data, never an editor image source
  *   content_history                   -> immutable audit log; handled through media_aliases
  */
-export const SCANS: { table: string; label: string; nameField: string; fields: string[] }[] = [
+export const SCANS: { table: string; label: string; nameField: string; fields: string[]; optional?: boolean }[] = [
   { table: "blog_posts", label: "Blog post", nameField: "title", fields: ["content", "content_en", "content_ru", "meta_description", "meta_description_en", "meta_description_ru"] },
   { table: "site_content", label: "Site content", nameField: "label", fields: ["value_es", "value_en", "value_ru"] },
   { table: "page_images", label: "Image / carousel", nameField: "collection_key", fields: ["image_url", "alt_text", "alt_text_en", "alt_text_ru"] },
+  { table: "gallery_items", label: "Gallery item", nameField: "title_es", fields: ["media_url", "poster_url", "description_es", "description_en", "description_ru", "alt_es", "alt_en", "alt_ru"], optional: true },
   { table: "services", label: "Service", nameField: "title", fields: ["description", "description_en", "description_ru"] },
   { table: "faqs", label: "FAQ", nameField: "question", fields: ["question", "question_en", "question_ru", "answer", "answer_en", "answer_ru"] },
   { table: "promotions", label: "Promotion", nameField: "badge_text", fields: ["badge_text", "badge_text_en", "badge_text_ru"] },

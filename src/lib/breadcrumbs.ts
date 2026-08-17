@@ -5,6 +5,7 @@ import { Locale } from "@/i18n/types";
 const LABELS: Record<Exclude<PageId, "blogPost">, Record<Locale, string>> = {
   home: { es: "Inicio", en: "Home", ru: "Главная" },
   services: { es: "Servicios", en: "Services", ru: "Услуги" },
+  gallery: { es: "Galería", en: "Gallery", ru: "Галерея" },
   about: { es: "Sobre mí", en: "About", ru: "Обо мне" },
   contact: { es: "Contacto", en: "Contact", ru: "Контакты" },
   blog: { es: "Blog", en: "Blog", ru: "Блог" },

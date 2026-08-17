@@ -10,6 +10,7 @@ export type Locale = (typeof LOCALES)[number];
 export const ROUTE_MAP = {
   home: { es: "/", en: "/en", ru: "/ru" },
   services: { es: "/servicios", en: "/en/services", ru: "/ru/uslugi" },
+  gallery: { es: "/galeria", en: "/en/gallery", ru: "/ru/galereya" },
   about: { es: "/sobre-mi", en: "/en/about", ru: "/ru/about" },
   contact: { es: "/contacto", en: "/en/contact", ru: "/ru/contact" },
   blog: { es: "/blog", en: "/en/blog", ru: "/ru/blog" },
@@ -21,6 +22,7 @@ export type PageId = keyof typeof ROUTE_MAP;
 export const STATIC_PAGES: Array<{ id: PageId; changefreq: string; priority: string }> = [
   { id: "home", changefreq: "weekly", priority: "1.0" },
   { id: "services", changefreq: "weekly", priority: "0.9" },
+  { id: "gallery", changefreq: "weekly", priority: "0.8" },
   { id: "about", changefreq: "monthly", priority: "0.7" },
   { id: "contact", changefreq: "monthly", priority: "0.7" },
   { id: "blog", changefreq: "daily", priority: "0.8" },

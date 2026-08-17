@@ -33,6 +33,15 @@ type Usage = { entity: string; label: string; id: string; field: string };
 type Client = ReturnType<typeof createClient>;
 
 
+/**
+ * A scan entry may be marked `optional` when its table ships ahead of the migration
+ * that creates it. PostgREST answers with 42P01 / PGRST205 in that case — the table
+ * simply holds no references yet, so the scan is skipped instead of failing the guard.
+ */
+const isMissingTable = (error: { code?: string; message?: string } | null) =>
+  !!error && (error.code === "42P01" || error.code === "PGRST205" ||
+    /does not exist|find the table/i.test(error.message ?? ""));
+
 const nameVariants = (name: string) => Array.from(new Set([name, encodeURIComponent(name)]));
 
 async function findUsages(admin: Client, fileName: string): Promise<Usage[]> {
@@ -67,7 +76,10 @@ async function matchingRows(
     const needle = variant.replace(/[%_]/g, (m) => `\\${m}`);
     const or = scan.fields.map((f) => `${f}.ilike.%${needle}%`).join(",");
     const { data, error } = await admin.from(scan.table).select(cols).or(or);
-    if (error) throw new Error(`${scan.table}: ${error.message}`);
+    if (error) {
+      if (scan.optional && isMissingTable(error)) return rows;
+      throw new Error(`${scan.table}: ${error.message}`);
+    }
     for (const row of (data ?? []) as Record<string, unknown>[]) {
       const id = String(row.id);
       if (seen.has(id)) continue;
@@ -165,7 +177,10 @@ async function usageCounts(admin: Client, names: string[]): Promise<Record<strin
         .select(cols)
         .order("id", { ascending: true })
         .range(from, from + PAGE_SIZE - 1);
-      if (error) throw new Error(`${scan.table}: ${error.message}`);
+      if (error) {
+        if (scan.optional && isMissingTable(error)) break;
+        throw new Error(`${scan.table}: ${error.message}`);
+      }
       const rows = (data ?? []) as Record<string, unknown>[];
       for (const row of rows) {
         for (const f of scan.fields) {
