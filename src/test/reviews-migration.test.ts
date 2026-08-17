@@ -104,7 +104,10 @@ describe("reviews migration — default privileges are revoked first", () => {
       .filter((s) => /^GRANT[\s\S]*TO anon$/.test(s));
     expect(anonGrants.length).toBe(2);
     for (const g of anonGrants) {
-      expect(g).not.toMatch(/INSERT|UPDATE|DELETE|TRUNCATE|REFERENCES|TRIGGER|ALL/i);
+      // Only the privilege list matters; the column list may contain words like
+      // "allowed_ratings" that would trip a naive keyword search.
+      const privileges = g.slice(0, g.indexOf("("));
+      expect(privileges).not.toMatch(/\b(INSERT|UPDATE|DELETE|TRUNCATE|REFERENCES|TRIGGER|ALL)\b/i);
       expect(g).toMatch(/GRANT SELECT \(/);
     }
     expect(sql).not.toMatch(/GRANT ALL[\s\S]{0,80}TO anon/i);
