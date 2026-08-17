@@ -15,7 +15,6 @@ import Layout from "./components/Layout";
 import Index from "./pages/Index";
 import ServiciosPage from "./pages/Servicios";
 import SobreMiPage from "./pages/SobreMi";
-import GaleriaPage from "./pages/Galeria";
 import ContactoPage from "./pages/Contacto";
 import PrivacidadPage from "./pages/Privacidad";
 import NotFound from "./pages/NotFound";
@@ -32,6 +31,7 @@ import { useIntegrationsInjector } from "./hooks/use-integrations-injector";
 // TipTap + editor components, and the analytics check page's recharts use)
 // don't ship to first-paint of the public site.
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const GaleriaPage = lazy(() => import("./pages/Galeria"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPostPage = lazy(() => import("./pages/BlogPost"));
 const AnalyticsCheck = lazy(() => import("./pages/AnalyticsCheck"));
