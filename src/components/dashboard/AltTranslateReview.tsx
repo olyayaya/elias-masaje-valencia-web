@@ -94,8 +94,13 @@ const AltTranslateReview = ({
                   aria-label={`alt-${lang}`}
                   value={values[lang] ?? ""}
                   maxLength={MAX_ALT_LENGTH}
+                  // The source is what was already saved and what the targets were
+                  // translated from — editing it here would leave stale targets.
+                  readOnly={lang === source}
+                  disabled={lang === source}
                   onChange={(e) => setEdits((p) => ({ ...p, [lang]: e.target.value }))}
                 />
+
                 {row.conflict && (
                   <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
                     <input

@@ -21,6 +21,15 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }));
 
+vi.mock("@/lib/alt-translate", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/alt-translate")>("@/lib/alt-translate");
+  return {
+    ...actual,
+    translateAlt: vi.fn(async () => ({ es: "Masaje de espalda", ru: "Массаж спины" })),
+  };
+});
+
+
 vi.mock("@/integrations/supabase/client", () => {
   const builder = () => {
     const chain: Record<string, unknown> = {};
@@ -57,6 +66,7 @@ import { I18nProvider } from "@/i18n/context";
 import { usePageImages } from "@/hooks/use-page-images";
 import DashboardCarousels from "@/components/dashboard/DashboardCarousels";
 import ImageAltDialog from "@/components/dashboard/ImageAltDialog";
+import { translateAlt } from "@/lib/alt-translate";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -98,9 +108,13 @@ describe("dashboard carousel alt editing", () => {
     await user.tab();
     await waitFor(() => expect(updateSpy).toHaveBeenCalledWith({ alt_text: "Masaje de cuello" }));
 
+    // The auto-translation review opens on save — dismiss it, the source alt is already stored.
+    await user.click(await screen.findByRole("button", { name: /cancel/i }));
+
     // Switching to RU writes only alt_text_ru.
     updateSpy.mockClear();
     await user.click(screen.getByRole("button", { name: /^RU/ }));
+
     const ruInput = await screen.findByLabelText(/Alt text \(RU\)/i);
     await user.type(ruInput, "Массаж шеи");
     await user.tab();
@@ -135,11 +149,48 @@ describe("image alt dialog", () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it("inserts with the typed alt text", async () => {
+  it("translates first and only inserts on the second confirm", async () => {
+    const user = userEvent.setup();
+    const { onConfirm } = setup();
+    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+
+    // First click runs the translation and keeps the dialog open for review.
+    await user.click(screen.getByRole("button", { name: /insert image/i }));
+    await waitFor(() => expect(translateAlt).toHaveBeenCalledWith("Back massage", "en"));
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(await screen.findByLabelText("alt-ru")).toHaveValue("Массаж спины");
+
+    await user.click(screen.getByRole("button", { name: /insert image/i }));
+    expect(onConfirm).toHaveBeenCalledWith(
+      "Back massage",
+      false,
+      expect.objectContaining({ en: "Back massage", ru: "Массаж спины" }),
+    );
+  });
+
+  it("invalidates the translation when the source text changes again", async () => {
     const user = userEvent.setup();
     const { onConfirm } = setup();
     await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
+    await screen.findByLabelText("alt-ru");
+
+    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), " deep");
+    expect(screen.queryByLabelText("alt-ru")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /insert image/i }));
+    expect(onConfirm).not.toHaveBeenCalled();
+    await waitFor(() => expect(translateAlt).toHaveBeenCalledWith("Back massage deep", "en"));
+  });
+
+  it("still lets the source language be saved when translation fails", async () => {
+    const user = userEvent.setup();
+    vi.mocked(translateAlt).mockRejectedValueOnce(new Error("offline"));
+    const { onConfirm } = setup();
+    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+    await user.click(screen.getByRole("button", { name: /insert image/i }));
+
+    const only = await screen.findByRole("button", { name: /save en only/i });
+    await user.click(only);
     expect(onConfirm).toHaveBeenCalledWith("Back massage", false, expect.objectContaining({ en: "Back massage" }));
   });
 
@@ -151,14 +202,17 @@ describe("image alt dialog", () => {
     expect(onConfirm).toHaveBeenCalledWith("", true, { es: "", en: "", ru: "" });
   });
 
-  it("edits the alt of an already inserted image", async () => {
+  it("edits the alt of an already inserted image without auto-translation", async () => {
     const user = userEvent.setup();
     const { onConfirm } = setup({ mode: "edit", initialAlt: "Old alt" });
     const input = screen.getByLabelText(/Alt text \(EN\)/i);
     expect(input).toHaveValue("Old alt");
     await user.clear(input);
     await user.type(input, "Neck massage");
+    // Turning auto-translate off saves the source language straight away.
+    await user.click(screen.getByLabelText(/translate/i));
     await user.click(screen.getByRole("button", { name: /save alt text/i }));
     expect(onConfirm).toHaveBeenCalledWith("Neck massage", false, expect.objectContaining({ en: "Neck massage" }));
   });
 });
+

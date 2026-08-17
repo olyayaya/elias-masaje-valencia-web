@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
@@ -115,6 +115,9 @@ const CollectionSection = ({
     current: AltTriple;
     translations: Partial<Record<AltLang, string>>;
   } | null>(null);
+  /** Monotonic token so a late translation answer cannot open a stale review. */
+  const translateReq = useRef(0);
+
 
   useEffect(() => {
     const d: Record<string, string> = {};
@@ -171,9 +174,13 @@ const CollectionSection = ({
 
     // Auto-translate only this row, only after an explicit save action.
     if (!autoTranslate || !next.trim()) return;
+    const token = ++translateReq.current;
     setTranslating(img.id);
     try {
       const translations = await translateAlt(next, altLang as AltLang);
+      // A newer save (other row, other language, edited text) already superseded
+      // this request — drop the stale answer instead of opening a wrong review.
+      if (token !== translateReq.current) return;
       setReview({
         img,
         source: altLang as AltLang,
@@ -186,10 +193,11 @@ const CollectionSection = ({
         translations,
       });
     } catch {
-      toast.error(L("translateFailed"));
+      if (token === translateReq.current) toast.error(L("translateFailed"));
     }
-    setTranslating(null);
+    if (token === translateReq.current) setTranslating(null);
   };
+
 
   /** Writes the three reviewed values in one update; source alt is already saved. */
   const saveReviewed = async (values: AltTriple) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +48,11 @@ const COPY = {
     es: "La traducción falló — el texto alternativo en {l} sigue disponible",
     ru: "Перевод не удался — alt-текст на {l} сохраняется",
   },
+  retry: { en: "Translate again", es: "Traducir de nuevo", ru: "Перевести снова" },
+  sourceOnly: { en: "Save {l} only", es: "Guardar solo {l}", ru: "Сохранить только {l}" },
 } as const;
+
+
 
 const fill = (s: string, vars: Record<string, string | number>) =>
   Object.entries(vars).reduce((acc, [k, v]) => acc.split(`{${k}}`).join(String(v)), s);
@@ -79,17 +83,27 @@ const ImageAltDialog = ({
   const [autoTranslate, setAutoTranslate] = useState(true);
   const [busy, setBusy] = useState(false);
   const [translations, setTranslations] = useState<Partial<AltTriple>>({});
+  /** Exactly which source text/lang produced `translations` — guards against stale results. */
+  const [translatedFor, setTranslatedFor] = useState<{ text: string; lang: AltLang } | null>(null);
+  const [failed, setFailed] = useState(false);
   const [overwrite, setOverwrite] = useState<Partial<Record<AltLang, boolean>>>({});
   const [edits, setEdits] = useState<Partial<AltTriple>>({});
+  const reqRef = useRef(0);
 
   useEffect(() => {
     if (open) {
       setAlt(initialAlt);
       setDecorative(initialDecorative);
       setTranslations({});
+      setTranslatedFor(null);
+      setFailed(false);
       setOverwrite({});
       setEdits({});
       setBusy(false);
+      reqRef.current += 1;
+    } else {
+      // Closing invalidates any in-flight request.
+      reqRef.current += 1;
     }
   }, [open, initialAlt, initialDecorative]);
 
@@ -99,20 +113,67 @@ const ImageAltDialog = ({
     ru: lang === "ru" ? initialAlt : initialOthers.ru ?? "",
   };
 
-  const plan = planAltTranslations({ current, source: lang, sourceValue: alt, translations, overwrite });
+  const fresh = !!translatedFor && translatedFor.lang === lang && translatedFor.text === alt.trim();
+  const plan = planAltTranslations({
+    current,
+    source: lang,
+    sourceValue: alt,
+    translations: fresh ? translations : {},
+    overwrite,
+  });
   const values = { ...planToTriple(plan), ...edits } as AltTriple;
 
-  const runTranslate = async () => {
-    setBusy(true);
-    try {
-      setTranslations(await translateAlt(alt, lang));
-    } catch {
-      toast.error(L("translateFailed", { l: lang.toUpperCase() }));
+  /** Any change to the source invalidates the machine translations (never manual edits). */
+  const changeAlt = (v: string) => {
+    setAlt(v);
+    if (translatedFor && translatedFor.text !== v.trim()) {
+      setTranslations({});
+      setTranslatedFor(null);
     }
-    setBusy(false);
+    setFailed(false);
+  };
+
+  const runTranslate = async (): Promise<boolean> => {
+    const text = alt.trim();
+    const token = ++reqRef.current;
+    setBusy(true);
+    setFailed(false);
+    try {
+      const result = await translateAlt(text, lang);
+      // Late answer of an outdated request (source changed / dialog closed): ignore it.
+      if (token !== reqRef.current) return false;
+      setTranslations(result);
+      setTranslatedFor({ text, lang });
+      setBusy(false);
+      return true;
+    } catch {
+      if (token !== reqRef.current) return false;
+      setFailed(true);
+      toast.error(L("translateFailed", { l: lang.toUpperCase() }));
+      setBusy(false);
+      return false;
+    }
   };
 
   const error = validateAlt(alt, decorative);
+
+  const confirm = (triple: AltTriple) =>
+    onConfirm(decorative ? "" : alt.trim(), decorative, decorative ? { es: "", en: "", ru: "" } : triple);
+
+  /** Needs a translation round before anything is written. */
+  const needsTranslation = !decorative && autoTranslate && !!alt.trim() && !fresh;
+
+  const handleSave = async () => {
+    if (error || busy) return;
+    if (needsTranslation) {
+      // Save with auto-translate on runs the translation itself and keeps the
+      // dialog open so the three languages can be reviewed first.
+      await runTranslate();
+      return;
+    }
+    confirm(values);
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
@@ -135,9 +196,10 @@ const ImageAltDialog = ({
             value={alt}
             maxLength={MAX_ALT_LENGTH}
             disabled={decorative}
-            onChange={(e) => setAlt(e.target.value)}
+            onChange={(e) => changeAlt(e.target.value)}
             placeholder={L("placeholder")}
           />
+
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span>{alt.trim().length}/{MAX_ALT_LENGTH}</span>
           </div>
@@ -171,12 +233,29 @@ const ImageAltDialog = ({
             </label>
             {autoTranslate && (
               <>
-                <Button type="button" variant="outline" size="sm" disabled={busy || !alt.trim()} onClick={runTranslate}>
+                <Button type="button" variant="outline" size="sm" disabled={busy || !alt.trim()} onClick={() => void runTranslate()}>
                   {busy ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Sparkles size={14} className="mr-1.5" />}
-                  {busy ? L("translating") : L("translate")}
+                  {busy ? L("translating") : fresh || failed ? L("retry") : L("translate")}
                 </Button>
+                {failed && (
+                  <div className="space-y-1">
+                    <p role="alert" className="text-[11px] text-destructive">
+                      {L("translateFailed", { l: lang.toUpperCase() })}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={busy || !!error}
+                      onClick={() => confirm(values)}
+                    >
+                      {L("sourceOnly", { l: lang.toUpperCase() })}
+                    </Button>
+                  </div>
+                )}
                 <p className="text-[11px] text-muted-foreground">{L("otherLangs")}</p>
-                {ALT_LANGS.filter((l) => l !== lang).map((l) => {
+                {fresh && ALT_LANGS.filter((l) => l !== lang).map((l) => {
+
                   const row = plan.find((r) => r.lang === l)!;
                   return (
                     <div key={l} className="space-y-1">
@@ -225,20 +304,11 @@ const ImageAltDialog = ({
             <X size={14} className="mr-1.5" />
             {L("cancel")}
           </Button>
-          <Button
-            size="sm"
-            disabled={!!error}
-            onClick={() =>
-              onConfirm(
-                decorative ? "" : alt.trim(),
-                decorative,
-                decorative ? { es: "", en: "", ru: "" } : values,
-              )
-            }
-          >
-            <Check size={14} className="mr-1.5" />
+          <Button size="sm" disabled={!!error || busy} onClick={() => void handleSave()}>
+            {busy ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Check size={14} className="mr-1.5" />}
             {mode === "edit" ? L("save") : L("insert")}
           </Button>
+
         </div>
       </DialogContent>
     </Dialog>
