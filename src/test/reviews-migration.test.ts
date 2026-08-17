@@ -98,7 +98,11 @@ describe("reviews migration — default privileges are revoked first", () => {
   });
 
   it("never grants anon table-level writes or TRUNCATE", () => {
-    const anonGrants = sql.match(/GRANT[\s\S]*?TO anon;/g) ?? [];
+    const anonGrants = sql
+      .split(";")
+      .map((s) => s.trim())
+      .filter((s) => /^GRANT[\s\S]*TO anon$/.test(s));
+    expect(anonGrants.length).toBe(2);
     for (const g of anonGrants) {
       expect(g).not.toMatch(/INSERT|UPDATE|DELETE|TRUNCATE|REFERENCES|TRIGGER|ALL/i);
       expect(g).toMatch(/GRANT SELECT \(/);
