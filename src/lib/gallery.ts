@@ -59,9 +59,117 @@ export function pickLocalized(
 export const isVideoUrl = (url: string) =>
   (VIDEO_INPUT_EXTS as readonly string[]).includes(extOf(url.split("?")[0]));
 
-/** Grid thumbnail: videos always show their static poster, never an active <video>. */
-export const thumbnailFor = (item: GalleryItem) =>
+/**
+ * Containers browsers can be relied on to play inline. MOV/M4V are accepted by the
+ * Library (and by the local converter) but must not be published to the public grid.
+ */
+export const WEB_PLAYABLE_VIDEO_EXTS = ["mp4", "webm"] as const;
+
+export const isWebPlayableVideo = (url: string) =>
+  (WEB_PLAYABLE_VIDEO_EXTS as readonly string[]).includes(extOf(url.split("?")[0]));
+
+/* ------------------------------------------------------------------ *
+ * Grid thumbnails
+ *
+ * The public grid must never download the full-size original. Supabase Storage
+ * serves on-the-fly derivatives from /storage/v1/render/image/public/<bucket>/…,
+ * so the grid points at a bounded transform of the same object (no duplicate
+ * stored copy). Anything that is not a public image object in our own media
+ * bucket falls back to the untouched URL.
+ * ------------------------------------------------------------------ */
+
+/** Bounded, non-negotiable derivative parameters — never taken from user input. */
+export const THUMB_WIDTH = 800;
+export const THUMB_QUALITY = 70;
+export const THUMB_RESIZE = "cover" as const;
+const MAX_THUMB_WIDTH = 1600;
+const MIN_THUMB_WIDTH = 80;
+
+const PUBLIC_OBJECT_SEGMENT = "/storage/v1/object/public/";
+const RENDER_IMAGE_SEGMENT = "/storage/v1/render/image/public/";
+const MEDIA_BUCKET = "media";
+/** Formats the image renderer can actually re-encode (GIF/SVG are passed through). */
+const TRANSFORMABLE_EXTS = ["jpg", "jpeg", "png", "webp", "avif"] as const;
+
+const clampWidth = (w: number) =>
+  Math.min(MAX_THUMB_WIDTH, Math.max(MIN_THUMB_WIDTH, Math.round(w) || THUMB_WIDTH));
+
+const clampQuality = (q: number) => Math.min(100, Math.max(20, Math.round(q) || THUMB_QUALITY));
+
+/**
+ * Public image URL in our media bucket → bounded render/image derivative.
+ * Returns `null` for anything else so callers can keep using the original URL.
+ */
+export function storageThumbUrl(
+  rawUrl: string,
+  opts: { width?: number; quality?: number } = {},
+): string | null {
+  if (!rawUrl || typeof rawUrl !== "string") return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:") return null;
+  const idx = parsed.pathname.indexOf(PUBLIC_OBJECT_SEGMENT);
+  if (idx !== 0) return null;
+
+  const rest = parsed.pathname.slice(PUBLIC_OBJECT_SEGMENT.length);
+  const slash = rest.indexOf("/");
+  if (slash <= 0) return null;
+  const bucket = rest.slice(0, slash);
+  const objectPath = rest.slice(slash + 1);
+  if (bucket !== MEDIA_BUCKET || !objectPath) return null;
+  if (objectPath.includes("..")) return null;
+  if (!(TRANSFORMABLE_EXTS as readonly string[]).includes(extOf(decodeURIComponent(objectPath)))) return null;
+
+  // Re-assemble through URL so every segment stays correctly percent-encoded.
+  const out = new URL(parsed.origin);
+  out.pathname = `${RENDER_IMAGE_SEGMENT}${bucket}/${objectPath}`;
+  out.searchParams.set("width", String(clampWidth(opts.width ?? THUMB_WIDTH)));
+  out.searchParams.set("quality", String(clampQuality(opts.quality ?? THUMB_QUALITY)));
+  out.searchParams.set("resize", THUMB_RESIZE);
+  return out.toString();
+}
+
+/** Full-size asset shown in the lightbox (photo) or played (video). */
+export const originalFor = (item: GalleryItem) =>
   item.media_type === "video" ? item.poster_url || "" : item.media_url;
+
+/**
+ * Grid thumbnail: videos always show their static poster, never an active <video>.
+ * Photos and posters are served as a bounded derivative when the object lives in
+ * our media bucket; the raw URL is only a fallback (also used by <img onError>).
+ */
+export const thumbnailFor = (item: GalleryItem) => {
+  const source = originalFor(item);
+  if (!source) return "";
+  return storageThumbUrl(source) ?? source;
+};
+
+/* ------------------------------------------------------------------ *
+ * Publish validation
+ * ------------------------------------------------------------------ */
+
+export type GalleryPublishIssue = "missingMedia" | "missingPoster" | "notWebPlayable";
+
+/** Reasons an item may not be published. Empty array = safe to publish. */
+export function publishIssues(item: Pick<GalleryItem, "media_type" | "media_url" | "poster_url">): GalleryPublishIssue[] {
+  const issues: GalleryPublishIssue[] = [];
+  if (!item.media_url || !item.media_url.trim()) issues.push("missingMedia");
+  if (item.media_type === "video") {
+    // A VideoObject without a thumbnailUrl is invalid structured data, so a video
+    // without a cover image simply cannot go public.
+    if (!item.poster_url || !item.poster_url.trim()) issues.push("missingPoster");
+    if (item.media_url && !isWebPlayableVideo(item.media_url)) issues.push("notWebPlayable");
+  }
+  return issues;
+}
+
+export const canPublish = (item: Pick<GalleryItem, "media_type" | "media_url" | "poster_url">) =>
+  publishIssues(item).length === 0;
+
 
 /** ISO-8601 duration (PT1M30S) for schema.org VideoObject. */
 export function isoDuration(seconds: number | null | undefined): string | undefined {
