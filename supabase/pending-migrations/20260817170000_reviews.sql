@@ -112,7 +112,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.reviews TO authenticated;
 GRANT ALL ON public.reviews TO service_role;
 -- Anon reads exactly the public card fields (plus the two ordering inputs).
 GRANT SELECT (
-  id, author_name, rating, review_text, reviewed_at, original_url, pinned, manual_priority
+  id, author_name, rating, review_text, original_language,
+  review_text_es, review_text_en, review_text_ru,
+  reviewed_at, original_url, pinned, manual_priority
 ) ON public.reviews TO anon;
 
 GRANT SELECT, INSERT, UPDATE ON public.review_display_settings TO authenticated;
