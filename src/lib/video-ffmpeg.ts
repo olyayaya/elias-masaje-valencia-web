@@ -1,12 +1,11 @@
 /**
  * Lazy ffmpeg.wasm bridge — the ONLY module that imports @ffmpeg/*.
  *
- * Everything is behind dynamic import()s so neither the ffmpeg glue nor the ~31 MB
- * single-thread core lands in the main bundle: they become their own chunk/assets that
- * are fetched the first time the converter is opened. The core is self-hosted (Vite
- * emits it from node_modules via ?url), so there is no CDN dependency at runtime and no
- * SharedArrayBuffer / COOP / COEP requirement.
+ * The glue is behind a dynamic import() so it becomes its own chunk, and the ~30 MB
+ * single-thread core is self-hosted at /ffmpeg/* by the ffmpegCore Vite plugin (never
+ * bundled, never fetched from a CDN, no SharedArrayBuffer / COOP / COEP requirement).
  */
+import { FFMPEG_CORE_URL, FFMPEG_WASM_URL } from "../../vite-plugin-ffmpeg-core";
 import {
   buildFfmpegArgs,
   parseEncoderCaps,
@@ -36,16 +35,12 @@ export const isConverterSupported = (): boolean =>
 /** Loads (once) the ffmpeg glue + self-hosted single-thread core. */
 export async function getFFmpeg(onLog?: (line: string) => void): Promise<FFmpegInstance> {
   if (instance?.loaded) return instance;
-  const [{ FFmpeg }, coreURL, wasmURL] = await Promise.all([
-    import("@ffmpeg/ffmpeg"),
-    import("@ffmpeg/core/dist/umd/ffmpeg-core.js?url").then((m) => m.default),
-    import("@ffmpeg/core/dist/umd/ffmpeg-core.wasm?url").then((m) => m.default),
-  ]);
+  const { FFmpeg } = await import("@ffmpeg/ffmpeg");
   const ff = new FFmpeg() as unknown as FFmpegInstance;
   ff.on("log", ((e: { message: string }) => onLog?.(e.message)) as never);
   await ff.load({
-    coreURL: new URL(coreURL, window.location.href).href,
-    wasmURL: new URL(wasmURL, window.location.href).href,
+    coreURL: new URL(FFMPEG_CORE_URL, window.location.href).href,
+    wasmURL: new URL(FFMPEG_WASM_URL, window.location.href).href,
   });
   instance = ff;
   return ff;
