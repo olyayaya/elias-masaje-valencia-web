@@ -127,7 +127,8 @@ const addFirstPhoto = async () => {
   const dialog = await screen.findByRole("dialog");
   await waitFor(() => expect(dialog.querySelectorAll("img").length).toBeGreaterThan(0));
   fireEvent.click(dialog.querySelectorAll("button[title]")[0]);
-  fireEvent.click(within(dialog).getByRole("button", { name: /Seleccionar|Select|Выбрать/ }));
+  // The "add" picker is multi-select, so its confirm button counts the selection.
+  fireEvent.click(within(dialog).getByRole("button", { name: /Añadir 1|Add 1|Добавить 1/ }));
 };
 
 describe("insert payload", () => {
@@ -136,7 +137,7 @@ describe("insert payload", () => {
     wrap();
     await addFirstPhoto();
     await waitFor(() => expect(h.insert).toHaveBeenCalled());
-    expect(h.insert.mock.calls[0][0]).toMatchObject({
+    expect(h.insert.mock.calls[0][0][0]).toMatchObject({
       media_type: "photo",
       media_url: "https://cdn.test/one.webp",
       poster_url: "",

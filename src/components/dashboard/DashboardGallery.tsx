@@ -106,9 +106,24 @@ const COPY = {
   saved: { en: "Saved", es: "Guardado", ru: "Сохранено" },
   saveFailed: { en: "Failed to save", es: "Error al guardar", ru: "Не удалось сохранить" },
   added: { en: "Item added", es: "Elemento añadido", ru: "Элемент добавлен" },
+  addedMany: {
+    en: "Added {added}, skipped {skipped} duplicates",
+    es: "Añadidos {added}, omitidos {skipped} duplicados",
+    ru: "Добавлено {added}, пропущено {skipped} дубликатов",
+  },
+  addedNone: {
+    en: "Nothing added — every selected file is already in the gallery.",
+    es: "No se añadió nada — todos los archivos ya están en la galería.",
+    ru: "Ничего не добавлено — все выбранные файлы уже в галерее.",
+  },
+  selectMany: { en: "Add {n}", es: "Añadir {n}", ru: "Добавить {n}" },
+  selectAllVisible: { en: "Select all visible", es: "Seleccionar todo lo visible", ru: "Выбрать всё видимое" },
+  clearSelection: { en: "Clear", es: "Limpiar", ru: "Очистить" },
+  selectedCount: { en: "{n} selected", es: "{n} seleccionados", ru: "Выбрано: {n}" },
   removed: { en: "Removed", es: "Eliminado", ru: "Удалено" },
   confirmRemove: { en: "Remove this item from the gallery?", es: "¿Quitar este elemento de la galería?", ru: "Удалить этот элемент из галереи?" },
 } as const;
+
 
 type UiLang = "en" | "es" | "ru";
 const fill = (s: string, vars: Record<string, string>) =>
@@ -165,24 +180,48 @@ const DashboardGallery = () => {
     return true;
   };
 
-  const addItem = async (kind: "photo" | "video", url: string) => {
+  /**
+   * Bulk add: one INSERT for the whole selection. Every new row starts unpublished
+   * with an empty poster and a sort_order that continues the existing list, so no two
+   * rows fight over the same slot. Files already present in the gallery are skipped
+   * (never removed or re-created) and reported back to the admin.
+   */
+  const addItems = async (kind: "photo" | "video", urls: string[]) => {
+    const existing = new Set(items.map((i) => i.media_url));
+    const seen = new Set<string>();
+    const fresh = urls.filter((u) => {
+      if (!u || existing.has(u) || seen.has(u)) return false;
+      seen.add(u);
+      return true;
+    });
+    const skipped = urls.length - fresh.length;
+    if (fresh.length === 0) {
+      toast.message(c("addedNone"));
+      return;
+    }
     const maxOrder = items.reduce((m, i) => Math.max(m, i.sort_order), 0);
-    const { error: err } = await galleryTable().insert({
+    const rows = fresh.map((url, idx) => ({
       media_type: kind,
       media_url: url,
       // `poster_url` only ever means "cover frame of a video". A photo is its own
       // image, so it never carries a poster — the grid derives its thumbnail itself.
       poster_url: "",
-      sort_order: maxOrder + 1,
+      sort_order: maxOrder + idx + 1,
       published: false,
-    });
+    }));
+    const { error: err } = await galleryTable().insert(rows);
     if (err) {
       toast.error(c("saveFailed"));
       return;
     }
-    toast.success(c("added"));
+    toast.success(
+      urls.length === 1 && skipped === 0
+        ? c("added")
+        : c("addedMany", { added: String(fresh.length), skipped: String(skipped) }),
+    );
     refresh();
   };
+
 
   /**
    * Reordering swaps two rows. Two independent UPDATEs can leave the list
@@ -556,12 +595,25 @@ const DashboardGallery = () => {
         retryLabel={c("retry")}
         cancelLabel={c("cancel")}
         selectLabel={c("select")}
+        // Only "add new items" is multi-select; replacing a file / picking a cover
+        // targets exactly one row and stays single-select.
+        multiple={picker?.mode === "add"}
+        selectManyLabel={c("selectMany", { n: "{n}" })}
+        selectAllLabel={c("selectAllVisible")}
+        clearLabel={c("clearSelection")}
+        selectedCountLabel={c("selectedCount", { n: "{n}" })}
         currentUrl={picker && picker.mode !== "add" ? picker.currentUrl : undefined}
         onClose={() => setPicker(null)}
+        onSelectMany={async (urls) => {
+          if (picker?.mode !== "add") return;
+          await addItems(picker.kind, urls);
+          setPicker(null);
+        }}
         onSelect={async (url) => {
           if (!picker) return;
-          if (picker.mode === "add") await addItem(picker.kind, url);
+          if (picker.mode === "add") await addItems(picker.kind, [url]);
           else if (picker.mode === "media") {
+
             const target = items.find((i) => i.id === picker.id);
             // A cover belongs to one specific video file: replacing the file must
             // never leave the previous video's frame (and a published video without
