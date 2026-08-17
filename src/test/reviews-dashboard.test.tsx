@@ -7,7 +7,6 @@ import {
   DEFAULT_REVIEW_SETTINGS,
   type Review,
   type ReviewDisplaySettings,
-  type ReviewSyncStateRow,
 } from "@/lib/reviews";
 
 const h = vi.hoisted(() => ({
@@ -18,7 +17,6 @@ const h = vi.hoisted(() => ({
   state: {
     items: [] as Review[],
     settings: null as unknown as ReviewDisplaySettings,
-    syncState: [] as ReviewSyncStateRow[],
     missingTable: false,
     isPending: false,
     isError: false,
@@ -27,16 +25,12 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("sonner", () => ({ toast: h.toast }));
-vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { functions: { invoke: vi.fn(async () => ({ data: { status: "ok" }, error: null })) } },
-}));
 vi.mock("@/integrations/supabase/pending-reviews", async (orig) => {
   const actual = await orig<typeof import("@/integrations/supabase/pending-reviews")>();
   return {
     ...actual,
     reviewsTable: () => ({ update: h.update }),
     reviewSettingsTable: () => ({ update: h.settingsUpdate }),
-    reviewSyncStateTable: () => ({ select: () => ({ order: async () => ({ data: [], error: null }) }) }),
   };
 });
 vi.mock("@/hooks/use-reviews", async (orig) => {
@@ -62,7 +56,7 @@ const review = (p: Partial<Review>): Review => ({
   manual_priority: p.manual_priority ?? 0,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "",
-  last_synced_at: null,
+  imported_at: null,
 });
 
 const mount = () =>
@@ -82,7 +76,6 @@ beforeEach(() => {
     review({ id: "b", author_name: "Bea", rating: 3, source: "manual", visible: false }),
   ];
   h.state.settings = { id: "s", updated_at: "", ...DEFAULT_REVIEW_SETTINGS };
-  h.state.syncState = [];
   h.state.missingTable = false;
 });
 afterEach(cleanup);
@@ -164,27 +157,12 @@ describe("dashboard reviews — persisted display settings", () => {
   });
 });
 
-describe("dashboard reviews — per-source status", () => {
-  it("shows persistent status and counters for each source", () => {
-    h.state.syncState = [
-      {
-        source: "google",
-        last_attempt_at: "2026-02-01T10:00:00Z",
-        last_success_at: "2026-02-01T10:00:00Z",
-        status: "ok",
-        imported_count: 3,
-        updated_count: 2,
-        skipped_count: 1,
-        error_code: null,
-        error_message: null,
-        updated_at: "",
-      },
-    ];
+describe("dashboard reviews — no automated sync surface", () => {
+  it("offers no sync button, no provider status and no secret names", () => {
     mount();
-    expect(screen.getByTestId("sync-status-google").textContent).toMatch(/connected|conectado|подключено/i);
-    expect(screen.getByTestId("sync-counters-google").textContent).toMatch(/3/);
-    // TripAdvisor is not a synced source at all — there is no sync row for it.
-    expect(screen.queryByTestId("sync-status-tripadvisor")).toBeNull();
+    expect(screen.queryByTestId("sync-status-google")).toBeNull();
+    expect(screen.queryByRole("button", { name: /sync|sincroniz|синхрон/i })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/GOOGLE_BUSINESS/);
   });
 });
 
@@ -199,7 +177,7 @@ describe("tripadvisor compliance card", () => {
     );
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
-    // No sync button and no source toggle for TripAdvisor anywhere.
+    // No import and no source toggle for TripAdvisor anywhere.
     expect(screen.queryByLabelText(/reviews from tripadvisor|reseñas de tripadvisor|отзывы из tripadvisor/i)).toBeNull();
   });
 
@@ -210,5 +188,57 @@ describe("tripadvisor compliance card", () => {
     }
     const sourceSelect = screen.getByLabelText(/all sources|todas las fuentes|все источники/i) as HTMLSelectElement;
     expect(Array.from(sourceSelect.options).map((o) => o.value)).toEqual(["all", "google", "manual"]);
+  });
+});
+
+describe("manual import — preview, dedupe and rights confirmation", () => {
+  const file = (text: string, name: string) =>
+    new File([text], name, { type: name.endsWith(".json") ? "application/json" : "text/csv" });
+
+  const upload = async (text: string, name = "reviews.csv") => {
+    const input = screen.getByLabelText(/choose|elegir|выбрать/i) as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file(text, name)] } });
+    await waitFor(() => expect(screen.getByTestId("import-preview")).toBeTruthy());
+  };
+
+  const CSV =
+    "source,external_review_id,author_name,rating,review_text,reviewed_at\n" +
+    "google,x,Ana,5,Muy bien,2026-01-01\n" + // already stored (id "x")
+    "google,new-1,Carla,4,Genial,2026-01-02\n" +
+    "google,new-1,Carla,4,Genial,2026-01-02\n"; // duplicate inside the file
+
+  it("previews every row and counts new, existing and in-file duplicates", async () => {
+    mount();
+    await upload(CSV);
+    const summary = screen.getByTestId("import-summary").textContent ?? "";
+    expect(summary).toMatch(/2/); // 2 valid rows
+    expect(screen.getByText("Carla")).toBeTruthy();
+    expect(screen.getByText("Ana")).toBeTruthy();
+  });
+
+  it("refuses to write until the rights confirmation is ticked", async () => {
+    mount();
+    await upload(CSV);
+    const confirm = screen.getByRole("button", { name: /import 2|importar 2|импортировать 2/i });
+    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByTestId("import-rights"));
+    expect((confirm as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("rejects a tripadvisor source row", async () => {
+    mount();
+    const input = screen.getByLabelText(/choose|elegir|выбрать/i) as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [
+          file(
+            "source,external_review_id,author_name,rating,review_text\ntripadvisor,t1,Ana,5,Nice\n",
+            "ta.csv",
+          ),
+        ],
+      },
+    });
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    expect(screen.queryByTestId("import-preview")).toBeNull();
   });
 });
