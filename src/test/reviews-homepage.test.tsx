@@ -114,13 +114,13 @@ describe("public reviews section", () => {
   it("links a per-review permalink, else the public source profile", () => {
     state.value.items = [
       review({ id: "a", original_url: "https://maps.google.com/review/a" }),
-      review({ id: "b", source: "tripadvisor", author_name: "Bea" }),
+      review({ id: "b", source: "google", author_name: "Bea", original_url: null }),
     ];
     state.value.settings = settings({ sort_mode: "manual" });
     mount();
     const links = screen.getAllByRole("link");
     expect(links[0].getAttribute("href")).toBe("https://maps.google.com/review/a");
-    expect(links[1].getAttribute("href")).toContain("tripadvisor.com");
+    expect(links[1].getAttribute("href")).toContain("maps.app.goo.gl");
     expect(links.every((l) => l.getAttribute("target") === "_blank")).toBe(true);
   });
 
@@ -140,5 +140,25 @@ describe("public reviews section", () => {
     expect(container.querySelector("blockquote")).toBeTruthy();
     expect(container.querySelector("cite")!.textContent).toBe("Ana");
     expect(container.querySelector('[role="img"]')!.getAttribute("aria-label")).toMatch(/5/);
+  });
+});
+
+describe("licensed sources only", () => {
+  it("renders no tripadvisor card and no tripadvisor link on the homepage", () => {
+    state.value.items = [
+      review({ id: "a", author_name: "Ana" }),
+      { ...review({ id: "t", author_name: "Tia" }), source: "tripadvisor" } as unknown as ReturnType<typeof review>,
+    ];
+    mount();
+    expect(screen.getAllByTestId("review-card")).toHaveLength(1);
+    expect(document.body.textContent).not.toMatch(/tripadvisor/i);
+  });
+
+  it("shows a neutral localized name instead of inventing one", () => {
+    state.value.items = [review({ id: "a", author_name: "" })];
+    mount();
+    const card = screen.getByTestId("review-card");
+    expect(card.textContent).toMatch(/cliente|client|клиент/i);
+    expect(card.textContent).not.toMatch(/google user/i);
   });
 });
