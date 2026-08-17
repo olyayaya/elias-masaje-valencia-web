@@ -81,3 +81,9 @@ describe("reviews migration — RLS and grants", () => {
     expect(sql).toMatch(/GRANT ALL ON public\.review_display_settings TO service_role;/);
   });
 });
+
+describe("reviews migration — manual priority range", () => {
+  it("bounds manual_priority to the range the dashboard allows", () => {
+    expect(sql).toMatch(/manual_priority\s+integer NOT NULL DEFAULT 0 CHECK \(manual_priority BETWEEN -999 AND 999\)/);
+  });
+});
