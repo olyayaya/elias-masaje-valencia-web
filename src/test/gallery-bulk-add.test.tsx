@@ -147,8 +147,10 @@ describe("gallery bulk add", () => {
     ];
     const dialog = await openPhotoPicker();
     // eslint-disable-next-line no-console
-    console.log("BOXES", within(dialog).getAllByRole("textbox").map((t) => (t as HTMLInputElement).placeholder));
+    
     fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "b" } });
+    // eslint-disable-next-line no-console
+    console.log("VAL", (within(dialog).getByRole("textbox") as HTMLInputElement).value, tilesOf(dialog).length);
     await waitFor(() => expect(tilesOf(dialog)).toHaveLength(2));
     const tiles = tilesOf(dialog);
     fireEvent.click(tiles[0]);
