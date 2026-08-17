@@ -194,6 +194,23 @@ describe("image alt dialog", () => {
     expect(onConfirm).toHaveBeenCalledWith("Back massage", false, expect.objectContaining({ en: "Back massage" }));
   });
 
+  it("ignores machine translations when auto-translate is switched off", async () => {
+    const user = userEvent.setup();
+    const { onConfirm } = setup({ initialOthers: { es: "Alt manual", ru: "" } });
+    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+    await user.click(screen.getByRole("button", { name: /insert image/i }));
+    expect(await screen.findByLabelText("alt-ru")).toHaveValue("Массаж спины");
+
+    // Turning the toggle off must discard the generated targets entirely.
+    await user.click(screen.getByLabelText(/translate/i));
+    await user.click(screen.getByRole("button", { name: /insert image/i }));
+    expect(onConfirm).toHaveBeenCalledWith("Back massage", false, {
+      es: "Alt manual",
+      en: "Back massage",
+      ru: "",
+    });
+  });
+
   it("allows an explicitly decorative image with an empty alt", async () => {
     const user = userEvent.setup();
     const { onConfirm } = setup();

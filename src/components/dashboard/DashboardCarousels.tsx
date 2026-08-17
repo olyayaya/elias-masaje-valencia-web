@@ -107,7 +107,8 @@ const CollectionSection = ({
   const [busy, setBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [autoTranslate, setAutoTranslate] = useState(true);
-  const [translating, setTranslating] = useState<string | null>(null);
+  /** Rows with a translation request in flight, keyed by image id. */
+  const [translating, setTranslating] = useState<Record<string, boolean>>({});
   const [review, setReview] = useState<{
     img: PageImage;
     source: AltLang;
@@ -115,15 +116,29 @@ const CollectionSection = ({
     current: AltTriple;
     translations: Partial<Record<AltLang, string>>;
   } | null>(null);
-  /** Monotonic token so a late translation answer cannot open a stale review. */
-  const translateReq = useRef(0);
-
+  /**
+   * One monotonic token per row+language, so a request for row B never cancels
+   * row A and an edit of the same row invalidates only its own pending answer.
+   */
+  const translateReq = useRef<Record<string, number>>({});
+  /** Latest draft values, readable inside async callbacks without stale closures. */
+  const draftsRef = useRef<Record<string, string>>({});
+  draftsRef.current = drafts;
 
   useEffect(() => {
     const d: Record<string, string> = {};
     images.forEach((i) => (d[`${i.id}:${altLang}`] = (i[altColumn(altLang as AltLang)] as string | null) ?? ""));
     setDrafts((prev) => ({ ...prev, ...d }));
   }, [images, altLang]);
+
+  /** Editing a row drops its pending translation and any review already shown for it. */
+  const editDraft = (key: string, id: string, v: string) => {
+    setDrafts((p) => ({ ...p, [key]: v }));
+    translateReq.current[key] = (translateReq.current[key] ?? 0) + 1;
+    setTranslating((p) => (p[id] ? { ...p, [id]: false } : p));
+    setReview((r) => (r && r.img.id === id ? null : r));
+  };
+
 
 
   const addImage = async (url: string) => {
@@ -157,7 +172,8 @@ const CollectionSection = ({
   /** Saves only the column of the active language, so ES/EN/RU stay independent. */
   const updateAlt = async (img: PageImage) => {
     const col = altColumn(altLang as AltLang);
-    const next = drafts[`${img.id}:${altLang}`] ?? "";
+    const key = `${img.id}:${altLang}`;
+    const next = draftsRef.current[key] ?? "";
     if (next === ((img[col] as string | null) ?? "")) return;
     setBusy(img.id + "-alt");
     const patch = { [col]: next } as { alt_text?: string; alt_text_en?: string; alt_text_ru?: string };
@@ -174,13 +190,17 @@ const CollectionSection = ({
 
     // Auto-translate only this row, only after an explicit save action.
     if (!autoTranslate || !next.trim()) return;
-    const token = ++translateReq.current;
-    setTranslating(img.id);
+    const token = (translateReq.current[key] ?? 0) + 1;
+    translateReq.current[key] = token;
+    setTranslating((p) => ({ ...p, [img.id]: true }));
+    const stale = () => translateReq.current[key] !== token;
     try {
       const translations = await translateAlt(next, altLang as AltLang);
-      // A newer save (other row, other language, edited text) already superseded
-      // this request — drop the stale answer instead of opening a wrong review.
-      if (token !== translateReq.current) return;
+      // Only this row's own newer request (or an edit) invalidates the answer;
+      // another row's translation never cancels it.
+      if (stale()) return;
+      // The admin may have typed again: never review a value that is no longer there.
+      if ((draftsRef.current[key] ?? "") !== next) return;
       setReview({
         img,
         source: altLang as AltLang,
@@ -193,10 +213,12 @@ const CollectionSection = ({
         translations,
       });
     } catch {
-      if (token === translateReq.current) toast.error(L("translateFailed"));
+      if (!stale()) toast.error(L("translateFailed"));
+    } finally {
+      if (!stale()) setTranslating((p) => ({ ...p, [img.id]: false }));
     }
-    if (token === translateReq.current) setTranslating(null);
   };
+
 
 
   /** Writes the three reviewed values in one update; source alt is already saved. */
@@ -271,12 +293,13 @@ const CollectionSection = ({
                 />
                 {L("autoTranslate")}
               </label>
-              {translating && (
+              {Object.values(translating).some(Boolean) && (
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <Loader2 size={11} className="animate-spin" />
                   {L("translating")}
                 </span>
               )}
+
             </div>
           )}
           {sorted.map((img, i) => {
@@ -307,10 +330,11 @@ const CollectionSection = ({
                   id={`alt-${img.id}`}
                   value={value}
                   maxLength={MAX_ALT_LENGTH}
-                  onChange={(e) => setDrafts((p) => ({ ...p, [draftKey]: e.target.value }))}
+                  onChange={(e) => editDraft(draftKey, img.id, e.target.value)}
                   onBlur={() => updateAlt(img)}
                   placeholder={L("altPlaceholder")}
                   className="text-sm"
+
                 />
                 <div className="flex flex-wrap items-center gap-2 text-[11px]">
                   {(["es", "en", "ru"] as AltLang[]).map((l) => (

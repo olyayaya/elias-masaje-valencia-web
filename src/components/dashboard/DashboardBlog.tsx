@@ -90,6 +90,19 @@ export const buildImageAttrs = (src: string, alt: string, decorative: boolean) =
   [DECORATIVE_ATTR]: decorative ? "true" : null,
 });
 
+/**
+ * One object holding the editor's fresh HTML for the active language plus the
+ * translated alt patch for the other languages — written in a single update so
+ * neither half can be dropped by the editor's own onUpdate write.
+ */
+export const mergeAltDraft = <T extends Record<string, unknown>>(
+  draft: T,
+  contentField: string,
+  html: string,
+  patch: Record<string, string>,
+): T => ({ ...draft, [contentField]: html, ...patch });
+
+
 interface BlogPost {
   id: string;
   title: string;
@@ -992,15 +1005,18 @@ const BlogEditor = ({
                           values,
                           decorative,
                         );
-                        // One atomic update: the editor's fresh HTML for the current
-                        // language plus the other-language patch, so neither can be
-                        // dropped by the editor's own onUpdate write.
-                        setDraft({
-                          ...draftRef.current,
-                          [contentKey]: editor.getHTML(),
-                          ...patch,
-                        });
+                        const finalDraft = mergeAltDraft(
+                          draftRef.current as unknown as Record<string, unknown>,
+                          contentKey as string,
+                          editor.getHTML(),
+                          patch,
+                        ) as unknown as BlogPost;
+                        // Sync the ref first: an editor callback firing in this same
+                        // tick must not merge on top of the pre-patch draft.
+                        draftRef.current = finalDraft;
+                        setDraft(finalDraft);
                         setAltDialog(null);
+
                       }}
 
                     />
