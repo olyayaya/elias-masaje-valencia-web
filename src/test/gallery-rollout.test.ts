@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { buildSitemapEntries, STATIC_PAGES, BASE_URL } from "../../supabase/functions/sitemap/build-sitemap";
 import { SCANS } from "../../supabase/functions/media-guard/rules";
 
-const MIGRATION = readFileSync("supabase/pending-migrations/20260817140000_gallery_items.sql", "utf8");
+const MIGRATION = readFileSync("supabase/migrations/20260817140000_gallery_items.sql", "utf8");
 
 describe("sitemap rollout safety", () => {
   it("never lists the gallery as an always-on static page", () => {
