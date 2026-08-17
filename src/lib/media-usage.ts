@@ -11,12 +11,24 @@ export type MediaGuardResult = {
   deleted?: boolean;
   renamed?: boolean;
   replaced?: boolean;
+  /** True when an alias row was written so history restores resolve the old name forward. */
+  aliased?: boolean;
   newName?: string;
   updatedReferences?: number;
   originalSize?: number;
   newSize?: number;
   warning?: string;
 };
+
+/** Thrown for non-2xx guard responses so callers can branch on the server's reason. */
+export class MediaGuardError extends Error {
+  alreadyCompressed: boolean;
+  constructor(message: string, opts?: { alreadyCompressed?: boolean }) {
+    super(message);
+    this.name = "MediaGuardError";
+    this.alreadyCompressed = !!opts?.alreadyCompressed;
+  }
+}
 
 type Action = "check" | "delete" | "rename" | "replace";
 
@@ -25,18 +37,20 @@ const invoke = async (action: Action, body: Record<string, unknown>): Promise<Me
     body: { action, ...body },
   });
   if (error) {
-    // A 409 (still in use / collision) arrives as a FunctionsHttpError with the payload in context
+    // A 4xx (still in use / collision / already compressed) arrives as a FunctionsHttpError
+    // with the JSON payload on the context response.
     const ctx = (error as unknown as { context?: Response }).context;
     if (ctx && typeof ctx.json === "function") {
       const payload = await ctx.json().catch(() => null);
       if (payload && typeof payload === "object" && "usages" in payload) return payload as MediaGuardResult;
       if (payload && typeof payload === "object" && "error" in payload) {
-        throw new Error(String((payload as { error: string }).error));
+        const p = payload as { error: string; alreadyCompressed?: boolean };
+        throw new MediaGuardError(String(p.error), { alreadyCompressed: !!p.alreadyCompressed });
       }
     }
-    throw new Error(error.message || "Media check failed");
+    throw new MediaGuardError(error.message || "Media check failed");
   }
-  if (data && (data as { error?: string }).error) throw new Error((data as { error: string }).error);
+  if (data && (data as { error?: string }).error) throw new MediaGuardError((data as { error: string }).error);
   return data as MediaGuardResult;
 };
 
@@ -46,11 +60,14 @@ export const checkMediaUsage = (fileName: string) => invoke("check", { fileName 
 /** Deletes only after the server re-verifies the file is unused. */
 export const deleteMediaFile = (fileName: string) => invoke("delete", { fileName });
 
-/** Server-side rename: copy → rewrite every reference → remove the old object (with rollback). */
+/** Server-side rename: copy → one transactional reference+alias rewrite → remove the old object. */
 export const renameMediaFile = (fileName: string, newName: string) =>
   invoke("rename", { fileName, newName });
 
-/** Server-side replace used by smart compression. Rejects any result that is not smaller. */
+/**
+ * Server-side replace used by smart compression. The server ignores originalSize (it reads the
+ * real stored object) and re-applies the 10% / 10 KB threshold.
+ */
 export const replaceMediaFile = (args: {
   fileName: string;
   newName: string;
