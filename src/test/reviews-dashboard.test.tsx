@@ -215,9 +215,11 @@ describe("manual import — preview, dedupe and rights confirmation", () => {
     mount();
     await upload(CSV);
     const summary = screen.getByTestId("import-summary").textContent ?? "";
-    expect(summary).toMatch(/2/); // 2 valid rows
+    // 2 valid rows · 1 new · 1 already stored · 1 in-file duplicate skipped
+    expect(summary.match(/\d+/g)).toEqual(["2", "1", "1", "1"]);
     expect(screen.getByText("Carla")).toBeTruthy();
-    expect(screen.getByText("Ana")).toBeTruthy();
+    // "Ana" shows both in the stored list and in the preview table.
+    expect(screen.getAllByText("Ana").length).toBeGreaterThan(1);
   });
 
   it("refuses to write until the rights confirmation is ticked", async () => {
