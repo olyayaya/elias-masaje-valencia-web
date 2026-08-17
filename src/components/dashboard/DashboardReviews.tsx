@@ -300,6 +300,8 @@ const DashboardReviews = () => {
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   /** Publication is decided here and nowhere else — never by the file. */
   const [publishNow, setPublishNow] = useState(false);
+  /** Pinning is decided here and nowhere else — the safe default ignores the file. */
+  const [keepPinned, setKeepPinned] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
   const importing = useRef(false);
