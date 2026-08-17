@@ -97,14 +97,16 @@ Deno.serve(async (req) => {
     if (action !== "check" && action !== "delete") return json({ error: "Invalid action" }, 400);
 
     const usages = await findUsages(admin, fileName);
-    if (action === "check") return json({ fileName, inUse: usages.length > 0, usages });
+    const historyReferences = await countHistoryReferences(admin, fileName);
+    if (action === "check") return json({ fileName, inUse: usages.length > 0, usages, historyReferences });
 
-    // delete → re-check immediately before removing (race-condition guard)
-    if (usages.length > 0) return json({ fileName, deleted: false, inUse: true, usages }, 409);
+    // delete → usage is re-scanned here, server-side, immediately before the remove call
+    if (usages.length > 0) return json({ fileName, deleted: false, inUse: true, usages, historyReferences }, 409);
 
     const { error: delError } = await admin.storage.from("media").remove([fileName]);
     if (delError) return json({ error: delError.message }, 500);
-    return json({ fileName, deleted: true, inUse: false, usages: [] });
+    return json({ fileName, deleted: true, inUse: false, usages: [], historyReferences });
+
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
   }
