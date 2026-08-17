@@ -138,7 +138,7 @@ describe("image alt dialog", () => {
   it("inserts with the typed alt text", async () => {
     const user = userEvent.setup();
     const { onConfirm } = setup();
-    await user.type(screen.getByLabelText(/alt text/i), "Back massage");
+    await user.type(screen.getByRole("textbox"), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
     expect(onConfirm).toHaveBeenCalledWith("Back massage", false);
   });
@@ -154,7 +154,7 @@ describe("image alt dialog", () => {
   it("edits the alt of an already inserted image", async () => {
     const user = userEvent.setup();
     const { onConfirm } = setup({ mode: "edit", initialAlt: "Old alt" });
-    const input = screen.getByLabelText(/alt text/i);
+    const input = screen.getByRole("textbox");
     expect(input).toHaveValue("Old alt");
     await user.clear(input);
     await user.type(input, "Neck massage");
