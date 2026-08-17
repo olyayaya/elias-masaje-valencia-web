@@ -6,7 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useHead } from "@/hooks/use-head";
 
-type Mode = "signin" | "signup" | "forgot";
+// Public sign-up is disabled server-side (GoTrue disable_signup) and removed
+// from the UI. Accounts are provisioned by the owner only.
+type Mode = "signin" | "forgot";
 
 const Auth = () => {
   // Private page: keep it out of search results and social previews.
@@ -41,15 +43,7 @@ const Auth = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}${nextPath ?? "/dashboard"}` },
-        });
-        if (error) throw error;
-        toast.success("Account created. Check your email if confirmation is required.");
-      } else if (mode === "forgot") {
+      if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
@@ -68,14 +62,9 @@ const Auth = () => {
   };
 
   const title =
-    mode === "signin" ? "Sign in to manage your site"
-    : mode === "signup" ? "Create your admin account"
-    : "Reset your password";
+    mode === "signin" ? "Sign in to manage your site" : "Reset your password";
 
-  const cta =
-    mode === "signin" ? "Sign in"
-    : mode === "signup" ? "Create account"
-    : "Send reset link";
+  const cta = mode === "signin" ? "Sign in" : "Send reset link";
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 py-10">
@@ -128,12 +117,14 @@ const Auth = () => {
               Forgot your password?
             </button>
           )}
-          <button
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            className="block w-full text-xs text-muted-foreground hover:text-foreground"
-          >
-            {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
-          </button>
+          {mode === "forgot" && (
+            <button
+              onClick={() => setMode("signin")}
+              className="block w-full text-xs text-muted-foreground hover:text-foreground"
+            >
+              Back to sign in
+            </button>
+          )}
         </div>
 
         <div className="mt-6 text-center">
@@ -149,7 +140,8 @@ const Auth = () => {
           <div>
             <h2 className="text-sm font-medium text-foreground">Admin access guide</h2>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Your admin account was created without a password. To enter the dashboard for the first time:
+              This dashboard is private — accounts are created by the owner only.
+              If your admin account was created without a password: To enter the dashboard for the first time:
             </p>
             <ol className="mt-3 space-y-2 text-xs text-muted-foreground list-decimal list-inside leading-relaxed">
               <li>Enter your admin email above.</li>
