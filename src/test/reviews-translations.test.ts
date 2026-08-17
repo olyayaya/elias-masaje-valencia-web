@@ -6,6 +6,7 @@ import {
   normalizeLanguage,
   localizedReviewText,
   parseReviewImport,
+  type ParsedImportRow,
   type Review,
 } from "@/lib/reviews";
 
@@ -82,6 +83,11 @@ describe("localizedReviewText", () => {
   });
 });
 
+const row = (r: { row: ParsedImportRow | null }): ParsedImportRow => {
+  if (!r.row) throw new Error("row was rejected by the parser");
+  return r.row;
+};
+
 describe("manual import — translations", () => {
   it("reads the language and per-locale columns from JSON", () => {
     const file = JSON.stringify([
@@ -94,13 +100,14 @@ describe("manual import — translations", () => {
         review_text_ru: "Отлично",
       },
     ]);
-    const { rows, issues } = parseReviewImport(file, "reviews.json");
-    expect(issues).toHaveLength(0);
-    expect(rows[0].original_language).toBe("en");
-    expect(rows[0].review_text_es).toBe("Genial");
-    expect(rows[0].review_text_ru).toBe("Отлично");
+    const { rows, fileIssues } = parseReviewImport(file, "reviews.json");
+    expect(fileIssues).toHaveLength(0);
+    expect(rows[0].issues).toHaveLength(0);
+    expect(row(rows[0]).original_language).toBe("en");
+    expect(row(rows[0]).review_text_es).toBe("Genial");
+    expect(row(rows[0]).review_text_ru).toBe("Отлично");
     // The original language column mirrors the untouched original text.
-    expect(rows[0].review_text_en).toBe("Great");
+    expect(row(rows[0]).review_text_en).toBe("Great");
   });
 
   it("reads a nested translations object", () => {
@@ -114,28 +121,29 @@ describe("manual import — translations", () => {
       },
     ]);
     const { rows } = parseReviewImport(file, "reviews.json");
-    expect(rows[0].review_text_en).toBe("Great");
-    expect(rows[0].review_text_ru).toBe("Отлично");
-    expect(rows[0].review_text_es).toBe("Genial");
+    expect(row(rows[0]).review_text_en).toBe("Great");
+    expect(row(rows[0]).review_text_ru).toBe("Отлично");
+    expect(row(rows[0]).review_text_es).toBe("Genial");
   });
 
   it("leaves translations null and never invents one when the file has none", () => {
     const file = JSON.stringify([{ author_name: "Ana", rating: 5, review_text: "Great" }]);
     const { rows } = parseReviewImport(file, "reviews.json");
-    expect(rows[0].original_language).toBeNull();
-    expect(rows[0].review_text_es).toBeNull();
-    expect(rows[0].review_text_en).toBeNull();
-    expect(rows[0].review_text_ru).toBeNull();
+    expect(row(rows[0]).original_language).toBeNull();
+    expect(row(rows[0]).review_text_es).toBeNull();
+    expect(row(rows[0]).review_text_en).toBeNull();
+    expect(row(rows[0]).review_text_ru).toBeNull();
   });
 
   it("reads the translation columns from CSV too", () => {
     const csv =
       "author_name,rating,review_text,original_language,review_text_es,review_text_en,review_text_ru\r\n" +
       'Ana,5,Great,en,Genial,Great,"Отлично"\r\n';
-    const { rows, issues } = parseReviewImport(csv, "reviews.csv");
-    expect(issues).toHaveLength(0);
-    expect(rows[0].original_language).toBe("en");
-    expect(rows[0].review_text_es).toBe("Genial");
+    const { rows, fileIssues } = parseReviewImport(csv, "reviews.csv");
+    expect(fileIssues).toHaveLength(0);
+    expect(rows[0].issues).toHaveLength(0);
+    expect(row(rows[0]).original_language).toBe("en");
+    expect(row(rows[0]).review_text_es).toBe("Genial");
   });
 });
 
