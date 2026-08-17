@@ -194,7 +194,7 @@ const en: DashboardTranslations = {
     blogDesc: "Write and manage SEO-optimized blog posts with AI",
     faqDesc: "Update frequently asked questions shown on the site",
     testimonialsDesc: "Manage client testimonials and ratings",
-    mediaDesc: "Upload and organize images for your site",
+    mediaDesc: "Upload and organize photos and videos for your site",
     seoDesc: "Check search performance, keywords, and local SEO tips",
   },
   promotions: {
@@ -322,7 +322,7 @@ const es: DashboardTranslations = {
     blogDesc: "Escribe y gestiona posts de blog optimizados para SEO con IA",
     faqDesc: "Actualiza las preguntas frecuentes que se muestran en el sitio",
     testimonialsDesc: "Gestiona testimonios y valoraciones de clientes",
-    mediaDesc: "Sube y organiza imágenes para tu sitio",
+    mediaDesc: "Sube y organiza fotos y vídeos para tu sitio",
     seoDesc: "Revisa el rendimiento de búsqueda, palabras clave y tips de SEO local",
   },
   promotions: {
@@ -450,7 +450,7 @@ const ru: DashboardTranslations = {
     blogDesc: "Создавайте и управляйте SEO-оптимизированными постами с помощью ИИ",
     faqDesc: "Обновляйте часто задаваемые вопросы на сайте",
     testimonialsDesc: "Управляйте отзывами и оценками клиентов",
-    mediaDesc: "Загружайте и организуйте изображения для сайта",
+    mediaDesc: "Загружайте и организуйте фото и видео для сайта",
     seoDesc: "Проверяйте поисковую эффективность, ключевые слова и советы по локальному SEO",
   },
   promotions: {

@@ -7,7 +7,7 @@ export const COPY = {
   // ---- upload ----------------------------------------------------------
   dropHere: { en: "Drop photos or videos here or", es: "Suelta fotos o vídeos aquí o", ru: "Перетащите фото или видео сюда или" },
   browse: { en: "browse", es: "explora", ru: "выберите" },
-  formats: { en: "JPG, PNG, WebP · MP4, MOV, WebM (max 250 MB)", es: "JPG, PNG, WebP · MP4, MOV, WebM (máx. 250 MB)", ru: "JPG, PNG, WebP · MP4, MOV, WebM (до 250 МБ)" },
+  formats: { en: "JPG, PNG, WebP · MP4, MOV, M4V, WebM (max 250 MB)", es: "JPG, PNG, WebP · MP4, MOV, M4V, WebM (máx. 250 MB)", ru: "JPG, PNG, WebP · MP4, MOV, M4V, WebM (до 250 МБ)" },
   uploading: { en: "Uploading…", es: "Subiendo…", ru: "Загрузка…" },
   uploaded: { en: "Optimized & uploaded (saved {n})", es: "Optimizada y subida (ahorro {n})", ru: "Оптимизировано и загружено (экономия {n})" },
   uploadedVideo: { en: "Video uploaded: {n}", es: "Vídeo subido: {n}", ru: "Видео загружено: {n}" },

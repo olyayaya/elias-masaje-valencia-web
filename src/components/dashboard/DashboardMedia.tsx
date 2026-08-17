@@ -400,9 +400,10 @@ const DashboardMedia = () => {
       >
         <div className="space-y-4">
           <Tabs value={filters.kind} onValueChange={(v) => setFilters({ ...filters, kind: v as MediaFilters["kind"] })}>
-            <TabsList>
+            {/* Horizontally scrollable so all four tabs stay tappable on narrow phones. */}
+            <TabsList className="w-full max-w-full justify-start overflow-x-auto flex-nowrap">
               {tabs.map((t) => (
-                <TabsTrigger key={t.id} value={t.id}>
+                <TabsTrigger key={t.id} value={t.id} className="shrink-0">
                   {t.label}
                   <span className="ml-1.5 text-xs text-muted-foreground">{t.count}</span>
                 </TabsTrigger>
@@ -535,6 +536,7 @@ const DashboardMedia = () => {
           <VideoConverterDialog
             file={converter}
             L={L}
+            onVerdict={(name, state) => markOpt(name, state)}
             onClose={() => setConverter(null)}
             onReplaced={(result, newName) => {
               setConverter(null);
