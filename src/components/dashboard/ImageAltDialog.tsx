@@ -244,7 +244,7 @@ const ImageAltDialog = ({
         {!decorative && (
           <div className="space-y-2 border-t border-border pt-3">
             <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
-              <input type="checkbox" checked={autoTranslate} onChange={(e) => setAutoTranslate(e.target.checked)} />
+              <input type="checkbox" checked={autoTranslate} onChange={(e) => toggleAutoTranslate(e.target.checked)} />
               {L("translate")}
             </label>
             {autoTranslate && (
