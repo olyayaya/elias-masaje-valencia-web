@@ -138,6 +138,8 @@ export interface ParsedImportRow {
   review_text: string;
   reviewed_at: string | null;
   original_url: string | null;
+  /** From `pinned`/`featured` in the file. Visibility is never taken from the file. */
+  pinned: boolean;
 }
 
 export type PreviewStatus = "new" | "duplicate_file" | "duplicate_existing" | "invalid";
