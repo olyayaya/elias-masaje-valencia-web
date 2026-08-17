@@ -651,6 +651,16 @@ const BlogEditor = ({
       editor?.commands.setContent((updated[contentKey] as string) || "", { emitUpdate: false });
       await autoSaveDraft(updated);
       toast.success(`${langLabels[lang]} version generated and saved`);
+      const carried = countNonLocalizedAlt(
+        (draft[langKey("content", srcLang) as keyof BlogPost] as string) || "",
+        (updated[contentKey] as string) || "",
+      );
+      const missing = countMissingAlt((updated[contentKey] as string) || "");
+      if (carried > 0 || missing > 0) {
+        toast.warning(
+          `Check image alt text in ${langLabels[lang]}: ${carried} not translated, ${missing} missing.`,
+        );
+      }
     } catch (e: any) {
       toast.error(e.message || "Translation failed");
     } finally {
