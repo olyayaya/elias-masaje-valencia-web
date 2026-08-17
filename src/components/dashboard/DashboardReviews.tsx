@@ -8,7 +8,7 @@ import {
 import { useI18n } from "@/i18n/context";
 import {
   CSV_TEMPLATE, GOOGLE_PROFILE_URL, IMPORT_BATCH_SIZE, MAX_IMPORT_ROWS, REVIEW_SORTS, TRIPADVISOR_PROFILE_URL,
-  checkImportFileSize, chunk, dedupeKey, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
+  checkImportFileSize, chunk, dedupeKey, httpsOnly, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
   type ImportIssue, type ImportPreview, type ParsedImportRow, type PreviewRow, type Review, type ReviewInsert,
   type ReviewSort,
 } from "@/lib/reviews";
@@ -131,6 +131,32 @@ const COPY = {
     es: "Las reseñas se guardan tal cual — nunca se editan, traducen ni inventan.",
     ru: "Отзывы сохраняются дословно — их не редактируют, не переводят и не выдумывают.",
   },
+  visibilityChoice: { en: "After importing", es: "Después de importar", ru: "После импорта" },
+  visHidden: {
+    en: "Import hidden — review them and switch them on later (recommended)",
+    es: "Importar ocultas — revísalas y actívalas después (recomendado)",
+    ru: "Импортировать скрытыми — проверить и включить позже (рекомендуется)",
+  },
+  visPublish: {
+    en: "Publish the selected reviews immediately",
+    es: "Publicar las reseñas seleccionadas inmediatamente",
+    ru: "Опубликовать выбранные сразу",
+  },
+  visHiddenNote: {
+    en: "Nothing will appear on the homepage until you switch each review on.",
+    es: "No aparecerá nada en la portada hasta que actives cada reseña.",
+    ru: "На главной ничего не появится, пока вы не включите каждый отзыв.",
+  },
+  visPublishNote: {
+    en: "The selected reviews go live on the homepage right away.",
+    es: "Las reseñas seleccionadas se publican en la portada de inmediato.",
+    ru: "Выбранные отзывы сразу появятся на главной.",
+  },
+  visIgnoresFile: {
+    en: "A visible/published column inside the file is ignored — only this choice decides.",
+    es: "Cualquier columna «visible/publicada» del archivo se ignora: solo decide esta opción.",
+    ru: "Колонка «visible/published» в файле игнорируется — решает только этот выбор.",
+  },
   importNeedsRights: { en: "Tick the confirmation above to enable the import.", es: "Marca la confirmación de arriba para poder importar.", ru: "Отметьте подтверждение выше, чтобы включить импорт." },
   importConfirm: { en: "Import {n}", es: "Importar {n}", ru: "Импортировать {n}" },
   importCancel: { en: "Discard", es: "Descartar", ru: "Отменить" },
@@ -157,6 +183,11 @@ const COPY = {
   lastImport: { en: "Last import: {v}", es: "Última importación: {v}", ru: "Последний импорт: {v}" },
   neverImported: { en: "never", es: "nunca", ru: "никогда" },
   saveFailed: { en: "Failed to save", es: "Error al guardar", ru: "Не удалось сохранить" },
+  manualUrlInvalid: {
+    en: "The link must be a full https:// address, or left empty.",
+    es: "El enlace debe ser una dirección https:// completa, o quedar vacío.",
+    ru: "Ссылка должна быть полным адресом https:// или пустой.",
+  },
 
   /* row / file problems */
   file_too_large: { en: "The file is larger than {max} MB.", es: "El archivo supera {max} MB.", ru: "Файл больше {max} МБ." },
@@ -227,12 +258,16 @@ const DashboardReviews = () => {
   // manual entry
   const [form, setForm] = useState({ author_name: "", rating: "5", review_text: "", reviewed_at: "", original_url: "" });
   const [adding, setAdding] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const addingRef = useRef(false);
 
   // import
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [anchor, setAnchor] = useState<number | null>(null);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  /** Publication is decided here and nowhere else — never by the file. */
+  const [publishNow, setPublishNow] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
   const importing = useRef(false);
@@ -291,20 +326,31 @@ const DashboardReviews = () => {
   /* ------------------------------------------------------ manual entry --- */
 
   const addManual = async () => {
+    if (addingRef.current) return;
     const author = form.author_name.trim();
     const text = form.review_text.trim();
     const stars = Number(form.rating);
     if (!author || !text || !Number.isInteger(stars) || stars < 1 || stars > 5) {
+      setFormError(c("manualIncomplete"));
       toast.error(c("manualIncomplete"));
+      return;
+    }
+    // A mistyped link is reported, never silently discarded.
+    const link = httpsOnly(form.original_url.trim());
+    if (link.bad) {
+      setFormError(c("manualUrlInvalid"));
+      toast.error(c("manualUrlInvalid"));
       return;
     }
     const reviewedAt = form.reviewed_at ? new Date(form.reviewed_at).toISOString() : null;
     const key = dedupeKey({ author_name: author, review_text: text, reviewed_at: reviewedAt });
     if (items.some((r) => r.dedupe_key === key)) {
+      setFormError(c("manualDuplicate"));
       toast.error(c("manualDuplicate"));
       return;
     }
-    const url = form.original_url.trim();
+    setFormError(null);
+    addingRef.current = true;
     setAdding(true);
     const { error } = await reviewsTable().insert([
       {
@@ -313,12 +359,13 @@ const DashboardReviews = () => {
         rating: stars,
         review_text: text,
         reviewed_at: reviewedAt,
-        original_url: url.startsWith("https://") ? url : null,
+        original_url: link.url,
         // Added hidden: the owner decides when it appears on the homepage.
         visible: false,
         imported_at: new Date().toISOString(),
       },
     ]);
+    addingRef.current = false;
     setAdding(false);
     if (error) {
       toast.error(c("saveFailed"));
