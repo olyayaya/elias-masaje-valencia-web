@@ -24,6 +24,7 @@ import {
   type VideoFormat,
   type VideoMeta,
   type VideoQuality,
+  type VideoSavingVerdict,
 } from "@/lib/video-convert";
 import { convertVideo, isConverterSupported, probeEncoders, probeVideoMeta } from "@/lib/video-ffmpeg";
 import { commitVideoReplacement } from "@/lib/media-usage";
