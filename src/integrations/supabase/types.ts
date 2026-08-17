@@ -409,6 +409,81 @@ export type Database = {
           },
         ]
       }
+      review_display_settings: {
+        Row: {
+          allowed_ratings: number[]
+          id: string
+          section_enabled: boolean
+          singleton: boolean
+          sort_mode: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_ratings?: number[]
+          id?: string
+          section_enabled?: boolean
+          singleton?: boolean
+          sort_mode?: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_ratings?: number[]
+          id?: string
+          section_enabled?: boolean
+          singleton?: boolean
+          sort_mode?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          author_name: string
+          created_at: string
+          dedupe_key: string
+          id: string
+          imported_at: string | null
+          manual_priority: number
+          original_url: string | null
+          pinned: boolean
+          rating: number
+          review_text: string
+          reviewed_at: string | null
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          author_name: string
+          created_at?: string
+          dedupe_key: string
+          id?: string
+          imported_at?: string | null
+          manual_priority?: number
+          original_url?: string | null
+          pinned?: boolean
+          rating: number
+          review_text: string
+          reviewed_at?: string | null
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          author_name?: string
+          created_at?: string
+          dedupe_key?: string
+          id?: string
+          imported_at?: string | null
+          manual_priority?: number
+          original_url?: string | null
+          pinned?: boolean
+          rating?: number
+          review_text?: string
+          reviewed_at?: string | null
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           created_at: string
@@ -586,6 +661,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      review_is_public: {
+        Args: { _rating: number; _visible: boolean }
         Returns: boolean
       }
       rewrite_media_references: {
