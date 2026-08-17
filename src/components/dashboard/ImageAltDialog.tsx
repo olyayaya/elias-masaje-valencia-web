@@ -113,7 +113,10 @@ const ImageAltDialog = ({
     ru: lang === "ru" ? initialAlt : initialOthers.ru ?? "",
   };
 
-  const fresh = !!translatedFor && translatedFor.lang === lang && translatedFor.text === alt.trim();
+  // With auto-translate off the machine results are ignored entirely: the other
+  // languages keep exactly what they already had.
+  const fresh =
+    autoTranslate && !!translatedFor && translatedFor.lang === lang && translatedFor.text === alt.trim();
   const plan = planAltTranslations({
     current,
     source: lang,
@@ -121,7 +124,7 @@ const ImageAltDialog = ({
     translations: fresh ? translations : {},
     overwrite,
   });
-  const values = { ...planToTriple(plan), ...edits } as AltTriple;
+  const values = { ...planToTriple(plan), ...(fresh ? edits : {}) } as AltTriple;
 
   /** Any change to the source invalidates the machine translations (never manual edits). */
   const changeAlt = (v: string) => {
@@ -129,9 +132,22 @@ const ImageAltDialog = ({
     if (translatedFor && translatedFor.text !== v.trim()) {
       setTranslations({});
       setTranslatedFor(null);
+      // Also invalidate an in-flight request and release the busy state.
+      reqRef.current += 1;
+      setBusy(false);
     }
     setFailed(false);
   };
+
+  const toggleAutoTranslate = (on: boolean) => {
+    setAutoTranslate(on);
+    if (!on) {
+      reqRef.current += 1;
+      setBusy(false);
+      setFailed(false);
+    }
+  };
+
 
   const runTranslate = async (): Promise<boolean> => {
     const text = alt.trim();
