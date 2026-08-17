@@ -243,13 +243,6 @@ const CategorySection = ({
                   Format: {`{ "extraUrls": [{ "loc": "https://eliasmas.es/landing", "changefreq": "monthly", "priority": "0.5" }] }`}
                 </p>
               )}
-              {robotsField && robotsWarnings.length > 0 && (
-                <ul className="space-y-1 pt-1 border-l-2 border-destructive/40 pl-3">
-                  {robotsWarnings.map((w, i) => (
-                    <li key={i} className="text-xs text-destructive/90">{w}</li>
-                  ))}
-                </ul>
-              )}
               {/* Image preview + position editor */}
               {isImageField(item.content_key) && posItem && (drafts[item.id] ?? "").startsWith("http") && (
                 <div className="space-y-2">
@@ -299,6 +292,8 @@ const DashboardSiteContent = () => {
     const { data } = await supabase
       .from("site_content")
       .select("*")
+      // robots.txt is shipped as a static file (public/robots.txt); never editable here.
+      .neq("content_key", "robots_txt")
       .order("sort_order", { ascending: true });
     if (data) {
       setItems(data as SiteContentRow[]);
