@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Loader2, Check, Film, ImageIcon } from "lucide-react";
 import { kindOf, type MediaKind } from "@/lib/media-kind";
 
@@ -21,6 +22,8 @@ interface Props {
   cancelLabel: string;
   selectLabel: string;
   currentUrl?: string;
+  searchPlaceholder?: string;
+  noMatchLabel?: string;
   onClose: () => void;
   onSelect: (url: string) => void;
 }
@@ -30,16 +33,18 @@ interface Props {
  * so every file keeps going through the compression / video pipeline.
  */
 const GalleryMediaPicker = ({
-  open, kind, title, description, emptyLabel, cancelLabel, selectLabel, currentUrl, onClose, onSelect,
+  open, kind, title, description, emptyLabel, cancelLabel, selectLabel, currentUrl,
+  searchPlaceholder = "Search by file name", noMatchLabel, onClose, onSelect,
 }: Props) => {
   const [files, setFiles] = useState<StorageFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(currentUrl ?? null);
+  const [search, setSearch] = useState("");
 
   const fetchFiles = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.storage.from("media").list("", {
-      limit: 300,
+      limit: 1000,
       sortBy: { column: "created_at", order: "desc" },
     });
     setFiles(
@@ -58,8 +63,19 @@ const GalleryMediaPicker = ({
   useEffect(() => {
     if (!open) return;
     setSelected(currentUrl ?? null);
+    setSearch("");
     void fetchFiles();
   }, [open, currentUrl, fetchFiles]);
+
+  // The Library grows past what a single scroll can reasonably present, so the list
+  // is filtered by file name (case- and accent-insensitive) before rendering.
+  const normalize = (v: string) =>
+    v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const visible = useMemo(() => {
+    const q = normalize(search.trim());
+    if (!q) return files;
+    return files.filter((f) => normalize(f.name).includes(q));
+  }, [files, search]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -69,15 +85,27 @@ const GalleryMediaPicker = ({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
+        {!loading && files.length > 0 && (
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
+            className="mb-1"
+          />
+        )}
+
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="animate-spin text-muted-foreground" size={20} />
           </div>
         ) : files.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">{emptyLabel}</p>
+        ) : visible.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">{noMatchLabel ?? emptyLabel}</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {files.map((f) => (
+            {visible.map((f) => (
               <button
                 key={f.name}
                 type="button"
