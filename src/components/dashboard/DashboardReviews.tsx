@@ -603,7 +603,7 @@ const DashboardReviews = () => {
     setKeepPinned(false);
   };
 
-  const rows = preview?.rows ?? [];
+  const rows = useMemo(() => preview?.rows ?? [], [preview]);
   const importable = useMemo(() => rows.filter((r) => r.status === "new"), [rows]);
 
   const toggleRow = (row: PreviewRow, e: { shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean }) => {
