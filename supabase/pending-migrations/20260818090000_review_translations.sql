@@ -72,13 +72,20 @@ END
 $$;
 
 -- ----------------------------------------------------------------- grants ---
--- Keep anon strictly read-only, then extend the column-level SELECT to the new
--- public columns. No table-level INSERT/UPDATE/DELETE/TRUNCATE is granted here.
-REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.reviews FROM anon;
+-- Drop every anon privilege first, then hand back exactly one column-level
+-- SELECT listing the full public column set. Anon never holds a table-level
+-- privilege on public.reviews, so a new column is invisible until it is added
+-- to this single list on purpose.
+REVOKE ALL PRIVILEGES ON TABLE public.reviews FROM anon;
 
-GRANT SELECT (original_language, review_text_es, review_text_en, review_text_ru)
-  ON public.reviews TO anon;
+GRANT SELECT (
+  id, author_name, rating, review_text, original_language,
+  review_text_es, review_text_en, review_text_ru,
+  reviewed_at, original_url, pinned, manual_priority
+) ON public.reviews TO anon;
 
 -- authenticated already holds table-level SELECT/INSERT/UPDATE/DELETE, which
 -- covers new columns automatically; service_role keeps ALL.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.reviews TO authenticated;
 GRANT ALL ON public.reviews TO service_role;
+
