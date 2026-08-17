@@ -3,9 +3,11 @@ import { History, RotateCcw, ChevronDown, ChevronRight, Loader2, Clock, Trash2, 
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
+import { fetchAliasMap, resolveSnapshotMedia, type AliasMap } from "@/lib/media-aliases";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import DashboardCard from "./DashboardCard";
+
 
 // Map history table_name → React Query key so a restore invalidates the
 // public site read for the same table.
