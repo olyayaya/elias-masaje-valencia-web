@@ -1,13 +1,14 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Plus, Trash2, ChevronUp, ChevronDown, Loader2, Film, ImageIcon, Eye, EyeOff, AlertTriangle, Wand2,
+  Plus, Trash2, ChevronUp, ChevronDown, Loader2, Film, ImageIcon, Eye, EyeOff, AlertTriangle, Wand2, X,
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
 import { galleryTable, publishIssues, type GalleryItem, type GalleryPublishIssue } from "@/lib/gallery";
+import { listAllMediaNames } from "@/lib/storage-list";
 import { useGalleryAdmin } from "@/hooks/use-gallery";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
@@ -15,6 +16,7 @@ import GalleryMediaPicker from "./GalleryMediaPicker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+
 
 const COPY = {
   intro: {
