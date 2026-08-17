@@ -189,9 +189,9 @@ Deno.serve(async (req) => {
       if (invalid) return json({ error: invalid }, 400);
       if (newName === fileName) return json({ error: "New name is identical" }, 400);
       // Server-side extension guard: format changes must go through the compression flow.
-      if (extOf(newName) !== extOf(fileName)) {
-        return json({ error: `Keep the .${extOf(fileName)} extension — change format via smart compression` }, 400);
-      }
+      const extError = validateRenameExtension(fileName, newName);
+      if (extError) return json({ error: extError }, 400);
+
 
       const source = await statObject(admin, fileName);
       if (!source.found) return json({ error: "Source file not found" }, 404);
