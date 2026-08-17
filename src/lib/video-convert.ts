@@ -188,6 +188,38 @@ export function outputNameFor(sourceName: string, format: VideoFormat): string {
   return `${base}.${EXT_BY_FORMAT[format]}`;
 }
 
+// ---------------------------------------------------------------------------
+// Audio removal (mute) — lossless remux, never a re-encode
+// ---------------------------------------------------------------------------
+
+/**
+ * Containers whose muxer understands `-movflags +faststart`. WebM must not get it.
+ */
+const MOV_LIKE = new Set(["mp4", "m4v", "mov"]);
+
+/**
+ * argv for stripping every audio (and data/subtitle) stream while copying the video
+ * bitstream untouched. No `-c:v` re-encode → no quality loss and near-instant remux.
+ * The container/extension is preserved, so the resulting MIME stays valid.
+ */
+export function buildStripAudioArgs(o: { inputName: string; outputName: string }): string[] {
+  const ext = (o.outputName.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "").toLowerCase();
+  const args = ["-i", o.inputName, "-map", "0:v:0", "-c:v", "copy", "-an", "-sn", "-dn"];
+  if (MOV_LIKE.has(ext)) args.push("-movflags", "+faststart");
+  args.push("-y", o.outputName);
+  return args;
+}
+
+/**
+ * True when the ffmpeg log for the source shows at least one audio stream.
+ * Used only for an honest "this video had no audio" notice — never to skip the remux
+ * (the remux is what guarantees no audio can reach storage).
+ */
+export function logHasAudioStream(log: string): boolean {
+  return /Stream #\d+:\d+(?:\[[^\]]*\])?(?:\([^)]*\))?:\s*Audio:/i.test(log);
+}
+
+
 /** Parses `ffmpeg -encoders` output into the capability flags we gate options on. */
 export function parseEncoderCaps(log: string): EncoderCaps {
   const has = (name: string) => new RegExp(`^\\s*\\S+\\s+${name}\\s`, "m").test(log);
