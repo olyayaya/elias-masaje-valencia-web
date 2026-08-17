@@ -277,6 +277,12 @@ const pick = (rec: Record<string, unknown>, field: keyof PreviewRow["raw"]) => {
   return "";
 };
 
+/** Booleans arrive as real booleans in JSON and as text in CSV. */
+const truthy = (v: unknown): boolean => {
+  if (typeof v === "boolean") return v;
+  return ["true", "1", "yes", "si", "sí", "да"].includes(clean(v).toLowerCase());
+};
+
 const normalizeRow = (rec: Record<string, unknown>, line: number): PreviewRow => {
   const raw = {
     author_name: pick(rec, "author_name"),
