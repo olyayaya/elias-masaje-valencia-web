@@ -16,6 +16,7 @@ import {
   validateStagedName,
   validateRenameExtension,
   backupNameFor,
+  readHeadFromStream,
   SCANS,
 } from "./rules.ts";
 import { promoteSameName } from "./promote.ts";
