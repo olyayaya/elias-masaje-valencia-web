@@ -117,3 +117,33 @@ describe("gallery picker multi-select", () => {
     expect(onSelect).toHaveBeenCalledWith("https://cdn.test/b.webp");
   });
 });
+
+describe("gallery picker keyboard, ARIA and touch", () => {
+  it("exposes a multi-selectable listbox and toggles with the keyboard", async () => {
+    mount(true);
+    const { dialog, buttons } = await tiles();
+    const listbox = dialog.querySelector('[role="listbox"]')!;
+    expect(listbox.getAttribute("aria-multiselectable")).toBe("true");
+    expect(buttons.every((b) => b.getAttribute("role") === "option")).toBe(true);
+    expect(buttons.every((b) => b.tagName)).toBeTruthy();
+
+    // Native buttons: Enter/Space are delivered as clicks by the browser, so a
+    // keyboard user toggles exactly like a tap does — without losing the rest.
+    buttons[0].focus();
+    expect(document.activeElement).toBe(buttons[0]);
+    fireEvent.click(buttons[0]);
+    fireEvent.click(buttons[1]);
+    expect(buttons[0].getAttribute("aria-selected")).toBe("true");
+    expect(buttons[1].getAttribute("aria-selected")).toBe("true");
+    expect(within(dialog).getByText(/2 selected/)).toBeTruthy();
+  });
+
+  it("announces the selected count politely", async () => {
+    mount(true);
+    const { dialog, buttons } = await tiles();
+    fireEvent.click(buttons[0]);
+    const live = dialog.querySelector('[data-testid="picker-selected-count"]')!;
+    expect(live.getAttribute("aria-live")).toBe("polite");
+    expect(live.textContent).toMatch(/1 selected/);
+  });
+});
