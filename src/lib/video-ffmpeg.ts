@@ -11,11 +11,14 @@ const FFMPEG_WASM_URL = "/ffmpeg/ffmpeg-core.wasm";
 
 import {
   buildFfmpegArgs,
+  buildStripAudioArgs,
+  logHasAudioStream,
   parseEncoderCaps,
   type ConvertOptions,
   type EncoderCaps,
   type VideoMeta,
 } from "./video-convert";
+
 
 type FFmpegInstance = {
   loaded: boolean;
