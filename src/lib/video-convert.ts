@@ -27,12 +27,18 @@ export interface VideoMeta {
   fps?: number;
 }
 
-/** Encoders the loaded ffmpeg core actually reports. Options are gated on this. */
+/**
+ * Encoders the loaded ffmpeg core actually reports (`ffmpeg -encoders`).
+ * Every option offered by the UI is gated on these flags — we never emit an encoder name
+ * that the running core cannot write.
+ */
 export interface EncoderCaps {
   h264: boolean;
   vp9: boolean;
   aac: boolean;
   opus: boolean;
+  mp3lame: boolean;
+  vorbis: boolean;
 }
 
 export const EXT_BY_FORMAT: Record<VideoFormat, string> = { mp4: "mp4", webm: "webm" };
@@ -41,6 +47,21 @@ export const MIME_BY_FORMAT: Record<VideoFormat, string> = {
   webm: "video/webm",
 };
 
+/**
+ * The audio encoder actually used for a container, or null when the core has none for it
+ * (in that case the output is muxed without audio rather than failing mid-encode).
+ */
+export function audioEncoderFor(format: VideoFormat, caps: EncoderCaps): string | null {
+  if (format === "mp4") {
+    if (caps.aac) return "aac";
+    if (caps.mp3lame) return "libmp3lame";
+    return null;
+  }
+  if (caps.opus) return "libopus";
+  if (caps.vorbis) return "libvorbis";
+  return null;
+}
+
 /** A format is offerable only when its video encoder exists in this core build. */
 export function availableFormats(caps: EncoderCaps): VideoFormat[] {
   const out: VideoFormat[] = [];
@@ -48,6 +69,7 @@ export function availableFormats(caps: EncoderCaps): VideoFormat[] {
   if (caps.vp9) out.push("webm");
   return out;
 }
+
 
 const evenDown = (n: number) => Math.max(2, Math.floor(n / 2) * 2);
 
