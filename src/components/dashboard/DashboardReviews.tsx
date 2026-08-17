@@ -1,0 +1,553 @@
+import { useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  AlertTriangle, ExternalLink, Eye, EyeOff, Loader2, Pin, PinOff, RefreshCw, Star, Upload,
+} from "lucide-react";
+import { useI18n } from "@/i18n/context";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  REVIEW_SOURCES, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
+  type ParsedImportRow, type Review, type ReviewSort, type ReviewSource,
+} from "@/lib/reviews";
+import { useAdminReviews, reviewKeys } from "@/hooks/use-reviews";
+import DashboardCard from "./DashboardCard";
+import DashboardTestimonials from "./DashboardTestimonials";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+const COPY = {
+  intro: {
+    en: "Real reviews imported from Google and TripAdvisor. Nothing here is written by the site.",
+    es: "Reseñas reales importadas de Google y TripAdvisor. Nada de esto lo escribe la web.",
+    ru: "Реальные отзывы из Google и TripAdvisor. Ничего не пишется сайтом.",
+  },
+  missingTable: {
+    en: "The reviews storage is not set up yet. Ask your developer to apply the pending reviews migration. The legacy editor below stays available until then.",
+    es: "El almacenamiento de reseñas aún no está configurado. Pide que se aplique la migración pendiente. Mientras tanto sigue disponible el editor anterior.",
+    ru: "Хранилище отзывов ещё не настроено. Попросите применить ожидающую миграцию. До этого доступен прежний редактор.",
+  },
+  legacyTitle: { en: "Legacy reviews", es: "Reseñas anteriores", ru: "Прежние отзывы" },
+  search: { en: "Search author or text", es: "Buscar autor o texto", ru: "Поиск по автору или тексту" },
+  sourceAll: { en: "All sources", es: "Todas las fuentes", ru: "Все источники" },
+  sourceGoogle: { en: "Google", es: "Google", ru: "Google" },
+  sourceTripadvisor: { en: "TripAdvisor", es: "TripAdvisor", ru: "TripAdvisor" },
+  sourceManual: { en: "Manual import", es: "Importación manual", ru: "Ручной импорт" },
+  ratingAll: { en: "All ratings", es: "Todas las valoraciones", ru: "Все оценки" },
+  visibilityAll: { en: "Visible and hidden", es: "Visibles y ocultas", ru: "Видимые и скрытые" },
+  visibilityVisible: { en: "Visible only", es: "Solo visibles", ru: "Только видимые" },
+  visibilityHidden: { en: "Hidden only", es: "Solo ocultas", ru: "Только скрытые" },
+  sortNewest: { en: "Newest first", es: "Más recientes", ru: "Сначала новые" },
+  sortOldest: { en: "Oldest first", es: "Más antiguas", ru: "Сначала старые" },
+  sortRatingHigh: { en: "Rating: high to low", es: "Valoración: alta a baja", ru: "Оценка: по убыванию" },
+  sortRatingLow: { en: "Rating: low to high", es: "Valoración: baja a alta", ru: "Оценка: по возрастанию" },
+  sortManual: { en: "Pinned / manual order", es: "Fijadas / orden manual", ru: "Закреплённые / вручную" },
+  count: { en: "{n} reviews", es: "{n} reseñas", ru: "Отзывов: {n}" },
+  empty: { en: "No reviews match these filters.", es: "Ninguna reseña coincide con los filtros.", ru: "Нет отзывов по этим фильтрам." },
+  none: {
+    en: "No reviews imported yet. Connect a source or import an official export below.",
+    es: "Aún no hay reseñas importadas. Conecta una fuente o importa una exportación oficial abajo.",
+    ru: "Отзывы ещё не импортированы. Подключите источник или импортируйте официальный экспорт ниже.",
+  },
+  openOriginal: { en: "Open original", es: "Abrir original", ru: "Открыть оригинал" },
+  show: { en: "Show on site", es: "Mostrar en la web", ru: "Показывать на сайте" },
+  hide: { en: "Hide from site", es: "Ocultar de la web", ru: "Скрыть с сайта" },
+  pin: { en: "Pin to the top", es: "Fijar arriba", ru: "Закрепить сверху" },
+  unpin: { en: "Unpin", es: "Desfijar", ru: "Открепить" },
+  hiddenBadge: { en: "Hidden", es: "Oculta", ru: "Скрыта" },
+  pinnedBadge: { en: "Pinned", es: "Fijada", ru: "Закреплена" },
+
+  displayTitle: { en: "What the homepage shows", es: "Qué muestra la portada", ru: "Что показывает главная" },
+  displayHint: {
+    en: "These switches control the public site directly. 1–4★ stay off unless you turn them on.",
+    es: "Estos interruptores controlan la web pública directamente. 1–4★ están apagados salvo que los actives.",
+    ru: "Эти переключатели напрямую управляют публичным сайтом. 1–4★ выключены, пока вы их не включите.",
+  },
+  sectionEnabled: { en: "Show the reviews section", es: "Mostrar la sección de reseñas", ru: "Показывать раздел отзывов" },
+  starsToggle: { en: "{n}★ reviews", es: "Reseñas de {n}★", ru: "Отзывы на {n}★" },
+  settingsSaved: { en: "Display settings saved", es: "Ajustes guardados", ru: "Настройки сохранены" },
+
+  syncTitle: { en: "Sources", es: "Fuentes", ru: "Источники" },
+  syncNow: { en: "Sync now", es: "Sincronizar", ru: "Синхронизировать" },
+  syncing: { en: "Syncing…", es: "Sincronizando…", ru: "Синхронизация…" },
+  lastSync: { en: "Last sync: {v}", es: "Última sincronización: {v}", ru: "Последняя синхронизация: {v}" },
+  never: { en: "never", es: "nunca", ru: "никогда" },
+  notConfigured: {
+    en: "Not connected — credentials are missing. Ask your developer to add the secrets listed below.",
+    es: "Sin conectar — faltan credenciales. Pide que se añadan los secretos indicados abajo.",
+    ru: "Не подключено — нет учётных данных. Попросите добавить перечисленные ниже секреты.",
+  },
+  syncResult: {
+    en: "Imported {imported}, updated {updated}, skipped {skipped}",
+    es: "Importadas {imported}, actualizadas {updated}, omitidas {skipped}",
+    ru: "Импортировано {imported}, обновлено {updated}, пропущено {skipped}",
+  },
+  syncFailed: { en: "Sync failed", es: "Error de sincronización", ru: "Ошибка синхронизации" },
+
+  importTitle: { en: "Import an official export", es: "Importar una exportación oficial", ru: "Импорт официального экспорта" },
+  importHint: {
+    en: "CSV or JSON with the columns source, external_review_id, author_name, rating, review_text, reviewed_at, original_url.",
+    es: "CSV o JSON con las columnas source, external_review_id, author_name, rating, review_text, reviewed_at, original_url.",
+    ru: "CSV или JSON со столбцами source, external_review_id, author_name, rating, review_text, reviewed_at, original_url.",
+  },
+  choose: { en: "Choose file", es: "Elegir archivo", ru: "Выбрать файл" },
+  importPreview: { en: "{n} valid rows ready to import", es: "{n} filas válidas listas", ru: "Готово к импорту строк: {n}" },
+  importConfirm: { en: "Import {n}", es: "Importar {n}", ru: "Импортировать {n}" },
+  importCancel: { en: "Discard", es: "Descartar", ru: "Отменить" },
+  importDone: { en: "Imported {n} reviews", es: "{n} reseñas importadas", ru: "Импортировано отзывов: {n}" },
+  importFailed: { en: "Import failed", es: "Error al importar", ru: "Ошибка импорта" },
+  saveFailed: { en: "Failed to save", es: "Error al guardar", ru: "Не удалось сохранить" },
+} as const;
+
+type UiLang = "en" | "es" | "ru";
+const fill = (s: string, vars: Record<string, string>) =>
+  Object.entries(vars).reduce((a, [k, v]) => a.split(`{${k}}`).join(v), s);
+
+const useCopy = () => {
+  const { locale } = useI18n();
+  const ui: UiLang = (["en", "es", "ru"] as const).includes(locale as UiLang) ? (locale as UiLang) : "en";
+  return (k: keyof typeof COPY, vars: Record<string, string> = {}) => fill(COPY[k][ui], vars);
+};
+
+const SOURCE_LABEL: Record<ReviewSource, keyof typeof COPY> = {
+  google: "sourceGoogle",
+  tripadvisor: "sourceTripadvisor",
+  manual: "sourceManual",
+};
+
+/** Secrets the server-side sync needs before it can run. Names only, never values. */
+export const REQUIRED_SYNC_SECRETS: Record<"google" | "tripadvisor", string[]> = {
+  google: [
+    "GOOGLE_BUSINESS_PROFILE_CLIENT_ID",
+    "GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET",
+    "GOOGLE_BUSINESS_PROFILE_REFRESH_TOKEN",
+    "GOOGLE_BUSINESS_ACCOUNT_ID",
+    "GOOGLE_BUSINESS_LOCATION_ID",
+  ],
+  tripadvisor: ["TRIPADVISOR_CONTENT_API_KEY", "TRIPADVISOR_LOCATION_ID"],
+};
+
+const Stars = ({ n }: { n: number }) => (
+  <span className="flex gap-0.5" aria-label={`${n}/5`}>
+    {Array.from({ length: 5 }).map((_, i) => (
+      <Star key={i} size={12} className={i < n ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/30"} />
+    ))}
+  </span>
+);
+
+const DashboardReviews = () => {
+  const c = useCopy();
+  const qc = useQueryClient();
+  const { items, settings, missingTable, isPending } = useAdminReviews();
+
+  const [search, setSearch] = useState("");
+  const [source, setSource] = useState<"all" | ReviewSource>("all");
+  const [rating, setRating] = useState<"all" | number>("all");
+  const [visibility, setVisibility] = useState<"all" | "visible" | "hidden">("all");
+  const [sort, setSort] = useState<ReviewSort>("newest");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState<null | ReviewSource>(null);
+  const [syncStatus, setSyncStatus] = useState<Record<string, string>>({});
+  const [importRows, setImportRows] = useState<ParsedImportRow[] | null>(null);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: reviewKeys.adminList });
+    void qc.invalidateQueries({ queryKey: reviewKeys.publicList });
+    void qc.invalidateQueries({ queryKey: reviewKeys.settings });
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = items.filter((r) => {
+      if (source !== "all" && r.source !== source) return false;
+      if (rating !== "all" && r.rating !== rating) return false;
+      if (visibility === "visible" && !r.visible) return false;
+      if (visibility === "hidden" && r.visible) return false;
+      if (q && !`${r.author_name} ${r.review_text}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    return sortReviews(list, sort);
+  }, [items, search, source, rating, visibility, sort]);
+
+  const patch = async (id: string, values: Record<string, unknown>) => {
+    setBusyId(id);
+    const { error } = await reviewsTable().update(values).eq("id", id);
+    setBusyId(null);
+    if (error) {
+      toast.error(c("saveFailed"));
+      return;
+    }
+    refresh();
+  };
+
+  const saveSettings = async (values: Record<string, unknown>) => {
+    const query = reviewSettingsTable().update(values);
+    const { error } = settings.id ? await query.eq("id", settings.id) : await query.neq("id", "");
+    if (error) {
+      toast.error(c("saveFailed"));
+      return;
+    }
+    toast.success(c("settingsSaved"));
+    refresh();
+  };
+
+  const toggleRatingBand = (n: number) => {
+    const cur = settings.allowed_ratings ?? [];
+    const next = cur.includes(n) ? cur.filter((r) => r !== n) : [...cur, n].sort((a, b) => a - b);
+    void saveSettings({ allowed_ratings: next });
+  };
+
+  /**
+   * Server-side sync. The Edge Function owns every credential; the browser only
+   * ever sees counters and a status string — never a token.
+   */
+  const runSync = async (src: ReviewSource) => {
+    setSyncing(src);
+    try {
+      const { data, error } = await supabase.functions.invoke("reviews-sync", {
+        body: { source: src },
+      });
+      if (error) throw error;
+      const res = data as {
+        status?: string;
+        imported?: number;
+        updated?: number;
+        skipped?: number;
+        error?: string;
+      };
+      if (res?.status === "not_configured") {
+        setSyncStatus((s) => ({ ...s, [src]: "not_configured" }));
+        toast.warning(c("notConfigured"));
+        return;
+      }
+      if (res?.status !== "ok") throw new Error(res?.error || "sync failed");
+      setSyncStatus((s) => ({ ...s, [src]: "ok" }));
+      toast.success(
+        c("syncResult", {
+          imported: String(res.imported ?? 0),
+          updated: String(res.updated ?? 0),
+          skipped: String(res.skipped ?? 0),
+        }),
+      );
+      refresh();
+    } catch {
+      setSyncStatus((s) => ({ ...s, [src]: "error" }));
+      toast.error(c("syncFailed"));
+    } finally {
+      setSyncing(null);
+    }
+  };
+
+  const onFile = async (file: File | undefined) => {
+    if (!file) return;
+    const text = await file.text();
+    const { rows, errors } = parseReviewImport(text);
+    setImportRows(rows);
+    setImportErrors(errors);
+  };
+
+  const confirmImport = async () => {
+    if (!importRows?.length) return;
+    setImporting(true);
+    // Upsert on (source, external_review_id): a re-import never duplicates and
+    // never touches the moderator's own visible / pinned decisions.
+    const { error } = await reviewsTable().upsert(
+      importRows.map((r) => ({ ...r, last_synced_at: new Date().toISOString() })),
+      { onConflict: "source,external_review_id", ignoreDuplicates: false },
+    );
+    setImporting(false);
+    if (error) {
+      toast.error(c("importFailed"));
+      return;
+    }
+    toast.success(c("importDone", { n: String(importRows.length) }));
+    setImportRows(null);
+    setImportErrors([]);
+    if (fileRef.current) fileRef.current.value = "";
+    refresh();
+  };
+
+  const lastSync = useMemo(() => {
+    const stamps = items.map((r) => r.last_synced_at).filter(Boolean) as string[];
+    if (!stamps.length) return null;
+    return stamps.sort().at(-1) ?? null;
+  }, [items]);
+
+  const selectClass =
+    "px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring";
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">{c("intro")}</p>
+
+      {missingTable && (
+        <DashboardCard>
+          <p className="text-sm text-muted-foreground flex items-start gap-2" data-testid="reviews-missing-table">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            {c("missingTable")}
+          </p>
+        </DashboardCard>
+      )}
+
+      {/* ---------------------------------------------- display settings --- */}
+      <DashboardCard title={c("displayTitle")}>
+        <p className="text-xs text-muted-foreground mb-3">{c("displayHint")}</p>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={settings.section_enabled}
+              disabled={missingTable}
+              onChange={(e) => void saveSettings({ section_enabled: e.target.checked })}
+            />
+            {c("sectionEnabled")}
+          </label>
+          <div className="flex flex-wrap gap-3">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <label key={n} className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={(settings.allowed_ratings ?? []).includes(n)}
+                  disabled={missingTable}
+                  onChange={() => toggleRatingBand(n)}
+                  aria-label={c("starsToggle", { n: String(n) })}
+                />
+                {c("starsToggle", { n: String(n) })}
+              </label>
+            ))}
+          </div>
+        </div>
+      </DashboardCard>
+
+      {/* -------------------------------------------------------- sources --- */}
+      <DashboardCard title={c("syncTitle")}>
+        <p className="text-xs text-muted-foreground mb-3">
+          {c("lastSync", { v: lastSync ? new Date(lastSync).toLocaleString() : c("never") })}
+        </p>
+        <div className="space-y-3">
+          {(["google", "tripadvisor"] as const).map((src) => (
+            <div key={src} className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium w-28">{c(SOURCE_LABEL[src])}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={syncing !== null || missingTable}
+                onClick={() => void runSync(src)}
+              >
+                {syncing === src ? (
+                  <Loader2 size={13} className="mr-1.5 animate-spin" />
+                ) : (
+                  <RefreshCw size={13} className="mr-1.5" />
+                )}
+                {syncing === src ? c("syncing") : c("syncNow")}
+              </Button>
+              {syncStatus[src] === "not_configured" && (
+                <span className="text-xs text-muted-foreground" data-testid={`sync-status-${src}`}>
+                  {c("notConfigured")} ({REQUIRED_SYNC_SECRETS[src].join(", ")})
+                </span>
+              )}
+              {syncStatus[src] === "error" && (
+                <span className="text-xs text-destructive">{c("syncFailed")}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </DashboardCard>
+
+      {/* --------------------------------------------------------- import --- */}
+      <DashboardCard title={c("importTitle")}>
+        <p className="text-xs text-muted-foreground mb-3">{c("importHint")}</p>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,.json,text/csv,application/json"
+          aria-label={c("choose")}
+          onChange={(e) => void onFile(e.target.files?.[0])}
+          className="text-sm"
+        />
+        {importErrors.length > 0 && (
+          <ul className="mt-3 text-xs text-destructive space-y-1" role="alert">
+            {importErrors.slice(0, 10).map((err) => (
+              <li key={err}>{err}</li>
+            ))}
+          </ul>
+        )}
+        {importRows && importRows.length > 0 && (
+          <div className="mt-3 space-y-2" data-testid="import-preview">
+            <p className="text-xs text-muted-foreground">{c("importPreview", { n: String(importRows.length) })}</p>
+            <ul className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-y-auto">
+              {importRows.slice(0, 5).map((r) => (
+                <li key={`${r.source}-${r.external_review_id}`}>
+                  {r.author_name} · {r.rating}★ · {r.review_text.slice(0, 60)}
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-2">
+              <Button size="sm" disabled={importing || missingTable} onClick={() => void confirmImport()}>
+                {importing ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : <Upload size={13} className="mr-1.5" />}
+                {c("importConfirm", { n: String(importRows.length) })}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setImportRows(null);
+                  setImportErrors([]);
+                  if (fileRef.current) fileRef.current.value = "";
+                }}
+              >
+                {c("importCancel")}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DashboardCard>
+
+      {/* -------------------------------------------------------- filters --- */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={c("search")}
+          aria-label={c("search")}
+          className="max-w-xs"
+        />
+        <select
+          className={selectClass}
+          value={source}
+          aria-label={c("sourceAll")}
+          onChange={(e) => setSource(e.target.value as "all" | ReviewSource)}
+        >
+          <option value="all">{c("sourceAll")}</option>
+          {REVIEW_SOURCES.map((s) => (
+            <option key={s} value={s}>{c(SOURCE_LABEL[s])}</option>
+          ))}
+        </select>
+        <select
+          className={selectClass}
+          value={String(rating)}
+          aria-label={c("ratingAll")}
+          onChange={(e) => setRating(e.target.value === "all" ? "all" : Number(e.target.value))}
+        >
+          <option value="all">{c("ratingAll")}</option>
+          {[5, 4, 3, 2, 1].map((n) => (
+            <option key={n} value={n}>{n}★</option>
+          ))}
+        </select>
+        <select
+          className={selectClass}
+          value={visibility}
+          aria-label={c("visibilityAll")}
+          onChange={(e) => setVisibility(e.target.value as "all" | "visible" | "hidden")}
+        >
+          <option value="all">{c("visibilityAll")}</option>
+          <option value="visible">{c("visibilityVisible")}</option>
+          <option value="hidden">{c("visibilityHidden")}</option>
+        </select>
+        <select
+          className={selectClass}
+          value={sort}
+          aria-label={c("sortNewest")}
+          onChange={(e) => setSort(e.target.value as ReviewSort)}
+        >
+          <option value="newest">{c("sortNewest")}</option>
+          <option value="oldest">{c("sortOldest")}</option>
+          <option value="rating_high">{c("sortRatingHigh")}</option>
+          <option value="rating_low">{c("sortRatingLow")}</option>
+          <option value="manual">{c("sortManual")}</option>
+        </select>
+        <span className="text-xs text-muted-foreground ml-auto">{c("count", { n: String(filtered.length) })}</span>
+      </div>
+
+      {/* ---------------------------------------------------------- list --- */}
+      {isPending ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="animate-spin text-muted-foreground" size={20} />
+        </div>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-6">{missingTable ? c("missingTable") : c("none")}</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-6">{c("empty")}</p>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((r: Review) => (
+            <DashboardCard key={r.id}>
+              <div className={`flex items-start justify-between gap-4 ${r.visible ? "" : "opacity-50"}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {r.author_avatar_url && (
+                      <img src={r.author_avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" loading="lazy" />
+                    )}
+                    <h4 className="text-sm font-medium text-foreground">{r.author_name}</h4>
+                    <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">
+                      {c(SOURCE_LABEL[r.source])}
+                    </span>
+                    {!r.visible && (
+                      <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">{c("hiddenBadge")}</span>
+                    )}
+                    {r.pinned && (
+                      <span className="text-[10px] px-2 py-0.5 bg-secondary text-muted-foreground rounded-full">{c("pinnedBadge")}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Stars n={r.rating} />
+                    {r.reviewed_at && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {new Date(r.reviewed_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{r.review_text}</p>
+                  {r.original_url && (
+                    <a
+                      href={r.original_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      <ExternalLink size={11} /> {c("openOriginal")}
+                    </a>
+                  )}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    onClick={() => void patch(r.id, { visible: !r.visible })}
+                    disabled={busyId === r.id}
+                    title={r.visible ? c("hide") : c("show")}
+                    aria-label={r.visible ? c("hide") : c("show")}
+                    className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary"
+                  >
+                    {r.visible ? <Eye size={14} /> : <EyeOff size={14} />}
+                  </button>
+                  <button
+                    onClick={() => void patch(r.id, { pinned: !r.pinned })}
+                    disabled={busyId === r.id}
+                    title={r.pinned ? c("unpin") : c("pin")}
+                    aria-label={r.pinned ? c("unpin") : c("pin")}
+                    className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary"
+                  >
+                    {r.pinned ? <PinOff size={14} /> : <Pin size={14} />}
+                  </button>
+                </div>
+              </div>
+            </DashboardCard>
+          ))}
+        </div>
+      )}
+
+      {/* The previous editor stays reachable until the migration is applied so no
+          existing review becomes unmanageable mid-rollout. */}
+      {missingTable && (
+        <div className="pt-4 border-t border-border space-y-3">
+          <h3 className="text-sm font-medium text-foreground">{c("legacyTitle")}</h3>
+          <DashboardTestimonials />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DashboardReviews;

@@ -16,7 +16,7 @@ import DashboardBlog from "@/components/dashboard/DashboardBlog";
 import DashboardSEO from "@/components/dashboard/DashboardSEO";
 import DashboardMedia from "@/components/dashboard/DashboardMedia";
 import DashboardFAQ from "@/components/dashboard/DashboardFAQ";
-import DashboardTestimonials from "@/components/dashboard/DashboardTestimonials";
+import DashboardReviews from "@/components/dashboard/DashboardReviews";
 import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
 import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
@@ -34,9 +34,10 @@ const primarySections = [
   { id: "content", icon: PenLine },
   { id: "carousels", icon: Images },
   { id: "gallery", icon: GalleryHorizontal },
+  // Library sits directly after Gallery: the Gallery picker sources its files there.
+  { id: "media", icon: Image },
   { id: "faq", icon: HelpCircle },
   { id: "blog", icon: FileText },
-  { id: "media", icon: Image },
   { id: "testimonials", icon: MessageSquare },
 ] as const;
 
@@ -84,7 +85,7 @@ const Dashboard = () => {
       case "attribution": return <DashboardAttribution />;
       case "media": return <DashboardMedia />;
       case "faq": return <DashboardFAQ />;
-      case "testimonials": return <DashboardTestimonials />;
+      case "testimonials": return <DashboardReviews />;
       case "history": return <DashboardHistory />;
       default: return <DashboardOverview onNavigate={navigateTo} />;
     }

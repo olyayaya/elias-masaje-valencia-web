@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useDbServices, useDbFaqs, useDbTestimonials, resolveField } from "@/hooks/use-db-content";
+import { usePublicReviews } from "@/hooks/use-reviews";
+import { publicReviews } from "@/lib/reviews";
 import { Link } from "react-router-dom";
 import heroImageOrganic from "@/assets/hero-organic.jpg";
 
@@ -53,6 +55,7 @@ const OrganicHome = () => {
   const servicesState = useDbServices();
   const faqState = useDbFaqs();
   const testimonialsState = useDbTestimonials();
+  const reviewsState = usePublicReviews();
   const { content: sc, status: scStatus, retry: scRetry } = useSiteContent();
   const { images: customHomeCarousel, loaded: homeCarouselLoaded } = usePageImages("home_carousel");
   const defaultHomeCarousel = [
@@ -92,10 +95,37 @@ const OrganicHome = () => {
     [faqState.data, locale]
   );
 
-  const testimonialItems = useMemo(() =>
-    (testimonialsState.data ?? []).map(tt => ({ quote: resolveField(tt, "quote", locale), name: tt.name, source: tt.source })),
-    [testimonialsState.data, locale]
+  // Real imported reviews win as soon as the reviews storage exists. Until the
+  // migration lands we keep rendering the previously curated entries — we never
+  // fabricate a card either way.
+  const reviewItems = useMemo(
+    () =>
+      publicReviews(reviewsState.items, reviewsState.settings).map((r) => ({
+        quote: r.review_text,
+        name: r.author_name,
+        source: r.source === "tripadvisor" ? "TripAdvisor" : r.source === "google" ? "Google" : "",
+        rating: r.rating,
+        date: r.reviewed_at,
+        url: r.original_url,
+      })),
+    [reviewsState.items, reviewsState.settings],
   );
+
+  const legacyItems = useMemo(
+    () =>
+      (testimonialsState.data ?? []).map((tt) => ({
+        quote: resolveField(tt, "quote", locale),
+        name: tt.name,
+        source: tt.source,
+        rating: 0,
+        date: null as string | null,
+        url: null as string | null,
+      })),
+    [testimonialsState.data, locale],
+  );
+
+  const testimonialItems = reviewsState.missingTable ? legacyItems : reviewItems;
+
 
   const previewServices = services.slice(0, 3);
 
@@ -423,15 +453,48 @@ const OrganicHome = () => {
                       className="bg-secondary/60 rounded-2xl border border-border/50 p-6 shrink-0"
                       style={{ width: CARD_WIDTH }}
                     >
+                      {item.rating > 0 && (
+                        <div className="flex gap-0.5 mb-2" aria-label={`${item.rating}/5`}>
+                          {Array.from({ length: 5 }).map((_, s) => (
+                            <span
+                              key={s}
+                              aria-hidden="true"
+                              className={`text-xs ${s < item.rating ? "text-yellow-500" : "text-muted-foreground/30"}`}
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <p className="text-sm text-muted-foreground font-body leading-relaxed italic mb-4">
                         "{item.quote}"
                       </p>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-body font-medium">— {item.name}</p>
-                        {item.source && (
-                          <span className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider">{item.source}</span>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {item.date && (
+                            <span className="text-[10px] font-body text-muted-foreground/60">
+                              {new Date(item.date).toLocaleDateString()}
+                            </span>
+                          )}
+                          {item.source &&
+                            (item.url ? (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider underline-offset-2 hover:underline"
+                              >
+                                {item.source}
+                              </a>
+                            ) : (
+                              <span className="text-[10px] font-body text-muted-foreground/60 uppercase tracking-wider">
+                                {item.source}
+                              </span>
+                            ))}
+                        </div>
                       </div>
+
                     </div>
                   ))}
                 </div>
