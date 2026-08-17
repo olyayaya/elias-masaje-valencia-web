@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { generateHTML } from "@tiptap/html";
+import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import ImageExt from "@tiptap/extension-image";
 import {
@@ -85,26 +85,24 @@ describe("editor serialization", () => {
     },
   });
   const exts = [StarterKit, ImageWithAlt];
+  const html = (content: string) => {
+    const editor = new Editor({ extensions: exts, content });
+    const out = editor.getHTML();
+    editor.destroy();
+    return out;
+  };
 
   it("keeps the alt attribute of an inserted image", () => {
-    const doc = {
-      type: "doc",
-      content: [{ type: "image", attrs: { src: "https://cdn.test/a.webp", alt: "Back massage" } }],
-    };
-    expect(generateHTML(doc, exts)).toContain('alt="Back massage"');
+    expect(html('<p><img src="https://cdn.test/a.webp" alt="Back massage"></p>')).toContain(
+      'alt="Back massage"',
+    );
   });
 
   it("serializes a decorative image as alt=\"\" with an explicit marker", () => {
-    const doc = {
-      type: "doc",
-      content: [
-        { type: "image", attrs: { src: "https://cdn.test/a.webp", alt: "", [DECORATIVE_ATTR]: "true" } },
-      ],
-    };
-    const html = generateHTML(doc, exts);
-    expect(html).toContain('alt=""');
-    expect(html).toContain(`${DECORATIVE_ATTR}="true"`);
-    expect(countMissingAlt(html)).toBe(0);
+    const out = html(`<p><img src="https://cdn.test/a.webp" alt="" ${DECORATIVE_ATTR}="true"></p>`);
+    expect(out).toContain('alt=""');
+    expect(out).toContain(`${DECORATIVE_ATTR}="true"`);
+    expect(countMissingAlt(out)).toBe(0);
   });
 });
 
