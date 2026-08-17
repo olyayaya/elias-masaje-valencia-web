@@ -79,17 +79,27 @@ const ImageAltDialog = ({
   const [autoTranslate, setAutoTranslate] = useState(true);
   const [busy, setBusy] = useState(false);
   const [translations, setTranslations] = useState<Partial<AltTriple>>({});
+  /** Exactly which source text/lang produced `translations` — guards against stale results. */
+  const [translatedFor, setTranslatedFor] = useState<{ text: string; lang: AltLang } | null>(null);
+  const [failed, setFailed] = useState(false);
   const [overwrite, setOverwrite] = useState<Partial<Record<AltLang, boolean>>>({});
   const [edits, setEdits] = useState<Partial<AltTriple>>({});
+  const reqRef = useRef(0);
 
   useEffect(() => {
     if (open) {
       setAlt(initialAlt);
       setDecorative(initialDecorative);
       setTranslations({});
+      setTranslatedFor(null);
+      setFailed(false);
       setOverwrite({});
       setEdits({});
       setBusy(false);
+      reqRef.current += 1;
+    } else {
+      // Closing invalidates any in-flight request.
+      reqRef.current += 1;
     }
   }, [open, initialAlt, initialDecorative]);
 
@@ -99,20 +109,67 @@ const ImageAltDialog = ({
     ru: lang === "ru" ? initialAlt : initialOthers.ru ?? "",
   };
 
-  const plan = planAltTranslations({ current, source: lang, sourceValue: alt, translations, overwrite });
+  const fresh = !!translatedFor && translatedFor.lang === lang && translatedFor.text === alt.trim();
+  const plan = planAltTranslations({
+    current,
+    source: lang,
+    sourceValue: alt,
+    translations: fresh ? translations : {},
+    overwrite,
+  });
   const values = { ...planToTriple(plan), ...edits } as AltTriple;
 
-  const runTranslate = async () => {
-    setBusy(true);
-    try {
-      setTranslations(await translateAlt(alt, lang));
-    } catch {
-      toast.error(L("translateFailed", { l: lang.toUpperCase() }));
+  /** Any change to the source invalidates the machine translations (never manual edits). */
+  const changeAlt = (v: string) => {
+    setAlt(v);
+    if (translatedFor && translatedFor.text !== v.trim()) {
+      setTranslations({});
+      setTranslatedFor(null);
     }
-    setBusy(false);
+    setFailed(false);
+  };
+
+  const runTranslate = async (): Promise<boolean> => {
+    const text = alt.trim();
+    const token = ++reqRef.current;
+    setBusy(true);
+    setFailed(false);
+    try {
+      const result = await translateAlt(text, lang);
+      // Late answer of an outdated request (source changed / dialog closed): ignore it.
+      if (token !== reqRef.current) return false;
+      setTranslations(result);
+      setTranslatedFor({ text, lang });
+      setBusy(false);
+      return true;
+    } catch {
+      if (token !== reqRef.current) return false;
+      setFailed(true);
+      toast.error(L("translateFailed", { l: lang.toUpperCase() }));
+      setBusy(false);
+      return false;
+    }
   };
 
   const error = validateAlt(alt, decorative);
+
+  const confirm = (triple: AltTriple) =>
+    onConfirm(decorative ? "" : alt.trim(), decorative, decorative ? { es: "", en: "", ru: "" } : triple);
+
+  /** Needs a translation round before anything is written. */
+  const needsTranslation = !decorative && autoTranslate && !!alt.trim() && !fresh;
+
+  const handleSave = async () => {
+    if (error || busy) return;
+    if (needsTranslation) {
+      // Save with auto-translate on runs the translation itself and keeps the
+      // dialog open so the three languages can be reviewed first.
+      await runTranslate();
+      return;
+    }
+    confirm(values);
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
