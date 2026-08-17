@@ -37,10 +37,21 @@ export const isConverterSupported = (): boolean =>
 
 /** Loads (once) the ffmpeg glue + self-hosted single-thread core. */
 export async function getFFmpeg(onLog?: (line: string) => void): Promise<FFmpegInstance> {
-  if (instance?.loaded) return instance;
+  if (instance?.loaded) {
+    if (onLog) {
+      const listener = ((e: { message: string }) => onLog(e.message)) as never;
+      instance.on("log", listener);
+      logListeners.set(onLog, listener);
+    }
+    return instance;
+  }
   const { FFmpeg } = await import("@ffmpeg/ffmpeg");
   const ff = new FFmpeg() as unknown as FFmpegInstance;
-  ff.on("log", ((e: { message: string }) => onLog?.(e.message)) as never);
+  if (onLog) {
+    const listener = ((e: { message: string }) => onLog(e.message)) as never;
+    ff.on("log", listener);
+    logListeners.set(onLog, listener);
+  }
   await ff.load({
     coreURL: new URL(FFMPEG_CORE_URL, window.location.href).href,
     wasmURL: new URL(FFMPEG_WASM_URL, window.location.href).href,
@@ -49,17 +60,36 @@ export async function getFFmpeg(onLog?: (line: string) => void): Promise<FFmpegI
   return ff;
 }
 
+/** Tracks log callbacks so a probe never leaves a listener attached to the singleton. */
+const logListeners = new Map<(line: string) => void, never>();
+
+function detachLog(ff: FFmpegInstance, onLog: (line: string) => void) {
+  const listener = logListeners.get(onLog);
+  if (!listener) return;
+  logListeners.delete(onLog);
+  try {
+    ff.off("log", listener);
+  } catch {
+    /* instance already terminated */
+  }
+}
+
 /** Runs `-encoders` once and caches which codecs this build can actually write. */
 export async function probeEncoders(): Promise<EncoderCaps> {
   if (caps) return caps;
   let log = "";
-  const ff = await getFFmpeg((line) => { log += `${line}\n`; });
-  await ff.exec(["-hide_banner", "-encoders"]);
-  const parsed = parseEncoderCaps(log);
+  const collect = (line: string) => { log += `${line}\n`; };
+  const ff = await getFFmpeg(collect);
+  try {
+    await ff.exec(["-hide_banner", "-encoders"]);
+  } finally {
+    // Without this the collector stays attached forever and grows on every conversion.
+    detachLog(ff, collect);
+  }
   // A core that reports nothing usable still has libx264 in practice only if detected;
   // never claim a codec we did not see.
-  caps = parsed;
-  return parsed;
+  caps = parseEncoderCaps(log);
+  return caps;
 }
 
 export function terminateFFmpeg() {
@@ -70,7 +100,9 @@ export function terminateFFmpeg() {
   }
   instance = null;
   caps = null;
+  logListeners.clear();
 }
+
 
 /** Reads width/height/duration from a File using the plain <video> element (no wasm needed). */
 export function probeVideoMeta(file: File): Promise<VideoMeta> {
@@ -122,8 +154,23 @@ export async function convertVideo(
   } = {},
 ): Promise<ConversionResult> {
   const { onProgress, signal } = handlers;
+  const cancelled = () => new DOMException("Cancelled", "AbortError");
+  if (signal?.aborted) throw cancelled();
+
   onProgress?.({ ratio: 0, stage: "loading" });
-  const ff = await getFFmpeg();
+
+  // Cancelling while the ~30 MB core is still downloading must terminate the instance and
+  // never proceed to an encode.
+  let loadAborted = false;
+  const abortDuringLoad = () => { loadAborted = true; terminateFFmpeg(); };
+  signal?.addEventListener("abort", abortDuringLoad, { once: true });
+  let ff: FFmpegInstance;
+  try {
+    ff = await getFFmpeg();
+  } finally {
+    signal?.removeEventListener("abort", abortDuringLoad);
+  }
+  if (loadAborted || signal?.aborted) throw cancelled();
 
   const inputName = `in.${(file.name.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "mp4").toLowerCase()}`;
   const outputName = `out.${options.format}`;
@@ -136,26 +183,41 @@ export async function convertVideo(
   const abort = () => terminateFFmpeg();
   signal?.addEventListener("abort", abort, { once: true });
 
+  let wrote = false;
   try {
     onProgress?.({ ratio: 0, stage: "reading" });
-    ff.writeFile(inputName, new Uint8Array(await file.arrayBuffer()));
-    if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (signal?.aborted) throw cancelled();
+    // MUST be awaited: exec on a half-written virtual FS reads a truncated input.
+    await ff.writeFile(inputName, bytes);
+    wrote = true;
+    if (signal?.aborted) throw cancelled();
     await ff.exec(args);
-    if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
+    if (signal?.aborted) throw cancelled();
     onProgress?.({ ratio: 1, stage: "finishing" });
     const data = await ff.readFile(outputName);
-    const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
-    const buffer = bytes.slice().buffer as ArrayBuffer;
+    const out = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const buffer = out.slice().buffer as ArrayBuffer;
     const blob = new Blob([buffer], { type: options.format === "mp4" ? "video/mp4" : "video/webm" });
     return { blob, size: blob.size };
   } finally {
     signal?.removeEventListener("abort", abort);
     try {
       ff.off("progress", onProg);
-      await ff.deleteFile(inputName).catch(() => undefined);
-      await ff.deleteFile(outputName).catch(() => undefined);
     } catch {
       /* instance already terminated by cancel */
     }
+    if (wrote) {
+      // Both paths are attempted independently so one failure cannot leak the other file.
+      for (const name of [inputName, outputName]) {
+        try {
+          await ff.deleteFile(name);
+        } catch {
+          /* file absent or instance terminated */
+        }
+      }
+    }
+
   }
 }
+

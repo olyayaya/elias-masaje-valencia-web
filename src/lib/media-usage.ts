@@ -80,8 +80,25 @@ export const replaceMediaFile = (args: {
  * One server-side scan that counts live references for many files at once — used by the
  * library's used/unused filter so the UI never fires N usage requests.
  */
-export const checkMediaUsageBatch = (fileNames: string[]) =>
-  invoke<{ usage: Record<string, number> }>("usage-batch", { fileNames });
+/** The server refuses more than this per request — the client must chunk, not truncate. */
+export const USAGE_BATCH_LIMIT = 500;
+
+/**
+ * Resolves usage counts for an arbitrary number of files by splitting the request into
+ * server-sized chunks and merging the answers. A library with 1200 objects must not
+ * silently lose the last 700.
+ */
+export async function checkMediaUsageBatch(fileNames: string[]): Promise<{ usage: Record<string, number> }> {
+  const usage: Record<string, number> = {};
+  for (let i = 0; i < fileNames.length; i += USAGE_BATCH_LIMIT) {
+    const chunk = fileNames.slice(i, i + USAGE_BATCH_LIMIT);
+    if (!chunk.length) continue;
+    const res = await invoke<{ usage: Record<string, number> }>("usage-batch", { fileNames: chunk });
+    Object.assign(usage, res.usage ?? {});
+  }
+  return { usage };
+}
+
 
 /**
  * Promotes a resumably-uploaded video object over an existing one. The server re-verifies

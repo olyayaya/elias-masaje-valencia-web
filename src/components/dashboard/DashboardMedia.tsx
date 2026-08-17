@@ -15,7 +15,7 @@ import {
 } from "@/lib/media-usage";
 import { analyzeCompression, blobToBase64 } from "@/lib/media-compress";
 import {
-  collisionSafeName, kindOf, countByKind, isVideoFile, UPLOAD_ACCEPT, VIDEO_MIME_BY_EXT, extOf,
+  collisionSafeName, kindOf, countByKind, classifyUpload, UPLOAD_ACCEPT,
   type MediaKind,
 } from "@/lib/media-kind";
 import {
@@ -163,9 +163,8 @@ const DashboardMedia = () => {
     toast.success(L("uploaded", { n: formatFileSize(optimized.originalSize - optimized.optimizedSize) }));
   };
 
-  const uploadVideo = async (file: File) => {
+  const uploadVideo = async (file: File, contentType: string) => {
     const name = collisionSafeName(file.name, files.map((f) => f.name));
-    const contentType = file.type || VIDEO_MIME_BY_EXT[extOf(file.name)] || "video/mp4";
     const controller = new AbortController();
     uploadAbort.current = controller;
     setUploadPct(0);
@@ -173,26 +172,31 @@ const DashboardMedia = () => {
       signal: controller.signal,
       onProgress: (sent, total) => setUploadPct(total ? Math.round((sent / total) * 100) : 0),
     });
+    // A freshly uploaded source has never been analyzed by the converter.
+    markOpt(name, "notAnalyzed");
     toast.success(L("uploadedVideo", { n: name }));
   };
 
   const handleUpload = async (fileList: FileList) => {
     setUploading(true);
     for (const file of Array.from(fileList)) {
-      const kind = kindOf({ name: file.name, mimeType: file.type });
+      // Extension-driven allowlist: only JPG/PNG/WebP… and MP4/MOV/M4V/WebM get through.
+      const verdict = classifyUpload(file);
       setUploadLabel(file.name);
       setUploadPct(0);
       try {
-        if (kind === "photo") {
+        if (!verdict.ok) {
+          toast.error(L("skippedUnsupported", { f: file.name }));
+          continue;
+        }
+        if (verdict.kind === "photo") {
           await uploadPhoto(file);
-        } else if (kind === "video" || isVideoFile(file)) {
+        } else {
           if (file.size > MAX_UPLOAD_VIDEO) {
             toast.error(L("tooBig", { f: file.name, m: Math.round(MAX_UPLOAD_VIDEO / (1024 * 1024)) }));
             continue;
           }
-          await uploadVideo(file);
-        } else {
-          toast.error(L("skippedUnsupported", { f: file.name }));
+          await uploadVideo(file, verdict.mimeType);
         }
       } catch (err) {
         if ((err as DOMException)?.name === "AbortError") toast.info(L("uploadCancelled"));
@@ -205,6 +209,7 @@ const DashboardMedia = () => {
     setUploadLabel(null);
     await fetchFiles();
   };
+
 
   /** Reports the server outcome honestly: warning stays a warning, never a plain success. */
   const reportOutcome = (message: string, result: { updatedReferences?: number; historyReferences?: number; aliased?: boolean; warning?: string }) => {
@@ -395,9 +400,10 @@ const DashboardMedia = () => {
       >
         <div className="space-y-4">
           <Tabs value={filters.kind} onValueChange={(v) => setFilters({ ...filters, kind: v as MediaFilters["kind"] })}>
-            <TabsList>
+            {/* Horizontally scrollable so all four tabs stay tappable on narrow phones. */}
+            <TabsList className="w-full max-w-full justify-start overflow-x-auto flex-nowrap">
               {tabs.map((t) => (
-                <TabsTrigger key={t.id} value={t.id}>
+                <TabsTrigger key={t.id} value={t.id} className="shrink-0">
                   {t.label}
                   <span className="ml-1.5 text-xs text-muted-foreground">{t.count}</span>
                 </TabsTrigger>
@@ -530,6 +536,7 @@ const DashboardMedia = () => {
           <VideoConverterDialog
             file={converter}
             L={L}
+            onVerdict={(name, state) => markOpt(name, state)}
             onClose={() => setConverter(null)}
             onReplaced={(result, newName) => {
               setConverter(null);

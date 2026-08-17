@@ -27,12 +27,18 @@ export interface VideoMeta {
   fps?: number;
 }
 
-/** Encoders the loaded ffmpeg core actually reports. Options are gated on this. */
+/**
+ * Encoders the loaded ffmpeg core actually reports (`ffmpeg -encoders`).
+ * Every option offered by the UI is gated on these flags — we never emit an encoder name
+ * that the running core cannot write.
+ */
 export interface EncoderCaps {
   h264: boolean;
   vp9: boolean;
   aac: boolean;
   opus: boolean;
+  mp3lame: boolean;
+  vorbis: boolean;
 }
 
 export const EXT_BY_FORMAT: Record<VideoFormat, string> = { mp4: "mp4", webm: "webm" };
@@ -41,6 +47,21 @@ export const MIME_BY_FORMAT: Record<VideoFormat, string> = {
   webm: "video/webm",
 };
 
+/**
+ * The audio encoder actually used for a container, or null when the core has none for it
+ * (in that case the output is muxed without audio rather than failing mid-encode).
+ */
+export function audioEncoderFor(format: VideoFormat, caps: EncoderCaps): string | null {
+  if (format === "mp4") {
+    if (caps.aac) return "aac";
+    if (caps.mp3lame) return "libmp3lame";
+    return null;
+  }
+  if (caps.opus) return "libopus";
+  if (caps.vorbis) return "libvorbis";
+  return null;
+}
+
 /** A format is offerable only when its video encoder exists in this core build. */
 export function availableFormats(caps: EncoderCaps): VideoFormat[] {
   const out: VideoFormat[] = [];
@@ -48,6 +69,7 @@ export function availableFormats(caps: EncoderCaps): VideoFormat[] {
   if (caps.vp9) out.push("webm");
   return out;
 }
+
 
 const evenDown = (n: number) => Math.max(2, Math.floor(n / 2) * 2);
 
@@ -98,20 +120,26 @@ export interface ConvertOptions {
 export function buildFfmpegArgs(o: ConvertOptions): string[] {
   const { width, height } = targetDimensions(o.meta.width, o.meta.height, o.resolution);
   const fps = o.fpsCap ?? FPS_CAP;
-  const args = ["-i", o.inputName, "-vf", `scale=${width}:${height}`, "-r", String(fps)];
+  // -fpsmax is a *ceiling*: a 24 fps source stays 24 fps instead of being interpolated up
+  // to 30 (which -r would do, making the file bigger for no visual gain).
+  const args = ["-i", o.inputName, "-vf", `scale=${width}:${height}`, "-fpsmax", String(fps)];
+  const audio = audioEncoderFor(o.format, o.caps);
 
   if (o.format === "mp4") {
     args.push("-c:v", "libx264", "-preset", "veryfast", "-crf", String(CRF.mp4[o.quality]));
     args.push("-pix_fmt", "yuv420p", "-movflags", "+faststart");
-    args.push("-c:a", o.caps.aac ? "aac" : "libmp3lame", "-b:a", `${AUDIO_KBPS[o.quality]}k`);
   } else {
     args.push("-c:v", "libvpx-vp9", "-b:v", "0", "-crf", String(CRF.webm[o.quality]));
     args.push("-row-mt", "1", "-pix_fmt", "yuv420p");
-    args.push("-c:a", o.caps.opus ? "libopus" : "libvorbis", "-b:a", `${AUDIO_KBPS[o.quality]}k`);
   }
+  // Never name an encoder this core did not report; drop the audio track instead.
+  if (audio) args.push("-c:a", audio, "-b:a", `${AUDIO_KBPS[o.quality]}k`);
+  else args.push("-an");
+
   args.push("-y", o.outputName);
   return args;
 }
+
 
 /**
  * Smart preset: compatible container, max 1080p, capped fps, sensible quality by source size.
@@ -160,8 +188,11 @@ export function parseEncoderCaps(log: string): EncoderCaps {
     vp9: has("libvpx-vp9"),
     aac: has("aac"),
     opus: has("libopus"),
+    mp3lame: has("libmp3lame"),
+    vorbis: has("libvorbis"),
   };
 }
+
 
 export const formatDuration = (seconds: number): string => {
   if (!Number.isFinite(seconds) || seconds < 0) return "—";

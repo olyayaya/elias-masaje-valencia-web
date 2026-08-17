@@ -12,9 +12,14 @@ import {
   validateName,
   validateOutputType,
   validateVideoOutputType,
+  validateVideoSourceName,
+  validateStagedName,
   validateRenameExtension,
+  backupNameFor,
   SCANS,
 } from "./rules.ts";
+import { promoteSameName } from "./promote.ts";
+
 
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -127,14 +132,47 @@ function decodeBase64(b64: string): Uint8Array {
   return out;
 }
 
-/** Reads only the first bytes of a stored object so container sniffing never buffers a whole video. */
+/**
+ * Reads only the first bytes of a stored object so container sniffing never buffers a whole
+ * video. A server that ignores the Range header answers 200 with the full body — in that case
+ * we read a single stream chunk and cancel, so a 250 MB object never lands in memory.
+ */
 async function readHead(admin: Client, name: string, bytes = 64): Promise<Uint8Array> {
   const { data, error } = await admin.storage.from("media").createSignedUrl(name, 60);
   if (error || !data?.signedUrl) throw new Error(`Could not read uploaded file: ${error?.message ?? "no url"}`);
   const res = await fetch(data.signedUrl, { headers: { Range: `bytes=0-${bytes - 1}` } });
   if (!res.ok && res.status !== 206) throw new Error(`Could not read uploaded file (${res.status})`);
-  return new Uint8Array(await res.arrayBuffer());
+
+  const body = res.body;
+  if (!body) return new Uint8Array(0);
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (total < bytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value?.length) continue;
+      chunks.push(value);
+      total += value.length;
+    }
+  } finally {
+    // Stops the download immediately — nothing beyond the head is ever transferred.
+    await reader.cancel().catch(() => undefined);
+  }
+
+  const head = new Uint8Array(Math.min(total, bytes));
+  let offset = 0;
+  for (const c of chunks) {
+    if (offset >= head.length) break;
+    head.set(c.subarray(0, head.length - offset), offset);
+    offset += c.length;
+  }
+  return head;
 }
+
+/** Supabase caps a plain select at 1000 rows — page explicitly or usage silently under-counts. */
+const PAGE_SIZE = 1000;
 
 /**
  * One pass over every scanned table that counts references for MANY filenames at once.
@@ -145,20 +183,29 @@ async function usageCounts(admin: Client, names: string[]): Promise<Record<strin
   const variants = names.map((n) => ({ n, needles: nameVariants(n) }));
   for (const scan of SCANS) {
     const cols = Array.from(new Set(["id", ...scan.fields])).join(",");
-    const { data, error } = await admin.from(scan.table).select(cols);
-    if (error) throw new Error(`${scan.table}: ${error.message}`);
-    for (const row of (data ?? []) as Record<string, unknown>[]) {
-      for (const f of scan.fields) {
-        const value = row[f];
-        if (typeof value !== "string" || !value) continue;
-        for (const { n, needles } of variants) {
-          if (needles.some((v) => value.includes(v))) counts[n] += 1;
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await admin
+        .from(scan.table)
+        .select(cols)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw new Error(`${scan.table}: ${error.message}`);
+      const rows = (data ?? []) as Record<string, unknown>[];
+      for (const row of rows) {
+        for (const f of scan.fields) {
+          const value = row[f];
+          if (typeof value !== "string" || !value) continue;
+          for (const { n, needles } of variants) {
+            if (needles.some((v) => value.includes(v))) counts[n] += 1;
+          }
         }
       }
+      if (rows.length < PAGE_SIZE) break;
     }
   }
   return counts;
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -216,10 +263,15 @@ Deno.serve(async (req) => {
       const contentType = typeof body?.contentType === "string" ? body.contentType.toLowerCase() : "";
       const enforceSaving = body?.enforceSaving !== false;
 
-      const stagedInvalid = validateName(stagedName);
-      if (stagedInvalid) return json({ error: `Staged file: ${stagedInvalid}` }, 400);
+      // The staged object must carry the reserved prefix bound to THIS user, and can never
+      // be an existing media name.
+      const stagedInvalid = validateStagedName(stagedName, user.id, [fileName, newName]);
+      if (stagedInvalid) return json({ error: stagedInvalid }, 400);
       const invalidNew = validateName(newName);
       if (invalidNew) return json({ error: invalidNew }, 400);
+      // The *source* being replaced must itself be a container we support.
+      const sourceInvalid = validateVideoSourceName(fileName);
+      if (sourceInvalid) return json({ error: sourceInvalid }, 400);
       const typeError = validateVideoOutputType(contentType, newName);
       if (typeError) {
         await admin.storage.from("media").remove([stagedName]);
@@ -235,7 +287,7 @@ Deno.serve(async (req) => {
         return json({ error: `Video is too large — the limit is ${MAX_VIDEO_BYTES / (1024 * 1024)} MB` }, 413);
       }
 
-      // The bytes really in storage must match the declared container.
+      // The bytes really in storage must match the declared container (client MIME is never trusted).
       const head = await readHead(admin, stagedName);
       if (!videoMagicMatches(contentType, head)) {
         await cleanup();
@@ -261,37 +313,40 @@ Deno.serve(async (req) => {
         return json({ error: "A file with that name already exists" }, 409);
       }
 
-      if (!renaming) {
-        // Same name: the old object must go before the staged copy can take its place.
-        const { error: rmOld } = await admin.storage.from("media").remove([fileName]);
-        if (rmOld) {
-          await cleanup();
-          return json({ error: rmOld.message }, 500);
-        }
-      }
-
-      const { error: copyError } = await admin.storage.from("media").copy(stagedName, newName);
-      if (copyError) {
-        // Staged object is deliberately kept so nothing is lost if the swap failed.
-        return json({ error: `${copyError.message} — the uploaded file is still available as ${stagedName}` }, 500);
-      }
-
+      const bucket = admin.storage.from("media");
       let updated = 0;
-      if (renaming) {
+
+      if (!renaming) {
+        // Same name: back up first, and restore the original if the promotion fails.
+        const backup = backupNameFor(user.id, crypto.randomUUID(), fileName);
+        const result = await promoteSameName(
+          {
+            copy: (from, to) => bucket.copy(from, to).then((r) => ({ error: r.error ? { message: r.error.message } : null })),
+            remove: (names) => bucket.remove(names).then((r) => ({ error: r.error ? { message: r.error.message } : null })),
+          },
+          { staged: stagedName, target: fileName, backup },
+        );
+        if (!result.ok) return json({ error: result.error, restored: result.restored }, 500);
+      } else {
+        const { error: copyError } = await bucket.copy(stagedName, newName);
+        if (copyError) {
+          // Staged object is deliberately kept so nothing is lost if the swap failed.
+          return json({ error: `${copyError.message} — the uploaded file is still available as ${stagedName}` }, 500);
+        }
         try {
           updated = await rewriteReferences(admin, fileName, newName, user.id);
         } catch (e) {
-          await admin.storage.from("media").remove([newName]);
+          await bucket.remove([newName]);
           await cleanup();
           return json({ error: `Video replacement rolled back: ${(e as Error).message}` }, 500);
         }
       }
 
       const historyReferences = await countHistoryReferences(admin, fileName);
-      await cleanup();
       let warning: string | undefined;
       if (renaming) {
-        const { error: rmError } = await admin.storage.from("media").remove([fileName]);
+        await cleanup();
+        const { error: rmError } = await bucket.remove([fileName]);
         if (rmError) warning = `Old object could not be removed: ${rmError.message}`;
       }
       return json({
@@ -306,6 +361,7 @@ Deno.serve(async (req) => {
         ...(warning ? { warning } : {}),
       });
     }
+
 
     if (action === "check" || action === "delete") {
       const usages = await findUsages(admin, fileName);

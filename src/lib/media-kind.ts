@@ -53,17 +53,53 @@ export function countByKind<T extends { name: string; mimeType?: string | null }
   return out;
 }
 
-/** Accept attribute for the upload zone: images plus the video containers we support. */
+/** Photo MIME types the upload pipeline accepts (everything the compressor can decode). */
+const PHOTO_MIME_PREFIX = "image/";
+
+/**
+ * Accept attribute for the upload zone. Deliberately NOT `video/*`: only the four
+ * containers the converter and the server actually support are offered.
+ */
 export const UPLOAD_ACCEPT = [
   "image/*",
-  "video/*",
   ...VIDEO_INPUT_EXTS.map((e) => `.${e}`),
+  ...VIDEO_INPUT_EXTS.map((e) => VIDEO_MIME_BY_EXT[e]),
 ].join(",");
 
 /** True when a File picked in the browser should go through the video pipeline. */
 export function isVideoFile(file: { name: string; type?: string }): boolean {
   return kindOf({ name: file.name, mimeType: file.type }) === "video";
 }
+
+/**
+ * Upload allowlist. The *extension* decides — a browser-reported MIME is only used to
+ * reject an obvious mismatch (an .mp4 announced as image/png). Anything outside
+ * JPG/PNG/WebP/AVIF/GIF/SVG and MP4/MOV/M4V/WebM is refused before a byte is sent.
+ */
+export type UploadVerdict =
+  | { ok: true; kind: "photo" }
+  | { ok: true; kind: "video"; ext: string; mimeType: string }
+  | { ok: false };
+
+export function classifyUpload(file: { name: string; type?: string }): UploadVerdict {
+  const ext = extOf(file.name);
+  const mime = (file.type ?? "").toLowerCase().split(";")[0].trim();
+
+  if (isVideoExt(ext)) {
+    // A file announced as an image but named .mp4 (or vice versa) is not trustworthy.
+    if (mime && !mime.startsWith("video/")) return { ok: false };
+    return { ok: true, kind: "video", ext, mimeType: VIDEO_MIME_BY_EXT[ext] };
+  }
+  if (isPhotoExt(ext)) {
+    if (mime && !mime.startsWith(PHOTO_MIME_PREFIX)) return { ok: false };
+    return { ok: true, kind: "photo" };
+  }
+  // No usable extension: fall back to a trustworthy image MIME only. Unknown video
+  // containers (AVI, MKV, …) are rejected because neither converter nor server take them.
+  if (!ext && mime.startsWith(PHOTO_MIME_PREFIX)) return { ok: true, kind: "photo" };
+  return { ok: false };
+}
+
 
 /**
  * Filenames are sanitized before they ever reach storage: no paths, no exotic characters,

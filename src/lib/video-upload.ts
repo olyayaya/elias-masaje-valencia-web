@@ -33,6 +33,18 @@ export async function removeObject(name: string): Promise<void> {
   }
 }
 
+/**
+ * Reserved, user-bound name for a throwaway upload awaiting server promotion.
+ * Must stay in sync with validateStagedName in supabase/functions/media-guard/rules.ts
+ * (a test asserts the server accepts exactly what this produces).
+ */
+export async function stagedObjectName(ext: string): Promise<string> {
+  const { data } = await supabase.auth.getUser();
+  const userId = data.user?.id;
+  if (!userId) throw new Error("Not signed in");
+  return `staged-${userId}-${crypto.randomUUID()}.${ext.toLowerCase()}`;
+}
+
 export async function uploadResumable(
   objectName: string,
   file: Blob,
@@ -41,6 +53,8 @@ export async function uploadResumable(
 ): Promise<void> {
   const { tus } = await import("tus-js-client").then((m) => ({ tus: m }));
   const token = await accessToken();
+  const signal = handlers.signal;
+  let abortListener: (() => void) | null = null;
 
   await new Promise<void>((resolve, reject) => {
     const upload = new tus.Upload(file, {
@@ -56,25 +70,35 @@ export async function uploadResumable(
         cacheControl: "3600",
       },
       chunkSize: CHUNK,
-      onError: (err) => reject(err instanceof Error ? err : new Error(String(err))),
+      onError: (err) => { detach(); reject(err instanceof Error ? err : new Error(String(err))); },
       onProgress: (sent, total) => handlers.onProgress?.(sent, total),
-      onSuccess: () => resolve(),
+      // The listener is detached FIRST: a late abort must never delete an object that
+      // has already been uploaded successfully.
+      onSuccess: () => { detach(); resolve(); },
     });
 
+    function detach() {
+      if (abortListener) signal?.removeEventListener("abort", abortListener);
+      abortListener = null;
+    }
+
     const abort = () => {
+      detach();
       void upload.abort(true).finally(() => {
         void removeObject(objectName);
         reject(new DOMException("Cancelled", "AbortError"));
       });
     };
-    if (handlers.signal?.aborted) return abort();
-    handlers.signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) return abort();
+    abortListener = abort;
+    signal?.addEventListener("abort", abort, { once: true });
 
     upload.findPreviousUploads().then((prev) => {
       if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
       upload.start();
     }).catch(() => upload.start());
   }).catch(async (err) => {
+    if (abortListener) signal?.removeEventListener("abort", abortListener);
     if ((err as DOMException)?.name !== "AbortError") await removeObject(objectName);
     throw err;
   });
@@ -82,3 +106,4 @@ export async function uploadResumable(
 
 export const publicUrlOf = (name: string) =>
   supabase.storage.from(BUCKET).getPublicUrl(name).data.publicUrl;
+
