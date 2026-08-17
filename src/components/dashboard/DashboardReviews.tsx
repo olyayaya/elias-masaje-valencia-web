@@ -31,7 +31,6 @@ const COPY = {
   search: { en: "Search author or text", es: "Buscar autor o texto", ru: "Поиск по автору или тексту" },
   sourceAll: { en: "All sources", es: "Todas las fuentes", ru: "Все источники" },
   sourceGoogle: { en: "Google", es: "Google", ru: "Google" },
-  sourceTripadvisor: { en: "TripAdvisor", es: "TripAdvisor", ru: "TripAdvisor" },
   sourceManual: { en: "Manual import", es: "Importación manual", ru: "Ручной импорт" },
   ratingAll: { en: "All ratings", es: "Todas las valoraciones", ru: "Все оценки" },
   visibilityAll: { en: "Visible and hidden", es: "Visibles y ocultas", ru: "Видимые и скрытые" },
@@ -277,6 +276,12 @@ const DashboardReviews = () => {
         setSyncStatus((s) => ({ ...s, [src]: "rate_limited" }));
         toast.warning(c("rateLimited", { n: String((res as { retry_after?: number }).retry_after ?? 60) }));
         refresh();
+        return;
+      }
+      if (res?.status === "compliance_required") {
+        // Defensive: the UI offers no button for a blocked source.
+        setSyncStatus((s) => ({ ...s, [src]: "compliance_required" }));
+        toast.warning(c("tripadvisorBody"));
         return;
       }
       if (res?.status === "not_configured") {
