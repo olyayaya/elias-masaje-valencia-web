@@ -9,11 +9,17 @@ const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 type Usage = { entity: string; label: string; id: string; field: string };
 
+// Every public table + column that a dashboard editor can put a media URL/filename into.
+// Audited against the production schema — no speculative columns.
+// Deliberately NOT scanned:
+//   booking_leads / conversion_events → visitor-submitted data, never an editor image source
+//   content_history                   → immutable audit log; reported separately, never blocking
 const SCANS: { table: string; label: string; nameField: string; fields: string[] }[] = [
   { table: "blog_posts", label: "Blog post", nameField: "title", fields: ["content", "content_en", "content_ru", "meta_description", "meta_description_en", "meta_description_ru"] },
   { table: "site_content", label: "Site content", nameField: "label", fields: ["value_es", "value_en", "value_ru"] },
-  { table: "page_images", label: "Image / carousel", nameField: "collection_key", fields: ["image_url"] },
+  { table: "page_images", label: "Image / carousel", nameField: "collection_key", fields: ["image_url", "alt_text"] },
   { table: "services", label: "Service", nameField: "title", fields: ["description", "description_en", "description_ru"] },
+  { table: "faqs", label: "FAQ", nameField: "question", fields: ["question", "question_en", "question_ru", "answer", "answer_en", "answer_ru"] },
   { table: "promotions", label: "Promotion", nameField: "badge_text", fields: ["badge_text", "badge_text_en", "badge_text_ru"] },
   { table: "testimonials", label: "Testimonial", nameField: "name", fields: ["quote", "quote_en", "quote_ru"] },
 ];
@@ -42,6 +48,23 @@ async function findUsages(admin: ReturnType<typeof createClient>, fileName: stri
   }
   return usages;
 }
+
+// content_history is an append-only audit log. A hit there means an OLD version of some
+// content referenced this file: restoring that version after deletion would show a broken
+// image. It must never block deletion (history rows are never edited, so the block would be
+// permanent) — instead it is surfaced as a non-blocking warning count.
+async function countHistoryReferences(
+  admin: ReturnType<typeof createClient>,
+  fileName: string,
+): Promise<number> {
+  const { count, error } = await admin
+    .from("content_history")
+    .select("id", { count: "exact", head: true })
+    .ilike("snapshot::text", `%${fileName.replace(/[%_]/g, (m) => `\\${m}`)}%`);
+  if (error) return 0; // never let the advisory lookup break the guard
+  return count ?? 0;
+}
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
