@@ -3,8 +3,5 @@ project_id = "ukjljyrejfkyurebksqz"
 [functions.sitemap]
 verify_jwt = false
 
-[functions.robots]
-verify_jwt = false
-
 [functions.llms]
 verify_jwt = false

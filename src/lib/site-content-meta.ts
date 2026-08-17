@@ -17,7 +17,9 @@
  * editor and the public-site hook in one shot.
  */
 export const LOCALE_INDEPENDENT_KEYS: ReadonlySet<string> = new Set([
-  "robots_txt",
+  // robots.txt is NOT editable from the dashboard: public/robots.txt is the
+  // single source of truth, shipped with the frontend build.
+
   "sitemap_config",
   "google_rating",
   "google_review_count",
