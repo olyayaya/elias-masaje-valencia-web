@@ -229,12 +229,29 @@ const ImageAltDialog = ({
             </label>
             {autoTranslate && (
               <>
-                <Button type="button" variant="outline" size="sm" disabled={busy || !alt.trim()} onClick={runTranslate}>
+                <Button type="button" variant="outline" size="sm" disabled={busy || !alt.trim()} onClick={() => void runTranslate()}>
                   {busy ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Sparkles size={14} className="mr-1.5" />}
-                  {busy ? L("translating") : L("translate")}
+                  {busy ? L("translating") : fresh || failed ? L("retry") : L("translate")}
                 </Button>
+                {failed && (
+                  <div className="space-y-1">
+                    <p role="alert" className="text-[11px] text-destructive">
+                      {L("translateFailed", { l: lang.toUpperCase() })}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={busy || !!error}
+                      onClick={() => confirm(values)}
+                    >
+                      {L("sourceOnly", { l: lang.toUpperCase() })}
+                    </Button>
+                  </div>
+                )}
                 <p className="text-[11px] text-muted-foreground">{L("otherLangs")}</p>
-                {ALT_LANGS.filter((l) => l !== lang).map((l) => {
+                {fresh && ALT_LANGS.filter((l) => l !== lang).map((l) => {
+
                   const row = plan.find((r) => r.lang === l)!;
                   return (
                     <div key={l} className="space-y-1">
