@@ -35,7 +35,7 @@ const review = (p: Partial<Review>): Review => ({
   manual_priority: p.manual_priority ?? 0,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "",
-  last_synced_at: null,
+  imported_at: null,
 });
 
 const settings = (p: Partial<ReviewDisplaySettings> = {}): ReviewDisplaySettings => ({
