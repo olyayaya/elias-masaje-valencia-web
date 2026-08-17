@@ -225,7 +225,7 @@ describe("image alt dialog", () => {
     const input = screen.getByLabelText(/Alt text \(EN\)/i);
     expect(input).toHaveValue("Old alt");
     await user.clear(input);
-    setInputValue(input, "Neck massage");
+    await user.type(input, "Neck massage");
     // Turning auto-translate off saves the source language straight away.
     await user.click(screen.getByLabelText(/translate/i));
     await user.click(screen.getByRole("button", { name: /save alt text/i }));
