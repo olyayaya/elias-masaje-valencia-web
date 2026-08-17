@@ -14,9 +14,17 @@ import type { Plugin } from "vite";
  */
 const FILES = ["ffmpeg-core.js", "ffmpeg-core.wasm"] as const;
 
+/**
+ * @ffmpeg/core does not export "./package.json" (or any deep path), so resolution goes through
+ * the "require" condition of its main entry and we walk back up to the UMD folder.
+ */
 const coreDir = (root: string) => {
   const require = createRequire(path.join(root, "package.json"));
-  return path.dirname(require.resolve("@ffmpeg/core/package.json")) + "/dist/umd";
+  const umd = path.dirname(require.resolve("@ffmpeg/core"));
+  if (fs.existsSync(path.join(umd, "ffmpeg-core.wasm"))) return umd;
+  const fallback = path.join(root, "node_modules/@ffmpeg/core/dist/umd");
+  if (fs.existsSync(path.join(fallback, "ffmpeg-core.wasm"))) return fallback;
+  throw new Error("ffmpeg core assets not found");
 };
 
 export function ffmpegCore(root: string): Plugin {
