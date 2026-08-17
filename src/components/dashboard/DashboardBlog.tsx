@@ -974,7 +974,7 @@ const BlogEditor = ({
                       initialDecorative={altDialog.decorative}
                       mode={altDialog.mode}
                       onCancel={() => setAltDialog(null)}
-                      initialOthers={otherLangAlts(draftRef.current, lang as AltLang, altDialog.src)}
+                      initialOthers={otherLangAlts(draftRef.current as unknown as Record<string, unknown>, lang as AltLang, altDialog.src)}
                       onConfirm={(alt, decorative, values) => {
                         const attrs = buildImageAttrs(altDialog.src, alt, decorative);
                         if (altDialog.mode === "edit") {
@@ -986,7 +986,7 @@ const BlogEditor = ({
                         }
                         // Translations only touch versions that already contain this image.
                         const patch = applyAltToOtherLangs(
-                          draftRef.current,
+                          draftRef.current as unknown as Record<string, unknown>,
                           lang as AltLang,
                           altDialog.src,
                           values,
