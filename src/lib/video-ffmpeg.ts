@@ -209,9 +209,15 @@ export async function convertVideo(
     }
     if (wrote) {
       // Both paths are attempted independently so one failure cannot leak the other file.
-      await Promise.resolve(ff.deleteFile(inputName)).catch(() => undefined);
-      await Promise.resolve(ff.deleteFile(outputName)).catch(() => undefined);
+      for (const name of [inputName, outputName]) {
+        try {
+          await ff.deleteFile(name);
+        } catch {
+          /* file absent or instance terminated */
+        }
+      }
     }
+
   }
 }
 
