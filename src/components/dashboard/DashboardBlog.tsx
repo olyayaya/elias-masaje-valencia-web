@@ -433,6 +433,12 @@ const DashboardBlog = () => {
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-1">{langVal(p, "meta_description", lang) || p.meta_description}</p>
+              {countMissingAlt(langVal(p, "content", lang)) > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                  <ImageIcon size={11} />
+                  {countMissingAlt(langVal(p, "content", lang))} image(s) without alt text ({lang.toUpperCase()})
+                </p>
+              )}
               <div className="flex gap-1.5 mt-2 flex-wrap">
                 {(p[kwKey(lang)] || p.seo_keywords).map((kw) => (
                   <span key={kw} className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded">{kw}</span>
