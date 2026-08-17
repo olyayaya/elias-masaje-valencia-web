@@ -172,7 +172,8 @@ const CollectionSection = ({
   /** Saves only the column of the active language, so ES/EN/RU stay independent. */
   const updateAlt = async (img: PageImage) => {
     const col = altColumn(altLang as AltLang);
-    const next = drafts[`${img.id}:${altLang}`] ?? "";
+    const key = `${img.id}:${altLang}`;
+    const next = draftsRef.current[key] ?? "";
     if (next === ((img[col] as string | null) ?? "")) return;
     setBusy(img.id + "-alt");
     const patch = { [col]: next } as { alt_text?: string; alt_text_en?: string; alt_text_ru?: string };
@@ -189,13 +190,17 @@ const CollectionSection = ({
 
     // Auto-translate only this row, only after an explicit save action.
     if (!autoTranslate || !next.trim()) return;
-    const token = ++translateReq.current;
-    setTranslating(img.id);
+    const token = (translateReq.current[key] ?? 0) + 1;
+    translateReq.current[key] = token;
+    setTranslating((p) => ({ ...p, [img.id]: true }));
+    const stale = () => translateReq.current[key] !== token;
     try {
       const translations = await translateAlt(next, altLang as AltLang);
-      // A newer save (other row, other language, edited text) already superseded
-      // this request — drop the stale answer instead of opening a wrong review.
-      if (token !== translateReq.current) return;
+      // Only this row's own newer request (or an edit) invalidates the answer;
+      // another row's translation never cancels it.
+      if (stale()) return;
+      // The admin may have typed again: never review a value that is no longer there.
+      if ((draftsRef.current[key] ?? "") !== next) return;
       setReview({
         img,
         source: altLang as AltLang,
@@ -208,10 +213,12 @@ const CollectionSection = ({
         translations,
       });
     } catch {
-      if (token === translateReq.current) toast.error(L("translateFailed"));
+      if (!stale()) toast.error(L("translateFailed"));
+    } finally {
+      if (!stale()) setTranslating((p) => ({ ...p, [img.id]: false }));
     }
-    if (token === translateReq.current) setTranslating(null);
   };
+
 
 
   /** Writes the three reviewed values in one update; source alt is already saved. */
