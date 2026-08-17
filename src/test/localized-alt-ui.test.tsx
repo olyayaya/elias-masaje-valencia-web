@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, renderHook } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { setInputValue } from "./utils/typing";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const ROWS = [
@@ -105,7 +104,7 @@ describe("dashboard carousel alt editing", () => {
     // ES tab is active first — editing writes alt_text.
     const esInput = await screen.findByLabelText(/Alt text \(ES\)/i);
     await user.clear(esInput);
-    setInputValue(esInput, "Masaje de cuello");
+    await user.type(esInput, "Masaje de cuello");
     await user.tab();
     await waitFor(() => expect(updateSpy).toHaveBeenCalledWith({ alt_text: "Masaje de cuello" }));
 
@@ -117,7 +116,7 @@ describe("dashboard carousel alt editing", () => {
     await user.click(screen.getByRole("button", { name: /^RU/ }));
 
     const ruInput = await screen.findByLabelText(/Alt text \(RU\)/i);
-    setInputValue(ruInput, "Массаж шеи");
+    await user.type(ruInput, "Массаж шеи");
     await user.tab();
     await waitFor(() => expect(updateSpy).toHaveBeenCalledWith({ alt_text_ru: "Массаж шеи" }));
     expect(updateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ alt_text: expect.anything() }));
@@ -153,7 +152,7 @@ describe("image alt dialog", () => {
   it("translates first and only inserts on the second confirm", async () => {
     const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup();
-    setInputValue(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
 
     // First click runs the translation and keeps the dialog open for review.
     await user.click(screen.getByRole("button", { name: /insert image/i }));
@@ -172,11 +171,11 @@ describe("image alt dialog", () => {
   it("invalidates the translation when the source text changes again", async () => {
     const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup();
-    setInputValue(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
     await screen.findByLabelText("alt-ru");
 
-    setInputValue(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage deep");
+    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), " deep");
     expect(screen.queryByLabelText("alt-ru")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /insert image/i }));
     expect(onConfirm).not.toHaveBeenCalled();
@@ -187,7 +186,7 @@ describe("image alt dialog", () => {
     const user = userEvent.setup({ delay: null });
     vi.mocked(translateAlt).mockRejectedValueOnce(new Error("offline"));
     const { onConfirm } = setup();
-    setInputValue(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
 
     const only = await screen.findByRole("button", { name: /save en only/i });
@@ -198,7 +197,7 @@ describe("image alt dialog", () => {
   it("ignores machine translations when auto-translate is switched off", async () => {
     const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup({ initialOthers: { es: "Alt manual", ru: "" } });
-    setInputValue(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
+    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
     expect(await screen.findByLabelText("alt-ru")).toHaveValue("Массаж спины");
 

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { setInputValue } from "./utils/typing";
 
 const ROWS = [
   {
@@ -79,7 +78,7 @@ describe("carousel alt auto-translation", () => {
 
     await user.click(await screen.findByText("Homepage Carousel"));
     const input = (await screen.findAllByLabelText(/Alt text \(ES\)/i))[0];
-    setInputValue(input, "Masaje de espalda");
+    await user.type(input, "Masaje de espalda");
     await user.tab();
 
     // Source column saved on its own first.
@@ -115,12 +114,12 @@ describe("carousel alt auto-translation", () => {
     await user.click(await screen.findByText("Homepage Carousel"));
 
     const input = (await screen.findAllByLabelText(/Alt text \(ES\)/i))[0];
-    setInputValue(input, "Masaje");
+    await user.type(input, "Masaje");
     await user.tab();
     await waitFor(() => expect(translateAlt).toHaveBeenCalledTimes(1));
 
     // The admin keeps typing before the answer arrives.
-    setInputValue(input, "Masaje de espalda");
+    await user.type(input, "Masaje de espalda");
     release!({ en: "Massage", ru: "Массаж" });
 
     // The late answer belongs to a value that no longer exists: no review opens.
@@ -138,12 +137,12 @@ describe("carousel alt auto-translation", () => {
     await user.click(await screen.findByText("Homepage Carousel"));
     const inputs = await screen.findAllByLabelText(/Alt text \(ES\)/i);
 
-    setInputValue(inputs[0], "Masaje de espalda");
+    await user.type(inputs[0], "Masaje de espalda");
     await user.tab();
     await waitFor(() => expect(translateAlt).toHaveBeenCalledTimes(1));
 
     // Row B is saved and answers before row A.
-    setInputValue(inputs[1], "Masaje de cuello");
+    await user.type(inputs[1], "Masaje de cuello");
     await user.tab();
     await waitFor(() => expect(translateAlt).toHaveBeenCalledTimes(2));
     await screen.findByLabelText("alt-ru");
