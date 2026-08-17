@@ -19,9 +19,13 @@ import { SOURCE_PROFILE_URL, displayReviews, type Review } from "@/lib/reviews";
  * prefers-reduced-motion the browser's job instead of ours.
  * ------------------------------------------------------------------ */
 
+/**
+ * Only licensed sources are ever rendered here. TripAdvisor content is not
+ * stored, not filtered and not shown in this block — the dashboard links to the
+ * TripAdvisor profile instead.
+ */
 const SOURCE_LABEL: Record<Review["source"], string> = {
   google: "Google",
-  tripadvisor: "TripAdvisor",
   manual: "",
 };
 
@@ -45,7 +49,7 @@ const ReviewCard = ({ review }: { review: Review }) => {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const longText = review.review_text.length > CLAMP_CHARS;
-  const sourceLabel = SOURCE_LABEL[review.source];
+  const sourceLabel = SOURCE_LABEL[review.source] ?? "";
   // A per-review permalink when the provider gives one, otherwise the public
   // profile of that source. Never presented as "this exact review".
   const href = review.original_url ?? SOURCE_PROFILE_URL[review.source];
@@ -70,7 +74,7 @@ const ReviewCard = ({ review }: { review: Review }) => {
       )}
       <footer className="flex items-center justify-between gap-2 mt-4">
         <p className="text-sm font-body font-medium not-italic">
-          <cite className="not-italic">{review.author_name}</cite>
+          <cite className="not-italic">{review.author_name.trim() || t.testimonials.anonymousAuthor}</cite>
         </p>
         <div className="flex items-center gap-2 shrink-0">
           {review.reviewed_at && (
