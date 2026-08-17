@@ -108,9 +108,13 @@ describe("dashboard carousel alt editing", () => {
     await user.tab();
     await waitFor(() => expect(updateSpy).toHaveBeenCalledWith({ alt_text: "Masaje de cuello" }));
 
+    // The auto-translation review opens on save — dismiss it, the source alt is already stored.
+    await user.click(await screen.findByRole("button", { name: /cancel/i }));
+
     // Switching to RU writes only alt_text_ru.
     updateSpy.mockClear();
     await user.click(screen.getByRole("button", { name: /^RU/ }));
+
     const ruInput = await screen.findByLabelText(/Alt text \(RU\)/i);
     await user.type(ruInput, "Массаж шеи");
     await user.tab();
