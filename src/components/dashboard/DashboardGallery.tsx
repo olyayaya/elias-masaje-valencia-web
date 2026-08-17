@@ -186,7 +186,7 @@ const DashboardGallery = () => {
    * rows fight over the same slot. Files already present in the gallery are skipped
    * (never removed or re-created) and reported back to the admin.
    */
-  const addItems = async (kind: "photo" | "video", urls: string[]) => {
+  const addItems = async (kind: "photo" | "video", urls: string[]): Promise<boolean> => {
     const existing = new Set(items.map((i) => i.media_url));
     const seen = new Set<string>();
     const fresh = urls.filter((u) => {
@@ -197,7 +197,8 @@ const DashboardGallery = () => {
     const skipped = urls.length - fresh.length;
     if (fresh.length === 0) {
       toast.message(c("addedNone"));
-      return;
+      // Nothing to retry: every file is already in the gallery.
+      return true;
     }
     const maxOrder = items.reduce((m, i) => Math.max(m, i.sort_order), 0);
     const rows = fresh.map((url, idx) => ({
@@ -211,8 +212,9 @@ const DashboardGallery = () => {
     }));
     const { error: err } = await galleryTable().insert(rows);
     if (err) {
+      // The picker stays open with the selection intact so the admin can retry.
       toast.error(c("saveFailed"));
-      return;
+      return false;
     }
     toast.success(
       urls.length === 1 && skipped === 0
@@ -220,6 +222,7 @@ const DashboardGallery = () => {
         : c("addedMany", { added: String(fresh.length), skipped: String(skipped) }),
     );
     refresh();
+    return true;
   };
 
 
@@ -606,13 +609,14 @@ const DashboardGallery = () => {
         onClose={() => setPicker(null)}
         onSelectMany={async (urls) => {
           if (picker?.mode !== "add") return;
-          await addItems(picker.kind, urls);
-          setPicker(null);
+          if (await addItems(picker.kind, urls)) setPicker(null);
         }}
         onSelect={async (url) => {
           if (!picker) return;
-          if (picker.mode === "add") await addItems(picker.kind, [url]);
-          else if (picker.mode === "media") {
+          if (picker.mode === "add") {
+            if (await addItems(picker.kind, [url])) setPicker(null);
+            return;
+          } else if (picker.mode === "media") {
 
             const target = items.find((i) => i.id === picker.id);
             // A cover belongs to one specific video file: replacing the file must

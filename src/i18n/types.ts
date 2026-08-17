@@ -83,6 +83,12 @@ export interface Translations {
   };
   testimonials: {
     title: string;
+    readMore: string;
+    showLess: string;
+    prev: string;
+    next: string;
+    ratingAria: string;
+    carouselLabel: string;
   };
   location: {
     title: string;

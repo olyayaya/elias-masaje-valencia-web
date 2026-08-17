@@ -7,23 +7,24 @@
 -- ============================================================================
 
 -- ---------------------------------------------------------------- reviews ---
+-- No raw provider payload column exists on purpose: it would be readable by any
+-- authenticated user through the table-level SELECT grant, and nothing in the
+-- product needs it.
 CREATE TABLE IF NOT EXISTS public.reviews (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   source            text NOT NULL CHECK (source IN ('google', 'tripadvisor', 'manual')),
   -- Stable id from the source system; for manual imports a deterministic hash.
-  external_review_id text NOT NULL,
-  author_name       text NOT NULL DEFAULT '',
-  author_avatar_url text,
+  external_review_id text NOT NULL CHECK (btrim(external_review_id) <> ''),
+  author_name       text NOT NULL DEFAULT '' CHECK (length(author_name) <= 200),
+  author_avatar_url text CHECK (author_avatar_url IS NULL OR author_avatar_url ~ '^https://'),
   rating            integer NOT NULL CHECK (rating BETWEEN 1 AND 5),
-  review_text       text NOT NULL DEFAULT '',
-  review_language   text,
+  review_text       text NOT NULL DEFAULT '' CHECK (length(review_text) <= 8000),
+  review_language   text CHECK (review_language IS NULL OR length(review_language) <= 12),
   reviewed_at       timestamptz,
-  original_url      text,
+  original_url      text CHECK (original_url IS NULL OR original_url ~ '^https://'),
   visible           boolean NOT NULL DEFAULT true,
   pinned            boolean NOT NULL DEFAULT false,
   manual_priority   integer NOT NULL DEFAULT 0,
-  -- Raw provider fields kept only for troubleshooting; never exposed to anon.
-  source_payload    jsonb,
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
   last_synced_at    timestamptz,
@@ -40,14 +41,54 @@ CREATE TABLE IF NOT EXISTS public.review_display_settings (
   singleton        boolean NOT NULL DEFAULT true UNIQUE CHECK (singleton),
   section_enabled  boolean NOT NULL DEFAULT true,
   -- Only 5-star reviews are shown until the owner turns the lower bands on.
-  allowed_ratings  integer[] NOT NULL DEFAULT '{5}',
-  allowed_sources  text[] NOT NULL DEFAULT '{google,tripadvisor,manual}',
+  allowed_ratings  integer[] NOT NULL DEFAULT '{5}'
+                     CHECK (allowed_ratings <@ ARRAY[1,2,3,4,5]),
+  allowed_sources  text[] NOT NULL DEFAULT '{google,tripadvisor,manual}'
+                     CHECK (allowed_sources <@ ARRAY['google','tripadvisor','manual']),
+  -- Persisted public ordering. Pinned reviews always come first regardless.
+  sort_mode        text NOT NULL DEFAULT 'newest'
+                     CHECK (sort_mode IN ('newest','oldest','rating_high','rating_low','manual')),
   updated_at       timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.review_display_settings
+  ADD COLUMN IF NOT EXISTS sort_mode text NOT NULL DEFAULT 'newest';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'review_display_settings_sort_mode_check'
+  ) THEN
+    ALTER TABLE public.review_display_settings
+      ADD CONSTRAINT review_display_settings_sort_mode_check
+      CHECK (sort_mode IN ('newest','oldest','rating_high','rating_low','manual'));
+  END IF;
+END $$;
 
 INSERT INTO public.review_display_settings (singleton)
 VALUES (true)
 ON CONFLICT (singleton) DO NOTHING;
+
+-- ------------------------------------------------------- review_sync_state ---
+-- One persistent row per automated source: what the last attempt did, and when.
+-- Admin-only: anon must never learn whether a provider is connected.
+CREATE TABLE IF NOT EXISTS public.review_sync_state (
+  source          text PRIMARY KEY CHECK (source IN ('google', 'tripadvisor')),
+  last_attempt_at timestamptz,
+  last_success_at timestamptz,
+  status          text NOT NULL DEFAULT 'never'
+                    CHECK (status IN ('never','ok','error','not_configured','rate_limited')),
+  imported_count  integer NOT NULL DEFAULT 0,
+  updated_count   integer NOT NULL DEFAULT 0,
+  skipped_count   integer NOT NULL DEFAULT 0,
+  -- Safe, enumerated codes and short messages only — never a token or a body.
+  error_code      text CHECK (error_code IS NULL OR length(error_code) <= 60),
+  error_message   text CHECK (error_message IS NULL OR length(error_message) <= 300),
+  updated_at      timestamptz NOT NULL DEFAULT now()
+);
+
+INSERT INTO public.review_sync_state (source) VALUES ('google'), ('tripadvisor')
+ON CONFLICT (source) DO NOTHING;
 
 -- ------------------------------------------------------------- visibility ---
 -- Security definer so the anon policy can read the settings row without needing
@@ -73,24 +114,32 @@ AS $$
   )
 $$;
 
+-- The function exists only to back an RLS policy; nobody calls it directly.
+REVOKE EXECUTE ON FUNCTION public.review_is_public(integer, text, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.review_is_public(integer, text, boolean) TO anon, authenticated, service_role;
+
 -- ----------------------------------------------------------------- grants ---
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.reviews TO authenticated;
 GRANT ALL ON public.reviews TO service_role;
--- Column-level grant: anon can never read source_payload.
+-- Anon reads exactly the public card fields (plus the two ordering inputs).
 GRANT SELECT (
-  id, source, external_review_id, author_name, author_avatar_url, rating,
-  review_text, review_language, reviewed_at, original_url, visible, pinned,
-  manual_priority, created_at, updated_at
+  id, source, author_name, author_avatar_url, rating, review_text,
+  review_language, reviewed_at, original_url, pinned, manual_priority
 ) ON public.reviews TO anon;
 
 GRANT SELECT, INSERT, UPDATE ON public.review_display_settings TO authenticated;
 GRANT ALL ON public.review_display_settings TO service_role;
-GRANT SELECT (id, singleton, section_enabled, allowed_ratings, allowed_sources, updated_at)
+GRANT SELECT (id, singleton, section_enabled, allowed_ratings, allowed_sources, sort_mode, updated_at)
   ON public.review_display_settings TO anon;
+
+-- Sync state is operational data: admins and the sync job only, never anon.
+GRANT SELECT ON public.review_sync_state TO authenticated;
+GRANT ALL ON public.review_sync_state TO service_role;
 
 -- -------------------------------------------------------------------- RLS ---
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.review_display_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.review_sync_state ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public reviews are readable" ON public.reviews;
 CREATE POLICY "Public reviews are readable"
@@ -124,6 +173,14 @@ CREATE POLICY "Admins manage review display settings"
   USING (public.has_role(auth.uid(), 'admin'::app_role))
   WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role));
 
+DROP POLICY IF EXISTS "Admins read review sync state" ON public.review_sync_state;
+CREATE POLICY "Admins read review sync state"
+  ON public.review_sync_state FOR SELECT
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'::app_role));
+
+-- Writes come from the sync job (service_role bypasses RLS); no client policy.
+
 -- --------------------------------------------------------------- triggers ---
 DROP TRIGGER IF EXISTS update_reviews_updated_at ON public.reviews;
 CREATE TRIGGER update_reviews_updated_at
@@ -133,6 +190,11 @@ CREATE TRIGGER update_reviews_updated_at
 DROP TRIGGER IF EXISTS update_review_display_settings_updated_at ON public.review_display_settings;
 CREATE TRIGGER update_review_display_settings_updated_at
   BEFORE UPDATE ON public.review_display_settings
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_review_sync_state_updated_at ON public.review_sync_state;
+CREATE TRIGGER update_review_sync_state_updated_at
+  BEFORE UPDATE ON public.review_sync_state
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Manual moderation (visible / pinned / settings) joins the existing audit trail.

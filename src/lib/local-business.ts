@@ -81,7 +81,7 @@ export function buildOrganization(locale: Locale) {
  */
 export function buildLocalBusiness(
   locale: Locale,
-  opts?: { rating?: string; reviewCount?: string; parentOrganization?: boolean }
+  opts?: { parentOrganization?: boolean }
 ) {
   const description =
     locale === "es"
@@ -114,11 +114,6 @@ export function buildLocalBusiness(
       telephone: "+34698968007",
       contactType: "Booking / Customer Service",
       availableLanguage: ["Spanish", "English", "Russian"],
-    },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: opts?.rating || "5.0",
-      reviewCount: opts?.reviewCount || "66",
     },
     sameAs: SAME_AS,
     ...(opts?.parentOrganization !== false

@@ -67,11 +67,7 @@ const Index = () => {
       "@context": "https://schema.org",
       "@graph": [
         buildOrganization(locale),
-        buildLocalBusiness(locale, {
-          rating: sc.google_rating,
-          reviewCount: sc.google_review_count,
-          parentOrganization: true,
-        }),
+        buildLocalBusiness(locale, { parentOrganization: true }),
         {
           "@type": "WebSite",
           "@id": `${BASE_URL}/#website`,

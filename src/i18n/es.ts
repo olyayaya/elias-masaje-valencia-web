@@ -95,6 +95,12 @@ export const es: Translations = {
   },
   testimonials: {
     title: "Lo que dicen mis clientes",
+    readMore: "Leer más",
+    showLess: "Mostrar menos",
+    prev: "Reseñas anteriores",
+    next: "Reseñas siguientes",
+    ratingAria: "{n} de 5 estrellas",
+    carouselLabel: "Reseñas de clientes",
   },
   location: { title: "Ubicación" },
   faq: {
