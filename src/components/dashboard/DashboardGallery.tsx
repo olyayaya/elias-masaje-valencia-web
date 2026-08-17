@@ -128,7 +128,8 @@ const DashboardGallery = () => {
   const { data: items = [], isPending, missingTable } = useGalleryAdmin();
   const [lang, setLang] = useState<Lang>("es");
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [posterBusyId, setPosterBusyId] = useState<string | null>(null);
+  /** Cover generation is a long, cancellable job: it owns its own visible progress. */
+  const [poster, setPoster] = useState<{ id: string; progress: number } | null>(null);
   const [picker, setPicker] = useState<
     | null
     | { mode: "add"; kind: "photo" | "video" }
@@ -137,6 +138,9 @@ const DashboardGallery = () => {
   >(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<GalleryItem>>>({});
   const posterAbort = useRef<AbortController | null>(null);
+
+  // Leaving the section must not keep a wasm decode (or an upload) running.
+  useEffect(() => () => posterAbort.current?.abort(), []);
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: queryKeys.galleryAdmin });
@@ -160,7 +164,9 @@ const DashboardGallery = () => {
     const { error: err } = await galleryTable().insert({
       media_type: kind,
       media_url: url,
-      poster_url: kind === "photo" ? url : "",
+      // `poster_url` only ever means "cover frame of a video". A photo is its own
+      // image, so it never carries a poster — the grid derives its thumbnail itself.
+      poster_url: "",
       sort_order: maxOrder + 1,
       published: false,
     });
@@ -173,10 +179,9 @@ const DashboardGallery = () => {
   };
 
   /**
-   * Reordering swaps two rows. Doing that as two separate requests can leave the
-   * list half-swapped if the second one fails, so it goes through a transactional
-   * RPC; the two-update path is kept only for environments where the RPC is not
-   * deployed yet.
+   * Reordering swaps two rows. Two independent UPDATEs can leave the list
+   * half-swapped, so the swap ONLY ever happens inside the transactional RPC — if the
+   * RPC is missing or fails, nothing is written at all and the admin sees why.
    */
   const move = async (item: GalleryItem, dir: -1 | 1) => {
     const idx = items.findIndex((i) => i.id === item.id);
@@ -187,26 +192,13 @@ const DashboardGallery = () => {
       rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { code?: string; message?: string } | null }>;
     }).rpc;
     const { error: rpcError } = await rpc("swap_gallery_order", { _a: item.id, _b: other.id });
+    setBusyId(null);
     if (rpcError) {
       const missingRpc =
         rpcError.code === "PGRST202" || /could not find the function|does not exist/i.test(rpcError.message ?? "");
-      if (!missingRpc) {
-        setBusyId(null);
-        toast.error(c("saveFailed"));
-        return;
-      }
-      const [r1, r2] = await Promise.all([
-        galleryTable().update({ sort_order: other.sort_order }).eq("id", item.id),
-        galleryTable().update({ sort_order: item.sort_order }).eq("id", other.id),
-      ]);
-      if (r1.error || r2.error) {
-        setBusyId(null);
-        toast.error(c("saveFailed"));
-        refresh();
-        return;
-      }
+      toast.error(missingRpc ? c("reorderFailed") : c("saveFailed"));
+      return;
     }
-    setBusyId(null);
     refresh();
   };
 
@@ -222,37 +214,75 @@ const DashboardGallery = () => {
     }
   };
 
+  /**
+   * Best-effort removal of a derivative WE just created. Only the freshly uploaded
+   * object name is ever passed here — the source video and any pre-existing cover are
+   * untouched no matter how the generation ended.
+   */
+  const discardDerivative = async (name: string) => {
+    try {
+      await supabase.storage.from("media").remove([name]);
+    } catch {
+      /* best effort: an orphan derivative is preferable to deleting the wrong file */
+    }
+  };
+
   /** Extract a cover frame in the browser and store it next to the other media. */
   const generateCover = async (item: GalleryItem) => {
     if (!item.media_url) return;
     posterAbort.current?.abort();
     const controller = new AbortController();
     posterAbort.current = controller;
-    setPosterBusyId(item.id);
+    setPoster({ id: item.id, progress: 0 });
+    const bump = (p: number) =>
+      setPoster((cur) => (cur && cur.id === item.id ? { ...cur, progress: p } : cur));
+    let uploaded: string | null = null;
     try {
       // Lazy: neither the poster module nor the FFmpeg fallback is in any other bundle.
       const { generatePoster, posterNameFor } = await import("@/lib/gallery-poster");
-      const result = await generatePoster({ videoUrl: item.media_url, signal: controller.signal });
-      const { data: existing } = await supabase.storage.from("media").list("", { limit: 1000 });
-      const taken = (existing ?? []).map((f) => f.name);
+      const result = await generatePoster({
+        videoUrl: item.media_url,
+        signal: controller.signal,
+        onProgress: (r) => {
+          if (!controller.signal.aborted) bump(Math.min(90, Math.round(r * 90)));
+        },
+      });
+      if (controller.signal.aborted) return;
+
+      // Full paginated listing: a truncated one could hand back a name already in use.
+      const taken = await listAllMediaNames();
       const name = posterNameFor(item.media_url, result.ext, taken);
+      bump(92);
       const { error: upErr } = await supabase.storage
         .from("media")
         .upload(name, result.blob, { contentType: result.mimeType, upsert: false });
       if (upErr) throw upErr;
-      const url = supabase.storage.from("media").getPublicUrl(name).data.publicUrl;
+      uploaded = name;
+      bump(96);
+
       if (controller.signal.aborted) return;
-      if (await patch(item.id, { poster_url: url })) toast.success(c("coverDone"));
+      const url = supabase.storage.from("media").getPublicUrl(name).data.publicUrl;
+      if (await patch(item.id, { poster_url: url })) {
+        uploaded = null;
+        bump(100);
+        toast.success(c("coverDone"));
+      }
     } catch (e) {
       if (!controller.signal.aborted) {
         if (import.meta.env.DEV) console.error("[gallery poster]", e);
         toast.error(c("coverFailed"));
       }
     } finally {
+      // Cancelled or failed after the upload: delete only that new derivative.
+      if (uploaded) await discardDerivative(uploaded);
+      if (controller.signal.aborted) toast.message(c("coverCancelled"));
       if (posterAbort.current === controller) posterAbort.current = null;
-      setPosterBusyId((id) => (id === item.id ? null : id));
+      setPoster((cur) => (cur && cur.id === item.id ? null : cur));
     }
   };
+
+  const cancelCover = () => posterAbort.current?.abort();
+
 
   const field = (item: GalleryItem, base: "title" | "description" | "alt") =>
     `${base}_${lang}` as keyof GalleryItem;
