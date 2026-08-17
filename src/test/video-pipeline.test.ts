@@ -33,8 +33,8 @@ let loadDelay = 0;
 vi.mock("@ffmpeg/ffmpeg", () => ({
   FFmpeg: class {
     loaded = false;
-    on = (...a: unknown[]) => ff.on(...a);
-    off = (...a: unknown[]) => ff.off(...a);
+    on = (e: string, cb: unknown) => ff.on(e, cb);
+    off = (e: string, cb: unknown) => ff.off(e, cb);
     async load() {
       await new Promise((r) => setTimeout(r, loadDelay));
       Object.assign(this, ff);
