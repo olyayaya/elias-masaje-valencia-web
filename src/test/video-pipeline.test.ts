@@ -280,9 +280,12 @@ describe("abortable ffmpeg initialization", () => {
     loadDelay = 30;
     const controller = new AbortController();
     const promise = probeEncoders(controller.signal);
+    // Abort while the core download is genuinely in flight (after the glue import).
+    await new Promise((r) => setTimeout(r, 5));
+    calls.length = 0;
     controller.abort();
     await expect(promise).rejects.toMatchObject({ name: "AbortError" });
-    // No -encoders run, and the aborted instance is torn down + its listener detached
+    // No -encoders run, and the aborted instance is torn down + its log listener detached
     // instead of being cached for the next caller.
     expect(calls).not.toContain("exec");
     expect(calls).toContain("terminate");
