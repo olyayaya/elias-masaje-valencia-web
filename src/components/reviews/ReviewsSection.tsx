@@ -20,6 +20,9 @@ import { displayReviews, isSiteLocale, localizedReviewText, type Review } from "
 
 const CLAMP_CHARS = 180;
 
+/** The public date always follows the page language, never the visitor's browser. */
+const DATE_LOCALES = { es: "es-ES", en: "en-GB", ru: "ru-RU" } as const;
+
 const Stars = ({ n, label }: { n: number; label: string }) => (
   <span className="flex gap-0.5 mb-2" role="img" aria-label={label}>
     {Array.from({ length: 5 }).map((_, i) => (
@@ -49,7 +52,7 @@ const ReviewCard = ({ review }: { review: Review }) => {
     >
       <Stars n={review.rating} label={t.testimonials.ratingAria.replace("{n}", String(review.rating))} />
       <blockquote className="text-sm text-muted-foreground font-body leading-relaxed italic">
-        <p className={!expanded && longText ? "line-clamp-4" : undefined}>{text}</p>
+        <p className={`whitespace-pre-line ${!expanded && longText ? "line-clamp-4" : ""}`}>{text}</p>
       </blockquote>
       {longText && (
         <button
@@ -72,7 +75,7 @@ const ReviewCard = ({ review }: { review: Review }) => {
           )}
           {review.reviewed_at && (
             <span className="text-[10px] font-body text-muted-foreground/60">
-              {new Date(review.reviewed_at).toLocaleDateString()}
+              {new Date(review.reviewed_at).toLocaleDateString(DATE_LOCALES[isSiteLocale(locale) ? locale : "es"])}
             </span>
           )}
           {review.original_url && (
