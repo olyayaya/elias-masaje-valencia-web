@@ -14,7 +14,6 @@ import {
   normalizeDate,
   normalizeGoogleReview,
   normalizeRating,
-  normalizeTripadvisorReview,
   readJsonLimited,
 } from "../../supabase/functions/reviews-sync/normalize";
 
@@ -68,19 +67,11 @@ describe("normalization", () => {
     expect(isUsable(r)).toBe(false);
   });
 
-  it("maps a TripAdvisor review and keeps its https permalink", () => {
-    const r = normalizeTripadvisorReview({
-      id: 991,
-      user: { username: "Cy", avatar: { small: { url: "https://img.example/c.jpg" } } },
-      rating: 4,
-      text: "Nice",
-      lang: "en",
-      published_date: "2026-03-02",
-      url: "https://www.tripadvisor.com/ShowUserReviews-x",
-    });
-    expect(r).toMatchObject({ source: "tripadvisor", external_review_id: "991", rating: 4, review_language: "en" });
-    expect(r.original_url).toBe("https://www.tripadvisor.com/ShowUserReviews-x");
-    expect(isUsable(r)).toBe(true);
+  it("invents no author name and skips the anonymous record", () => {
+    const r = normalizeGoogleReview({ reviewId: "z", reviewer: {}, starRating: "FIVE", comment: "Great" });
+    expect(r.author_name).toBe("");
+    expect(r.author_name).not.toMatch(/user/i);
+    expect(isUsable(r)).toBe(false);
   });
 
   it("normalizes ratings, dates and urls defensively", () => {
@@ -165,8 +156,35 @@ describe("reviews-sync edge function source", () => {
     expect(fn).not.toMatch(/console\.(log|error)\([^)]*(token|headers|body)/i);
   });
 
-  it("exposes the documented public profile fallbacks", () => {
+  it("exposes the documented public profile fallback for Google only", () => {
     expect(SOURCE_PROFILE_URL.google).toBe("https://maps.app.goo.gl/uyR3ZRdYUFiYSwXt5");
-    expect(SOURCE_PROFILE_URL.tripadvisor).toContain("Elias_Massage_Valencia");
+    expect(Object.keys(SOURCE_PROFILE_URL)).toEqual(["google"]);
+  });
+});
+
+describe("tripadvisor compliance gating", () => {
+  const fn = readFileSync("supabase/functions/reviews-sync/index.ts", "utf8");
+  const norm = readFileSync("supabase/functions/reviews-sync/normalize.ts", "utf8");
+
+  it("answers compliance_required without an error status", () => {
+    expect(fn).toMatch(/compliance_required/);
+    expect(fn).toMatch(/COMPLIANCE_BLOCKED\.has\(source\)/);
+    // The refusal is a normal 200 answer, never a 500.
+    expect(fn).not.toMatch(/compliance_required[^\n]*,\s*5\d\d/);
+  });
+
+  it("performs no TripAdvisor request anywhere in the function", () => {
+    const code = `${fn}\n${norm}`;
+    expect(code).not.toMatch(/api\.content\.tripadvisor\.com/);
+    expect(code).not.toMatch(/TRIPADVISOR_CONTENT_API_KEY/);
+    expect(code).not.toMatch(/TRIPADVISOR_LOCATION_ID/);
+    expect(code).not.toMatch(/fetchTripadvisor/);
+    expect(norm).not.toMatch(/normalizeTripadvisorReview/);
+  });
+
+  it("keeps tripadvisor out of every synced/stored source list", () => {
+    // Only Google is a configured, fetchable source.
+    expect(fn).toMatch(/const REQUIRED[^}]*google[^}]*}/s);
+    expect(fn).not.toMatch(/tripadvisor:\s*\[/);
   });
 });
