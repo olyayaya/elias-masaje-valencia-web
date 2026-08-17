@@ -2,13 +2,13 @@ import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff, Loader2, Pin, PinOff, RefreshCw, Star, Upload,
+  AlertTriangle, ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff, Loader2, Pin, PinOff, Star, Upload,
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
-import { supabase } from "@/integrations/supabase/client";
 import {
-  REVIEW_SORTS, REVIEW_SOURCES, TRIPADVISOR_PROFILE_URL, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
-  type ParsedImportRow, type Review, type ReviewSort, type ReviewSource, type ReviewSyncStateRow,
+  REVIEW_SORTS, REVIEW_SOURCES, TRIPADVISOR_PROFILE_URL, parseReviewImport, planImport, reviewSettingsTable,
+  reviewsTable, sortReviews,
+  type ParsedImportRow, type Review, type ReviewSort, type ReviewSource,
 } from "@/lib/reviews";
 import { useAdminReviews, reviewKeys } from "@/hooks/use-reviews";
 import DashboardCard from "./DashboardCard";
@@ -18,9 +18,9 @@ import { Input } from "@/components/ui/input";
 
 const COPY = {
   intro: {
-    en: "Real reviews from Google and from manual entries you hold the rights to. Nothing here is written by the site.",
-    es: "Reseñas reales de Google y entradas manuales sobre las que tienes derechos. Nada de esto lo escribe la web.",
-    ru: "Реальные отзывы из Google и ручные записи, на которые у вас есть права. Ничего не пишется сайтом.",
+    en: "Real reviews you add yourself by importing a CSV or JSON file. There is no automatic connection to Google or TripAdvisor: nothing is fetched, copied or written by the site.",
+    es: "Reseñas reales que añades tú importando un archivo CSV o JSON. No hay conexión automática con Google ni TripAdvisor: la web no descarga, copia ni escribe nada.",
+    ru: "Реальные отзывы, которые вы добавляете сами, импортируя файл CSV или JSON. Автоматического подключения к Google или TripAdvisor нет: сайт ничего не загружает, не копирует и не пишет сам.",
   },
   missingTable: {
     en: "The reviews storage is not set up yet. Ask your developer to apply the pending reviews migration. The legacy editor below stays available until then.",
@@ -76,10 +76,6 @@ const COPY = {
   priority: { en: "Manual order value", es: "Valor de orden manual", ru: "Значение ручного порядка" },
   priorityUp: { en: "Move up in manual order", es: "Subir en el orden manual", ru: "Поднять в ручном порядке" },
   priorityDown: { en: "Move down in manual order", es: "Bajar en el orden manual", ru: "Опустить в ручном порядке" },
-  statusNever: { en: "Never synced", es: "Nunca sincronizado", ru: "Ещё не синхронизировано" },
-  statusOk: { en: "Connected", es: "Conectado", ru: "Подключено" },
-  statusError: { en: "Last attempt failed", es: "El último intento falló", ru: "Последняя попытка не удалась" },
-  statusRateLimited: { en: "Cooling down — try again in a minute", es: "En espera — inténtalo en un minuto", ru: "Пауза — повторите через минуту" },
   lastAttempt: { en: "Last attempt: {v}", es: "Último intento: {v}", ru: "Последняя попытка: {v}" },
   counters: { en: "{i} new · {u} updated · {s} skipped", es: "{i} nuevas · {u} actualizadas · {s} omitidas", ru: "{i} новых · {u} обновлено · {s} пропущено" },
   rateLimited: { en: "Please wait {n}s before syncing this source again.", es: "Espera {n}s antes de volver a sincronizar esta fuente.", ru: "Подождите {n} с перед повторной синхронизацией." },
@@ -91,29 +87,44 @@ const COPY = {
   },
   tripadvisorOpen: { en: "Open TripAdvisor profile", es: "Abrir perfil de TripAdvisor", ru: "Открыть профиль TripAdvisor" },
 
-  syncTitle: { en: "Sources", es: "Fuentes", ru: "Источники" },
-  syncNow: { en: "Sync now", es: "Sincronizar", ru: "Синхронизировать" },
-  syncing: { en: "Syncing…", es: "Sincronizando…", ru: "Синхронизация…" },
   lastSync: { en: "Last sync: {v}", es: "Última sincronización: {v}", ru: "Последняя синхронизация: {v}" },
-  never: { en: "never", es: "nunca", ru: "никогда" },
-  notConfigured: {
-    en: "Not connected — credentials are missing. Ask your developer to add the secrets listed below.",
-    es: "Sin conectar — faltan credenciales. Pide que se añadan los secretos indicados abajo.",
-    ru: "Не подключено — нет учётных данных. Попросите добавить перечисленные ниже секреты.",
-  },
-  syncResult: {
-    en: "Imported {imported}, updated {updated}, skipped {skipped}",
-    es: "Importadas {imported}, actualizadas {updated}, omitidas {skipped}",
-    ru: "Импортировано {imported}, обновлено {updated}, пропущено {skipped}",
-  },
-  syncFailed: { en: "Sync failed", es: "Error de sincronización", ru: "Ошибка синхронизации" },
 
-  importTitle: { en: "Import an official export", es: "Importar una exportación oficial", ru: "Импорт официального экспорта" },
+  importTitle: { en: "Import reviews (CSV or JSON)", es: "Importar reseñas (CSV o JSON)", ru: "Импорт отзывов (CSV или JSON)" },
   importHint: {
-    en: "CSV or JSON with the columns source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Allowed sources: google, manual. Copied TripAdvisor content is rejected.",
-    es: "CSV o JSON con las columnas source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Fuentes permitidas: google, manual. El contenido copiado de TripAdvisor se rechaza.",
-    ru: "CSV или JSON со столбцами source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Допустимые источники: google, manual. Скопированный контент TripAdvisor отклоняется.",
+    en: "CSV or JSON with the columns source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Allowed sources: google, manual. Copied TripAdvisor content is rejected. Nothing is saved until you check the rights box and confirm.",
+    es: "CSV o JSON con las columnas source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Fuentes permitidas: google, manual. El contenido copiado de TripAdvisor se rechaza. No se guarda nada hasta que marques la casilla de derechos y confirmes.",
+    ru: "CSV или JSON со столбцами source, external_review_id, author_name, rating, review_text, reviewed_at, original_url. Допустимые источники: google, manual. Скопированный контент TripAdvisor отклоняется. Ничего не сохраняется, пока вы не отметите подтверждение прав и не подтвердите импорт.",
   },
+  importSummary: {
+    en: "{n} valid rows · {fresh} new · {upd} already stored (will be refreshed) · {dupe} duplicates in the file skipped",
+    es: "{n} filas válidas · {fresh} nuevas · {upd} ya guardadas (se actualizarán) · {dupe} duplicados del archivo omitidos",
+    ru: "Корректных строк: {n} · новых: {fresh} · уже сохранено: {upd} (будут обновлены) · дубликатов в файле пропущено: {dupe}",
+  },
+  importRights: {
+    en: "I confirm these are real customer reviews and that I have the right to publish this text on my site.",
+    es: "Confirmo que son reseñas reales de clientes y que tengo derecho a publicar este texto en mi web.",
+    ru: "Подтверждаю, что это реальные отзывы клиентов и что у меня есть право публиковать этот текст на моём сайте.",
+  },
+  importRightsHint: {
+    en: "Reviews are stored exactly as written — never edited, translated or invented.",
+    es: "Las reseñas se guardan tal cual — nunca se editan, traducen ni inventan.",
+    ru: "Отзывы сохраняются дословно — их не редактируют, не переводят и не выдумывают.",
+  },
+  importNeedsRights: {
+    en: "Tick the confirmation above to enable the import.",
+    es: "Marca la confirmación de arriba para poder importar.",
+    ru: "Отметьте подтверждение выше, чтобы включить импорт.",
+  },
+  colAuthor: { en: "Author", es: "Autor", ru: "Автор" },
+  colRating: { en: "Rating", es: "Valoración", ru: "Оценка" },
+  colSource: { en: "Source", es: "Fuente", ru: "Источник" },
+  colDate: { en: "Date", es: "Fecha", ru: "Дата" },
+  colText: { en: "Review", es: "Reseña", ru: "Отзыв" },
+  colState: { en: "Status", es: "Estado", ru: "Статус" },
+  rowNew: { en: "New", es: "Nueva", ru: "Новая" },
+  rowUpdate: { en: "Update", es: "Actualización", ru: "Обновление" },
+  lastImport: { en: "Last import: {v}", es: "Última importación: {v}", ru: "Последний импорт: {v}" },
+  neverImported: { en: "never", es: "nunca", ru: "никогда" },
   choose: { en: "Choose file", es: "Elegir archivo", ru: "Выбрать файл" },
   importPreview: { en: "{n} valid rows ready to import", es: "{n} filas válidas listas", ru: "Готово к импорту строк: {n}" },
   importConfirm: { en: "Import {n}", es: "Importar {n}", ru: "Импортировать {n}" },
