@@ -192,9 +192,10 @@ const ImageAltDialog = ({
             value={alt}
             maxLength={MAX_ALT_LENGTH}
             disabled={decorative}
-            onChange={(e) => setAlt(e.target.value)}
+            onChange={(e) => changeAlt(e.target.value)}
             placeholder={L("placeholder")}
           />
+
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span>{alt.trim().length}/{MAX_ALT_LENGTH}</span>
           </div>
