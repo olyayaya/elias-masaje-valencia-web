@@ -37,10 +37,21 @@ export const isConverterSupported = (): boolean =>
 
 /** Loads (once) the ffmpeg glue + self-hosted single-thread core. */
 export async function getFFmpeg(onLog?: (line: string) => void): Promise<FFmpegInstance> {
-  if (instance?.loaded) return instance;
+  if (instance?.loaded) {
+    if (onLog) {
+      const listener = ((e: { message: string }) => onLog(e.message)) as never;
+      instance.on("log", listener);
+      logListeners.set(onLog, listener);
+    }
+    return instance;
+  }
   const { FFmpeg } = await import("@ffmpeg/ffmpeg");
   const ff = new FFmpeg() as unknown as FFmpegInstance;
-  ff.on("log", ((e: { message: string }) => onLog?.(e.message)) as never);
+  if (onLog) {
+    const listener = ((e: { message: string }) => onLog(e.message)) as never;
+    ff.on("log", listener);
+    logListeners.set(onLog, listener);
+  }
   await ff.load({
     coreURL: new URL(FFMPEG_CORE_URL, window.location.href).href,
     wasmURL: new URL(FFMPEG_WASM_URL, window.location.href).href,
@@ -49,17 +60,36 @@ export async function getFFmpeg(onLog?: (line: string) => void): Promise<FFmpegI
   return ff;
 }
 
+/** Tracks log callbacks so a probe never leaves a listener attached to the singleton. */
+const logListeners = new Map<(line: string) => void, never>();
+
+function detachLog(ff: FFmpegInstance, onLog: (line: string) => void) {
+  const listener = logListeners.get(onLog);
+  if (!listener) return;
+  logListeners.delete(onLog);
+  try {
+    ff.off("log", listener);
+  } catch {
+    /* instance already terminated */
+  }
+}
+
 /** Runs `-encoders` once and caches which codecs this build can actually write. */
 export async function probeEncoders(): Promise<EncoderCaps> {
   if (caps) return caps;
   let log = "";
-  const ff = await getFFmpeg((line) => { log += `${line}\n`; });
-  await ff.exec(["-hide_banner", "-encoders"]);
-  const parsed = parseEncoderCaps(log);
+  const collect = (line: string) => { log += `${line}\n`; };
+  const ff = await getFFmpeg(collect);
+  try {
+    await ff.exec(["-hide_banner", "-encoders"]);
+  } finally {
+    // Without this the collector stays attached forever and grows on every conversion.
+    detachLog(ff, collect);
+  }
   // A core that reports nothing usable still has libx264 in practice only if detected;
   // never claim a codec we did not see.
-  caps = parsed;
-  return parsed;
+  caps = parseEncoderCaps(log);
+  return caps;
 }
 
 export function terminateFFmpeg() {
@@ -70,7 +100,9 @@ export function terminateFFmpeg() {
   }
   instance = null;
   caps = null;
+  logListeners.clear();
 }
+
 
 /** Reads width/height/duration from a File using the plain <video> element (no wasm needed). */
 export function probeVideoMeta(file: File): Promise<VideoMeta> {
