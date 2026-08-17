@@ -29,7 +29,7 @@ const COPY = {
   tooLong: { en: "Keep it under {n} characters.", es: "Mantenlo por debajo de {n} caracteres.", ru: "Не длиннее {n} символов." },
   save: { en: "Save alt text", es: "Guardar texto alternativo", ru: "Сохранить alt-текст" },
   insert: { en: "Insert image", es: "Insertar imagen", ru: "Вставить изображение" },
-  cancel: { en: "Cancel", es: "Cancelar", ru: "Отmena" },
+  cancel: { en: "Cancel", es: "Cancelar", ru: "Отмена" },
 } as const;
 
 const fill = (s: string, vars: Record<string, string | number>) =>
