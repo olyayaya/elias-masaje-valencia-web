@@ -217,13 +217,15 @@ const DashboardGallery = () => {
   /**
    * Best-effort removal of a derivative WE just created. Only the freshly uploaded
    * object name is ever passed here — the source video and any pre-existing cover are
-   * untouched no matter how the generation ended.
+   * untouched no matter how the generation ended. A failure is surfaced instead of
+   * being silently swallowed, so the admin knows a stray file stayed in the Library.
    */
   const discardDerivative = async (name: string) => {
     try {
-      await supabase.storage.from("media").remove([name]);
+      const { error: rmErr } = await supabase.storage.from("media").remove([name]);
+      if (rmErr) toast.warning(c("cleanupFailed", { name }));
     } catch {
-      /* best effort: an orphan derivative is preferable to deleting the wrong file */
+      toast.warning(c("cleanupFailed", { name }));
     }
   };
 
@@ -251,8 +253,11 @@ const DashboardGallery = () => {
 
       // Full paginated listing: a truncated one could hand back a name already in use.
       const taken = await listAllMediaNames();
+      // Cancelling during that listing must leave Storage completely untouched.
+      if (controller.signal.aborted) return;
       const name = posterNameFor(item.media_url, result.ext, taken);
       bump(92);
+      if (controller.signal.aborted) return;
       const { error: upErr } = await supabase.storage
         .from("media")
         .upload(name, result.blob, { contentType: result.mimeType, upsert: false });
@@ -261,6 +266,7 @@ const DashboardGallery = () => {
       bump(96);
 
       if (controller.signal.aborted) return;
+
       const url = supabase.storage.from("media").getPublicUrl(name).data.publicUrl;
       if (await patch(item.id, { poster_url: url })) {
         uploaded = null;
