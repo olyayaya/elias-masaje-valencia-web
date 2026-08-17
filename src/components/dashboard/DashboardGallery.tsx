@@ -557,8 +557,13 @@ const DashboardGallery = () => {
             // A photo never owns a cover, so its poster_url is explicitly cleared.
             const changed = !!target && target.media_url !== url;
             const clearPoster = changed && target?.media_type === "video";
-            const values: Record<string, unknown> = { media_url: url, poster_url: "" };
-            if (clearPoster) values.published = false;
+            const values: Record<string, unknown> = { media_url: url };
+            if (target?.media_type === "photo") values.poster_url = "";
+            if (clearPoster) {
+              values.poster_url = "";
+              values.published = false;
+            }
+
             if (await patch(picker.id, values)) {
               toast.success(c("saved"));
               if (clearPoster) toast.warning(c("posterCleared"));
