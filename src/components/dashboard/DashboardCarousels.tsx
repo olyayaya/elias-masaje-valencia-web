@@ -330,10 +330,11 @@ const CollectionSection = ({
                   id={`alt-${img.id}`}
                   value={value}
                   maxLength={MAX_ALT_LENGTH}
-                  onChange={(e) => setDrafts((p) => ({ ...p, [draftKey]: e.target.value }))}
+                  onChange={(e) => editDraft(draftKey, img.id, e.target.value)}
                   onBlur={() => updateAlt(img)}
                   placeholder={L("altPlaceholder")}
                   className="text-sm"
+
                 />
                 <div className="flex flex-wrap items-center gap-2 text-[11px]">
                   {(["es", "en", "ru"] as AltLang[]).map((l) => (
