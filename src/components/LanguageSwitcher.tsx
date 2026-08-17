@@ -61,9 +61,23 @@ const LanguageSwitcher = () => {
   }, [open]);
 
   const switchTo = (l: Locale) => {
+    // Choosing the active language: just close the menu, never navigate.
+    if (l === locale) {
+      setOpen(false);
+      setFocusIdx(-1);
+      return;
+    }
     const target = getEquivalentPath(pathname, l, postSlugs?.[l]);
-    navigate(target);
+    // Explicit, one-shot signal so ScrollToTop keeps the vertical position
+    // instead of treating this PUSH as a plain page change.
+    navigate(target, {
+      state: {
+        preserveScroll: true,
+        scrollY: typeof window !== "undefined" ? window.scrollY : 0,
+      },
+    });
     setOpen(false);
+    setFocusIdx(-1);
   };
 
   return (

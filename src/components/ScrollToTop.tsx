@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 
+/** Location state written by the LanguageSwitcher when the visitor changes language. */
+type PreserveScrollState = { preserveScroll?: boolean; scrollY?: number } | null;
+
 /* ------------------------------------------------------------------ *
  * Scroll behaviour for the SPA.
  *
@@ -49,7 +52,7 @@ const isReload = () => {
 };
 
 const ScrollToTop = () => {
-  const { pathname, search, hash } = useLocation();
+  const { pathname, search, hash, state } = useLocation();
   const navigationType = useNavigationType();
   // The very first effect run is the initial load / reload of the document.
   const firstRun = useRef(true);
@@ -76,15 +79,22 @@ const ScrollToTop = () => {
     // Hash anchors: never interfere.
     if (hash) return cleanup;
 
-    const shouldRestore = navigationType === "POP" || (first && isReload());
+    // A language switch (ES <-> EN <-> RU) carries an explicit flag and the
+    // position the visitor was reading at. Never applied on Back/Forward.
+    const ls = state as PreserveScrollState;
+    const languageSwitch =
+      navigationType !== "POP" && !!ls?.preserveScroll && typeof ls?.scrollY === "number";
+
+    const shouldRestore = languageSwitch || navigationType === "POP" || (first && isReload());
 
     if (!shouldRestore) {
       if (!first) window.scrollTo(0, 0);
       return cleanup;
     }
 
-    const target = readSaved(key);
+    const target = languageSwitch ? Math.max(0, Math.round(ls!.scrollY!)) : readSaved(key);
     if (target == null) return cleanup;
+    if (languageSwitch) save(key, target);
 
     // Retry until the async content makes the page tall enough. Always
     // instant — a smooth technical scroll would be visible as a jump.
@@ -107,7 +117,7 @@ const ScrollToTop = () => {
       if (raf) cancelAnimationFrame(raf);
       cleanup();
     };
-  }, [pathname, search, hash, navigationType]);
+  }, [pathname, search, hash, navigationType, state]);
 
 
   return null;
