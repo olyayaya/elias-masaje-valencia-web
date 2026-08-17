@@ -86,7 +86,14 @@ export interface ReviewRow {
   dedupe_key: string;
   author_name: string;
   rating: number;
+  /** The original text, exactly as written. Never edited, never translated. */
   review_text: string;
+  /** Language of `review_text` (lowercase tag: es / en / ru / pt …). */
+  original_language: string | null;
+  /** Human-made translations. `null` means "no translation — show the original". */
+  review_text_es: string | null;
+  review_text_en: string | null;
+  review_text_ru: string | null;
   reviewed_at: string | null;
   original_url: string | null;
   visible: boolean;
@@ -103,6 +110,10 @@ export interface ReviewInsert {
   author_name: string;
   rating: number;
   review_text: string;
+  original_language?: string | null;
+  review_text_es?: string | null;
+  review_text_en?: string | null;
+  review_text_ru?: string | null;
   reviewed_at?: string | null;
   original_url?: string | null;
   visible?: boolean;

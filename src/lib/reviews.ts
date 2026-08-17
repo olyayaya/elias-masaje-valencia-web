@@ -30,12 +30,14 @@ export type { ReviewInsert, ReviewSort };
 export type Review = ReviewRow;
 export type ReviewDisplaySettings = ReviewDisplaySettingsRow;
 
+export const TRANSLATION_COLUMNS = "original_language, review_text_es, review_text_en, review_text_ru";
+
 export const REVIEW_COLUMNS =
-  "id, dedupe_key, author_name, rating, review_text, reviewed_at, original_url, visible, pinned, manual_priority, created_at, updated_at, imported_at";
+  "id, dedupe_key, author_name, rating, review_text, original_language, review_text_es, review_text_en, review_text_ru, reviewed_at, original_url, visible, pinned, manual_priority, created_at, updated_at, imported_at";
 
 /** Ordering inputs (pinned / manual_priority) are part of the public read. */
 export const PUBLIC_REVIEW_COLUMNS =
-  "id, author_name, rating, review_text, reviewed_at, original_url, pinned, manual_priority";
+  "id, author_name, rating, review_text, original_language, review_text_es, review_text_en, review_text_ru, reviewed_at, original_url, pinned, manual_priority";
 
 export const REVIEW_SETTINGS_COLUMNS = "id, section_enabled, allowed_ratings, sort_mode, updated_at";
 
