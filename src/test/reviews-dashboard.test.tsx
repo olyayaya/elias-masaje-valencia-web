@@ -195,7 +195,7 @@ describe("dashboard reviews — per-source status", () => {
     mount();
     expect(screen.getByTestId("sync-status-google").textContent).toMatch(/connected|conectado|подключено/i);
     expect(screen.getByTestId("sync-counters-google").textContent).toMatch(/3/);
-    expect(screen.getByTestId("sync-status-tripadvisor").textContent).toMatch(/not connected|no conectad|не подключ/i);
+    expect(screen.getByTestId("sync-status-tripadvisor").textContent).toMatch(/not connected|sin conectar|не подключ/i);
     // The Content API limitation is stated plainly instead of promising everything.
     expect(screen.getByText(/limited set|conjunto limitado|ограниченный набор/i)).toBeTruthy();
   });
