@@ -114,9 +114,9 @@ const CollectionSection = ({
       alt_text: "",
       sort_order: nextOrder,
     });
-    if (error) toast.error("Failed to add image");
+    if (error) toast.error(L("addFailed"));
     else {
-      toast.success("Image added");
+      toast.success(L("added"));
       onChange();
     }
     setBusy(null);
@@ -125,31 +125,34 @@ const CollectionSection = ({
   const updateUrl = async (id: string, url: string) => {
     setBusy(id);
     const { error } = await supabase.from("page_images").update({ image_url: url }).eq("id", id);
-    if (error) toast.error("Failed to update");
+    if (error) toast.error(L("updateFailed"));
     else {
-      toast.success("Image updated");
+      toast.success(L("updated"));
       onChange();
     }
     setBusy(null);
   };
 
+  /** Saves only the column of the active language, so ES/EN/RU stay independent. */
   const updateAlt = async (img: PageImage) => {
-    if (drafts[img.id] === img.alt_text) return;
+    const col = altColumn(altLang as AltLang);
+    const next = drafts[`${img.id}:${altLang}`] ?? "";
+    if (next === ((img[col] as string | null) ?? "")) return;
     setBusy(img.id + "-alt");
-    const { error } = await supabase.from("page_images").update({ alt_text: drafts[img.id] }).eq("id", img.id);
-    if (error) toast.error("Failed to save");
-    else toast.success("Alt text saved");
+    const { error } = await supabase.from("page_images").update({ [col]: next }).eq("id", img.id);
+    if (error) toast.error(L("saveFailed"));
+    else toast.success(L("saved"));
     setBusy(null);
     onChange();
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Remove this image from the carousel?")) return;
+    if (!confirm(L("confirmRemove"))) return;
     setBusy(id);
     const { error } = await supabase.from("page_images").delete().eq("id", id);
-    if (error) toast.error("Failed to remove");
+    if (error) toast.error(L("removeFailed"));
     else {
-      toast.success("Removed");
+      toast.success(L("removed"));
       onChange();
     }
     setBusy(null);
@@ -170,6 +173,7 @@ const CollectionSection = ({
 
   const sorted = [...images].sort((a, b) => a.sort_order - b.sort_order);
   const usingDefaults = sorted.length === 0;
+  const langUpper = altLang.toUpperCase();
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -179,7 +183,7 @@ const CollectionSection = ({
             <ChevronRight size={14} className={`transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
             <span>
               {usingDefaults
-                ? "Using built-in default images — add one to override"
+                ? L("defaults")
                 : `${sorted.length} image${sorted.length === 1 ? "" : "s"}`}
             </span>
           </div>
@@ -187,12 +191,20 @@ const CollectionSection = ({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="border border-t-0 border-border rounded-b-lg bg-card px-5 pb-5 pt-3 space-y-3">
-          {sorted.map((img, i) => (
-            <div key={img.id} className="flex gap-3 items-start p-3 rounded-lg bg-secondary/40">
+          {sorted.length > 0 && (
+            <LanguageTabs active={altLang} onChange={setAltLang} />
+          )}
+          {sorted.map((img, i) => {
+            const status = altStatus(img);
+            const draftKey = `${img.id}:${altLang}`;
+            const value = drafts[draftKey] ?? "";
+            const missing = !value.trim();
+            return (
+            <div key={img.id} className="flex flex-col sm:flex-row gap-3 items-start p-3 rounded-lg bg-secondary/40">
               <div className="w-20 h-20 rounded-md overflow-hidden bg-background shrink-0">
                 <img src={img.image_url} alt={img.alt_text} className="w-full h-full object-cover" />
               </div>
-              <div className="flex-1 space-y-1.5 min-w-0">
+              <div className="flex-1 space-y-1.5 min-w-0 w-full">
                 <div className="flex gap-1.5">
                   <Input
                     value={img.image_url}
@@ -203,17 +215,37 @@ const CollectionSection = ({
                     <ImageIcon size={14} />
                   </Button>
                 </div>
-                <div className="flex gap-1.5">
-                  <Input
-                    value={drafts[img.id] ?? ""}
-                    onChange={(e) => setDrafts((p) => ({ ...p, [img.id]: e.target.value }))}
-                    onBlur={() => updateAlt(img)}
-                    placeholder="Alt text (for SEO & accessibility)"
-                    className="text-sm"
-                  />
+                <label className="text-[11px] text-muted-foreground block" htmlFor={`alt-${img.id}`}>
+                  {L("altLabel", { l: langUpper })}
+                </label>
+                <Input
+                  id={`alt-${img.id}`}
+                  value={value}
+                  maxLength={MAX_ALT_LENGTH}
+                  onChange={(e) => setDrafts((p) => ({ ...p, [draftKey]: e.target.value }))}
+                  onBlur={() => updateAlt(img)}
+                  placeholder={L("altPlaceholder")}
+                  className="text-sm"
+                />
+                <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                  {(["es", "en", "ru"] as AltLang[]).map((l) => (
+                    <span
+                      key={l}
+                      className={`px-1.5 py-0.5 rounded ${status[l] ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
+                    >
+                      {l.toUpperCase()}
+                      {status[l] ? " ✓" : " —"}
+                    </span>
+                  ))}
+                  {missing && (
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <AlertTriangle size={11} />
+                      {altLang === "es" ? L("missingEs") : L("missing", { l: langUpper })}
+                    </span>
+                  )}
                 </div>
               </div>
-              <div className="flex flex-col gap-1 shrink-0">
+              <div className="flex sm:flex-col gap-1 shrink-0">
                 <Button size="sm" variant="ghost" onClick={() => move(img, -1)} disabled={i === 0 || !!busy} className="h-7 w-7 p-0">
                   <ChevronUp size={14} />
                 </Button>
@@ -225,14 +257,15 @@ const CollectionSection = ({
                 </Button>
               </div>
             </div>
-          ))}
+          );})}
 
           <Button size="sm" variant="outline" onClick={() => setPickerForNew(true)} disabled={busy === "new"} className="w-full">
             {busy === "new" ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Plus size={14} className="mr-1.5" />}
-            Add image
+            {L("addImage")}
           </Button>
         </div>
       </CollapsibleContent>
+
 
       <ImagePicker
         open={pickerForNew}
