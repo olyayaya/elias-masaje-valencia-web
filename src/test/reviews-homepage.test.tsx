@@ -183,11 +183,11 @@ describe("localized review text on the public page", () => {
 
   afterEach(() => window.history.pushState({}, "", "/"));
 
-  it("shows the Spanish text and the note on the Spanish page", () => {
+  it("shows the Spanish text without a translation note on the Spanish page", () => {
     state.value.items = [translated];
     mount();
     expect(screen.getByTestId("review-card").textContent).toContain("¡Un masaje fantástico de Elias!");
-    expect(screen.getByTestId("review-translated-note").textContent).toBe("Traducido del original");
+    expect(screen.queryByTestId("review-translated-note")).toBeNull();
   });
 
   it("shows the untouched original and no note in the original language", () => {
@@ -198,19 +198,20 @@ describe("localized review text on the public page", () => {
     expect(screen.queryByTestId("review-translated-note")).toBeNull();
   });
 
-  it("shows the Russian text and the Russian note on the Russian page", () => {
+  it("shows the Russian text without a translation note on the Russian page", () => {
     window.history.pushState({}, "", "/ru");
     state.value.items = [translated];
     mount();
     expect(screen.getByTestId("review-card").textContent).toContain("Потрясающий массаж у Элиаса!");
-    expect(screen.getByTestId("review-translated-note").textContent).toBe("Переведено с оригинала");
+    expect(screen.queryByTestId("review-translated-note")).toBeNull();
   });
 
-  it("uses the exact English note on the English page", () => {
+  it("shows the English text without a translation note on the English page", () => {
     window.history.pushState({}, "", "/en");
     state.value.items = [review({ id: "e", review_text: "Genial", original_language: "es", review_text_en: "Great" })];
     mount();
-    expect(screen.getByTestId("review-translated-note").textContent).toBe("Translated from the original");
+    expect(screen.getByTestId("review-card").textContent).toContain("Great");
+    expect(screen.queryByTestId("review-translated-note")).toBeNull();
   });
 
   it("formats the date with the page language, not the browser locale", () => {
@@ -248,7 +249,7 @@ describe("localized review text on the public page", () => {
     expect(screen.queryByTestId("review-translated-note")).toBeNull();
   });
 
-  it("labels a mixed-language original as translated in every language", () => {
+  it("shows a mixed-language original without a translation note in any language", () => {
     state.value.items = [
       review({
         id: "m",
@@ -261,7 +262,7 @@ describe("localized review text on the public page", () => {
     ];
     mount();
     expect(screen.getByTestId("review-card").textContent).toContain("Muy buen servicio");
-    expect(screen.getByTestId("review-translated-note")).toBeTruthy();
+    expect(screen.queryByTestId("review-translated-note")).toBeNull();
   });
 
   it("clamps on the length of the shown translation, not the original", () => {
