@@ -422,7 +422,9 @@ const DashboardMedia = () => {
           )}
           <p className="text-sm text-muted-foreground">
             {uploading
-              ? (uploadLabel ? L("uploadingFile", { f: uploadLabel, p: uploadPct }) : L("uploading"))
+              ? (uploadLabel
+                  ? L(uploadPhase === "processing" ? "removingAudio" : "uploadingFile", { f: uploadLabel, p: uploadPct })
+                  : L("uploading"))
               : <>{L("dropHere")} <span className="text-foreground underline">{L("browse")}</span></>}
           </p>
           {uploading && uploadAbort.current && (
@@ -443,6 +445,29 @@ const DashboardMedia = () => {
             onChange={(e) => { if (e.target.files) void handleUpload(e.target.files); e.target.value = ""; }}
           />
         </div>
+
+        {/* Video-only preprocessing option. Clicks stay out of the drop zone. */}
+        <div className="mt-4 flex flex-wrap items-start gap-3">
+          <Switch
+            id="remove-audio"
+            checked={removeAudio}
+            onCheckedChange={(v) => setRemoveAudio(Boolean(v))}
+            disabled={uploading}
+            aria-describedby="remove-audio-hint"
+          />
+          <div className="flex-1 min-w-[12rem]">
+            <Label htmlFor="remove-audio" className="text-sm cursor-pointer">
+              <span className="inline-flex items-center gap-1.5">
+                <VolumeX size={14} aria-hidden="true" />
+                {L("removeAudio")}
+              </span>
+            </Label>
+            <p id="remove-audio-hint" className="text-xs text-muted-foreground/80 mt-1">
+              {L("removeAudioHint")}
+            </p>
+          </div>
+        </div>
+
       </DashboardCard>
 
       <DashboardCard
