@@ -25,9 +25,23 @@ CREATE TABLE IF NOT EXISTS public.reviews (
   -- placeholder author.
   author_name       text NOT NULL CHECK (btrim(author_name) <> '' AND length(author_name) <= 200),
   rating            integer NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  -- The original, exactly as the customer wrote it. Never edited, never replaced
+  -- by a translation.
   review_text       text NOT NULL CHECK (btrim(review_text) <> '' AND length(review_text) <= 8000),
+  -- Language of `review_text`. Lowercase BCP-47-ish tag so a future locale
+  -- ("pt-br") fits without another migration.
+  original_language text CHECK (
+    original_language IS NULL
+    OR original_language ~ '^[a-z]{2,3}(-[a-z0-9]{2,8})*$'
+  ),
+  -- Human-made translations, one column per site language. NULL means "no
+  -- translation stored" and the site falls back to the original.
+  review_text_es    text CHECK (review_text_es IS NULL OR (btrim(review_text_es) <> '' AND length(review_text_es) <= 8000)),
+  review_text_en    text CHECK (review_text_en IS NULL OR (btrim(review_text_en) <> '' AND length(review_text_en) <= 8000)),
+  review_text_ru    text CHECK (review_text_ru IS NULL OR (btrim(review_text_ru) <> '' AND length(review_text_ru) <= 8000)),
   reviewed_at       timestamptz,
   original_url      text CHECK (original_url IS NULL OR original_url ~ '^https://'),
+
   visible           boolean NOT NULL DEFAULT true,
   pinned            boolean NOT NULL DEFAULT false,
   -- Same range the dashboard's priority input allows.
