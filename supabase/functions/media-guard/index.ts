@@ -12,9 +12,14 @@ import {
   validateName,
   validateOutputType,
   validateVideoOutputType,
+  validateVideoSourceName,
+  validateStagedName,
   validateRenameExtension,
+  backupNameFor,
   SCANS,
 } from "./rules.ts";
+import { promoteSameName } from "./promote.ts";
+
 
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
