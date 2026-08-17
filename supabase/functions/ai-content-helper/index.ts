@@ -113,7 +113,29 @@ Source (${langNames[sourceLang]}): "${text}"`;
 
     const data = await response.json();
     const result = data.choices?.[0]?.message?.content?.trim() || "";
+
+    if (expectJson) {
+      const raw = result.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        console.error("translate_alt: model did not return JSON");
+        return json({ error: "Translation failed. Please try again." }, 502);
+      }
+      const translations: Record<string, string> = {};
+      for (const l of LANGS) {
+        const v = parsed[l];
+        if (typeof v === "string" && v.trim()) translations[l] = v.trim().slice(0, MAX_ALT);
+      }
+      if (Object.keys(translations).length === 0) {
+        return json({ error: "Translation failed. Please try again." }, 502);
+      }
+      return json({ translations });
+    }
+
     return json({ result });
+
   } catch (error) {
     console.error("Edge function error:", error);
     return json({ error: "Internal server error." }, 500);
