@@ -52,8 +52,20 @@ const pendingTable = <Row, Insert = Partial<Row>>(name: string): PendingTable<Ro
 
 /* --------------------------------------------------------------- rows --- */
 
-export const REVIEW_SOURCES = ["google", "tripadvisor", "manual"] as const;
+/**
+ * Sources the site is licensed to store and display.
+ *
+ * TripAdvisor is deliberately absent: their Content API terms forbid selectively
+ * filtering / sorting their reviews and commingling them with third-party
+ * reviews, which is exactly what this section does. TripAdvisor content is
+ * therefore never imported, stored, filtered or shown here — only linked.
+ */
+export const REVIEW_SOURCES = ["google", "manual"] as const;
 export type ReviewSource = (typeof REVIEW_SOURCES)[number];
+
+/** Public TripAdvisor profile. A link target only — never a content source. */
+export const TRIPADVISOR_PROFILE_URL =
+  "https://www.tripadvisor.com/Attraction_Review-g187529-d34031094-Reviews-Elias_Massage_Valencia-Valencia_Province_of_Valencia_Valencian_Community.html";
 
 export const REVIEW_SORTS = ["newest", "oldest", "rating_high", "rating_low", "manual"] as const;
 export type ReviewSort = (typeof REVIEW_SORTS)[number];
@@ -102,7 +114,7 @@ export interface ReviewDisplaySettingsRow {
 export type ReviewSyncStatus = "never" | "ok" | "error" | "not_configured" | "rate_limited";
 
 export interface ReviewSyncStateRow {
-  source: "google" | "tripadvisor";
+  source: "google";
   last_attempt_at: string | null;
   last_success_at: string | null;
   status: ReviewSyncStatus;
