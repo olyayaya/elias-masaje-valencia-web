@@ -142,29 +142,7 @@ async function readHead(admin: Client, name: string, bytes = 64): Promise<Uint8A
   if (error || !data?.signedUrl) throw new Error(`Could not read uploaded file: ${error?.message ?? "no url"}`);
   const res = await fetch(data.signedUrl, { headers: { Range: `bytes=0-${bytes - 1}` } });
   if (!res.ok && res.status !== 206) throw new Error(`Could not read uploaded file (${res.status})`);
-
-  const body = res.body;
-  if (!body) return new Uint8Array(0);
-  const reader = body.getReader();
-  const head = new Uint8Array(bytes);
-  let total = 0;
-  try {
-    while (total < bytes) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value?.length) continue;
-      // Only the bytes we promised are ever retained: a server that ignores Range can hand
-      // us a 10 MB first chunk, and all but the first `bytes` of it are dropped right here.
-      const take = Math.min(value.length, bytes - total);
-      head.set(value.subarray(0, take), total);
-      total += take;
-    }
-  } finally {
-    // Stops the download immediately — nothing beyond the head is ever transferred.
-    await reader.cancel().catch(() => undefined);
-  }
-
-  return head.subarray(0, total);
+  return await readHeadFromStream(res.body, bytes);
 }
 
 
