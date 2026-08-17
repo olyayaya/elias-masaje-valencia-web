@@ -86,6 +86,18 @@ Deno.serve(async (req) => {
     if (variant === "3") {
       return new Response(new Blob([bytes], { type: "application/xml" }), { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8", "content-disposition": "inline; filename=\"sitemap.xml\"" } });
     }
+    if (variant === "5") {
+      return new Response("hello world", { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8" } });
+    }
+    if (variant === "6") {
+      return new Response("\uFEFF" + xml, { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8" } });
+    }
+    if (variant === "7") {
+      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/rss+xml; charset=utf-8" } });
+    }
+    if (variant === "8") {
+      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8", "content-disposition": "attachment; filename=\"sitemap.xml\"" } });
+    }
     if (variant === "4") {
       return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/xml", "content-length": String(bytes.byteLength) } });
     }
