@@ -141,11 +141,53 @@ const CollectionSection = ({
     setBusy(img.id + "-alt");
     const patch = { [col]: next } as { alt_text?: string; alt_text_en?: string; alt_text_ru?: string };
     const { error } = await supabase.from("page_images").update(patch).eq("id", img.id);
-    if (error) toast.error(L("saveFailed"));
-    else toast.success(L("saved"));
+    if (error) {
+      toast.error(L("saveFailed"));
+      setBusy(null);
+      onChange();
+      return;
+    }
+    toast.success(L("saved"));
     setBusy(null);
     onChange();
+
+    // Auto-translate only this row, only after an explicit save action.
+    if (!autoTranslate || !next.trim()) return;
+    setTranslating(img.id);
+    try {
+      const translations = await translateAlt(next, altLang as AltLang);
+      setReview({
+        img,
+        source: altLang as AltLang,
+        sourceValue: next,
+        current: {
+          es: altLang === "es" ? next : img.alt_text ?? "",
+          en: altLang === "en" ? next : img.alt_text_en ?? "",
+          ru: altLang === "ru" ? next : img.alt_text_ru ?? "",
+        },
+        translations,
+      });
+    } catch {
+      toast.error(L("translateFailed"));
+    }
+    setTranslating(null);
   };
+
+  /** Writes the three reviewed values in one update; source alt is already saved. */
+  const saveReviewed = async (values: AltTriple) => {
+    if (!review) return;
+    setBusy(review.img.id + "-alt");
+    const { error } = await supabase
+      .from("page_images")
+      .update({ alt_text: values.es, alt_text_en: values.en, alt_text_ru: values.ru })
+      .eq("id", review.img.id);
+    setBusy(null);
+    if (error) toast.error(L("saveFailed"));
+    else toast.success(L("saved"));
+    setReview(null);
+    onChange();
+  };
+
 
   const remove = async (id: string) => {
     if (!confirm(L("confirmRemove"))) return;
