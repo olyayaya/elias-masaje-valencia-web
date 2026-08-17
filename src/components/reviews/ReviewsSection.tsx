@@ -52,7 +52,7 @@ const ReviewCard = ({ review, clone = false }: { review: Review; clone?: boolean
   // The page language decides which stored text is shown; the original is the
   // fallback and is never overwritten.
   const siteLocale = isSiteLocale(locale) ? locale : "es";
-  const { text, translated } = localizedReviewText(review, siteLocale);
+  const { text } = localizedReviewText(review, siteLocale);
   const longText = text.length > CLAMP_CHARS;
   // Display-only: the stored name keeps its original characters.
   const authorName = normalizeAuthorName(review.author_name);
@@ -110,14 +110,6 @@ const ReviewCard = ({ review, clone = false }: { review: Review; clone?: boolean
             <ExternalLink size={11} aria-hidden="true" />
             {t.testimonials.openOriginal}
           </a>
-        )}
-        {translated && (
-          <span
-            className="text-[10px] font-body text-muted-foreground/50"
-            data-testid={clone ? undefined : "review-translated-note"}
-          >
-            {t.testimonials.translatedNote}
-          </span>
         )}
       </footer>
     </li>

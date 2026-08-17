@@ -101,7 +101,6 @@ export const es: Translations = {
     next: "Reseñas siguientes",
     ratingAria: "{n} de 5 estrellas",
     carouselLabel: "Reseñas de clientes",
-    translatedNote: "Traducido del original",
     openOriginal: "Ver original",
     pause: "Pausar el carrusel",
     play: "Reanudar el carrusel",

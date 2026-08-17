@@ -101,7 +101,6 @@ export const ru: Translations = {
     next: "Следующие отзывы",
     ratingAria: "{n} из 5 звёзд",
     carouselLabel: "Отзывы клиентов",
-    translatedNote: "Переведено с оригинала",
     openOriginal: "Смотреть оригинал",
     pause: "Остановить карусель",
     play: "Возобновить движение",
