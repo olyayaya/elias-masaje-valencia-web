@@ -138,6 +138,8 @@ export interface ParsedImportRow {
   review_text: string;
   reviewed_at: string | null;
   original_url: string | null;
+  /** From `pinned`/`featured` in the file. Visibility is never taken from the file. */
+  pinned: boolean;
 }
 
 export type PreviewStatus = "new" | "duplicate_file" | "duplicate_existing" | "invalid";
@@ -275,6 +277,12 @@ const pick = (rec: Record<string, unknown>, field: keyof PreviewRow["raw"]) => {
   return "";
 };
 
+/** Booleans arrive as real booleans in JSON and as text in CSV. */
+const truthy = (v: unknown): boolean => {
+  if (typeof v === "boolean") return v;
+  return ["true", "1", "yes", "si", "sí", "да"].includes(clean(v).toLowerCase());
+};
+
 const normalizeRow = (rec: Record<string, unknown>, line: number): PreviewRow => {
   const raw = {
     author_name: pick(rec, "author_name"),
@@ -303,7 +311,7 @@ const normalizeRow = (rec: Record<string, unknown>, line: number): PreviewRow =>
     else reviewedAt = d.toISOString();
   }
 
-  const original = httpsOnly(clean(rec.original_url ?? rec.url ?? rec.link));
+  const original = httpsOnly(clean(rec.original_url ?? rec.source_url ?? rec.url ?? rec.link));
   if (original.bad) issues.push({ code: "url_invalid" });
 
   if (issues.length) return { line, status: "invalid", row: null, raw, issues };
@@ -314,6 +322,7 @@ const normalizeRow = (rec: Record<string, unknown>, line: number): PreviewRow =>
     review_text: raw.review_text,
     reviewed_at: reviewedAt,
     original_url: original.url,
+    pinned: truthy(rec.pinned ?? rec.featured),
     dedupe_key: dedupeKey({ author_name: raw.author_name, review_text: raw.review_text, reviewed_at: reviewedAt }),
   };
   return { line, status: "new", row, raw, issues: [] };

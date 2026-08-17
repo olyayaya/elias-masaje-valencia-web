@@ -225,3 +225,57 @@ describe("no external review integration anywhere", () => {
     expect(readFileSync("src/lib/reviews.ts", "utf8")).not.toMatch(/allowed_sources/);
   });
 });
+
+describe("owner JSON wrapper format", () => {
+  const file = JSON.stringify({
+    version: 1,
+    reviews: [
+      {
+        source: "google",
+        external_id: null,
+        author: "Carlos",
+        rating: 5,
+        title: null,
+        text: "Отзыв",
+        published_at: "2026-07-15",
+        language: "es",
+        source_url: "https://maps.example/review",
+        is_enabled: true,
+        featured: true,
+      },
+    ],
+  });
+
+  it("maps author/text/published_at/source_url/featured", () => {
+    const preview = parseReviewImport(file);
+    expect(preview.fileIssues).toEqual([]);
+    expect(preview.counts.valid).toBe(1);
+    const row = preview.rows[0].row!;
+    expect(row.author_name).toBe("Carlos");
+    expect(row.review_text).toBe("Отзыв");
+    expect(row.rating).toBe(5);
+    expect(row.reviewed_at).toBe(new Date("2026-07-15").toISOString());
+    expect(row.original_url).toBe("https://maps.example/review");
+    expect(row.pinned).toBe(true);
+  });
+
+  it("never derives visibility from is_enabled and stores no provider fields", () => {
+    const row = parseReviewImport(file).rows[0].row!;
+    expect(row).not.toHaveProperty("visible");
+    expect(row).not.toHaveProperty("is_enabled");
+    expect(row).not.toHaveProperty("source");
+    expect(row).not.toHaveProperty("external_id");
+    expect(row).not.toHaveProperty("title");
+    expect(row).not.toHaveProperty("language");
+  });
+
+  it("rejects a non-https source_url", () => {
+    const bad = JSON.stringify({ reviews: [{ author: "A", rating: 5, text: "T", source_url: "http://x.test/a" }] });
+    expect(parseReviewImport(bad).rows[0].issues.map((i) => i.code)).toContain("url_invalid");
+  });
+
+  it("treats featured=false as not pinned", () => {
+    const off = JSON.stringify({ reviews: [{ author: "B", rating: 5, text: "T2", featured: false }] });
+    expect(parseReviewImport(off).rows[0].row!.pinned).toBe(false);
+  });
+});
