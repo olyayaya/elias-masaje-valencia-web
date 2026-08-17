@@ -486,6 +486,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      count_media_history_refs: { Args: { _needle: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
