@@ -1,10 +1,20 @@
 import { useState, useEffect, useRef } from "react";
-import { Upload, Trash2, Loader2, Copy, Check, AlertTriangle } from "lucide-react";
+import { Upload, Trash2, Loader2, Copy, Check, AlertTriangle, Sparkles, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { optimizeImage, getOptimizedExtension, formatFileSize } from "@/lib/image-utils";
-import { checkMediaUsage, deleteMediaFile, type MediaUsage } from "@/lib/media-usage";
+import {
+  checkMediaUsage,
+  deleteMediaFile,
+  renameMediaFile,
+  replaceMediaFile,
+  type MediaUsage,
+} from "@/lib/media-usage";
+import { analyzeCompression, blobToBase64 } from "@/lib/media-compress";
 import { toast } from "sonner";
 import DashboardCard from "./DashboardCard";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +49,11 @@ const DashboardMedia = () => {
   const [checking, setChecking] = useState<string | null>(null);
   const [target, setTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [compressing, setCompressing] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<MediaFile | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   const fetchFiles = async () => {
     const { data } = await supabase.storage.from("media").list("", {
@@ -82,6 +97,70 @@ const DashboardMedia = () => {
     }
     setUploading(false);
     fetchFiles();
+  };
+
+  const handleCompress = async (file: MediaFile) => {
+    setCompressing(file.name);
+    try {
+      const outcome = await analyzeCompression(file.url, file.name);
+      if (outcome.status === "unsupported") {
+        toast.error(`Cannot compress ${file.name} — ${outcome.reason}`);
+        return;
+      }
+      if (outcome.status === "already") {
+        toast.success("Image is already compressed — nothing was changed");
+        return;
+      }
+      const result = await replaceMediaFile({
+        fileName: file.name,
+        newName: outcome.newName,
+        contentBase64: await blobToBase64(outcome.blob),
+        contentType: outcome.blob.type,
+        originalSize: outcome.originalSize,
+      });
+      toast.success(
+        `Compressed: ${formatFileSize(outcome.originalSize)} → ${formatFileSize(outcome.newSize)} (−${outcome.savedPercent}%)` +
+          (result.updatedReferences ? ` · ${result.updatedReferences} link(s) updated` : "")
+      );
+      await fetchFiles();
+    } catch (err: any) {
+      toast.error(err.message || "Compression failed");
+    } finally {
+      setCompressing(null);
+    }
+  };
+
+  const openRename = (file: MediaFile) => {
+    setRenameTarget(file);
+    setRenameValue(file.name);
+    setRenameError(null);
+  };
+
+  const submitRename = async () => {
+    if (!renameTarget) return;
+    const next = renameValue.trim();
+    const currentExt = renameTarget.name.match(/\.[^.]+$/)?.[0] ?? "";
+    if (!next) return setRenameError("Name cannot be empty");
+    if (/[\\/]|\.\./.test(next)) return setRenameError("Name cannot contain paths");
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(next)) return setRenameError("Use letters, numbers, dot, dash and underscore only");
+    if (!next.toLowerCase().endsWith(currentExt.toLowerCase())) return setRenameError(`Keep the ${currentExt} extension — change format via smart compression`);
+    if (next === renameTarget.name) return setRenameError("New name is identical");
+    if (files.some((f) => f.name === next)) return setRenameError("A file with that name already exists");
+
+    setRenaming(true);
+    setRenameError(null);
+    try {
+      const result = await renameMediaFile(renameTarget.name, next);
+      toast.success(
+        `Renamed to ${next}` + (result.updatedReferences ? ` · ${result.updatedReferences} link(s) updated` : "")
+      );
+      setRenameTarget(null);
+      await fetchFiles();
+    } catch (err: any) {
+      setRenameError(err.message || "Rename failed");
+    } finally {
+      setRenaming(false);
+    }
   };
 
   const requestDelete = async (name: string) => {
@@ -180,6 +259,23 @@ const DashboardMedia = () => {
                 <p className="text-sm text-foreground truncate">{f.name}</p>
                 <span className="text-xs text-muted-foreground">{formatSize(f.size)}</span>
               </div>
+              <button
+                onClick={() => void handleCompress(f)}
+                disabled={compressing === f.name}
+                aria-label={`Smart compress ${f.name}`}
+                title="Smart compress"
+                className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary disabled:opacity-50"
+              >
+                {compressing === f.name ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              </button>
+              <button
+                onClick={() => openRename(f)}
+                aria-label={`Rename ${f.name}`}
+                title="Rename"
+                className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary"
+              >
+                <Pencil size={14} />
+              </button>
               <button onClick={() => copyUrl(f.url)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary" title="Copy URL">
                 {copied === f.url ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
               </button>
@@ -196,6 +292,40 @@ const DashboardMedia = () => {
           ))}
         </div>
       </DashboardCard>
+
+      <Dialog open={!!renameTarget} onOpenChange={(open) => { if (!open && !renaming) setRenameTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename file</DialogTitle>
+            <DialogDescription>
+              All links to this image in your content are updated automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Current name</p>
+              <p className="text-sm break-all">{renameTarget?.name}</p>
+            </div>
+            <div>
+              <label htmlFor="media-rename" className="text-xs text-muted-foreground mb-1 block">New name</label>
+              <Input
+                id="media-rename"
+                value={renameValue}
+                onChange={(e) => { setRenameValue(e.target.value); setRenameError(null); }}
+                disabled={renaming}
+              />
+            </div>
+            {renameError && <p className="text-xs text-destructive">{renameError}</p>}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setRenameTarget(null)} disabled={renaming}>Cancel</Button>
+            <Button size="sm" onClick={() => void submitRename()} disabled={renaming}>
+              {renaming ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+              Rename
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!target} onOpenChange={(open) => { if (!open && !deleting) setTarget(null); }}>
         <AlertDialogContent>
