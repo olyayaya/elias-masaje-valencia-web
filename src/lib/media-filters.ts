@@ -53,10 +53,21 @@ const usageStateOf = (name: string, usage: Record<string, number> | null): Usage
   return usage[name] > 0 ? "used" : "unused";
 };
 
+/**
+ * Optimization state of a file. Anything that is neither a photo nor a video can never be
+ * optimized, so it reports "unsupported" without needing an analysis pass; everything else
+ * stays "notAnalyzed" until a compression or conversion has actually measured it.
+ */
+export const optStateOf = (
+  file: LibraryFile,
+  optimization: Record<string, OptState>,
+): OptState => optimization[file.name] ?? (kindOf(file) === "other" ? "unsupported" : "notAnalyzed");
+
 const toTime = (v: string) => {
   const t = Date.parse(v);
   return Number.isNaN(t) ? null : t;
 };
+
 
 export interface FilterContext {
   /** filename → number of live references. `null` when the batch lookup has not run. */
