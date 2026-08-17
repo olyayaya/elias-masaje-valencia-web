@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { dashboardStrings } from "@/i18n/dashboard";
+import { useDashboardT } from "@/i18n/dashboard";
 
 const source = readFileSync("src/pages/Dashboard.tsx", "utf8");
 
@@ -17,7 +17,7 @@ describe("dashboard section order", () => {
 });
 
 describe("reviews naming", () => {
-  const labels = Object.entries(dashboardStrings).map(([lang, s]) => [lang, s.sections.testimonials] as const);
+  const labels = (["es", "en", "ru"] as const).map((lang) => [lang, useDashboardT(lang).sections.testimonials] as const);
 
   it("uses Reseñas / Reviews / Отзывы", () => {
     expect(Object.fromEntries(labels)).toMatchObject({
