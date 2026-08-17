@@ -2,10 +2,10 @@
  * Typed access layer for the review tables that ship ahead of their migration.
  *
  * `src/integrations/supabase/types.ts` is generated from the *applied* schema, so
- * it cannot describe `reviews`, `review_display_settings` or `review_sync_state`
- * until the pending migration is applied. Rather than scattering `any` through
- * the app, the row shapes are declared once here and the query builder is given
- * a small, honest surface — the same calls the client really supports.
+ * it cannot describe `reviews` or `review_display_settings` until the pending
+ * migration is applied. Rather than scattering `any` through the app, the row
+ * shapes are declared once here and the query builder is given a small, honest
+ * surface — the same calls the client really supports.
  *
  * When the migration is applied and types are regenerated, these accessors can be
  * swapped for `supabase.from("reviews")` without touching any caller.
@@ -53,12 +53,14 @@ const pendingTable = <Row, Insert = Partial<Row>>(name: string): PendingTable<Ro
 /* --------------------------------------------------------------- rows --- */
 
 /**
- * Sources the site is licensed to store and display.
+ * Sources a review can carry. Both are *manual* entries: the owner imports an
+ * export or a hand-kept list of reviews they hold the rights to. There is no
+ * provider API, no crawler and no background job anywhere in this app — the only
+ * way a review reaches the database is an admin-confirmed CSV/JSON import.
  *
  * TripAdvisor is deliberately absent: their Content API terms forbid selectively
  * filtering / sorting their reviews and commingling them with third-party
- * reviews, which is exactly what this section does. TripAdvisor content is
- * therefore never imported, stored, filtered or shown here — only linked.
+ * reviews. TripAdvisor content is never imported, stored, filtered or shown.
  */
 export const REVIEW_SOURCES = ["google", "manual"] as const;
 export type ReviewSource = (typeof REVIEW_SOURCES)[number];
@@ -86,7 +88,8 @@ export interface ReviewRow {
   manual_priority: number;
   created_at: string;
   updated_at: string;
-  last_synced_at: string | null;
+  /** When this row last arrived through a manual import. */
+  imported_at: string | null;
 }
 
 export interface ReviewInsert {
@@ -99,7 +102,7 @@ export interface ReviewInsert {
   review_language?: string | null;
   reviewed_at?: string | null;
   original_url?: string | null;
-  last_synced_at?: string | null;
+  imported_at?: string | null;
 }
 
 export interface ReviewDisplaySettingsRow {
@@ -111,23 +114,7 @@ export interface ReviewDisplaySettingsRow {
   updated_at: string;
 }
 
-export type ReviewSyncStatus = "never" | "ok" | "error" | "not_configured" | "rate_limited";
-
-export interface ReviewSyncStateRow {
-  source: "google";
-  last_attempt_at: string | null;
-  last_success_at: string | null;
-  status: ReviewSyncStatus;
-  imported_count: number;
-  updated_count: number;
-  skipped_count: number;
-  error_code: string | null;
-  error_message: string | null;
-  updated_at: string;
-}
-
 /* ----------------------------------------------------------- accessors --- */
 
 export const reviewsTable = () => pendingTable<ReviewRow, ReviewInsert>("reviews");
 export const reviewSettingsTable = () => pendingTable<ReviewDisplaySettingsRow>("review_display_settings");
-export const reviewSyncStateTable = () => pendingTable<ReviewSyncStateRow>("review_sync_state");
