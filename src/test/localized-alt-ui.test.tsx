@@ -66,6 +66,7 @@ import { I18nProvider } from "@/i18n/context";
 import { usePageImages } from "@/hooks/use-page-images";
 import DashboardCarousels from "@/components/dashboard/DashboardCarousels";
 import ImageAltDialog from "@/components/dashboard/ImageAltDialog";
+import { translateAlt } from "@/lib/alt-translate";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
