@@ -103,7 +103,8 @@ describe("gallery picker multi-select", () => {
     expect(within(dialog).getByText(/3 selected/)).toBeTruthy();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Clear" }));
-    expect(within(dialog).queryByRole("button", { name: /^Add/ })).toBeNull();
+    const confirm = within(dialog).getByRole("button", { name: "Add 0" }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
   });
 
   it("stays single-select for replacement and poster pickers", async () => {
