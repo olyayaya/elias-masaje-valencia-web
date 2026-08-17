@@ -89,7 +89,7 @@ export function applyFilters(
       if (to !== null && t > to) return false;
     }
     if (f.usage !== "all" && usageStateOf(file.name, ctx.usage) !== f.usage) return false;
-    if (f.opt !== "all" && (ctx.optimization[file.name] ?? "notAnalyzed") !== f.opt) return false;
+    if (f.opt !== "all" && optStateOf(file, ctx.optimization) !== f.opt) return false;
     return true;
   });
 
