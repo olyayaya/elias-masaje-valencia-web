@@ -27,10 +27,19 @@ export const ALLOWED_OUTPUT: Record<string, string[]> = {
   "image/png": ["png"],
 };
 
-/** Rename may only change the basename — format changes must go through compression. */
+/** Containers the local converter may commit. */
+export const ALLOWED_VIDEO_OUTPUT: Record<string, string[]> = {
+  "video/mp4": ["mp4"],
+  "video/webm": ["webm"],
+};
+
+/** Video objects are committed by direct resumable upload, so this bound is generous. */
+export const MAX_VIDEO_BYTES = 250 * 1024 * 1024;
+
+/** Rename may only change the basename — format changes must go through conversion. */
 export function validateRenameExtension(oldName: string, newName: string): string | null {
   if (extOf(oldName) !== extOf(newName)) {
-    return `Keep the .${extOf(oldName)} extension — change format via smart compression`;
+    return `Keep the .${extOf(oldName)} extension — change format via smart compression or video conversion`;
   }
   return null;
 }
@@ -40,6 +49,29 @@ export function validateOutputType(contentType: string, newName: string): string
   if (!allowed) return "Unsupported output format";
   if (!allowed.includes(extOf(newName))) return `Extension .${extOf(newName)} does not match ${contentType}`;
   return null;
+}
+
+export function validateVideoOutputType(contentType: string, newName: string): string | null {
+  const allowed = ALLOWED_VIDEO_OUTPUT[contentType];
+  if (!allowed) return "Unsupported video output format";
+  if (!allowed.includes(extOf(newName))) return `Extension .${extOf(newName)} does not match ${contentType}`;
+  return null;
+}
+
+/**
+ * Container sniffing on the first bytes of the uploaded object:
+ *  - MP4/MOV: ISO-BMFF `ftyp` box at offset 4
+ *  - WebM:    Matroska EBML magic 1A 45 DF A3
+ * Guarantees the committed bytes really are the container the extension promises.
+ */
+export function videoMagicMatches(type: string, b: Uint8Array): boolean {
+  if (type === "video/mp4") {
+    return b.length > 12 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70;
+  }
+  if (type === "video/webm") {
+    return b.length > 4 && b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3;
+  }
+  return false;
 }
 
 /** Verifies the declared MIME against the real file signature so contentType cannot be forged. */

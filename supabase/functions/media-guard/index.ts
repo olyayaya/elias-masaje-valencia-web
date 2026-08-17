@@ -6,9 +6,12 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   evaluateSaving,
   magicMatches,
+  videoMagicMatches,
   MAX_UPLOAD_BYTES,
+  MAX_VIDEO_BYTES,
   validateName,
   validateOutputType,
+  validateVideoOutputType,
   validateRenameExtension,
   SCANS,
 } from "./rules.ts";
@@ -124,6 +127,39 @@ function decodeBase64(b64: string): Uint8Array {
   return out;
 }
 
+/** Reads only the first bytes of a stored object so container sniffing never buffers a whole video. */
+async function readHead(admin: Client, name: string, bytes = 64): Promise<Uint8Array> {
+  const { data, error } = await admin.storage.from("media").createSignedUrl(name, 60);
+  if (error || !data?.signedUrl) throw new Error(`Could not read uploaded file: ${error?.message ?? "no url"}`);
+  const res = await fetch(data.signedUrl, { headers: { Range: `bytes=0-${bytes - 1}` } });
+  if (!res.ok && res.status !== 206) throw new Error(`Could not read uploaded file (${res.status})`);
+  return new Uint8Array(await res.arrayBuffer());
+}
+
+/**
+ * One pass over every scanned table that counts references for MANY filenames at once.
+ * Powers the library's used/unused filter without N round-trips.
+ */
+async function usageCounts(admin: Client, names: string[]): Promise<Record<string, number>> {
+  const counts: Record<string, number> = Object.fromEntries(names.map((n) => [n, 0]));
+  const variants = names.map((n) => ({ n, needles: nameVariants(n) }));
+  for (const scan of SCANS) {
+    const cols = Array.from(new Set(["id", ...scan.fields])).join(",");
+    const { data, error } = await admin.from(scan.table).select(cols);
+    if (error) throw new Error(`${scan.table}: ${error.message}`);
+    for (const row of (data ?? []) as Record<string, unknown>[]) {
+      for (const f of scan.fields) {
+        const value = row[f];
+        if (typeof value !== "string" || !value) continue;
+        for (const { n, needles } of variants) {
+          if (needles.some((v) => value.includes(v))) counts[n] += 1;
+        }
+      }
+    }
+  }
+  return counts;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const json = (body: unknown, status = 200) =>
@@ -148,11 +184,128 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
+    if (!["check", "delete", "rename", "replace", "usage-batch", "commit-video"].includes(action)) {
+      return json({ error: "Invalid action" }, 400);
+    }
+
+    // ---- usage-batch: one scan, many filenames (library filters) ---------
+    if (action === "usage-batch") {
+      const raw = Array.isArray(body?.fileNames) ? body.fileNames : [];
+      const names = Array.from(
+        new Set(
+          raw
+            .filter((n: unknown): n is string => typeof n === "string")
+            .map((n: string) => n.trim())
+            .filter((n: string) => n && n.length <= 300 && !n.includes("/")),
+        ),
+      ) as string[];
+      if (!names.length) return json({ error: "No file names provided" }, 400);
+      if (names.length > 500) return json({ error: "Too many file names (max 500)" }, 400);
+      return json({ usage: await usageCounts(admin, names) });
+    }
+
     const fileName = typeof body?.fileName === "string" ? body.fileName.trim() : "";
     if (!fileName || fileName.length > 300 || fileName.includes("/")) {
       return json({ error: "Invalid fileName" }, 400);
     }
-    if (!["check", "delete", "rename", "replace"].includes(action)) return json({ error: "Invalid action" }, 400);
+
+    // ---- commit-video: promote a staged upload over an existing object ---
+    if (action === "commit-video") {
+      const stagedName = typeof body?.stagedName === "string" ? body.stagedName.trim() : "";
+      const newName = typeof body?.newName === "string" && body.newName.trim() ? body.newName.trim() : fileName;
+      const contentType = typeof body?.contentType === "string" ? body.contentType.toLowerCase() : "";
+      const enforceSaving = body?.enforceSaving !== false;
+
+      const stagedInvalid = validateName(stagedName);
+      if (stagedInvalid) return json({ error: `Staged file: ${stagedInvalid}` }, 400);
+      const invalidNew = validateName(newName);
+      if (invalidNew) return json({ error: invalidNew }, 400);
+      const typeError = validateVideoOutputType(contentType, newName);
+      if (typeError) {
+        await admin.storage.from("media").remove([stagedName]);
+        return json({ error: typeError }, 400);
+      }
+
+      const cleanup = async () => { await admin.storage.from("media").remove([stagedName]); };
+
+      const staged = await statObject(admin, stagedName);
+      if (!staged.found) return json({ error: "Uploaded video not found" }, 404);
+      if (staged.size > MAX_VIDEO_BYTES) {
+        await cleanup();
+        return json({ error: `Video is too large — the limit is ${MAX_VIDEO_BYTES / (1024 * 1024)} MB` }, 413);
+      }
+
+      // The bytes really in storage must match the declared container.
+      const head = await readHead(admin, stagedName);
+      if (!videoMagicMatches(contentType, head)) {
+        await cleanup();
+        return json({ error: `Uploaded data does not look like ${contentType}` }, 400);
+      }
+
+      const src = await statObject(admin, fileName);
+      if (!src.found) {
+        await cleanup();
+        return json({ error: "Source file not found" }, 404);
+      }
+      if (enforceSaving) {
+        const verdict = evaluateSaving(src.size, staged.size);
+        if (!verdict.ok) {
+          await cleanup();
+          return json({ error: verdict.message, alreadyCompressed: verdict.alreadyCompressed, originalSize: src.size, newSize: staged.size }, 409);
+        }
+      }
+
+      const renaming = newName !== fileName;
+      if (renaming && (await statObject(admin, newName)).found) {
+        await cleanup();
+        return json({ error: "A file with that name already exists" }, 409);
+      }
+
+      if (!renaming) {
+        // Same name: the old object must go before the staged copy can take its place.
+        const { error: rmOld } = await admin.storage.from("media").remove([fileName]);
+        if (rmOld) {
+          await cleanup();
+          return json({ error: rmOld.message }, 500);
+        }
+      }
+
+      const { error: copyError } = await admin.storage.from("media").copy(stagedName, newName);
+      if (copyError) {
+        // Staged object is deliberately kept so nothing is lost if the swap failed.
+        return json({ error: `${copyError.message} — the uploaded file is still available as ${stagedName}` }, 500);
+      }
+
+      let updated = 0;
+      if (renaming) {
+        try {
+          updated = await rewriteReferences(admin, fileName, newName, user.id);
+        } catch (e) {
+          await admin.storage.from("media").remove([newName]);
+          await cleanup();
+          return json({ error: `Video replacement rolled back: ${(e as Error).message}` }, 500);
+        }
+      }
+
+      const historyReferences = await countHistoryReferences(admin, fileName);
+      await cleanup();
+      let warning: string | undefined;
+      if (renaming) {
+        const { error: rmError } = await admin.storage.from("media").remove([fileName]);
+        if (rmError) warning = `Old object could not be removed: ${rmError.message}`;
+      }
+      return json({
+        fileName,
+        newName,
+        replaced: true,
+        updatedReferences: updated,
+        aliased: renaming,
+        originalSize: src.size,
+        newSize: staged.size,
+        historyReferences,
+        ...(warning ? { warning } : {}),
+      });
+    }
 
     if (action === "check" || action === "delete") {
       const usages = await findUsages(admin, fileName);

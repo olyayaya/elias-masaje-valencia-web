@@ -1,22 +1,40 @@
-import { useState, useEffect, useRef } from "react";
-import { Upload, Trash2, Loader2, Copy, Check, AlertTriangle, Sparkles, Pencil } from "lucide-react";
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
+import {
+  Upload, Trash2, Loader2, Copy, Check, AlertTriangle, Sparkles, Pencil, Film, FileQuestion, Play, X,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { optimizeImage, formatFileSize } from "@/lib/image-utils";
 import {
   checkMediaUsage,
+  checkMediaUsageBatch,
   deleteMediaFile,
   renameMediaFile,
   replaceMediaFile,
   MediaGuardError,
   type MediaUsage,
 } from "@/lib/media-usage";
-import { analyzeCompression, blobToBase64, type UnsupportedReason } from "@/lib/media-compress";
+import { analyzeCompression, blobToBase64 } from "@/lib/media-compress";
+import {
+  collisionSafeName, kindOf, countByKind, isVideoFile, UPLOAD_ACCEPT, VIDEO_MIME_BY_EXT, extOf,
+  type MediaKind,
+} from "@/lib/media-kind";
+import {
+  applyFilters, availableExtensions, DEFAULT_FILTERS,
+  type LibraryFile, type MediaFilters, type OptState,
+} from "@/lib/media-filters";
+import { MAX_CONVERT_BYTES } from "@/lib/video-convert";
+import { uploadResumable } from "@/lib/video-upload";
 import { useI18n } from "@/i18n/context";
 import { toast } from "sonner";
 import DashboardCard from "./DashboardCard";
+import MediaFilterBar from "./MediaFilterBar";
+import { COPY, makeL, REASONS, toLang } from "./media/i18n";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,13 +45,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { ConverterFile } from "./VideoConverterDialog";
 
-interface MediaFile {
-  name: string;
-  size: number;
-  url: string;
-  created_at: string;
-}
+// The ffmpeg engine lives behind this lazy boundary: opening the converter is what pulls
+// the wasm core, never a plain visit to the Library.
+const VideoConverterDialog = lazy(() => import("./VideoConverterDialog"));
 
 type DeleteTarget = {
   name: string;
@@ -41,119 +57,20 @@ type DeleteTarget = {
   historyReferences: number;
 };
 
-type Lang = "en" | "es" | "ru";
-
-const COPY = {
-  dropHere: { en: "Drop images here or", es: "Suelta imágenes aquí o", ru: "Перетащите изображения сюда или" },
-  browse: { en: "browse", es: "explora", ru: "выберите" },
-  formats: { en: "JPG, PNG, WebP", es: "JPG, PNG, WebP", ru: "JPG, PNG, WebP" },
-  uploading: { en: "Uploading…", es: "Subiendo…", ru: "Загрузка…" },
-  uploaded: { en: "Optimized & uploaded (saved {n})", es: "Optimizada y subida (ahorro {n})", ru: "Оптимизировано и загружено (экономия {n})" },
-  uploadFailed: { en: "Upload failed", es: "Error al subir", ru: "Ошибка загрузки" },
-  library: { en: "Library", es: "Biblioteca", ru: "Библиотека" },
-  files: { en: "{n} files", es: "{n} archivos", ru: "{n} файлов" },
-  compress: { en: "Smart compress", es: "Compresión inteligente", ru: "Умное сжатие" },
-  rename: { en: "Rename", es: "Renombrar", ru: "Переименовать" },
-  copyUrl: { en: "Copy URL", es: "Copiar URL", ru: "Копировать ссылку" },
-  del: { en: "Delete", es: "Eliminar", ru: "Удалить" },
-  already: { en: "Image is already compressed — nothing was changed", es: "La imagen ya está comprimida: no se cambió nada", ru: "Изображение уже сжато — ничего не изменено" },
-  compressed: { en: "Compressed: {a} → {b} (−{p}%)", es: "Comprimida: {a} → {b} (−{p}%)", ru: "Сжато: {a} → {b} (−{p}%)" },
-  linksUpdated: { en: "{n} link(s) updated", es: "{n} enlace(s) actualizados", ru: "обновлено ссылок: {n}" },
-  compressFailed: { en: "Compression failed", es: "Error al comprimir", ru: "Ошибка сжатия" },
-  cannotCompress: { en: "Cannot compress {f} — {r}", es: "No se puede comprimir {f} — {r}", ru: "Нельзя сжать {f} — {r}" },
-  renamedTo: { en: "Renamed to {n}", es: "Renombrada a {n}", ru: "Переименовано в {n}" },
-  renameFailed: { en: "Rename failed", es: "Error al renombrar", ru: "Ошибка переименования" },
-  renameTitle: { en: "Rename file", es: "Renombrar archivo", ru: "Переименовать файл" },
-  renameDesc: {
-    en: "All links to this image in your content are updated in a single transaction, and old versions in the change history keep resolving to the new name.",
-    es: "Todos los enlaces a esta imagen se actualizan en una sola transacción, y las versiones antiguas del historial siguen apuntando al nuevo nombre.",
-    ru: "Все ссылки на это изображение обновляются одной транзакцией, а старые версии в истории продолжают указывать на новое имя.",
-  },
-  currentName: { en: "Current name", es: "Nombre actual", ru: "Текущее имя" },
-  newName: { en: "New name", es: "Nombre nuevo", ru: "Новое имя" },
-  cancel: { en: "Cancel", es: "Cancelar", ru: "Отмена" },
-  close: { en: "Close", es: "Cerrar", ru: "Закрыть" },
-  errEmpty: { en: "Name cannot be empty", es: "El nombre no puede estar vacío", ru: "Имя не может быть пустым" },
-  errPaths: { en: "Name cannot contain paths", es: "El nombre no puede contener rutas", ru: "Имя не может содержать пути" },
-  errChars: { en: "Use letters, numbers, dot, dash and underscore only", es: "Usa solo letras, números, punto, guion y guion bajo", ru: "Только буквы, цифры, точка, дефис и подчёркивание" },
-  errExt: { en: "Keep the {e} extension — change format via smart compression", es: "Mantén la extensión {e}: cambia el formato con la compresión inteligente", ru: "Сохраните расширение {e} — формат меняется через умное сжатие" },
-  errSame: { en: "New name is identical", es: "El nombre nuevo es idéntico", ru: "Новое имя совпадает с текущим" },
-  errExists: { en: "A file with that name already exists", es: "Ya existe un archivo con ese nombre", ru: "Файл с таким именем уже существует" },
-  checkFailed: { en: "Couldn't verify where this file is used", es: "No se pudo comprobar dónde se usa este archivo", ru: "Не удалось проверить, где используется файл" },
-  deleted: { en: "Deleted {n}", es: "Eliminada {n}", ru: "Удалено: {n}" },
-  deleteFailed: { en: "Delete failed", es: "Error al eliminar", ru: "Ошибка удаления" },
-  nowInUse: { en: "File is now in use — deletion blocked", es: "El archivo está en uso: eliminación bloqueada", ru: "Файл используется — удаление заблокировано" },
-  inUseTitle: { en: "This file is still in use", es: "Este archivo sigue en uso", ru: "Файл всё ещё используется" },
-  deleteTitle: { en: "Delete {n}?", es: "¿Eliminar {n}?", ru: "Удалить {n}?" },
-  inUseBody: {
-    en: "“{n}” is referenced by {c} item(s). Replace the image there first — deletion is blocked to avoid breaking published content.",
-    es: "«{n}» está referenciada por {c} elemento(s). Cámbiala allí primero: la eliminación está bloqueada para no romper el contenido publicado.",
-    ru: "«{n}» используется в {c} элемент(ах). Сначала замените изображение там — удаление заблокировано, чтобы не сломать опубликованный контент.",
-  },
-  deleteBody: {
-    en: "No content references this file. Deleting it is permanent and cannot be undone.",
-    es: "Ningún contenido usa este archivo. La eliminación es permanente y no se puede deshacer.",
-    ru: "Ни один контент не ссылается на этот файл. Удаление необратимо.",
-  },
-  deletePermanently: { en: "Delete permanently", es: "Eliminar definitivamente", ru: "Удалить навсегда" },
-  historyNote: {
-    en: "Heads-up: {n} archived version(s) in the change history still reference this file. Restoring one of those after deletion would show a broken image. Live content is not affected.",
-    es: "Aviso: {n} versión(es) archivadas del historial aún usan este archivo. Restaurar una de ellas tras la eliminación mostraría una imagen rota. El contenido publicado no se ve afectado.",
-    ru: "Внимание: {n} архивных версий в истории ещё ссылаются на этот файл. Восстановление такой версии после удаления покажет битую картинку. На опубликованный контент это не влияет.",
-  },
-  aliasNote: {
-    en: "{n} archived version(s) referenced the old name — they now resolve to the new one automatically on restore.",
-    es: "{n} versión(es) archivadas usaban el nombre anterior: ahora se resuelven automáticamente al nuevo al restaurar.",
-    ru: "{n} архивных версий ссылались на старое имя — при восстановлении они автоматически указывают на новое.",
-  },
-  leftover: {
-    en: "Links updated, but the old file could not be removed: {m}",
-    es: "Enlaces actualizados, pero no se pudo eliminar el archivo antiguo: {m}",
-    ru: "Ссылки обновлены, но старый файл не удалось удалить: {m}",
-  },
-} as const;
-
-const REASONS: Record<UnsupportedReason, Record<Lang, string>> = {
-  gif: {
-    en: "GIF animation cannot be re-encoded without losing the animation",
-    es: "una animación GIF no se puede recomprimir sin perder la animación",
-    ru: "GIF-анимацию нельзя пережать без потери анимации",
-  },
-  svg: {
-    en: "SVG is a vector format and does not need raster compression",
-    es: "SVG es vectorial y no necesita compresión de mapa de bits",
-    ru: "SVG — векторный формат, растровое сжатие не требуется",
-  },
-  avif: {
-    en: "AVIF is already a modern compressed format",
-    es: "AVIF ya es un formato comprimido moderno",
-    ru: "AVIF уже современный сжатый формат",
-  },
-  notImage: { en: "this file is not an image", es: "este archivo no es una imagen", ru: "это не изображение" },
-  decode: {
-    en: "this image could not be decoded in the browser",
-    es: "esta imagen no se pudo decodificar en el navegador",
-    ru: "изображение не удалось декодировать в браузере",
-  },
-  tooLarge: {
-    en: "the re-encoded image exceeds the upload limit",
-    es: "la imagen recomprimida supera el límite de subida",
-    ru: "пережатое изображение превышает лимит загрузки",
-  },
-};
-
-const fill = (s: string, vars: Record<string, string | number>) =>
-  Object.entries(vars).reduce((acc, [k, v]) => acc.split(`{${k}}`).join(String(v)), s);
+const PAGE = 24;
+const MAX_UPLOAD_VIDEO = MAX_CONVERT_BYTES;
 
 const DashboardMedia = () => {
   const { locale } = useI18n();
-  const lang = (["en", "es", "ru"] as const).includes(locale as Lang) ? (locale as Lang) : "en";
-  const L = (k: keyof typeof COPY, vars: Record<string, string | number> = {}) =>
-    fill(COPY[k][lang] ?? COPY[k].en, vars);
+  const lang = toLang(locale);
+  const L = useMemo(() => makeL(lang), [lang]);
 
-  const [files, setFiles] = useState<MediaFile[]>([]);
+  const [files, setFiles] = useState<LibraryFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadLabel, setUploadLabel] = useState<string | null>(null);
+  const [uploadPct, setUploadPct] = useState(0);
+  const uploadAbort = useRef<AbortController | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -161,51 +78,132 @@ const DashboardMedia = () => {
   const [target, setTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [compressing, setCompressing] = useState<string | null>(null);
-  const [renameTarget, setRenameTarget] = useState<MediaFile | null>(null);
+  const [renameTarget, setRenameTarget] = useState<LibraryFile | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
 
+  const [filters, setFilters] = useState<MediaFilters>(DEFAULT_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [visible, setVisible] = useState(PAGE);
+  const [usage, setUsage] = useState<Record<string, number> | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [optimization, setOptimization] = useState<Record<string, OptState>>({});
+
+  const [converter, setConverter] = useState<ConverterFile | null>(null);
+  const [previewing, setPreviewing] = useState<LibraryFile | null>(null);
+
+  /** Lists the whole bucket (Storage caps a page at 1000 objects). */
   const fetchFiles = async () => {
-    const { data } = await supabase.storage.from("media").list("", {
-      limit: 100,
-      sortBy: { column: "created_at", order: "desc" },
-    });
-    if (data) {
-      const mapped = data
-        .filter((f) => f.name !== ".emptyFolderPlaceholder")
-        .map((f) => ({
+    const all: LibraryFile[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase.storage.from("media").list("", {
+        limit: 1000,
+        offset,
+        sortBy: { column: "created_at", order: "desc" },
+      });
+      if (error || !data) break;
+      for (const f of data) {
+        if (f.name === ".emptyFolderPlaceholder") continue;
+        all.push({
           name: f.name,
-          size: f.metadata?.size || 0,
+          size: (f.metadata?.size as number) || 0,
           url: supabase.storage.from("media").getPublicUrl(f.name).data.publicUrl,
           created_at: f.created_at || "",
-        }));
-      setFiles(mapped);
+          mimeType: (f.metadata?.mimetype as string) ?? null,
+        });
+      }
+      if (data.length < 1000) break;
     }
+    setFiles(all);
     setLoading(false);
   };
 
-  useEffect(() => { fetchFiles(); }, []);
+  useEffect(() => { void fetchFiles(); }, []);
+
+  const counts = useMemo(() => countByKind(files), [files]);
+  const extensions = useMemo(() => availableExtensions(files), [files]);
+  const filtered = useMemo(
+    () => applyFilters(files, filters, { usage, optimization }),
+    [files, filters, usage, optimization],
+  );
+  const shown = filtered.slice(0, visible);
+
+  useEffect(() => { setVisible(PAGE); }, [filters]);
+
+  const scanUsage = async () => {
+    setUsageLoading(true);
+    try {
+      const res = await checkMediaUsageBatch(files.map((f) => f.name));
+      setUsage(res.usage ?? {});
+    } catch (err) {
+      toast.error((err as Error).message || L("usageFailed"));
+    } finally {
+      setUsageLoading(false);
+    }
+  };
+
+  const markOpt = (name: string, state: OptState) =>
+    setOptimization((prev) => ({ ...prev, [name]: state }));
+
+  // ---- upload ------------------------------------------------------------
+  const uploadPhoto = async (file: File) => {
+    const optimized = await optimizeImage(file);
+    const name = collisionSafeName(
+      `${file.name.replace(/\.[^.]+$/, "")}.${optimized.ext}`,
+      files.map((f) => f.name),
+    );
+    const { error } = await supabase.storage.from("media").upload(name, optimized.blob, {
+      contentType: optimized.mime,
+      cacheControl: "3600",
+      upsert: false,
+    });
+    if (error) throw new Error(error.message);
+    markOpt(name, "optimized");
+    toast.success(L("uploaded", { n: formatFileSize(optimized.originalSize - optimized.optimizedSize) }));
+  };
+
+  const uploadVideo = async (file: File) => {
+    const name = collisionSafeName(file.name, files.map((f) => f.name));
+    const contentType = file.type || VIDEO_MIME_BY_EXT[extOf(file.name)] || "video/mp4";
+    const controller = new AbortController();
+    uploadAbort.current = controller;
+    setUploadPct(0);
+    await uploadResumable(name, file, contentType, {
+      signal: controller.signal,
+      onProgress: (sent, total) => setUploadPct(total ? Math.round((sent / total) * 100) : 0),
+    });
+    toast.success(L("uploadedVideo", { n: name }));
+  };
 
   const handleUpload = async (fileList: FileList) => {
     setUploading(true);
     for (const file of Array.from(fileList)) {
-      if (!file.type.startsWith("image/")) continue;
+      const kind = kindOf({ name: file.name, mimeType: file.type });
+      setUploadLabel(file.name);
+      setUploadPct(0);
       try {
-        const optimized = await optimizeImage(file);
-        const name = `${Date.now()}-${file.name.replace(/\.[^.]+$/, "")}.${optimized.ext}`;
-        await supabase.storage.from("media").upload(name, optimized.blob, {
-          contentType: optimized.mime,
-          cacheControl: "3600",
-          upsert: false,
-        });
-        toast.success(L("uploaded", { n: formatFileSize(optimized.originalSize - optimized.optimizedSize) }));
-      } catch (err: any) {
-        toast.error(err.message || L("uploadFailed"));
+        if (kind === "photo") {
+          await uploadPhoto(file);
+        } else if (kind === "video" || isVideoFile(file)) {
+          if (file.size > MAX_UPLOAD_VIDEO) {
+            toast.error(L("tooBig", { f: file.name, m: Math.round(MAX_UPLOAD_VIDEO / (1024 * 1024)) }));
+            continue;
+          }
+          await uploadVideo(file);
+        } else {
+          toast.error(L("skippedUnsupported", { f: file.name }));
+        }
+      } catch (err) {
+        if ((err as DOMException)?.name === "AbortError") toast.info(L("uploadCancelled"));
+        else toast.error((err as Error).message || L("uploadFailed"));
+      } finally {
+        uploadAbort.current = null;
       }
     }
     setUploading(false);
-    fetchFiles();
+    setUploadLabel(null);
+    await fetchFiles();
   };
 
   /** Reports the server outcome honestly: warning stays a warning, never a plain success. */
@@ -218,15 +216,17 @@ const DashboardMedia = () => {
     else toast.success(text);
   };
 
-  const handleCompress = async (file: MediaFile) => {
+  const handleCompress = async (file: LibraryFile) => {
     setCompressing(file.name);
     try {
       const outcome = await analyzeCompression(file.url, file.name);
       if (outcome.status === "unsupported") {
+        markOpt(file.name, "unsupported");
         toast.error(L("cannotCompress", { f: file.name, r: REASONS[outcome.reason][lang] ?? REASONS[outcome.reason].en }));
         return;
       }
       if (outcome.status === "already") {
+        markOpt(file.name, "optimized");
         toast.success(L("already"));
         return;
       }
@@ -237,6 +237,7 @@ const DashboardMedia = () => {
         contentType: outcome.contentType,
         originalSize: outcome.originalSize,
       });
+      markOpt(result.newName ?? outcome.newName, "optimized");
       reportOutcome(
         L("compressed", {
           a: formatFileSize(outcome.originalSize),
@@ -246,16 +247,20 @@ const DashboardMedia = () => {
         result,
       );
       await fetchFiles();
-    } catch (err: any) {
+    } catch (err) {
       // The server re-applies the threshold against the real stored size — respect its verdict.
-      if (err instanceof MediaGuardError && err.alreadyCompressed) toast.success(L("already"));
-      else toast.error(err.message || L("compressFailed"));
+      if (err instanceof MediaGuardError && err.alreadyCompressed) {
+        markOpt(file.name, "optimized");
+        toast.success(L("already"));
+      } else {
+        toast.error((err as Error).message || L("compressFailed"));
+      }
     } finally {
       setCompressing(null);
     }
   };
 
-  const openRename = (file: MediaFile) => {
+  const openRename = (file: LibraryFile) => {
     setRenameTarget(file);
     setRenameValue(file.name);
     setRenameError(null);
@@ -278,9 +283,10 @@ const DashboardMedia = () => {
       const result = await renameMediaFile(renameTarget.name, next);
       reportOutcome(L("renamedTo", { n: next }), result);
       setRenameTarget(null);
+      setUsage(null);
       await fetchFiles();
-    } catch (err: any) {
-      setRenameError(err.message || L("renameFailed"));
+    } catch (err) {
+      setRenameError((err as Error).message || L("renameFailed"));
     } finally {
       setRenaming(false);
     }
@@ -291,8 +297,8 @@ const DashboardMedia = () => {
     try {
       const result = await checkMediaUsage(name);
       setTarget({ name, usages: result.usages ?? [], historyReferences: result.historyReferences ?? 0 });
-    } catch (err: any) {
-      toast.error(err.message || L("checkFailed"));
+    } catch (err) {
+      toast.error((err as Error).message || L("checkFailed"));
     } finally {
       setChecking(null);
     }
@@ -306,14 +312,15 @@ const DashboardMedia = () => {
       if (result.deleted) {
         toast.success(L("deleted", { n: target.name }));
         setTarget(null);
-        fetchFiles();
+        setUsage(null);
+        await fetchFiles();
       } else {
         // Became used between check and delete
         setTarget({ name: target.name, usages: result.usages ?? [], historyReferences: result.historyReferences ?? 0 });
         toast.error(L("nowInUse"));
       }
-    } catch (err: any) {
-      toast.error(err.message || L("deleteFailed"));
+    } catch (err) {
+      toast.error((err as Error).message || L("deleteFailed"));
     } finally {
       setDeleting(false);
     }
@@ -329,6 +336,12 @@ const DashboardMedia = () => {
 
   const blocked = (target?.usages.length ?? 0) > 0;
   const iconBtn = "p-2 rounded-lg hover:bg-secondary disabled:opacity-50 shrink-0";
+  const tabs: { id: "all" | MediaKind; label: string; count: number }[] = [
+    { id: "all", label: L("all"), count: files.length },
+    { id: "photo", label: L("photos"), count: counts.photo },
+    { id: "video", label: L("videos"), count: counts.video },
+    { id: "other", label: L("other"), count: counts.other },
+  ];
 
   return (
     <div className="space-y-6">
@@ -342,9 +355,9 @@ const DashboardMedia = () => {
           onDrop={(e) => {
             e.preventDefault();
             setDragging(false);
-            if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files);
+            if (e.dataTransfer.files.length) void handleUpload(e.dataTransfer.files);
           }}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => { if (!uploading) inputRef.current?.click(); }}
         >
           {uploading ? (
             <Loader2 size={24} className="mx-auto text-muted-foreground mb-3 animate-spin" />
@@ -352,71 +365,194 @@ const DashboardMedia = () => {
             <Upload size={24} className="mx-auto text-muted-foreground/50 mb-3" />
           )}
           <p className="text-sm text-muted-foreground">
-            {uploading ? L("uploading") : <>{L("dropHere")} <span className="text-foreground underline">{L("browse")}</span></>}
+            {uploading
+              ? (uploadLabel ? L("uploadingFile", { f: uploadLabel, p: uploadPct }) : L("uploading"))
+              : <>{L("dropHere")} <span className="text-foreground underline">{L("browse")}</span></>}
           </p>
+          {uploading && uploadAbort.current && (
+            <div className="max-w-sm mx-auto mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+              <Progress value={uploadPct} />
+              <Button variant="ghost" size="sm" onClick={() => uploadAbort.current?.abort()}>
+                <X size={14} className="mr-1" />{L("cancel")}
+              </Button>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground/70 mt-1">{L("formats")}</p>
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept={UPLOAD_ACCEPT}
             multiple
             className="hidden"
-            onChange={(e) => e.target.files && handleUpload(e.target.files)}
+            onChange={(e) => { if (e.target.files) void handleUpload(e.target.files); e.target.value = ""; }}
           />
         </div>
       </DashboardCard>
 
-      <DashboardCard title={L("library")} description={L("files", { n: files.length })}>
-        <div className="divide-y divide-border">
-          {files.map((f) => (
-            <div key={f.name} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
-              <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center overflow-hidden shrink-0">
-                <img src={f.url} alt={f.name} className="w-10 h-10 rounded-lg object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              </div>
-              <div className="flex-1 min-w-[8rem]">
-                <p className="text-sm text-foreground truncate">{f.name}</p>
-                <span className="text-xs text-muted-foreground">{formatFileSize(f.size)}</span>
-              </div>
-              <div className="flex items-center gap-1 ml-auto">
-                <button
-                  onClick={() => void handleCompress(f)}
-                  disabled={compressing === f.name}
-                  aria-label={`${L("compress")} ${f.name}`}
-                  title={L("compress")}
-                  className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                >
-                  {compressing === f.name ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                </button>
-                <button
-                  onClick={() => openRename(f)}
-                  aria-label={`${L("rename")} ${f.name}`}
-                  title={L("rename")}
-                  className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                >
-                  <Pencil size={14} />
-                </button>
-                <button
-                  onClick={() => copyUrl(f.url)}
-                  aria-label={`${L("copyUrl")} ${f.name}`}
-                  title={L("copyUrl")}
-                  className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                >
-                  {copied === f.url ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                </button>
-                <button
-                  onClick={() => void requestDelete(f.name)}
-                  disabled={checking === f.name}
-                  aria-label={`${L("del")} ${f.name}`}
-                  title={L("del")}
-                  className={`${iconBtn} text-muted-foreground hover:text-destructive`}
-                >
-                  {checking === f.name ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                </button>
-              </div>
+      <DashboardCard
+        title={L("library")}
+        description={L("showing", { n: shown.length, t: filtered.length })}
+      >
+        <div className="space-y-4">
+          <Tabs value={filters.kind} onValueChange={(v) => setFilters({ ...filters, kind: v as MediaFilters["kind"] })}>
+            <TabsList>
+              {tabs.map((t) => (
+                <TabsTrigger key={t.id} value={t.id}>
+                  {t.label}
+                  <span className="ml-1.5 text-xs text-muted-foreground">{t.count}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          <MediaFilterBar
+            filters={filters}
+            onChange={setFilters}
+            extensions={extensions}
+            L={L}
+            open={filtersOpen}
+            onToggle={() => setFiltersOpen((o) => !o)}
+            usageLoaded={usage !== null}
+            usageLoading={usageLoading}
+            onScanUsage={() => void scanUsage()}
+          />
+
+          {shown.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">{L("empty")}</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {shown.map((f) => {
+                const kind = kindOf(f);
+                const refs = usage?.[f.name];
+                return (
+                  <div key={f.name} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center overflow-hidden shrink-0">
+                      {kind === "photo" ? (
+                        <img
+                          src={f.url}
+                          alt={f.name}
+                          loading="lazy"
+                          className="w-10 h-10 rounded-lg object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      ) : kind === "video" ? (
+                        <Film size={16} className="text-muted-foreground" aria-hidden="true" />
+                      ) : (
+                        <FileQuestion size={16} className="text-muted-foreground" aria-hidden="true" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-[8rem]">
+                      <p className="text-sm text-foreground truncate">{f.name}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {formatFileSize(f.size)}
+                        {refs !== undefined && (
+                          <> · {refs > 0 ? L("used") : L("unused")}</>
+                        )}
+                      </span>
+                    </div>
+                    {kind === "video" && <Badge variant="outline" className="shrink-0">{L("videos")}</Badge>}
+                    <div className="flex items-center gap-1 ml-auto">
+                      {kind === "photo" && (
+                        <button
+                          onClick={() => void handleCompress(f)}
+                          disabled={compressing === f.name}
+                          aria-label={`${L("compress")} ${f.name}`}
+                          title={L("compress")}
+                          className={`${iconBtn} text-muted-foreground hover:text-foreground`}
+                        >
+                          {compressing === f.name ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                        </button>
+                      )}
+                      {kind === "video" && (
+                        <>
+                          <button
+                            onClick={() => setPreviewing(f)}
+                            aria-label={`${L("preview")} ${f.name}`}
+                            title={L("preview")}
+                            className={`${iconBtn} text-muted-foreground hover:text-foreground`}
+                          >
+                            <Play size={14} />
+                          </button>
+                          <button
+                            onClick={() => setConverter({ name: f.name, url: f.url, size: f.size })}
+                            aria-label={`${L("convert")} ${f.name}`}
+                            title={L("convert")}
+                            className={`${iconBtn} text-muted-foreground hover:text-foreground`}
+                          >
+                            <Sparkles size={14} />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => openRename(f)}
+                        aria-label={`${L("rename")} ${f.name}`}
+                        title={L("rename")}
+                        className={`${iconBtn} text-muted-foreground hover:text-foreground`}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => copyUrl(f.url)}
+                        aria-label={`${L("copyUrl")} ${f.name}`}
+                        title={L("copyUrl")}
+                        className={`${iconBtn} text-muted-foreground hover:text-foreground`}
+                      >
+                        {copied === f.url ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                      </button>
+                      <button
+                        onClick={() => void requestDelete(f.name)}
+                        disabled={checking === f.name}
+                        aria-label={`${L("del")} ${f.name}`}
+                        title={L("del")}
+                        className={`${iconBtn} text-muted-foreground hover:text-destructive`}
+                      >
+                        {checking === f.name ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          )}
+
+          {filtered.length > shown.length && (
+            <div className="flex justify-center pt-2">
+              <Button variant="outline" size="sm" onClick={() => setVisible((v) => v + PAGE)}>
+                {L("loadMore")}
+              </Button>
+            </div>
+          )}
         </div>
       </DashboardCard>
+
+      {converter && (
+        <Suspense fallback={null}>
+          <VideoConverterDialog
+            file={converter}
+            L={L}
+            onClose={() => setConverter(null)}
+            onReplaced={(result, newName) => {
+              setConverter(null);
+              setUsage(null);
+              reportOutcome(L("replaced", { n: newName }), result);
+              void fetchFiles();
+            }}
+          />
+        </Suspense>
+      )}
+
+      <Dialog open={!!previewing} onOpenChange={(open) => { if (!open) setPreviewing(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="break-all">{previewing?.name}</DialogTitle>
+            <DialogDescription>{formatFileSize(previewing?.size ?? 0)}</DialogDescription>
+          </DialogHeader>
+          {previewing && (
+            // eslint-disable-next-line jsx-a11y/media-has-caption
+            <video src={previewing.url} controls playsInline className="w-full rounded-lg bg-black" />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!renameTarget} onOpenChange={(open) => { if (!open && !renaming) setRenameTarget(null); }}>
         <DialogContent>
@@ -501,4 +637,6 @@ const DashboardMedia = () => {
   );
 };
 
+export type { LibraryFile };
+export { COPY };
 export default DashboardMedia;
