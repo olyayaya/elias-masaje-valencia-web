@@ -474,6 +474,9 @@ const DashboardReviews = () => {
     [importable, selected],
   );
 
+  /** How many selected rows carry featured/pinned in the file — shown before importing. */
+  const selectedPinnedCount = useMemo(() => selectedRows.filter((r) => r.pinned).length, [selectedRows]);
+
   /**
    * Insert in batches so one bad batch never loses the rest of the file.
    *
