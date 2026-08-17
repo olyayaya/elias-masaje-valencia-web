@@ -70,7 +70,11 @@ const DashboardMedia = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadLabel, setUploadLabel] = useState<string | null>(null);
   const [uploadPct, setUploadPct] = useState(0);
+  /** Distinguishes the local mute pass from the network transfer in the progress UI. */
+  const [uploadPhase, setUploadPhase] = useState<"processing" | "uploading">("uploading");
+  const [removeAudio, setRemoveAudio] = useState(false);
   const uploadAbort = useRef<AbortController | null>(null);
+
   const [copied, setCopied] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
