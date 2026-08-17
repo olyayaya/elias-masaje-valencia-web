@@ -64,6 +64,12 @@ const COPY = {
     es: "No se pudo generar la portada de este vídeo. Elige una imagen.",
     ru: "Не удалось создать обложку из этого видео. Выберите изображение.",
   },
+  cleanupFailed: {
+    en: "The temporary cover “{name}” could not be deleted from the Library. Remove it there manually.",
+    es: "No se pudo eliminar de la Biblioteca la portada temporal «{name}». Bórrala allí manualmente.",
+    ru: "Временную обложку «{name}» не удалось удалить из Библиотеки. Удалите её там вручную.",
+  },
+
   posterCleared: {
     en: "Cover cleared because the video file changed — generate or pick a new one.",
     es: "Se ha borrado la portada porque cambió el vídeo — genera o elige una nueva.",
