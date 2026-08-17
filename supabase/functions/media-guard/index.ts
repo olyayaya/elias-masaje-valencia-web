@@ -230,11 +230,8 @@ Deno.serve(async (req) => {
     if (contentBase64.length > Math.ceil((MAX_UPLOAD_BYTES * 4) / 3) + 64) {
       return json({ error: `Image is too large — the limit is ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB` }, 413);
     }
-    const allowedExts = ALLOWED_OUTPUT[contentType];
-    if (!allowedExts) return json({ error: "Unsupported output format" }, 400);
-    if (!allowedExts.includes(extOf(newName))) {
-      return json({ error: `Extension .${extOf(newName)} does not match ${contentType}` }, 400);
-    }
+    const typeError = validateOutputType(contentType, newName);
+    if (typeError) return json({ error: typeError }, 400);
 
     const bytes = decodeBase64(contentBase64);
     if (bytes.byteLength > MAX_UPLOAD_BYTES) {
@@ -248,13 +245,11 @@ Deno.serve(async (req) => {
     const source = await statObject(admin, fileName);
     if (!source.found) return json({ error: "Source file not found" }, 404);
     const originalSize = source.size;
-    const saved = originalSize - bytes.byteLength;
-    if (saved <= 0) {
-      return json({ error: "Compressed result is not smaller — file left untouched", originalSize, newSize: bytes.byteLength }, 409);
+    const verdict = evaluateSaving(originalSize, bytes.byteLength);
+    if (!verdict.ok) {
+      return json({ error: verdict.message, alreadyCompressed: verdict.alreadyCompressed, originalSize, newSize: bytes.byteLength }, 409);
     }
-    if (saved < MIN_SAVING_BYTES || saved / originalSize < MIN_SAVING_RATIO) {
-      return json({ error: "Image is already compressed — file left untouched", alreadyCompressed: true, originalSize, newSize: bytes.byteLength }, 409);
-    }
+
 
     const renaming = newName !== fileName;
     if (renaming && (await statObject(admin, newName)).found) {
