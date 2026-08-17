@@ -444,10 +444,14 @@ export type Database = {
           id: string
           imported_at: string | null
           manual_priority: number
+          original_language: string | null
           original_url: string | null
           pinned: boolean
           rating: number
           review_text: string
+          review_text_en: string | null
+          review_text_es: string | null
+          review_text_ru: string | null
           reviewed_at: string | null
           updated_at: string
           visible: boolean
@@ -459,10 +463,14 @@ export type Database = {
           id?: string
           imported_at?: string | null
           manual_priority?: number
+          original_language?: string | null
           original_url?: string | null
           pinned?: boolean
           rating: number
           review_text: string
+          review_text_en?: string | null
+          review_text_es?: string | null
+          review_text_ru?: string | null
           reviewed_at?: string | null
           updated_at?: string
           visible?: boolean
@@ -474,10 +482,14 @@ export type Database = {
           id?: string
           imported_at?: string | null
           manual_priority?: number
+          original_language?: string | null
           original_url?: string | null
           pinned?: boolean
           rating?: number
           review_text?: string
+          review_text_en?: string | null
+          review_text_es?: string | null
+          review_text_ru?: string | null
           reviewed_at?: string | null
           updated_at?: string
           visible?: boolean
