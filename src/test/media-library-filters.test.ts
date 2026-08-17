@@ -52,7 +52,8 @@ describe("media kind detection", () => {
 
 describe("file name safety", () => {
   it("strips paths, accents and unsafe characters", () => {
-    expect(sanitizeFileName("../../évil name (1).MP4")).toBe("evil-name-1.MP4");
+    // The extension is normalized to lower case so kind/format checks stay predictable.
+    expect(sanitizeFileName("../../évil name (1).MP4")).toBe("evil-name-1.mp4");
     expect(sanitizeFileName("a/b/c.png")).toBe("a-b-c.png");
   });
 
