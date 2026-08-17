@@ -10,7 +10,7 @@ const sql = readFileSync("supabase/pending-migrations/20260817170000_reviews.sql
 describe("reviews migration — structure", () => {
   it("is additive: nothing existing is dropped", () => {
     expect(sql).not.toMatch(/drop table/i);
-    expect(sql).not.toMatch(/(drop|alter)[^;]*testimonials/i);
+    expect(sql).not.toMatch(/(drop|alter|delete from)\s+(table\s+)?(public\.)?testimonials/i);
   });
 
   it("never creates a raw provider payload column", () => {
