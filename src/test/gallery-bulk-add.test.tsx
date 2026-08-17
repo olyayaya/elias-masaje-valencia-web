@@ -146,6 +146,8 @@ describe("gallery bulk add", () => {
       { name: "c1.webp", mimeType: "image/webp" },
     ];
     const dialog = await openPhotoPicker();
+    // eslint-disable-next-line no-console
+    console.log("TILES", tilesOf(dialog).map((t) => t.getAttribute("title")));
     fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "b" } });
     await waitFor(() => expect(tilesOf(dialog)).toHaveLength(2));
     const tiles = tilesOf(dialog);
