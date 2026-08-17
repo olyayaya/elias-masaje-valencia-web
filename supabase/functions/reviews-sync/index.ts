@@ -10,7 +10,6 @@ import {
   isUsable,
   nextPageToken,
   normalizeGoogleReview,
-  normalizeTripadvisorReview,
   readJsonLimited,
   type NormalizedReview,
 } from './normalize.ts';
@@ -23,6 +22,11 @@ import {
  * not connected the function answers `not_configured` instead of guessing or
  * scraping. No review is ever invented here, and no provider body, header or
  * token is ever logged.
+ *
+ * TripAdvisor is compliance-blocked: their Content API terms forbid selective
+ * filtering/sorting and commingling their reviews with third-party content, so
+ * that branch performs no external request at all and answers
+ * `compliance_required`.
  */
 
 const corsHeaders = {
@@ -45,8 +49,10 @@ const REQUIRED: Record<string, string[]> = {
     'GOOGLE_BUSINESS_ACCOUNT_ID',
     'GOOGLE_BUSINESS_LOCATION_ID',
   ],
-  tripadvisor: ['TRIPADVISOR_CONTENT_API_KEY', 'TRIPADVISOR_LOCATION_ID'],
 };
+
+/** Known but never fetched. Answered before any network or secret lookup. */
+const COMPLIANCE_BLOCKED = new Set(['tripadvisor']);
 
 const TIMEOUT_MS = 15_000;
 
@@ -113,22 +119,6 @@ async function fetchGoogle(): Promise<NormalizedReview[]> {
   return dedupe(out).slice(0, MAX_REVIEWS);
 }
 
-async function fetchTripadvisor(): Promise<NormalizedReview[]> {
-  const key = Deno.env.get('TRIPADVISOR_CONTENT_API_KEY')!;
-  const loc = Deno.env.get('TRIPADVISOR_LOCATION_ID')!.trim();
-  const url =
-    `https://api.content.tripadvisor.com/api/v1/location/${encodeURIComponent(loc)}/reviews` +
-    `?key=${encodeURIComponent(key)}&language=en`;
-  const res = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } });
-  if (!res.ok) {
-    throw new SyncError('tripadvisor_request_failed', `TripAdvisor request failed (${res.status}).`);
-  }
-  const data = await readJsonLimited(res);
-  // The official Content API returns a limited window of reviews per location;
-  // this is the provider's cap, not a bug in the sync.
-  return dedupe(asArray(data.data).map(normalizeTripadvisorReview)).slice(0, MAX_REVIEWS);
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -161,6 +151,17 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     source = String((body as { source?: string }).source ?? '');
+    if (COMPLIANCE_BLOCKED.has(source)) {
+      // Not an error: a deliberate, documented refusal. No fetch, no storage
+      // write, no sync state row for a source that is never synced.
+      const blocked = source;
+      source = '';
+      return json({
+        status: 'compliance_required',
+        source: blocked,
+        reason: 'tripadvisor_license_required',
+      });
+    }
     if (!REQUIRED[source]) return json({ error: 'invalid source' }, 400);
 
     // Durable cooldown: the gap is enforced from the stored attempt timestamp,
@@ -194,7 +195,7 @@ Deno.serve(async (req) => {
       return json({ status: 'not_configured', source, missing_secrets: missing });
     }
 
-    const fetched = source === 'google' ? await fetchGoogle() : await fetchTripadvisor();
+    const fetched = await fetchGoogle();
     const valid = fetched.filter(isUsable);
     const skipped = fetched.length - valid.length;
 

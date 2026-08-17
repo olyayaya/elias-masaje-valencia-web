@@ -17,12 +17,18 @@ export const RATE_LIMIT_MS = 60_000;
  */
 export const SOURCE_PROFILE_URL = {
   google: "https://maps.app.goo.gl/uyR3ZRdYUFiYSwXt5",
-  tripadvisor:
-    "https://www.tripadvisor.com/Attraction_Review-g187529-d34031094-Reviews-Elias_Massage_Valencia-Valencia_Province_of_Valencia_Valencian_Community.html",
 } as const;
 
+/**
+ * TripAdvisor is not synced. Their Content API terms forbid selective
+ * filtering/sorting and commingling licensed reviews with third-party reviews,
+ * so this module contains no TripAdvisor normalizer and the function performs no
+ * TripAdvisor request. The dashboard links to the public profile instead.
+ */
+export const COMPLIANCE_BLOCKED_SOURCES = ["tripadvisor"] as const;
+
 export interface NormalizedReview {
-  source: "google" | "tripadvisor";
+  source: "google";
   external_review_id: string;
   author_name: string;
   author_avatar_url: string | null;
@@ -65,7 +71,11 @@ export const normalizeRating = (v: unknown): number => {
   return Number.isFinite(n) && n >= 1 && n <= 5 ? Math.round(n) : 0;
 };
 
-/** A review is only stored when it carries an id, an author and a real rating. */
+/**
+ * A review is only stored when it carries an id, a *real* author name and a real
+ * rating. Incomplete records are skipped — no placeholder author is ever
+ * invented or written.
+ */
 export const isUsable = (r: NormalizedReview): boolean =>
   !!r.external_review_id && !!r.author_name && r.rating >= 1 && r.rating <= 5;
 
@@ -103,7 +113,8 @@ export function normalizeGoogleReview(r: Record<string, unknown>): NormalizedRev
     source: "google",
     // Resource names are unique but long; the trailing segment is the review id.
     external_review_id: rawId.includes("/") ? rawId.split("/").pop()!.slice(0, 200) : rawId,
-    author_name: clip(reviewer.displayName, 120) || "Google user",
+    // No fallback name: an anonymous payload fails isUsable and is skipped.
+    author_name: clip(reviewer.displayName, 120),
     author_avatar_url: httpsOnly(reviewer.profilePhotoUrl),
     rating: normalizeRating(r.starRating),
     review_text: clip(r.comment, 5000),
@@ -113,22 +124,6 @@ export function normalizeGoogleReview(r: Record<string, unknown>): NormalizedRev
     // than pass off the reply URI as one, the card falls back to the public
     // Google profile link on the client.
     original_url: null,
-  };
-}
-
-export function normalizeTripadvisorReview(r: Record<string, unknown>): NormalizedReview {
-  const user = (r.user ?? {}) as Record<string, unknown>;
-  const avatar = ((user.avatar ?? {}) as Record<string, unknown>).small as Record<string, unknown> | undefined;
-  return {
-    source: "tripadvisor",
-    external_review_id: clip(String(r.id ?? ""), 200),
-    author_name: clip(user.username, 120) || "TripAdvisor user",
-    author_avatar_url: httpsOnly(avatar?.url),
-    rating: normalizeRating(r.rating),
-    review_text: clip(r.text, 5000),
-    review_language: clip(r.lang, 12) || null,
-    reviewed_at: normalizeDate(r.published_date),
-    original_url: httpsOnly(r.url),
   };
 }
 
