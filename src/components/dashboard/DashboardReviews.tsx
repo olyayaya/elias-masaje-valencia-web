@@ -102,9 +102,9 @@ const COPY = {
 
   importTitle: { en: "Import reviews (CSV or JSON)", es: "Importar reseñas (CSV o JSON)", ru: "Импорт отзывов (CSV или JSON)" },
   importHint: {
-    en: "Columns: author_name, rating, review_text, reviewed_at, original_url. Up to {rows} rows and {mb} MB per file. Nothing is saved until you pick the rows, tick the rights box and confirm.",
-    es: "Columnas: author_name, rating, review_text, reviewed_at, original_url. Máximo {rows} filas y {mb} MB por archivo. No se guarda nada hasta que elijas las filas, marques la casilla de derechos y confirmes.",
-    ru: "Столбцы: author_name, rating, review_text, reviewed_at, original_url. Не более {rows} строк и {mb} МБ на файл. Ничего не сохраняется, пока вы не выберете строки, не отметите подтверждение прав и не подтвердите импорт.",
+    en: "CSV columns: author_name, rating, review_text, reviewed_at, original_url. JSON: either a list of reviews or a wrapper {version, reviews:[…]}. Accepted aliases: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned. Up to {rows} rows and {mb} MB per file. Nothing is saved until you pick the rows, tick the rights box and confirm.",
+    es: "Columnas CSV: author_name, rating, review_text, reviewed_at, original_url. JSON: una lista de reseñas o un envoltorio {version, reviews:[…]}. Alias aceptados: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned. Máximo {rows} filas y {mb} MB por archivo. No se guarda nada hasta que elijas las filas, marques la casilla de derechos y confirmes.",
+    ru: "Столбцы CSV: author_name, rating, review_text, reviewed_at, original_url. JSON: список отзывов или обёртка {version, reviews:[…]}. Допустимые псевдонимы: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned. Не более {rows} строк и {mb} МБ на файл. Ничего не сохраняется, пока вы не выберете строки, не отметите подтверждение прав и не подтвердите импорт.",
   },
   template: { en: "Download CSV template", es: "Descargar plantilla CSV", ru: "Скачать шаблон CSV" },
   choose: { en: "Choose file", es: "Elegir archivo", ru: "Выбрать файл" },
