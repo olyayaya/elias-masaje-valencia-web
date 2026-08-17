@@ -231,6 +231,6 @@ export function buildGallerySchema(items: GalleryItem[], locale: Locale) {
     url,
     inLanguage: locale === "es" ? "es-ES" : locale === "ru" ? "ru-RU" : "en-US",
     hasPart,
-
   };
+
 }
