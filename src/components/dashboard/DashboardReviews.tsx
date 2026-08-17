@@ -322,7 +322,8 @@ const TranslationEditor = ({
   review: Review;
   c: Copy;
   busy: boolean;
-  onSave: (values: Record<string, unknown>) => Promise<void>;
+  /** Resolves true only when the row was really written; false keeps the editor open. */
+  onSave: (values: Record<string, unknown>) => Promise<boolean>;
 }) => {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState({ lang: "", es: "", en: "", ru: "" });
@@ -345,12 +346,19 @@ const TranslationEditor = ({
       setError(c("trLangInvalid"));
       return;
     }
-    await onSave({
+    setError(null);
+    const saved = await onSave({
       original_language: lang ? normalizeLanguage(lang) : null,
       review_text_es: draft.es.trim() || null,
       review_text_en: draft.en.trim() || null,
       review_text_ru: draft.ru.trim() || null,
     });
+    // A failed write keeps the draft on screen: nothing is lost and no success
+    // is ever announced for a change the database refused.
+    if (!saved) {
+      setError(c("saveFailed"));
+      return;
+    }
     setOpen(false);
   };
 
@@ -478,15 +486,16 @@ const DashboardReviews = () => {
     return sortReviews(list, sort);
   }, [items, search, rating, visibility, sort]);
 
-  const patch = async (id: string, values: Record<string, unknown>) => {
+  const patch = async (id: string, values: Record<string, unknown>): Promise<boolean> => {
     setBusyId(id);
     const { error } = await reviewsTable().update(values).eq("id", id);
     setBusyId(null);
     if (error) {
       toast.error(c("saveFailed"));
-      return;
+      return false;
     }
     refresh();
+    return true;
   };
 
   const saveSettings = async (values: Record<string, unknown>) => {
@@ -1235,8 +1244,9 @@ const DashboardReviews = () => {
                     c={c}
                     busy={busyId === r.id}
                     onSave={async (values) => {
-                      await patch(r.id, values);
-                      toast.success(c("trSaved"));
+                      const saved = await patch(r.id, values);
+                      if (saved) toast.success(c("trSaved"));
+                      return saved;
                     }}
                   />
                   {r.original_url && (
