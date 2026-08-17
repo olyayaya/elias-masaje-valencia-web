@@ -21,6 +21,15 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }));
 
+vi.mock("@/lib/alt-translate", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/alt-translate")>("@/lib/alt-translate");
+  return {
+    ...actual,
+    translateAlt: vi.fn(async () => ({ es: "Masaje de espalda", ru: "Массаж спины" })),
+  };
+});
+
+
 vi.mock("@/integrations/supabase/client", () => {
   const builder = () => {
     const chain: Record<string, unknown> = {};
