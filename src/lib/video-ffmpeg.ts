@@ -198,23 +198,22 @@ export async function convertVideo(
   } = {},
 ): Promise<ConversionResult> {
   const { onProgress, signal } = handlers;
-  const cancelled = () => new DOMException("Cancelled", "AbortError");
   if (signal?.aborted) throw cancelled();
 
   onProgress?.({ ratio: 0, stage: "loading" });
 
   // Cancelling while the ~30 MB core is still downloading must terminate the instance and
-  // never proceed to an encode.
-  let loadAborted = false;
-  const abortDuringLoad = () => { loadAborted = true; terminateFFmpeg(); };
+  // never proceed to an encode. getFFmpeg additionally discards a core that finishes
+  // loading after the abort, so nothing is cached either.
+  const abortDuringLoad = () => terminateFFmpeg();
   signal?.addEventListener("abort", abortDuringLoad, { once: true });
   let ff: FFmpegInstance;
   try {
-    ff = await getFFmpeg();
+    ff = await getFFmpeg(undefined, signal);
   } finally {
     signal?.removeEventListener("abort", abortDuringLoad);
   }
-  if (loadAborted || signal?.aborted) throw cancelled();
+  if (signal?.aborted) throw cancelled();
 
   const inputName = `in.${(file.name.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "mp4").toLowerCase()}`;
   const outputName = `out.${options.format}`;
@@ -227,14 +226,12 @@ export async function convertVideo(
   const abort = () => terminateFFmpeg();
   signal?.addEventListener("abort", abort, { once: true });
 
-  let wrote = false;
   try {
     onProgress?.({ ratio: 0, stage: "reading" });
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (signal?.aborted) throw cancelled();
     // MUST be awaited: exec on a half-written virtual FS reads a truncated input.
     await ff.writeFile(inputName, bytes);
-    wrote = true;
     if (signal?.aborted) throw cancelled();
     await ff.exec(args);
     if (signal?.aborted) throw cancelled();
@@ -251,15 +248,16 @@ export async function convertVideo(
     } catch {
       /* instance already terminated by cancel */
     }
-    if (wrote) {
-      // Both paths are attempted independently so one failure cannot leak the other file.
-      for (const name of [inputName, outputName]) {
-        try {
-          await ff.deleteFile(name);
-        } catch {
-          /* file absent or instance terminated */
-        }
+    // Always attempted, even when writeFile itself rejected: a partially written input
+    // would otherwise stay in the wasm heap for the lifetime of the tab.
+    for (const name of [inputName, outputName]) {
+      try {
+        await ff.deleteFile(name);
+      } catch {
+        /* file absent or instance terminated */
       }
+    }
+
     }
 
   }
