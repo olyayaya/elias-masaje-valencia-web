@@ -17,7 +17,7 @@ const h = vi.hoisted(() => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), message: vi.fn() },
   state: {
     items: [] as Review[],
-    settings: { id: "s", updated_at: "", ...DEFAULT_REVIEW_SETTINGS } as ReviewDisplaySettings,
+    settings: null as unknown as ReviewDisplaySettings,
     syncState: [] as ReviewSyncStateRow[],
     missingTable: false,
     isPending: false,
