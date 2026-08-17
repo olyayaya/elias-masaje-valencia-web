@@ -15,6 +15,7 @@ import {
   formatDuration,
   MAX_CONVERT_BYTES,
   MEMORY_WARN_BYTES,
+  MIME_BY_FORMAT,
   outputNameFor,
   smartPreset,
   targetDimensions,
@@ -203,11 +204,15 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
       setResult({ ...settings, blob: out.blob, size: out.size, url: URL.createObjectURL(out.blob) });
       setPhase("done");
       // Tell the Library only what the conversion actually PROVED about this file.
+      // A merely bigger result ("notSmaller") proves nothing: these settings were simply
+      // worse, and smaller ones may still shrink the source — so no verdict is reported.
       const verdictNow = evaluateVideoSaving(file.size, out.size);
-      if (verdictNow.ok) onVerdict?.(file.name, "canOptimize");
-      else if (verdictNow.reason === "alreadyOptimized") onVerdict?.(file.name, "optimized");
-      // reason === "notSmaller": these settings were simply worse — the source may still be
-      // shrinkable with smaller ones, so the state stays untouched.
+      const state = verdictNow.ok
+        ? "canOptimize"
+        : verdictNow.reason === "alreadyOptimized"
+          ? "optimized"
+          : null;
+      if (state) onVerdict?.(file.name, state);
     } catch (e) {
       if (!aliveRef.current) return;
       if ((e as DOMException)?.name === "AbortError") {
@@ -382,7 +387,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
                   size="sm"
                   asChild
                 >
-                  <a href={resultUrlRef.current ?? "#"} download={outputNameFor(file.name, format)}>
+                  <a href={result.url} download={resultName ?? file.name}>
                     <Download size={14} className="mr-1" />
                     {L("downloadResult")}
                   </a>
