@@ -115,6 +115,9 @@ const CollectionSection = ({
     current: AltTriple;
     translations: Partial<Record<AltLang, string>>;
   } | null>(null);
+  /** Monotonic token so a late translation answer cannot open a stale review. */
+  const translateReq = useRef(0);
+
 
   useEffect(() => {
     const d: Record<string, string> = {};
