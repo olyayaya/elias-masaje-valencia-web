@@ -9,6 +9,7 @@ export const es: Translations = {
   nav: {
     home: "Inicio",
     services: "Servicios",
+    gallery: "Galería",
     about: "Sobre mí",
     contact: "Contacto",
     blog: "Blog",
@@ -127,6 +128,19 @@ export const es: Translations = {
     navigation: "Navegación",
     contact: "Contacto",
     rights: "Todos los derechos reservados.",
+  },
+  gallery: {
+    title: "Galería",
+    subtitle: "Momentos del estudio: fotos y vídeos del espacio, los tratamientos y el día a día.",
+    metaTitle: "Galería — Elias Masaje Valencia",
+    metaDescription: "Fotos y vídeos del estudio de masaje de Elias en Valencia: el espacio, los tratamientos y los detalles que cuidan tu descanso.",
+    empty: "Aún no hay material publicado en la galería.",
+    playVideo: "Reproducir vídeo",
+    readMore: "Leer más",
+    close: "Cerrar",
+    prev: "Anterior",
+    next: "Siguiente",
+    viewer: "Visor de galería",
   },
   a11y: {
     skipToContent: "Saltar al contenido",

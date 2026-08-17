@@ -1,12 +1,13 @@
 import { Locale } from "@/i18n/types";
 
-export type PageId = "home" | "services" | "about" | "contact" | "blog" | "blogPost" | "privacy";
+export type PageId = "home" | "services" | "gallery" | "about" | "contact" | "blog" | "blogPost" | "privacy";
 
 export const BASE_URL = "https://eliasmas.es";
 
 export const ROUTE_MAP: Record<PageId, Record<Locale, string>> = {
   home:     { es: "/",            en: "/en",            ru: "/ru" },
   services: { es: "/servicios",   en: "/en/services",   ru: "/ru/uslugi" },
+  gallery:  { es: "/galeria",     en: "/en/gallery",    ru: "/ru/galereya" },
   about:    { es: "/sobre-mi",    en: "/en/about",      ru: "/ru/about" },
   contact:  { es: "/contacto",    en: "/en/contact",    ru: "/ru/contact" },
   blog:     { es: "/blog",        en: "/en/blog",       ru: "/ru/blog" },

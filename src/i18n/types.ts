@@ -9,6 +9,7 @@ export interface Translations {
   nav: {
     home: string;
     services: string;
+    gallery: string;
     about: string;
     contact: string;
     blog: string;
@@ -117,6 +118,19 @@ export interface Translations {
     navigation: string;
     contact: string;
     rights: string;
+  };
+  gallery: {
+    title: string;
+    subtitle: string;
+    metaTitle: string;
+    metaDescription: string;
+    empty: string;
+    playVideo: string;
+    readMore: string;
+    close: string;
+    prev: string;
+    next: string;
+    viewer: string;
   };
   a11y: {
     skipToContent: string;

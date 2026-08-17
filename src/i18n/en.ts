@@ -9,6 +9,7 @@ export const en: Translations = {
   nav: {
     home: "Home",
     services: "Services",
+    gallery: "Gallery",
     about: "About",
     contact: "Contact",
     blog: "Blog",
@@ -127,6 +128,19 @@ export const en: Translations = {
     navigation: "Navigation",
     contact: "Contact",
     rights: "All rights reserved.",
+  },
+  gallery: {
+    title: "Gallery",
+    subtitle: "Moments from the studio: photos and videos of the space, the treatments and everyday details.",
+    metaTitle: "Gallery — Elias Masaje Valencia",
+    metaDescription: "Photos and videos from Elias' massage studio in Valencia: the space, the treatments and the details that care for your rest.",
+    empty: "No gallery items published yet.",
+    playVideo: "Play video",
+    readMore: "Read more",
+    close: "Close",
+    prev: "Previous",
+    next: "Next",
+    viewer: "Gallery viewer",
   },
   a11y: {
     skipToContent: "Skip to content",

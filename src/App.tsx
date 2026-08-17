@@ -15,6 +15,7 @@ import Layout from "./components/Layout";
 import Index from "./pages/Index";
 import ServiciosPage from "./pages/Servicios";
 import SobreMiPage from "./pages/SobreMi";
+import GaleriaPage from "./pages/Galeria";
 import ContactoPage from "./pages/Contacto";
 import PrivacidadPage from "./pages/Privacidad";
 import NotFound from "./pages/NotFound";
@@ -91,6 +92,7 @@ const App = () => (
               <Route element={<Layout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/servicios" element={<ServiciosPage />} />
+                <Route path="/galeria" element={<GaleriaPage />} />
                 <Route path="/sobre-mi" element={<SobreMiPage />} />
                 <Route path="/contacto" element={<ContactoPage />} />
                 <Route path="/blog" element={<Blog />} />
@@ -102,6 +104,7 @@ const App = () => (
               <Route element={<Layout />}>
                 <Route path="/en" element={<Index />} />
                 <Route path="/en/services" element={<ServiciosPage />} />
+                <Route path="/en/gallery" element={<GaleriaPage />} />
                 <Route path="/en/about" element={<SobreMiPage />} />
                 <Route path="/en/contact" element={<ContactoPage />} />
                 <Route path="/en/blog" element={<Blog />} />
@@ -113,6 +116,7 @@ const App = () => (
               <Route element={<Layout />}>
                 <Route path="/ru" element={<Index />} />
                 <Route path="/ru/uslugi" element={<ServiciosPage />} />
+                <Route path="/ru/galereya" element={<GaleriaPage />} />
                 <Route path="/ru/about" element={<SobreMiPage />} />
                 <Route path="/ru/contact" element={<ContactoPage />} />
                 <Route path="/ru/blog" element={<Blog />} />

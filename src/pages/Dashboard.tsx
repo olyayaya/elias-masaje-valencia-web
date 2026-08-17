@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe, ChevronDown, Sun, Moon, Sparkles, Images, Plug, TrendingUp, LogOut, Inbox,
+  LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe, ChevronDown, Sun, Moon, Sparkles, Images, Plug, TrendingUp, LogOut, Inbox, GalleryHorizontal,
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { useHead } from "@/hooks/use-head";
@@ -21,6 +21,7 @@ import DashboardHistory from "@/components/dashboard/DashboardHistory";
 import DashboardSiteContent from "@/components/dashboard/DashboardSiteContent";
 import DashboardPromotions from "@/components/dashboard/DashboardPromotions";
 import DashboardCarousels from "@/components/dashboard/DashboardCarousels";
+import DashboardGallery from "@/components/dashboard/DashboardGallery";
 import DashboardIntegrations from "@/components/dashboard/DashboardIntegrations";
 import DashboardAttribution from "@/components/dashboard/DashboardAttribution";
 import DashboardLeads from "@/components/dashboard/DashboardLeads";
@@ -32,6 +33,7 @@ const primarySections = [
   { id: "services", icon: LayoutDashboard },
   { id: "content", icon: PenLine },
   { id: "carousels", icon: Images },
+  { id: "gallery", icon: GalleryHorizontal },
   { id: "faq", icon: HelpCircle },
   { id: "blog", icon: FileText },
   { id: "media", icon: Image },
@@ -73,6 +75,7 @@ const Dashboard = () => {
       case "services": return <DashboardServices />;
       case "content": return <DashboardSiteContent />;
       case "carousels": return <DashboardCarousels />;
+      case "gallery": return <DashboardGallery />;
       case "promotions": return <DashboardPromotions />;
       case "blog": return <DashboardBlog />;
       case "seo": return <DashboardSEO />;

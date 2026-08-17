@@ -42,6 +42,7 @@ export interface DashboardTranslations {
     testimonials: string;
     history: string;
     carousels: string;
+    gallery: string;
     integrations: string;
     attribution: string;
     leads: string;
@@ -170,6 +171,7 @@ const en: DashboardTranslations = {
     testimonials: "Testimonials",
     history: "History",
     carousels: "Carousels",
+    gallery: "Gallery",
     integrations: "Integrations",
     attribution: "Attribution",
     leads: "Booking leads",
@@ -298,6 +300,7 @@ const es: DashboardTranslations = {
     testimonials: "Testimonios",
     history: "Historial",
     carousels: "Carruseles",
+    gallery: "Galería",
     integrations: "Integraciones",
     attribution: "Atribución",
     leads: "Solicitudes",
@@ -426,6 +429,7 @@ const ru: DashboardTranslations = {
     testimonials: "Отзывы",
     history: "История",
     carousels: "Карусели",
+    gallery: "Галерея",
     integrations: "Интеграции",
     attribution: "Атрибуция",
     leads: "Заявки",

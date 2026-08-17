@@ -85,10 +85,13 @@ describe("sitemap generator", () => {
     }
   });
 
-  it("emits 30 unique <loc> entries for 6 static route groups + 4 published articles", () => {
+  it("emits 33 unique <loc> entries for 7 static route groups + 4 published articles", () => {
     const all = locs();
-    expect(all).toHaveLength(30);
-    expect(new Set(all).size).toBe(30);
+    expect(all).toHaveLength(33);
+    expect(new Set(all).size).toBe(33);
+    expect(all).toContain(`${BASE_URL}/galeria`);
+    expect(all).toContain(`${BASE_URL}/en/gallery`);
+    expect(all).toContain(`${BASE_URL}/ru/galereya`);
   });
 
   it("emits reciprocal article hreflang with Spanish x-default", () => {

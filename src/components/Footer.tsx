@@ -46,6 +46,7 @@ const Footer = () => {
             <nav className="flex flex-col gap-2" aria-label={t.a11y.footerNavigation}>
               <Link to={lp("home")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.home}</Link>
               <Link to={lp("services")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.services}</Link>
+              <Link to={lp("gallery")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.gallery}</Link>
               <Link to={lp("about")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.about}</Link>
               <Link to={lp("blog")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.blog}</Link>
               <Link to={lp("contact")} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-body">{t.nav.contact}</Link>
