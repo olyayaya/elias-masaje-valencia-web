@@ -293,12 +293,13 @@ const CollectionSection = ({
                 />
                 {L("autoTranslate")}
               </label>
-              {translating && (
+              {Object.values(translating).some(Boolean) && (
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <Loader2 size={11} className="animate-spin" />
                   {L("translating")}
                 </span>
               )}
+
             </div>
           )}
           {sorted.map((img, i) => {
