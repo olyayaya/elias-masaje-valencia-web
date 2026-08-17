@@ -50,12 +50,8 @@ const COPY = {
   },
   retry: { en: "Translate again", es: "Traducir de nuevo", ru: "Перевести снова" },
   sourceOnly: { en: "Save {l} only", es: "Guardar solo {l}", ru: "Сохранить только {l}" },
-  reviewFirst: {
-    en: "Translate & review",
-    es: "Traducir y revisar",
-    ru: "Перевести и проверить",
-  },
 } as const;
+
 
 
 const fill = (s: string, vars: Record<string, string | number>) =>
