@@ -57,7 +57,7 @@ export interface OptimizedImage {
 /**
  * Optimize an image file: resize to max dimensions and compress as WebP.
  */
-export async function optimizeImage(file: File): Promise<OptimizedImage> {
+export async function optimizeImage(file: Blob): Promise<OptimizedImage> {
   const img = await loadImage(file);
   const supportsWebp = document.createElement("canvas").toDataURL("image/webp").startsWith("data:image/webp");
   const format = supportsWebp ? "image/webp" : "image/jpeg";
@@ -75,7 +75,7 @@ export async function optimizeImage(file: File): Promise<OptimizedImage> {
 /**
  * Generate a thumbnail blob from a file.
  */
-export async function generateThumbnail(file: File): Promise<Blob> {
+export async function generateThumbnail(file: Blob): Promise<Blob> {
   const img = await loadImage(file);
   const supportsWebp = document.createElement("canvas").toDataURL("image/webp").startsWith("data:image/webp");
   const format = supportsWebp ? "image/webp" : "image/jpeg";
