@@ -274,6 +274,57 @@ describe("localized review text on the public page", () => {
   });
 });
 
+describe("section heading", () => {
+  afterEach(() => window.history.pushState({}, "", "/"));
+
+  it("renders the Spanish heading immediately without fade-in opacity", () => {
+    state.value.items = [review({ id: "a" })];
+    mount();
+    const h2 = screen.getByRole("heading", { level: 2 });
+    expect(h2.textContent).toBe("Lo que dicen mis clientes");
+    const wrapper = h2.parentElement;
+    expect(wrapper).toBeTruthy();
+    const style = wrapper!.getAttribute("style") || "";
+    expect(style).not.toMatch(/opacity:\s*0/);
+    expect(style).not.toMatch(/visibility:\s*hidden/);
+  });
+
+  it("renders the English heading immediately without fade-in opacity", () => {
+    window.history.pushState({}, "", "/en");
+    state.value.items = [review({ id: "a" })];
+    mount();
+    const h2 = screen.getByRole("heading", { level: 2 });
+    expect(h2.textContent).toBe("What my clients say");
+    const wrapper = h2.parentElement;
+    expect(wrapper).toBeTruthy();
+    const style = wrapper!.getAttribute("style") || "";
+    expect(style).not.toMatch(/opacity:\s*0/);
+    expect(style).not.toMatch(/visibility:\s*hidden/);
+  });
+
+  it("renders the Russian heading immediately without fade-in opacity", () => {
+    window.history.pushState({}, "", "/ru");
+    state.value.items = [review({ id: "a" })];
+    mount();
+    const h2 = screen.getByRole("heading", { level: 2 });
+    expect(h2.textContent).toBe("Отзывы клиентов");
+    const wrapper = h2.parentElement;
+    expect(wrapper).toBeTruthy();
+    const style = wrapper!.getAttribute("style") || "";
+    expect(style).not.toMatch(/opacity:\s*0/);
+    expect(style).not.toMatch(/visibility:\s*hidden/);
+  });
+
+  it("keeps the decorative divider under the heading", () => {
+    state.value.items = [review({ id: "a" })];
+    mount();
+    const h2 = screen.getByRole("heading", { level: 2 });
+    const divider = h2.parentElement!.querySelector("div");
+    expect(divider).toBeTruthy();
+    expect(divider!.className).toContain("bg-primary");
+  });
+});
+
 describe("review card layout and carousel controls", () => {
   it("normalizes a messy imported author name onto a single line", () => {
     state.value.items = [review({ id: "n", author_name: "C\nFed\tT   Jr" })];
