@@ -97,8 +97,24 @@ const clampWidth = (w: number) =>
 const clampQuality = (q: number) => Math.min(100, Math.max(20, Math.round(q) || THUMB_QUALITY));
 
 /**
+ * Origin of the Supabase project this build talks to. A look-alike path on a foreign
+ * host (https://evil.example/storage/v1/object/public/media/x.webp) must never be
+ * rewritten into "our" renderer, so the origin is compared, not just the path.
+ */
+const projectOrigin = (): string | null => {
+  const raw = (import.meta.env?.VITE_SUPABASE_URL ?? "") as string;
+  if (!raw) return null;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Public image URL in our media bucket → bounded render/image derivative.
- * Returns `null` for anything else so callers can keep using the original URL.
+ * Returns `null` for anything else (foreign origin, malformed encoding, traversal,
+ * non-transformable format) so callers keep using the original URL. Never throws.
  */
 export function storageThumbUrl(
   rawUrl: string,
@@ -112,6 +128,8 @@ export function storageThumbUrl(
     return null;
   }
   if (parsed.protocol !== "https:") return null;
+  const origin = projectOrigin();
+  if (!origin || parsed.origin !== origin) return null;
   const idx = parsed.pathname.indexOf(PUBLIC_OBJECT_SEGMENT);
   if (idx !== 0) return null;
 
@@ -122,7 +140,17 @@ export function storageThumbUrl(
   const objectPath = rest.slice(slash + 1);
   if (bucket !== MEDIA_BUCKET || !objectPath) return null;
   if (objectPath.includes("..")) return null;
-  if (!(TRANSFORMABLE_EXTS as readonly string[]).includes(extOf(decodeURIComponent(objectPath)))) return null;
+
+  // Malformed percent-encoding (%zz, lone %) must degrade to "no derivative", not throw.
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(objectPath);
+  } catch {
+    return null;
+  }
+  // Encoded traversal (%2e%2e%2f) and encoded path separators are refused as well.
+  if (decoded.includes("..") || decoded.includes("/")) return null;
+  if (!(TRANSFORMABLE_EXTS as readonly string[]).includes(extOf(decoded))) return null;
 
   // Re-assemble through URL so every segment stays correctly percent-encoded.
   const out = new URL(parsed.origin);
@@ -132,6 +160,7 @@ export function storageThumbUrl(
   out.searchParams.set("resize", THUMB_RESIZE);
   return out.toString();
 }
+
 
 /** Full-size asset shown in the lightbox (photo) or played (video). */
 export const originalFor = (item: GalleryItem) =>

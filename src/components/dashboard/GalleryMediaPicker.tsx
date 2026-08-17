@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Check, Film, ImageIcon } from "lucide-react";
+import { Loader2, Check, Film, ImageIcon, AlertTriangle, RotateCw } from "lucide-react";
 import { kindOf, type MediaKind } from "@/lib/media-kind";
+import { listAllMediaObjects } from "@/lib/storage-list";
 
 interface StorageFile {
   name: string;
@@ -24,6 +25,8 @@ interface Props {
   currentUrl?: string;
   searchPlaceholder?: string;
   noMatchLabel?: string;
+  errorLabel?: string;
+  retryLabel?: string;
   onClose: () => void;
   onSelect: (url: string) => void;
 }
@@ -34,30 +37,37 @@ interface Props {
  */
 const GalleryMediaPicker = ({
   open, kind, title, description, emptyLabel, cancelLabel, selectLabel, currentUrl,
-  searchPlaceholder = "Search by file name", noMatchLabel, onClose, onSelect,
+  searchPlaceholder = "Search by file name", noMatchLabel, errorLabel, retryLabel = "Retry",
+  onClose, onSelect,
 }: Props) => {
   const [files, setFiles] = useState<StorageFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [selected, setSelected] = useState<string | null>(currentUrl ?? null);
   const [search, setSearch] = useState("");
 
   const fetchFiles = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.storage.from("media").list("", {
-      limit: 1000,
-      sortBy: { column: "created_at", order: "desc" },
-    });
-    setFiles(
-      (data ?? [])
-        .filter((f) => f.name !== ".emptyFolderPlaceholder" && !f.name.startsWith("blog/"))
-        .map((f) => ({
-          name: f.name,
-          url: supabase.storage.from("media").getPublicUrl(f.name).data.publicUrl,
-          kind: kindOf({ name: f.name, mimeType: (f.metadata as { mimetype?: string } | null)?.mimetype }),
-        }))
-        .filter((f) => f.kind === kind),
-    );
-    setLoading(false);
+    setFailed(false);
+    try {
+      // Every page of the bucket root — a single limited list would silently hide files.
+      const all = await listAllMediaObjects();
+      setFiles(
+        all
+          .filter((f) => !f.name.startsWith("blog/"))
+          .map((f) => ({
+            name: f.name,
+            url: supabase.storage.from("media").getPublicUrl(f.name).data.publicUrl,
+            kind: kindOf({ name: f.name, mimeType: f.mimeType }),
+          }))
+          .filter((f) => f.kind === kind),
+      );
+    } catch {
+      setFiles([]);
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
   }, [kind]);
 
   useEffect(() => {
@@ -85,7 +95,7 @@ const GalleryMediaPicker = ({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        {!loading && files.length > 0 && (
+        {!loading && !failed && files.length > 0 && (
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -98,6 +108,17 @@ const GalleryMediaPicker = ({
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="animate-spin text-muted-foreground" size={20} />
+          </div>
+        ) : failed ? (
+          <div className="py-8 text-center space-y-3" data-testid="picker-error" role="alert">
+            <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+              <AlertTriangle size={15} className="shrink-0" />
+              {errorLabel ?? "Could not load the Library files."}
+            </p>
+            <Button size="sm" variant="outline" onClick={() => void fetchFiles()}>
+              <RotateCw size={13} className="mr-1.5" />
+              {retryLabel}
+            </Button>
           </div>
         ) : files.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">{emptyLabel}</p>

@@ -125,7 +125,7 @@ const realPhoto = () => new File([new Uint8Array([1])], "shot.png", { type: "ima
 
 async function openLibrary(locale = "en") {
   window.history.replaceState({}, "", `/${locale}`);
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
   const { container } = render(<I18nProvider><DashboardMedia /></I18nProvider>);
   await screen.findByLabelText(/./i).catch(() => undefined);
   await waitFor(() => expect(container.querySelector('input[type="file"]')).toBeTruthy());
@@ -143,16 +143,12 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("remove-audio option", () => {
-  it("is off by default and shows the localized label in ES/EN/RU", async () => {
-    await openLibrary("es");
+  // One Library render per locale: mounting the whole section three times inside a
+  // single test made it the slowest case in the suite for no extra coverage.
+  it.each(["es", "en", "ru"] as const)("is off by default and localized in %s", async (locale) => {
+    await openLibrary(locale);
     expect(toggle()).toHaveAttribute("aria-checked", "false");
-    expect(screen.getByText(COPY.removeAudio.es)).toBeInTheDocument();
-    cleanup();
-    await openLibrary("ru");
-    expect(screen.getByText(COPY.removeAudio.ru)).toBeInTheDocument();
-    cleanup();
-    await openLibrary("en");
-    expect(screen.getByText(COPY.removeAudio.en)).toBeInTheDocument();
+    expect(screen.getByText(COPY.removeAudio[locale])).toBeInTheDocument();
   });
 
   it("uploads the original file and never loads the mute helper while off", async () => {

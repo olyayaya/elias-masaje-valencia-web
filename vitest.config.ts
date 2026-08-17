@@ -5,10 +5,10 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    // The jsdom dashboard suites run several heavy editors in parallel; 5s is not
-    // enough under full-suite load even though each test passes in isolation.
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
+    // Each jsdom worker mounts whole dashboard sections; oversubscribing the CPU made
+    // individual tests miss the default 5s budget purely through contention.
+    pool: "threads",
+    poolOptions: { threads: { minThreads: 1, maxThreads: 4 } },
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],

@@ -1,13 +1,14 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Plus, Trash2, ChevronUp, ChevronDown, Loader2, Film, ImageIcon, Eye, EyeOff, AlertTriangle, Wand2,
+  Plus, Trash2, ChevronUp, ChevronDown, Loader2, Film, ImageIcon, Eye, EyeOff, AlertTriangle, Wand2, X,
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
 import { galleryTable, publishIssues, type GalleryItem, type GalleryPublishIssue } from "@/lib/gallery";
+import { listAllMediaNames } from "@/lib/storage-list";
 import { useGalleryAdmin } from "@/hooks/use-gallery";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
@@ -15,6 +16,7 @@ import GalleryMediaPicker from "./GalleryMediaPicker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+
 
 const COPY = {
   intro: {
@@ -41,12 +43,21 @@ const COPY = {
   pickerEmpty: { en: "No files of this type in the Library.", es: "No hay archivos de este tipo en la Biblioteca.", ru: "В Библиотеке нет файлов этого типа." },
   pickerSearch: { en: "Search by file name", es: "Buscar por nombre de archivo", ru: "Поиск по имени файла" },
   pickerNoMatch: { en: "No files match your search.", es: "Ningún archivo coincide con la búsqueda.", ru: "Нет файлов, подходящих под запрос." },
+  pickerError: {
+    en: "Could not load the Library files.",
+    es: "No se pudieron cargar los archivos de la Biblioteca.",
+    ru: "Не удалось загрузить файлы Библиотеки.",
+  },
+  retry: { en: "Retry", es: "Reintentar", ru: "Повторить" },
   cancel: { en: "Cancel", es: "Cancelar", ru: "Отмена" },
   select: { en: "Select", es: "Seleccionar", ru: "Выбрать" },
   changeMedia: { en: "Change file", es: "Cambiar archivo", ru: "Заменить файл" },
   poster: { en: "Video cover", es: "Portada del vídeo", ru: "Обложка видео" },
   generateCover: { en: "Generate cover", es: "Generar portada", ru: "Создать обложку" },
   generating: { en: "Generating cover…", es: "Generando portada…", ru: "Создание обложки…" },
+  coverProgress: { en: "Generating cover — {p}%", es: "Generando portada — {p}%", ru: "Создание обложки — {p}%" },
+  coverCancel: { en: "Cancel cover generation", es: "Cancelar la generación de portada", ru: "Отменить создание обложки" },
+  coverCancelled: { en: "Cover generation cancelled", es: "Generación de portada cancelada", ru: "Создание обложки отменено" },
   coverDone: { en: "Cover generated", es: "Portada generada", ru: "Обложка создана" },
   coverFailed: {
     en: "Could not generate a cover from this video. Pick an image instead.",
@@ -58,6 +69,12 @@ const COPY = {
     es: "Se ha borrado la portada porque cambió el vídeo — genera o elige una nueva.",
     ru: "Обложка сброшена, так как видео изменилось — создайте или выберите новую.",
   },
+  reorderFailed: {
+    en: "Could not reorder — the atomic reorder function is unavailable. Nothing was changed.",
+    es: "No se pudo reordenar: la función de reordenación atómica no está disponible. No se cambió nada.",
+    ru: "Не удалось изменить порядок: атомарная функция недоступна. Ничего не изменено.",
+  },
+
   issueMissingMedia: { en: "No file selected.", es: "Ningún archivo seleccionado.", ru: "Файл не выбран." },
   issueMissingPoster: {
     en: "A video needs a cover image before it can be published.",
@@ -111,7 +128,8 @@ const DashboardGallery = () => {
   const { data: items = [], isPending, missingTable } = useGalleryAdmin();
   const [lang, setLang] = useState<Lang>("es");
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [posterBusyId, setPosterBusyId] = useState<string | null>(null);
+  /** Cover generation is a long, cancellable job: it owns its own visible progress. */
+  const [poster, setPoster] = useState<{ id: string; progress: number } | null>(null);
   const [picker, setPicker] = useState<
     | null
     | { mode: "add"; kind: "photo" | "video" }
@@ -120,6 +138,9 @@ const DashboardGallery = () => {
   >(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<GalleryItem>>>({});
   const posterAbort = useRef<AbortController | null>(null);
+
+  // Leaving the section must not keep a wasm decode (or an upload) running.
+  useEffect(() => () => posterAbort.current?.abort(), []);
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: queryKeys.galleryAdmin });
@@ -143,7 +164,9 @@ const DashboardGallery = () => {
     const { error: err } = await galleryTable().insert({
       media_type: kind,
       media_url: url,
-      poster_url: kind === "photo" ? url : "",
+      // `poster_url` only ever means "cover frame of a video". A photo is its own
+      // image, so it never carries a poster — the grid derives its thumbnail itself.
+      poster_url: "",
       sort_order: maxOrder + 1,
       published: false,
     });
@@ -156,10 +179,9 @@ const DashboardGallery = () => {
   };
 
   /**
-   * Reordering swaps two rows. Doing that as two separate requests can leave the
-   * list half-swapped if the second one fails, so it goes through a transactional
-   * RPC; the two-update path is kept only for environments where the RPC is not
-   * deployed yet.
+   * Reordering swaps two rows. Two independent UPDATEs can leave the list
+   * half-swapped, so the swap ONLY ever happens inside the transactional RPC — if the
+   * RPC is missing or fails, nothing is written at all and the admin sees why.
    */
   const move = async (item: GalleryItem, dir: -1 | 1) => {
     const idx = items.findIndex((i) => i.id === item.id);
@@ -170,26 +192,13 @@ const DashboardGallery = () => {
       rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { code?: string; message?: string } | null }>;
     }).rpc;
     const { error: rpcError } = await rpc("swap_gallery_order", { _a: item.id, _b: other.id });
+    setBusyId(null);
     if (rpcError) {
       const missingRpc =
         rpcError.code === "PGRST202" || /could not find the function|does not exist/i.test(rpcError.message ?? "");
-      if (!missingRpc) {
-        setBusyId(null);
-        toast.error(c("saveFailed"));
-        return;
-      }
-      const [r1, r2] = await Promise.all([
-        galleryTable().update({ sort_order: other.sort_order }).eq("id", item.id),
-        galleryTable().update({ sort_order: item.sort_order }).eq("id", other.id),
-      ]);
-      if (r1.error || r2.error) {
-        setBusyId(null);
-        toast.error(c("saveFailed"));
-        refresh();
-        return;
-      }
+      toast.error(missingRpc ? c("reorderFailed") : c("saveFailed"));
+      return;
     }
-    setBusyId(null);
     refresh();
   };
 
@@ -205,37 +214,75 @@ const DashboardGallery = () => {
     }
   };
 
+  /**
+   * Best-effort removal of a derivative WE just created. Only the freshly uploaded
+   * object name is ever passed here — the source video and any pre-existing cover are
+   * untouched no matter how the generation ended.
+   */
+  const discardDerivative = async (name: string) => {
+    try {
+      await supabase.storage.from("media").remove([name]);
+    } catch {
+      /* best effort: an orphan derivative is preferable to deleting the wrong file */
+    }
+  };
+
   /** Extract a cover frame in the browser and store it next to the other media. */
   const generateCover = async (item: GalleryItem) => {
     if (!item.media_url) return;
     posterAbort.current?.abort();
     const controller = new AbortController();
     posterAbort.current = controller;
-    setPosterBusyId(item.id);
+    setPoster({ id: item.id, progress: 0 });
+    const bump = (p: number) =>
+      setPoster((cur) => (cur && cur.id === item.id ? { ...cur, progress: p } : cur));
+    let uploaded: string | null = null;
     try {
       // Lazy: neither the poster module nor the FFmpeg fallback is in any other bundle.
       const { generatePoster, posterNameFor } = await import("@/lib/gallery-poster");
-      const result = await generatePoster({ videoUrl: item.media_url, signal: controller.signal });
-      const { data: existing } = await supabase.storage.from("media").list("", { limit: 1000 });
-      const taken = (existing ?? []).map((f) => f.name);
+      const result = await generatePoster({
+        videoUrl: item.media_url,
+        signal: controller.signal,
+        onProgress: (r) => {
+          if (!controller.signal.aborted) bump(Math.min(90, Math.round(r * 90)));
+        },
+      });
+      if (controller.signal.aborted) return;
+
+      // Full paginated listing: a truncated one could hand back a name already in use.
+      const taken = await listAllMediaNames();
       const name = posterNameFor(item.media_url, result.ext, taken);
+      bump(92);
       const { error: upErr } = await supabase.storage
         .from("media")
         .upload(name, result.blob, { contentType: result.mimeType, upsert: false });
       if (upErr) throw upErr;
-      const url = supabase.storage.from("media").getPublicUrl(name).data.publicUrl;
+      uploaded = name;
+      bump(96);
+
       if (controller.signal.aborted) return;
-      if (await patch(item.id, { poster_url: url })) toast.success(c("coverDone"));
+      const url = supabase.storage.from("media").getPublicUrl(name).data.publicUrl;
+      if (await patch(item.id, { poster_url: url })) {
+        uploaded = null;
+        bump(100);
+        toast.success(c("coverDone"));
+      }
     } catch (e) {
       if (!controller.signal.aborted) {
         if (import.meta.env.DEV) console.error("[gallery poster]", e);
         toast.error(c("coverFailed"));
       }
     } finally {
+      // Cancelled or failed after the upload: delete only that new derivative.
+      if (uploaded) await discardDerivative(uploaded);
+      if (controller.signal.aborted) toast.message(c("coverCancelled"));
       if (posterAbort.current === controller) posterAbort.current = null;
-      setPosterBusyId((id) => (id === item.id ? null : id));
+      setPoster((cur) => (cur && cur.id === item.id ? null : cur));
     }
   };
+
+  const cancelCover = () => posterAbort.current?.abort();
+
 
   const field = (item: GalleryItem, base: "title" | "description" | "alt") =>
     `${base}_${lang}` as keyof GalleryItem;
@@ -306,7 +353,9 @@ const DashboardGallery = () => {
         <div className="space-y-4">
           {items.map((item, idx) => {
             const busy = busyId === item.id;
-            const posterBusy = posterBusyId === item.id;
+            const posterBusy = poster?.id === item.id;
+            const posterProgress = poster?.id === item.id ? poster.progress : 0;
+
             const thumb = item.media_type === "video" ? item.poster_url : item.media_url;
             const issues = publishIssues(item);
             return (
@@ -346,6 +395,35 @@ const DashboardGallery = () => {
                           )}
                           {posterBusy ? c("generating") : c("generateCover")}
                         </Button>
+                        {posterBusy && (
+                          <div className="space-y-1" data-testid="cover-progress">
+                            <div
+                              role="progressbar"
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-valuenow={posterProgress}
+                              aria-label={c("generating")}
+                              className="h-1.5 w-full rounded-full bg-secondary overflow-hidden"
+                            >
+                              <div
+                                className="h-full bg-primary transition-all"
+                                style={{ width: `${posterProgress}%` }}
+                              />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground" aria-live="polite">
+                              {c("coverProgress", { p: String(posterProgress) })}
+                            </p>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="w-full text-destructive"
+                              onClick={cancelCover}
+                            >
+                              <X size={13} className="mr-1.5" /> {c("coverCancel")}
+                            </Button>
+                          </div>
+                        )}
+
                         <Button
                           size="sm"
                           variant="outline"
@@ -462,6 +540,8 @@ const DashboardGallery = () => {
         emptyLabel={c("pickerEmpty")}
         searchPlaceholder={c("pickerSearch")}
         noMatchLabel={c("pickerNoMatch")}
+        errorLabel={c("pickerError")}
+        retryLabel={c("retry")}
         cancelLabel={c("cancel")}
         selectLabel={c("select")}
         currentUrl={picker && picker.mode !== "add" ? picker.currentUrl : undefined}
@@ -474,20 +554,22 @@ const DashboardGallery = () => {
             // A cover belongs to one specific video file: replacing the file must
             // never leave the previous video's frame (and a published video without
             // a cover is not allowed, so it is unpublished in the same write).
+            // A photo never owns a cover, so its poster_url is explicitly cleared.
             const changed = !!target && target.media_url !== url;
             const clearPoster = changed && target?.media_type === "video";
             const values: Record<string, unknown> = { media_url: url };
+            if (target?.media_type === "photo") values.poster_url = "";
             if (clearPoster) {
               values.poster_url = "";
               values.published = false;
-            } else if (changed && target?.media_type === "photo") {
-              values.poster_url = url;
             }
+
             if (await patch(picker.id, values)) {
               toast.success(c("saved"));
               if (clearPoster) toast.warning(c("posterCleared"));
             }
           } else if (await patch(picker.id, { poster_url: url })) toast.success(c("saved"));
+
           setPicker(null);
         }}
       />

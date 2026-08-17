@@ -119,7 +119,7 @@ describe("carousel alt auto-translation", () => {
     await waitFor(() => expect(translateAlt).toHaveBeenCalledTimes(1));
 
     // The admin keeps typing before the answer arrives.
-    await user.type(input, " de espalda");
+    await user.type(input, "Masaje de espalda");
     release!({ en: "Massage", ru: "Массаж" });
 
     // The late answer belongs to a value that no longer exists: no review opens.

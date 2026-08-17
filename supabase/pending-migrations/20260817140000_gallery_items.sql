@@ -94,7 +94,8 @@ FOR EACH ROW EXECUTE FUNCTION public.log_content_change();
 -- ---------------------------------------------------------------------------
 -- Atomic reorder: two independent UPDATE round-trips can leave the list in a
 -- half-swapped state if the second one fails. This RPC swaps both rows inside a
--- single transaction and is admin-only.
+-- single transaction, locks them in a stable id order (so two concurrent reorders
+-- of the same pair can never deadlock), and is admin / service_role only.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.swap_gallery_order(_a uuid, _b uuid)
 RETURNS integer
@@ -105,21 +106,40 @@ AS $function$
 DECLARE
   order_a integer;
   order_b integer;
+  locked_count integer;
+  jwt_role text := COALESCE(
+    NULLIF(current_setting('request.jwt.claims', true), '')::json ->> 'role',
+    ''
+  );
 BEGIN
-  IF NOT public.has_role(auth.uid(), 'admin'::app_role) THEN
+  -- Authenticated admin (verified through the security-definer role check) OR the
+  -- service role. anon is never allowed, and "any authenticated user" is not enough.
+  IF NOT (
+    jwt_role = 'service_role'
+    OR (auth.uid() IS NOT NULL AND public.has_role(auth.uid(), 'admin'::app_role))
+  ) THEN
     RAISE EXCEPTION 'not authorized';
   END IF;
+
   IF _a IS NULL OR _b IS NULL OR _a = _b THEN
     RAISE EXCEPTION 'invalid gallery reorder arguments';
   END IF;
 
-  -- Deterministic lock order avoids deadlocks between concurrent reorders.
-  SELECT sort_order INTO order_a FROM public.gallery_items WHERE id = _a FOR UPDATE;
-  SELECT sort_order INTO order_b FROM public.gallery_items WHERE id = _b FOR UPDATE;
+  -- ONE locking statement in a deterministic (id) order — never caller order.
+  WITH locked AS (
+    SELECT id FROM public.gallery_items
+    WHERE id IN (_a, _b)
+    ORDER BY id
+    FOR UPDATE
+  )
+  SELECT count(*) INTO locked_count FROM locked;
 
-  IF order_a IS NULL OR order_b IS NULL THEN
+  IF locked_count <> 2 THEN
     RAISE EXCEPTION 'gallery item not found';
   END IF;
+
+  SELECT sort_order INTO order_a FROM public.gallery_items WHERE id = _a;
+  SELECT sort_order INTO order_b FROM public.gallery_items WHERE id = _b;
 
   UPDATE public.gallery_items SET sort_order = order_b WHERE id = _a;
   UPDATE public.gallery_items SET sort_order = order_a WHERE id = _b;
@@ -131,6 +151,7 @@ $function$;
 REVOKE ALL ON FUNCTION public.swap_gallery_order(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.swap_gallery_order(uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.swap_gallery_order(uuid, uuid) TO service_role;
+
 
 -- ---------------------------------------------------------------------------
 -- Media renames must follow gallery media + poster references too.

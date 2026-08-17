@@ -65,8 +65,21 @@ const GalleryLightbox = ({ items, index, onClose, onNavigate }: Props) => {
     };
   }, []);
 
-  // Stop playback whenever the visible item changes, not only on close.
-  useEffect(() => () => stopVideo(), [index, stopVideo]);
+  // Stop playback whenever the visible item changes, not only on close. The element
+  // is captured while the effect runs: by cleanup time the ref already points at the
+  // next item (or null), so reading it there would silently skip the pause.
+  useEffect(() => {
+    const v = videoRef.current;
+    return () => {
+      if (!v) return;
+      try {
+        v.pause();
+        v.currentTime = 0;
+      } catch {
+        /* jsdom / unsupported media */
+      }
+    };
+  }, [index]);
 
 
   useEffect(() => {
