@@ -892,6 +892,38 @@ const DashboardReviews = () => {
               </p>
             </fieldset>
 
+            <fieldset className="space-y-1" data-testid="import-pinning">
+              <legend className="text-xs font-medium text-foreground mb-1">{c("pinChoice")}</legend>
+              <label className="flex items-start gap-2 text-xs text-foreground min-h-11 py-1">
+                <input
+                  type="radio"
+                  name="import-pinning"
+                  className="mt-0.5 w-5 h-5"
+                  checked={!keepPinned}
+                  onChange={() => setKeepPinned(false)}
+                  data-testid="import-pin-none"
+                />
+                <span>{c("pinNone")}</span>
+              </label>
+              <label className="flex items-start gap-2 text-xs text-foreground min-h-11 py-1">
+                <input
+                  type="radio"
+                  name="import-pinning"
+                  className="mt-0.5 w-5 h-5"
+                  checked={keepPinned}
+                  onChange={() => setKeepPinned(true)}
+                  data-testid="import-pin-keep"
+                />
+                <span>{c("pinKeep")}</span>
+              </label>
+              <p className="text-[11px] text-muted-foreground" data-testid="import-pinning-note">
+                {keepPinned ? c("pinKeepNote") : c("pinNoneNote")}
+              </p>
+              <p className="text-[11px] text-muted-foreground" aria-live="polite" data-testid="import-pinned-count">
+                {c("pinSelectedCount", { n: String(selectedPinnedCount) })}
+              </p>
+            </fieldset>
+
             <label className="flex items-start gap-2 text-xs text-foreground">
               <input
                 type="checkbox"
