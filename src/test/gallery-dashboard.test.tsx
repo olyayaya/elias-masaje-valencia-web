@@ -8,9 +8,9 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import type { GalleryItem } from "@/lib/gallery";
 
 const h = vi.hoisted(() => {
-  const insert = vi.fn(async () => ({ error: null as null | { message: string } }));
+  const insert = vi.fn(async (_payload: Record<string, unknown>) => ({ error: null as null | { message: string } }));
   const updateEq = vi.fn(async () => ({ error: null as null | { message: string } }));
-  const update = vi.fn(() => ({ eq: updateEq }));
+  const update = vi.fn((_payload: Record<string, unknown>) => ({ eq: updateEq }));
   const del = vi.fn(() => ({ eq: vi.fn(async () => ({ error: null })) }));
   const rpc = vi.fn(async () => ({ error: null as null | { code?: string; message?: string } }));
   const list = vi.fn(async (_p: string, _o: { limit: number; offset: number }) => ({
