@@ -90,6 +90,19 @@ export const buildImageAttrs = (src: string, alt: string, decorative: boolean) =
   [DECORATIVE_ATTR]: decorative ? "true" : null,
 });
 
+/**
+ * One object holding the editor's fresh HTML for the active language plus the
+ * translated alt patch for the other languages — written in a single update so
+ * neither half can be dropped by the editor's own onUpdate write.
+ */
+export const mergeAltDraft = <T extends Record<string, unknown>>(
+  draft: T,
+  contentField: string,
+  html: string,
+  patch: Record<string, string>,
+): T => ({ ...draft, [contentField]: html, ...patch });
+
+
 interface BlogPost {
   id: string;
   title: string;
