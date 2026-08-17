@@ -117,7 +117,6 @@ const ReviewCard = ({ review, clone = false }: { review: Review; clone?: boolean
 
 const ReviewsSection = () => {
   const { t } = useI18n();
-  const heading = useFadeIn(0);
   const scroller = useRef<HTMLUListElement>(null);
   const { items, settings, missingTable, isPending, isError } = usePublicReviews();
 
