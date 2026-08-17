@@ -600,6 +600,14 @@ describe("dashboard reviews — translation editor", () => {
     fireEvent.click(screen.getByTestId("tr-cancel-a"));
     expect(screen.queryByTestId("tr-editor-a")).toBeNull();
     expect(h.update).not.toHaveBeenCalled();
+    expect(h.toast.success).not.toHaveBeenCalled();
+    expect(h.toast.error).not.toHaveBeenCalled();
+
+    // Reopening shows the stored value again, never the abandoned draft.
+    fireEvent.click(screen.getByTestId("tr-edit-a"));
+    expect((screen.getByTestId("tr-editor-a").querySelectorAll("textarea")[0] as HTMLTextAreaElement).value).toBe(
+      "Genial",
+    );
   });
 
   it("finds a review by the text of its translation", () => {
