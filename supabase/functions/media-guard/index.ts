@@ -1,7 +1,17 @@
 // Admin-protected media operations: usage check, safe delete, safe rename, safe replace (compression).
-// Never deletes/renames a file without server-side re-verification, and never leaves references stale.
+// Every mutating path re-verifies server-side. Reference rewriting + alias recording happen inside a
+// single PostgreSQL transaction (rewrite_media_references), so references can never be half-updated.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  evaluateSaving,
+  magicMatches,
+  MAX_UPLOAD_BYTES,
+  validateName,
+  validateOutputType,
+  validateRenameExtension,
+} from "./rules.ts";
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -10,10 +20,11 @@ const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 type Usage = { entity: string; label: string; id: string; field: string };
 
 // Every public table + column that a dashboard editor can put a media URL/filename into.
-// Audited against the production schema — no speculative columns.
+// Audited against the production schema — no speculative columns. Kept in sync with
+// public.rewrite_media_references (same tables, same columns).
 // Deliberately NOT scanned:
 //   booking_leads / conversion_events → visitor-submitted data, never an editor image source
-//   content_history                   → immutable audit log; reported separately, never blocking
+//   content_history                   → immutable audit log; handled through media_aliases instead
 const SCANS: { table: string; label: string; nameField: string; fields: string[] }[] = [
   { table: "blog_posts", label: "Blog post", nameField: "title", fields: ["content", "content_en", "content_ru", "meta_description", "meta_description_en", "meta_description_ru"] },
   { table: "site_content", label: "Site content", nameField: "label", fields: ["value_es", "value_en", "value_ru"] },
@@ -25,6 +36,7 @@ const SCANS: { table: string; label: string; nameField: string; fields: string[]
 ];
 
 type Client = ReturnType<typeof createClient>;
+
 
 const nameVariants = (name: string) => Array.from(new Set([name, encodeURIComponent(name)]));
 
@@ -71,74 +83,52 @@ async function matchingRows(
   return rows;
 }
 
-type Backup = { table: string; id: string; values: Record<string, string> };
-
 /**
- * Rewrites every reference from oldName → newName across all content-bearing fields.
- * Handles raw filename, full public URL (the filename inside it) and URL-encoded filename.
- * Returns per-row backups so the caller can compensate if a later step fails.
+ * Single transactional rewrite of every content reference + the alias row.
+ * Postgres rolls the whole function back on any error, so there is no partial state
+ * and no client-side compensation array to get wrong.
  */
 async function rewriteReferences(
   admin: Client,
   oldName: string,
   newName: string,
-): Promise<{ backups: Backup[]; updated: number }> {
-  const backups: Backup[] = [];
-  let updated = 0;
-  for (const scan of SCANS) {
-    for (const row of await matchingRows(admin, scan, oldName)) {
-      const before: Record<string, string> = {};
-      const patch: Record<string, string> = {};
-      for (const f of scan.fields) {
-        const value = row[f];
-        if (typeof value !== "string") continue;
-        let next = value;
-        next = next.split(oldName).join(newName);
-        next = next.split(encodeURIComponent(oldName)).join(encodeURIComponent(newName));
-        if (next !== value) {
-          before[f] = value;
-          patch[f] = next;
-        }
-      }
-      if (!Object.keys(patch).length) continue;
-      const { error } = await admin.from(scan.table).update(patch).eq("id", row.id);
-      if (error) throw Object.assign(new Error(`${scan.table}: ${error.message}`), { backups });
-      backups.push({ table: scan.table, id: String(row.id), values: before });
-      updated += Object.keys(patch).length;
-    }
-  }
-  return { backups, updated };
+  actor: string,
+): Promise<number> {
+  const { data, error } = await admin.rpc("rewrite_media_references", {
+    _old: oldName,
+    _new: newName,
+    _old_enc: encodeURIComponent(oldName),
+    _new_enc: encodeURIComponent(newName),
+    _actor: actor,
+  });
+  if (error) throw new Error(error.message);
+  return typeof data === "number" ? data : 0;
 }
 
-async function restoreReferences(admin: Client, backups: Backup[]) {
-  for (const b of backups) {
-    await admin.from(b.table).update(b.values).eq("id", b.id);
-  }
-}
-
-// content_history is an append-only audit log. A hit there means an OLD version of some
-// content referenced this file: restoring that version after deletion/rename would show a broken
-// image. It must never block the operation (history rows are never edited, so the block would be
-// permanent) — instead it is surfaced as a non-blocking warning count.
+// content_history is an append-only audit log — snapshots are never rewritten. Restores stay safe
+// because the dashboard resolves old names through media_aliases before applying a snapshot.
+// The count is still reported so the admin sees the honest state.
 async function countHistoryReferences(admin: Client, fileName: string): Promise<number> {
   const { data, error } = await admin.rpc("count_media_history_refs", { _needle: fileName });
   if (error) return 0; // never let the advisory lookup break the guard
   return typeof data === "number" ? data : 0;
 }
 
-const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
 
-function validateName(name: string): string | null {
-  if (!name) return "Name cannot be empty";
-  if (name.includes("/") || name.includes("\\") || name.includes("..")) return "Name cannot contain paths";
-  if (!NAME_RE.test(name)) return "Use letters, numbers, dot, dash and underscore only";
-  if (!/\.[A-Za-z0-9]{2,5}$/.test(name)) return "Name must keep a file extension";
-  return null;
-}
+type Stat = { found: boolean; size: number };
 
-async function objectExists(admin: Client, name: string): Promise<boolean> {
-  const { data } = await admin.storage.from("media").list("", { search: name, limit: 100 });
-  return (data ?? []).some((f: { name: string }) => f.name === name);
+/**
+ * Exact-name lookup in the media bucket. Storage API failures are thrown (500), a clean
+ * "no such object" answer returns found:false (404) — the two are never conflated.
+ */
+async function statObject(admin: Client, name: string): Promise<Stat> {
+  const { data, error } = await admin.storage.from("media").list("", { search: name, limit: 100 });
+  if (error) throw new Error(`Storage lookup failed: ${error.message}`);
+  const hit = (data ?? []).find((f: { name: string }) => f.name === name) as
+    | { name: string; metadata?: { size?: number } }
+    | undefined;
+  if (!hit) return { found: false, size: 0 };
+  return { found: true, size: Number(hit.metadata?.size ?? 0) };
 }
 
 function decodeBase64(b64: string): Uint8Array {
@@ -197,29 +187,36 @@ Deno.serve(async (req) => {
       const invalid = validateName(newName);
       if (invalid) return json({ error: invalid }, 400);
       if (newName === fileName) return json({ error: "New name is identical" }, 400);
-      if (!(await objectExists(admin, fileName))) return json({ error: "Source file not found" }, 404);
-      if (await objectExists(admin, newName)) return json({ error: "A file with that name already exists" }, 409);
+      // Server-side extension guard: format changes must go through the compression flow.
+      const extError = validateRenameExtension(fileName, newName);
+      if (extError) return json({ error: extError }, 400);
+
+
+      const source = await statObject(admin, fileName);
+      if (!source.found) return json({ error: "Source file not found" }, 404);
+      if ((await statObject(admin, newName)).found) {
+        return json({ error: "A file with that name already exists" }, 409);
+      }
 
       const { error: copyError } = await admin.storage.from("media").copy(fileName, newName);
       if (copyError) return json({ error: copyError.message }, 500);
 
       let updated = 0;
       try {
-        updated = (await rewriteReferences(admin, fileName, newName)).updated;
+        updated = await rewriteReferences(admin, fileName, newName, user.id);
       } catch (e) {
-        const backups = (e as { backups?: Backup[] }).backups ?? [];
-        await restoreReferences(admin, backups);
+        // The RPC is a single transaction: nothing was committed. Only the new object must go.
         await admin.storage.from("media").remove([newName]);
         return json({ error: `Rename rolled back: ${(e as Error).message}` }, 500);
       }
 
+      const historyReferences = await countHistoryReferences(admin, fileName);
       const { error: rmError } = await admin.storage.from("media").remove([fileName]);
       if (rmError) {
         // References already point at the new object which exists — keep them, report the leftover.
-        return json({ fileName, newName, renamed: true, updatedReferences: updated, warning: rmError.message });
+        return json({ fileName, newName, renamed: true, updatedReferences: updated, aliased: true, historyReferences, warning: `Old object could not be removed: ${rmError.message}` });
       }
-      const historyReferences = await countHistoryReferences(admin, fileName);
-      return json({ fileName, newName, renamed: true, updatedReferences: updated, historyReferences });
+      return json({ fileName, newName, renamed: true, updatedReferences: updated, aliased: true, historyReferences });
     }
 
     // ---- replace (smart compression commit) ------------------------------
@@ -227,18 +224,34 @@ Deno.serve(async (req) => {
     const invalid = validateName(newName);
     if (invalid) return json({ error: invalid }, 400);
     const contentBase64 = typeof body?.contentBase64 === "string" ? body.contentBase64 : "";
-    const contentType = typeof body?.contentType === "string" ? body.contentType : "application/octet-stream";
+    const contentType = typeof body?.contentType === "string" ? body.contentType.toLowerCase() : "";
     if (!contentBase64) return json({ error: "Missing image data" }, 400);
-    if (!/^image\/(webp|jpeg|png)$/.test(contentType)) return json({ error: "Unsupported output format" }, 400);
+    if (contentBase64.length > Math.ceil((MAX_UPLOAD_BYTES * 4) / 3) + 64) {
+      return json({ error: `Image is too large — the limit is ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB` }, 413);
+    }
+    const typeError = validateOutputType(contentType, newName);
+    if (typeError) return json({ error: typeError }, 400);
 
     const bytes = decodeBase64(contentBase64);
-    const originalSize = Number(body?.originalSize ?? 0);
-    if (!originalSize || bytes.byteLength >= originalSize) {
-      return json({ error: "Compressed result is not smaller — file left untouched" }, 409);
+    if (bytes.byteLength > MAX_UPLOAD_BYTES) {
+      return json({ error: `Image is too large — the limit is ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB` }, 413);
     }
-    if (!(await objectExists(admin, fileName))) return json({ error: "Source file not found" }, 404);
+    if (!magicMatches(contentType, bytes)) {
+      return json({ error: `Image data does not look like ${contentType}` }, 400);
+    }
+
+    // Never trust the client-reported original size — read the real stored object.
+    const source = await statObject(admin, fileName);
+    if (!source.found) return json({ error: "Source file not found" }, 404);
+    const originalSize = source.size;
+    const verdict = evaluateSaving(originalSize, bytes.byteLength);
+    if (!verdict.ok) {
+      return json({ error: verdict.message, alreadyCompressed: verdict.alreadyCompressed, originalSize, newSize: bytes.byteLength }, 409);
+    }
+
+
     const renaming = newName !== fileName;
-    if (renaming && (await objectExists(admin, newName))) {
+    if (renaming && (await statObject(admin, newName)).found) {
       return json({ error: "A file with that name already exists" }, 409);
     }
 
@@ -250,17 +263,17 @@ Deno.serve(async (req) => {
     let updated = 0;
     if (renaming) {
       try {
-        updated = (await rewriteReferences(admin, fileName, newName)).updated;
+        updated = await rewriteReferences(admin, fileName, newName, user.id);
       } catch (e) {
-        const backups = (e as { backups?: Backup[] }).backups ?? [];
-        await restoreReferences(admin, backups);
         await admin.storage.from("media").remove([newName]);
         return json({ error: `Compression rolled back: ${(e as Error).message}` }, 500);
       }
+      const historyReferences = await countHistoryReferences(admin, fileName);
       const { error: rmError } = await admin.storage.from("media").remove([fileName]);
       if (rmError) {
-        return json({ fileName, newName, replaced: true, updatedReferences: updated, newSize: bytes.byteLength, originalSize, warning: rmError.message });
+        return json({ fileName, newName, replaced: true, updatedReferences: updated, aliased: true, newSize: bytes.byteLength, originalSize, historyReferences, warning: `Old object could not be removed: ${rmError.message}` });
       }
+      return json({ fileName, newName, replaced: true, updatedReferences: updated, aliased: true, newSize: bytes.byteLength, originalSize, historyReferences });
     }
 
     const historyReferences = await countHistoryReferences(admin, fileName);
@@ -268,7 +281,8 @@ Deno.serve(async (req) => {
       fileName,
       newName,
       replaced: true,
-      updatedReferences: updated,
+      updatedReferences: 0,
+      aliased: false,
       originalSize,
       newSize: bytes.byteLength,
       historyReferences,

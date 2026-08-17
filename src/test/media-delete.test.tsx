@@ -32,14 +32,22 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 import DashboardMedia from "@/components/dashboard/DashboardMedia";
+import { I18nProvider } from "@/i18n/context";
 
 const openDeleteDialog = async () => {
+  // The media dashboard is localized; /en pins the English copy asserted below.
+  window.history.replaceState({}, "", "/en");
   const user = userEvent.setup();
-  render(<DashboardMedia />);
+  render(
+    <I18nProvider>
+      <DashboardMedia />
+    </I18nProvider>
+  );
   const btn = await screen.findByLabelText("Delete hero.webp");
   await user.click(btn);
   return user;
 };
+
 
 beforeEach(() => {
   vi.clearAllMocks();

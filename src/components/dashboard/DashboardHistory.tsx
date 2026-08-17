@@ -3,9 +3,11 @@ import { History, RotateCcw, ChevronDown, ChevronRight, Loader2, Clock, Trash2, 
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
+import { fetchAliasMap, resolveSnapshotMedia, type AliasMap } from "@/lib/media-aliases";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import DashboardCard from "./DashboardCard";
+
 
 // Map history table_name → React Query key so a restore invalidates the
 // public site read for the same table.
@@ -55,6 +57,7 @@ const DashboardHistory = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
+  const [aliases, setAliases] = useState<AliasMap>(new Map());
   const queryClient = useQueryClient();
 
   const invalidateFor = (tableName: string) => {
@@ -72,13 +75,21 @@ const DashboardHistory = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchHistory(); }, []);
+  useEffect(() => {
+    fetchHistory();
+    // Snapshots are immutable, so stale media names are resolved forward at restore time.
+    fetchAliasMap().then(setAliases).catch(() => setAliases(new Map()));
+  }, []);
 
   const restore = async (entry: HistoryEntry) => {
     setRestoring(entry.id);
     try {
-      await restoreEntry(entry);
-      toast.success("Restored to previous version");
+      const remapped = await restoreEntry(entry);
+      toast.success(
+        remapped > 0
+          ? `Restored to previous version · ${remapped} media link(s) remapped to their current file`
+          : "Restored to previous version"
+      );
       fetchHistory();
     } catch (err) {
       console.error("Restore failed:", err);
@@ -88,15 +99,20 @@ const DashboardHistory = () => {
     }
   };
 
-  const restoreEntry = async (entry: HistoryEntry) => {
-    const { id, created_at, updated_at, ...fields } = entry.snapshot;
+  /** Resolves renamed/re-encoded media names forward before writing the snapshot back. */
+  const restoreEntry = async (entry: HistoryEntry): Promise<number> => {
+    const { snapshot, remapped } = resolveSnapshotMedia(entry.snapshot, aliases);
+    const { id, created_at, updated_at, ...fields } = snapshot;
     if (entry.action === "delete") {
-      await supabase.from(entry.table_name as any).insert({ ...entry.snapshot, id: entry.record_id } as any);
+      await supabase.from(entry.table_name as any).insert({ ...snapshot, id: entry.record_id } as any);
     } else {
       await supabase.from(entry.table_name as any).update(fields as any).eq("id", entry.record_id);
     }
     invalidateFor(entry.table_name);
+    return remapped;
   };
+
+
 
   const runBulkUndo = async () => {
     setBulkRunning(true);
