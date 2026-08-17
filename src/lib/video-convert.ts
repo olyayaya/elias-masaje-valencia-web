@@ -120,20 +120,26 @@ export interface ConvertOptions {
 export function buildFfmpegArgs(o: ConvertOptions): string[] {
   const { width, height } = targetDimensions(o.meta.width, o.meta.height, o.resolution);
   const fps = o.fpsCap ?? FPS_CAP;
-  const args = ["-i", o.inputName, "-vf", `scale=${width}:${height}`, "-r", String(fps)];
+  // -fpsmax is a *ceiling*: a 24 fps source stays 24 fps instead of being interpolated up
+  // to 30 (which -r would do, making the file bigger for no visual gain).
+  const args = ["-i", o.inputName, "-vf", `scale=${width}:${height}`, "-fpsmax", String(fps)];
+  const audio = audioEncoderFor(o.format, o.caps);
 
   if (o.format === "mp4") {
     args.push("-c:v", "libx264", "-preset", "veryfast", "-crf", String(CRF.mp4[o.quality]));
     args.push("-pix_fmt", "yuv420p", "-movflags", "+faststart");
-    args.push("-c:a", o.caps.aac ? "aac" : "libmp3lame", "-b:a", `${AUDIO_KBPS[o.quality]}k`);
   } else {
     args.push("-c:v", "libvpx-vp9", "-b:v", "0", "-crf", String(CRF.webm[o.quality]));
     args.push("-row-mt", "1", "-pix_fmt", "yuv420p");
-    args.push("-c:a", o.caps.opus ? "libopus" : "libvorbis", "-b:a", `${AUDIO_KBPS[o.quality]}k`);
   }
+  // Never name an encoder this core did not report; drop the audio track instead.
+  if (audio) args.push("-c:a", audio, "-b:a", `${AUDIO_KBPS[o.quality]}k`);
+  else args.push("-an");
+
   args.push("-y", o.outputName);
   return args;
 }
+
 
 /**
  * Smart preset: compatible container, max 1080p, capped fps, sensible quality by source size.
