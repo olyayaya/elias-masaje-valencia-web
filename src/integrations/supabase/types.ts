@@ -239,6 +239,30 @@ export type Database = {
         }
         Relationships: []
       }
+      media_aliases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          new_name: string
+          old_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_name: string
+          old_name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_name?: string
+          old_name?: string
+        }
+        Relationships: []
+      }
       page_images: {
         Row: {
           alt_text: string
@@ -487,12 +511,23 @@ export type Database = {
     }
     Functions: {
       count_media_history_refs: { Args: { _needle: string }; Returns: number }
+      current_actor: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      rewrite_media_references: {
+        Args: {
+          _actor: string
+          _new: string
+          _new_enc: string
+          _old: string
+          _old_enc: string
+        }
+        Returns: number
       }
     }
     Enums: {
