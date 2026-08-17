@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { AlertTriangle, Check, X } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { MAX_ALT_LENGTH, validateAlt, type AltLang } from "@/lib/alt-text";
+import { ALT_LANGS, planAltTranslations, planToTriple, translateAlt, type AltTriple } from "@/lib/alt-translate";
+import { toast } from "sonner";
+import { Loader2, Sparkles } from "lucide-react";
 
 const COPY = {
   title: { en: "Describe this image", es: "Describe esta imagen", ru: "Опишите изображение" },
@@ -30,6 +33,21 @@ const COPY = {
   save: { en: "Save alt text", es: "Guardar texto alternativo", ru: "Сохранить alt-текст" },
   insert: { en: "Insert image", es: "Insertar imagen", ru: "Вставить изображение" },
   cancel: { en: "Cancel", es: "Cancelar", ru: "Отмена" },
+  translate: { en: "Translate to the other languages", es: "Traducir a los demás idiomas", ru: "Перевести на остальные языки" },
+  translating: { en: "Translating…", es: "Traduciendo…", ru: "Перевод…" },
+  autoBadge: { en: "Auto — needs review", es: "Automático — revisar", ru: "Автоперевод — проверьте" },
+  keptBadge: { en: "Kept your text", es: "Se mantiene tu texto", ru: "Оставлен ваш текст" },
+  overwrite: { en: "Replace with the translation", es: "Sustituir por la traducción", ru: "Заменить переводом" },
+  otherLangs: {
+    en: "Other languages — applied only where this image already exists",
+    es: "Otros idiomas — se aplica solo donde esta imagen ya existe",
+    ru: "Другие языки — применяется только там, где это изображение уже есть",
+  },
+  translateFailed: {
+    en: "Translation failed — the {l} alt text still works",
+    es: "La traducción falló — el texto alternativo en {l} sigue disponible",
+    ru: "Перевод не удался — alt-текст на {l} сохраняется",
+  },
 } as const;
 
 const fill = (s: string, vars: Record<string, string | number>) =>
@@ -41,14 +59,16 @@ export interface ImageAltDialogProps {
   lang: AltLang;
   initialAlt?: string;
   initialDecorative?: boolean;
+  /** Alt already present for this same image in the other language versions. */
+  initialOthers?: Partial<AltTriple>;
   /** "insert" while placing a new image, "edit" when changing an existing one. */
   mode?: "insert" | "edit";
   onCancel: () => void;
-  onConfirm: (alt: string, decorative: boolean) => void;
+  onConfirm: (alt: string, decorative: boolean, values: AltTriple) => void;
 }
 
 const ImageAltDialog = ({
-  open, src, lang, initialAlt = "", initialDecorative = false, mode = "insert", onCancel, onConfirm,
+  open, src, lang, initialAlt = "", initialDecorative = false, initialOthers = {}, mode = "insert", onCancel, onConfirm,
 }: ImageAltDialogProps) => {
   const { locale } = useI18n();
   const ui = (["en", "es", "ru"] as const).includes(locale as AltLang) ? (locale as AltLang) : "en";
@@ -56,13 +76,41 @@ const ImageAltDialog = ({
 
   const [alt, setAlt] = useState(initialAlt);
   const [decorative, setDecorative] = useState(initialDecorative);
+  const [autoTranslate, setAutoTranslate] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [translations, setTranslations] = useState<Partial<AltTriple>>({});
+  const [overwrite, setOverwrite] = useState<Partial<Record<AltLang, boolean>>>({});
+  const [edits, setEdits] = useState<Partial<AltTriple>>({});
 
   useEffect(() => {
     if (open) {
       setAlt(initialAlt);
       setDecorative(initialDecorative);
+      setTranslations({});
+      setOverwrite({});
+      setEdits({});
+      setBusy(false);
     }
   }, [open, initialAlt, initialDecorative]);
+
+  const current: AltTriple = {
+    es: lang === "es" ? initialAlt : initialOthers.es ?? "",
+    en: lang === "en" ? initialAlt : initialOthers.en ?? "",
+    ru: lang === "ru" ? initialAlt : initialOthers.ru ?? "",
+  };
+
+  const plan = planAltTranslations({ current, source: lang, sourceValue: alt, translations, overwrite });
+  const values = { ...planToTriple(plan), ...edits } as AltTriple;
+
+  const runTranslate = async () => {
+    setBusy(true);
+    try {
+      setTranslations(await translateAlt(alt, lang));
+    } catch {
+      toast.error(L("translateFailed", { l: lang.toUpperCase() }));
+    }
+    setBusy(false);
+  };
 
   const error = validateAlt(alt, decorative);
 
@@ -115,6 +163,63 @@ const ImageAltDialog = ({
           )}
         </div>
 
+        {!decorative && (
+          <div className="space-y-2 border-t border-border pt-3">
+            <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={autoTranslate} onChange={(e) => setAutoTranslate(e.target.checked)} />
+              {L("translate")}
+            </label>
+            {autoTranslate && (
+              <>
+                <Button type="button" variant="outline" size="sm" disabled={busy || !alt.trim()} onClick={runTranslate}>
+                  {busy ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Sparkles size={14} className="mr-1.5" />}
+                  {busy ? L("translating") : L("translate")}
+                </Button>
+                <p className="text-[11px] text-muted-foreground">{L("otherLangs")}</p>
+                {ALT_LANGS.filter((l) => l !== lang).map((l) => {
+                  const row = plan.find((r) => r.lang === l)!;
+                  return (
+                    <div key={l} className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                        <span className="font-medium text-foreground">{l.toUpperCase()}</span>
+                        {row.auto && (
+                          <span data-testid={`auto-${l}`} className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                            {L("autoBadge")}
+                          </span>
+                        )}
+                        {row.conflict && <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{L("keptBadge")}</span>}
+                      </div>
+                      <Input
+                        aria-label={`alt-${l}`}
+                        value={values[l] ?? ""}
+                        maxLength={MAX_ALT_LENGTH}
+                        onChange={(e) => setEdits((p) => ({ ...p, [l]: e.target.value }))}
+                      />
+                      {row.conflict && (
+                        <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!overwrite[l]}
+                            onChange={(e) => {
+                              setEdits((p) => {
+                                const n = { ...p };
+                                delete n[l];
+                                return n;
+                              });
+                              setOverwrite((p) => ({ ...p, [l]: e.target.checked }));
+                            }}
+                          />
+                          {L("overwrite")}
+                        </label>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onCancel}>
             <X size={14} className="mr-1.5" />
@@ -123,7 +228,13 @@ const ImageAltDialog = ({
           <Button
             size="sm"
             disabled={!!error}
-            onClick={() => onConfirm(decorative ? "" : alt.trim(), decorative)}
+            onClick={() =>
+              onConfirm(
+                decorative ? "" : alt.trim(),
+                decorative,
+                decorative ? { es: "", en: "", ru: "" } : values,
+              )
+            }
           >
             <Check size={14} className="mr-1.5" />
             {mode === "edit" ? L("save") : L("insert")}

@@ -18,7 +18,8 @@ import DashboardCard from "./DashboardCard";
 import ImagePicker from "./ImagePicker";
 import LanguageTabs, { Lang, langKey, langVal } from "./LanguageTabs";
 import ImageAltDialog from "./ImageAltDialog";
-import { countMissingAlt, countNonLocalizedAlt, DECORATIVE_ATTR, type AltLang } from "@/lib/alt-text";
+import { countMissingAlt, countNonLocalizedAlt, parseImages, setAltForSrc, DECORATIVE_ATTR, type AltLang } from "@/lib/alt-text";
+import { ALT_LANGS, type AltTriple } from "@/lib/alt-translate";
 import { AI_ENABLED } from "@/config/features";
 import { slugify, isValidSlug } from "@/lib/blog-slugs";
 import { toast } from "sonner";
@@ -40,6 +41,48 @@ const ImageWithAlt = ImageExt.extend({
     };
   },
 });
+
+const contentField = (l: AltLang) => (l === "es" ? "content" : `content_${l}`) as "content" | "content_en" | "content_ru";
+
+/** Alt already stored for the same image in the other language versions. */
+export const otherLangAlts = (
+  draft: Record<string, unknown>,
+  lang: AltLang,
+  src: string,
+): Partial<Record<AltLang, string>> => {
+  const out: Partial<Record<AltLang, string>> = {};
+  for (const l of ALT_LANGS) {
+    if (l === lang) continue;
+    const html = (draft[contentField(l)] as string) || "";
+    const img = parseImages(html).find((i) => i.src === src);
+    if (img) out[l] = img.alt;
+  }
+  return out;
+};
+
+/**
+ * Writes the reviewed translations into the other localized bodies, but only
+ * for an <img> with the same src that already exists there. Never inserts an
+ * image and never rewrites anything else in the article.
+ */
+export const applyAltToOtherLangs = (
+  draft: Record<string, unknown>,
+  lang: AltLang,
+  src: string,
+  values: AltTriple,
+  decorative: boolean,
+): Record<string, string> => {
+  const patch: Record<string, string> = {};
+  for (const l of ALT_LANGS) {
+    if (l === lang) continue;
+    const field = contentField(l);
+    const html = (draft[field] as string) || "";
+    if (!html) continue;
+    const { html: next, changed } = setAltForSrc(html, src, values[l] ?? "", decorative);
+    if (changed && next !== html) patch[field] = next;
+  }
+  return patch;
+};
 
 export const buildImageAttrs = (src: string, alt: string, decorative: boolean) => ({
   src,
@@ -931,7 +974,8 @@ const BlogEditor = ({
                       initialDecorative={altDialog.decorative}
                       mode={altDialog.mode}
                       onCancel={() => setAltDialog(null)}
-                      onConfirm={(alt, decorative) => {
+                      initialOthers={otherLangAlts(draftRef.current as unknown as Record<string, unknown>, lang as AltLang, altDialog.src)}
+                      onConfirm={(alt, decorative, values) => {
                         const attrs = buildImageAttrs(altDialog.src, alt, decorative);
                         if (altDialog.mode === "edit") {
                           editor.chain().focus().updateAttributes("image", attrs).run();
@@ -939,6 +983,17 @@ const BlogEditor = ({
                         } else {
                           editor.chain().focus().setImage(attrs).run();
                           toast.success("Image inserted");
+                        }
+                        // Translations only touch versions that already contain this image.
+                        const patch = applyAltToOtherLangs(
+                          draftRef.current as unknown as Record<string, unknown>,
+                          lang as AltLang,
+                          altDialog.src,
+                          values,
+                          decorative,
+                        );
+                        if (Object.keys(patch).length > 0) {
+                          setDraft({ ...draftRef.current, ...patch });
                         }
                         setAltDialog(null);
                       }}

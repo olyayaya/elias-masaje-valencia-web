@@ -48,11 +48,31 @@ Deno.serve(async (req) => {
   if (!auth.ok) return auth.res;
 
   try {
-    const { text, action, targetLang, sourceLang } = await req.json();
+    const { text, action, targetLang, sourceLang, targets } = await req.json();
+
+    const langNames: Record<string, string> = { es: "Spanish", en: "English", ru: "Russian" };
+    const LANGS = ["es", "en", "ru"];
+    const MAX_ALT = 125;
 
     let prompt = "";
-    if (action === "translate") {
-      const langNames: Record<string, string> = { es: "Spanish", en: "English", ru: "Russian" };
+    let expectJson = false;
+
+    if (action === "translate_alt") {
+      // Localized image alt text: short, factual, no keyword stuffing.
+      if (typeof text !== "string" || !text.trim()) return json({ error: "Missing text" }, 400);
+      if (text.length > 300) return json({ error: "Text too long" }, 400);
+      if (!LANGS.includes(sourceLang)) return json({ error: "Invalid sourceLang" }, 400);
+      const wanted = Array.isArray(targets)
+        ? targets.filter((t: unknown) => typeof t === "string" && LANGS.includes(t) && t !== sourceLang)
+        : LANGS.filter((l) => l !== sourceLang);
+      if (wanted.length === 0) return json({ error: "No target languages" }, 400);
+      expectJson = true;
+      prompt = `Translate this image ALT text from ${langNames[sourceLang]} into: ${wanted.map((l: string) => langNames[l]).join(", ")}.
+Rules: it describes a photo on a massage therapy website. Keep it a single short factual sentence describing exactly what the source says. Do NOT add facts, brand names, locations or keywords that are not in the source. No keyword stuffing. Maximum ${MAX_ALT} characters per language.
+Return ONLY a JSON object with the keys ${wanted.map((l: string) => `"${l}"`).join(", ")} and string values.
+
+Source (${langNames[sourceLang]}): "${text}"`;
+    } else if (action === "translate") {
       prompt = `Translate the following massage/wellness service description from ${langNames[sourceLang] || sourceLang} to ${langNames[targetLang] || targetLang}. Keep the same tone — professional, warm, concise. Return ONLY the translated text, nothing else.\n\nText: "${text}"`;
     } else if (action === "seo_optimize") {
       prompt = `Improve this massage/wellness service description for SEO performance. It should be compelling, include relevant keywords for "massage Valencia" searches, and stay under 200 characters. Keep the same language as the original. Return ONLY the improved text, nothing else.\n\nOriginal: "${text}"`;
@@ -62,6 +82,7 @@ Deno.serve(async (req) => {
     } else {
       return json({ error: "Invalid action" }, 400);
     }
+
 
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
@@ -92,7 +113,29 @@ Deno.serve(async (req) => {
 
     const data = await response.json();
     const result = data.choices?.[0]?.message?.content?.trim() || "";
+
+    if (expectJson) {
+      const raw = result.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        console.error("translate_alt: model did not return JSON");
+        return json({ error: "Translation failed. Please try again." }, 502);
+      }
+      const translations: Record<string, string> = {};
+      for (const l of LANGS) {
+        const v = parsed[l];
+        if (typeof v === "string" && v.trim()) translations[l] = v.trim().slice(0, MAX_ALT);
+      }
+      if (Object.keys(translations).length === 0) {
+        return json({ error: "Translation failed. Please try again." }, 502);
+      }
+      return json({ translations });
+    }
+
     return json({ result });
+
   } catch (error) {
     console.error("Edge function error:", error);
     return json({ error: "Internal server error." }, 500);

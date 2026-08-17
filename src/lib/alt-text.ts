@@ -92,3 +92,35 @@ export function countNonLocalizedAlt(sourceHtml: string, targetHtml: string): nu
     return !!src && src.alt.trim() === i.alt.trim();
   }).length;
 }
+
+const escapeAttr = (v: string) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+const setAttr = (tag: string, name: string, value: string | null): string => {
+  const re = new RegExp(`\\s${name}\\s*=\\s*("[^"]*"|'[^']*')`, "i");
+  const stripped = tag.replace(re, "");
+  if (value === null) return stripped;
+  return stripped.replace(/\s*\/?>$/, (end) => ` ${name}="${escapeAttr(value)}"${end.trim().startsWith("/") ? " />" : ">"}`);
+};
+
+/**
+ * Sets alt (and the decorative marker) on every <img> whose src already exists
+ * in this HTML. Never inserts an image and never touches other markup, so a
+ * translated alt can only reach an article version that already shows the image.
+ */
+export function setAltForSrc(
+  html: string,
+  src: string,
+  alt: string,
+  decorative = false,
+): { html: string; changed: boolean } {
+  if (!html || !src) return { html, changed: false };
+  let changed = false;
+  const next = html.replace(IMG_RE, (tag) => {
+    if ((attr(tag, "src") ?? "") !== src) return tag;
+    changed = true;
+    let out = setAttr(tag, "alt", decorative ? "" : alt);
+    out = setAttr(out, DECORATIVE_ATTR, decorative ? "true" : null);
+    return out;
+  });
+  return { html: next, changed };
+}
