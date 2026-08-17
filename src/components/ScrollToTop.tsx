@@ -117,7 +117,7 @@ const ScrollToTop = () => {
       if (raf) cancelAnimationFrame(raf);
       cleanup();
     };
-  }, [pathname, search, hash, navigationType]);
+  }, [pathname, search, hash, navigationType, state]);
 
 
   return null;
