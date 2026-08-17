@@ -306,8 +306,11 @@ export async function stripAudio(
   }
 
   const ext = (options.fileName.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "mp4").toLowerCase();
-  const inputName = `mute-in.${ext}`;
-  const outputName = `mute-out.${ext}`;
+  // Unique per operation: a fixed name would collide across concurrent runs on the
+  // singleton core and let one run read another's output.
+  const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const inputName = `mute-${token}-in.${ext}`;
+  const outputName = `mute-${token}-out.${ext}`;
   const args = buildStripAudioArgs({ inputName, outputName });
 
   const onProg = ((e: { progress: number }) =>
@@ -321,7 +324,10 @@ export async function stripAudio(
     if (signal?.aborted) throw cancelled();
     await ff.writeFile(inputName, bytes);
     if (signal?.aborted) throw cancelled();
-    await ff.exec(args);
+    const code = await ff.exec(args);
+    // Must be checked BEFORE readFile: a failed remux can leave a stale/partial object
+    // in the virtual FS that would otherwise be uploaded as if it were valid.
+    if (code !== 0) throw new Error(`Audio removal failed (ffmpeg exit code ${code})`);
     if (signal?.aborted) throw cancelled();
     const data = await ff.readFile(outputName);
     const out = typeof data === "string" ? new TextEncoder().encode(data) : data;
@@ -329,6 +335,7 @@ export async function stripAudio(
     const blob = new Blob([buffer], { type: options.mimeType });
     if (!blob.size) throw new Error("Audio removal produced an empty file");
     return { blob, size: blob.size, hadAudio: logHasAudioStream(log) };
+
   } finally {
     signal?.removeEventListener("abort", abort);
     detachLog(ff, collect);
