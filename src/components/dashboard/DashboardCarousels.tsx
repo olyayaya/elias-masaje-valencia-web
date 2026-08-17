@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
 import { useI18n } from "@/i18n/context";
 import { altColumn, altStatus, MAX_ALT_LENGTH, type AltLang } from "@/lib/alt-text";
+import { translateAlt, type AltTriple } from "@/lib/alt-translate";
+import AltTranslateReview from "./AltTranslateReview";
 import DashboardCard from "./DashboardCard";
 import ImagePicker from "./ImagePicker";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
@@ -54,6 +56,13 @@ const COPY = {
   removed: { en: "Removed", es: "Eliminada", ru: "Удалено" },
   removeFailed: { en: "Failed to remove", es: "Error al eliminar", ru: "Не удалось удалить" },
   confirmRemove: { en: "Remove this image from the carousel?", es: "¿Quitar esta imagen del carrusel?", ru: "Удалить это изображение из карусели?" },
+  autoTranslate: { en: "Translate to the other languages on save", es: "Traducir a los demás idiomas al guardar", ru: "Переводить на остальные языки при сохранении" },
+  translating: { en: "Translating…", es: "Traduciendo…", ru: "Перевод…" },
+  translateFailed: {
+    en: "Translation failed — your alt text was saved",
+    es: "La traducción falló — tu texto alternativo se guardó",
+    ru: "Перевод не удался — ваш alt-текст сохранён",
+  },
 } as const;
 
 const fill = (s: string, vars: Record<string, string | number>) =>
@@ -97,6 +106,15 @@ const CollectionSection = ({
   const [pickerForNew, setPickerForNew] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [autoTranslate, setAutoTranslate] = useState(true);
+  const [translating, setTranslating] = useState<string | null>(null);
+  const [review, setReview] = useState<{
+    img: PageImage;
+    source: AltLang;
+    sourceValue: string;
+    current: AltTriple;
+    translations: Partial<Record<AltLang, string>>;
+  } | null>(null);
 
   useEffect(() => {
     const d: Record<string, string> = {};
@@ -235,7 +253,23 @@ const CollectionSection = ({
       <CollapsibleContent>
         <div className="border border-t-0 border-border rounded-b-lg bg-card px-5 pb-5 pt-3 space-y-3">
           {sorted.length > 0 && (
-            <LanguageTabs active={altLang} onChange={setAltLang} />
+            <div className="flex flex-wrap items-center gap-3">
+              <LanguageTabs active={altLang} onChange={setAltLang} />
+              <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoTranslate}
+                  onChange={(e) => setAutoTranslate(e.target.checked)}
+                />
+                {L("autoTranslate")}
+              </label>
+              {translating && (
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Loader2 size={11} className="animate-spin" />
+                  {L("translating")}
+                </span>
+              )}
+            </div>
           )}
           {sorted.map((img, i) => {
             const status = altStatus(img);
@@ -309,6 +343,19 @@ const CollectionSection = ({
         </div>
       </CollapsibleContent>
 
+
+      {review && (
+        <AltTranslateReview
+          open
+          source={review.source}
+          sourceValue={review.sourceValue}
+          current={review.current}
+          translations={review.translations}
+          saving={busy === review.img.id + "-alt"}
+          onCancel={() => setReview(null)}
+          onConfirm={saveReviewed}
+        />
+      )}
 
       <ImagePicker
         open={pickerForNew}
