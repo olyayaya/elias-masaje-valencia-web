@@ -8,3 +8,7 @@ verify_jwt = false
 
 [functions.media-guard]
 verify_jwt = true
+
+[functions.ai-content-helper]
+verify_jwt = true
+
