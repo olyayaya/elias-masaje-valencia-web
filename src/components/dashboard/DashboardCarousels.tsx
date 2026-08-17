@@ -107,7 +107,8 @@ const CollectionSection = ({
   const [busy, setBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [autoTranslate, setAutoTranslate] = useState(true);
-  const [translating, setTranslating] = useState<string | null>(null);
+  /** Rows with a translation request in flight, keyed by image id. */
+  const [translating, setTranslating] = useState<Record<string, boolean>>({});
   const [review, setReview] = useState<{
     img: PageImage;
     source: AltLang;
@@ -115,15 +116,29 @@ const CollectionSection = ({
     current: AltTriple;
     translations: Partial<Record<AltLang, string>>;
   } | null>(null);
-  /** Monotonic token so a late translation answer cannot open a stale review. */
-  const translateReq = useRef(0);
-
+  /**
+   * One monotonic token per row+language, so a request for row B never cancels
+   * row A and an edit of the same row invalidates only its own pending answer.
+   */
+  const translateReq = useRef<Record<string, number>>({});
+  /** Latest draft values, readable inside async callbacks without stale closures. */
+  const draftsRef = useRef<Record<string, string>>({});
+  draftsRef.current = drafts;
 
   useEffect(() => {
     const d: Record<string, string> = {};
     images.forEach((i) => (d[`${i.id}:${altLang}`] = (i[altColumn(altLang as AltLang)] as string | null) ?? ""));
     setDrafts((prev) => ({ ...prev, ...d }));
   }, [images, altLang]);
+
+  /** Editing a row drops its pending translation and any review already shown for it. */
+  const editDraft = (key: string, id: string, v: string) => {
+    setDrafts((p) => ({ ...p, [key]: v }));
+    translateReq.current[key] = (translateReq.current[key] ?? 0) + 1;
+    setTranslating((p) => (p[id] ? { ...p, [id]: false } : p));
+    setReview((r) => (r && r.img.id === id ? null : r));
+  };
+
 
 
   const addImage = async (url: string) => {
