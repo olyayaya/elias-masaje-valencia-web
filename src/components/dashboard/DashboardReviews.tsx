@@ -836,6 +836,12 @@ const DashboardReviews = () => {
                           {r.row?.reviewed_at ? new Date(r.row.reviewed_at).toLocaleDateString() : r.raw.reviewed_at || "—"}
                         </td>
                         <td className="p-2 text-muted-foreground max-w-md">{r.raw.review_text}</td>
+                        <td className="p-2 whitespace-nowrap text-muted-foreground" data-testid={`import-link-${r.line}`}>
+                          {r.row?.original_url ? c("linkYes") : c("linkNo")}
+                        </td>
+                        <td className="p-2 whitespace-nowrap text-muted-foreground" data-testid={`import-pin-${r.line}`}>
+                          {r.row?.pinned ? c("pinFileYes") : c("pinFileNo")}
+                        </td>
                         <td className="p-2 whitespace-nowrap">
                           <span className={r.status === "invalid" ? "text-destructive" : "text-muted-foreground"}>
                             {c(STATUS_LABEL[r.status])}
