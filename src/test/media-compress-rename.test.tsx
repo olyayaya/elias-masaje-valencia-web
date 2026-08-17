@@ -11,7 +11,17 @@ const toastError = vi.fn();
 const toastSuccess = vi.fn();
 const storageRemove = vi.fn();
 
+class MediaGuardError extends Error {
+  alreadyCompressed: boolean;
+  constructor(message: string, opts?: { alreadyCompressed?: boolean }) {
+    super(message);
+    this.name = "MediaGuardError";
+    this.alreadyCompressed = !!opts?.alreadyCompressed;
+  }
+}
+
 vi.mock("@/lib/media-usage", () => ({
+  MediaGuardError,
   checkMediaUsage: (...a: unknown[]) => checkMediaUsage(...a),
   deleteMediaFile: (...a: unknown[]) => deleteMediaFile(...a),
   renameMediaFile: (...a: unknown[]) => renameMediaFile(...a),
