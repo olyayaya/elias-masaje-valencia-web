@@ -15,7 +15,7 @@ import {
 } from "@/lib/media-usage";
 import { analyzeCompression, blobToBase64 } from "@/lib/media-compress";
 import {
-  collisionSafeName, kindOf, countByKind, isVideoFile, UPLOAD_ACCEPT, VIDEO_MIME_BY_EXT, extOf,
+  collisionSafeName, kindOf, countByKind, classifyUpload, UPLOAD_ACCEPT,
   type MediaKind,
 } from "@/lib/media-kind";
 import {
@@ -173,7 +173,7 @@ const DashboardMedia = () => {
       onProgress: (sent, total) => setUploadPct(total ? Math.round((sent / total) * 100) : 0),
     });
     // A freshly uploaded source has never been analyzed by the converter.
-    markOpt(name, "unknown");
+    markOpt(name, "notAnalyzed");
     toast.success(L("uploadedVideo", { n: name }));
   };
 
