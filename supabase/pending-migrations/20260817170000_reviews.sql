@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS public.reviews (
   manual_priority   integer NOT NULL DEFAULT 0,
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
-  last_synced_at    timestamptz,
+  -- When this row last arrived through a manual CSV/JSON import by an admin.
+  imported_at       timestamptz,
   CONSTRAINT reviews_source_external_key UNIQUE (source, external_review_id)
 );
 
@@ -74,28 +75,6 @@ END $$;
 INSERT INTO public.review_display_settings (singleton)
 VALUES (true)
 ON CONFLICT (singleton) DO NOTHING;
-
--- ------------------------------------------------------- review_sync_state ---
--- One persistent row per automated source: what the last attempt did, and when.
--- Admin-only: anon must never learn whether a provider is connected.
-CREATE TABLE IF NOT EXISTS public.review_sync_state (
-  -- Google is the only automated source; TripAdvisor is never synced.
-  source          text PRIMARY KEY CHECK (source = 'google'),
-  last_attempt_at timestamptz,
-  last_success_at timestamptz,
-  status          text NOT NULL DEFAULT 'never'
-                    CHECK (status IN ('never','ok','error','not_configured','rate_limited')),
-  imported_count  integer NOT NULL DEFAULT 0,
-  updated_count   integer NOT NULL DEFAULT 0,
-  skipped_count   integer NOT NULL DEFAULT 0,
-  -- Safe, enumerated codes and short messages only — never a token or a body.
-  error_code      text CHECK (error_code IS NULL OR length(error_code) <= 60),
-  error_message   text CHECK (error_message IS NULL OR length(error_message) <= 300),
-  updated_at      timestamptz NOT NULL DEFAULT now()
-);
-
-INSERT INTO public.review_sync_state (source) VALUES ('google')
-ON CONFLICT (source) DO NOTHING;
 
 -- ------------------------------------------------------------- visibility ---
 -- Security definer so the anon policy can read the settings row without needing
@@ -139,14 +118,9 @@ GRANT ALL ON public.review_display_settings TO service_role;
 GRANT SELECT (id, singleton, section_enabled, allowed_ratings, allowed_sources, sort_mode, updated_at)
   ON public.review_display_settings TO anon;
 
--- Sync state is operational data: admins and the sync job only, never anon.
-GRANT SELECT ON public.review_sync_state TO authenticated;
-GRANT ALL ON public.review_sync_state TO service_role;
-
 -- -------------------------------------------------------------------- RLS ---
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.review_display_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.review_sync_state ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public reviews are readable" ON public.reviews;
 CREATE POLICY "Public reviews are readable"
@@ -180,14 +154,6 @@ CREATE POLICY "Admins manage review display settings"
   USING (public.has_role(auth.uid(), 'admin'::app_role))
   WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role));
 
-DROP POLICY IF EXISTS "Admins read review sync state" ON public.review_sync_state;
-CREATE POLICY "Admins read review sync state"
-  ON public.review_sync_state FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'::app_role));
-
--- Writes come from the sync job (service_role bypasses RLS); no client policy.
-
 -- --------------------------------------------------------------- triggers ---
 DROP TRIGGER IF EXISTS update_reviews_updated_at ON public.reviews;
 CREATE TRIGGER update_reviews_updated_at
@@ -197,11 +163,6 @@ CREATE TRIGGER update_reviews_updated_at
 DROP TRIGGER IF EXISTS update_review_display_settings_updated_at ON public.review_display_settings;
 CREATE TRIGGER update_review_display_settings_updated_at
   BEFORE UPDATE ON public.review_display_settings
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_review_sync_state_updated_at ON public.review_sync_state;
-CREATE TRIGGER update_review_sync_state_updated_at
-  BEFORE UPDATE ON public.review_sync_state
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Manual moderation (visible / pinned / settings) joins the existing audit trail.
