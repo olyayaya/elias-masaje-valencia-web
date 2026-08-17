@@ -12,7 +12,8 @@ function xmlHeaders(): Headers {
   return headers;
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+  const variant = new URL(req.url).searchParams.get("__ctv") ?? "";
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -70,6 +71,24 @@ Deno.serve(async (_req) => {
 
     const xml = buildSitemapXml(posts ?? [], extraUrls, new Date(), { includeGallery });
 
+    const bytes = new TextEncoder().encode(xml);
+    const base = {
+      "cache-control": "public, max-age=60, s-maxage=60",
+      "access-control-allow-origin": "*",
+      "x-content-type-options": "nosniff",
+    };
+    if (variant === "1") {
+      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8" } });
+    }
+    if (variant === "2") {
+      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "text/xml; charset=utf-8" } });
+    }
+    if (variant === "3") {
+      return new Response(new Blob([bytes], { type: "application/xml" }), { status: 200, headers: { ...base, "content-type": "application/xml; charset=utf-8", "content-disposition": "inline; filename=\"sitemap.xml\"" } });
+    }
+    if (variant === "4") {
+      return new Response(bytes, { status: 200, headers: { ...base, "content-type": "application/xml", "content-length": String(bytes.byteLength) } });
+    }
     return new Response(xml, { status: 200, headers: xmlHeaders() });
   } catch (err) {
     console.error("Sitemap error:", err);
