@@ -16,7 +16,8 @@ import {
   MAX_VIDEO_BYTES,
 } from "../../supabase/functions/media-guard/rules";
 
-const FULL: EncoderCaps = { h264: true, vp9: true, aac: true, opus: true };
+const FULL: EncoderCaps = { h264: true, vp9: true, aac: true, opus: true, mp3lame: true, vorbis: true };
+const NONE: EncoderCaps = { h264: false, vp9: false, aac: false, opus: false, mp3lame: false, vorbis: false };
 
 describe("resolution policy", () => {
   it("never upscales", () => {
@@ -62,15 +63,29 @@ describe("ffmpeg argument building", () => {
     expect(args).toContain("libopus");
   });
 
-  it("falls back when an audio encoder is missing", () => {
+  it("falls back to a verified audio encoder when the preferred one is missing", () => {
     const args = buildFfmpegArgs({ ...base, format: "mp4", caps: { ...FULL, aac: false } });
     expect(args).toContain("libmp3lame");
     expect(args).not.toContain("aac");
+    const webm = buildFfmpegArgs({ ...base, format: "webm", outputName: "out.webm", caps: { ...FULL, opus: false } });
+    expect(webm).toContain("libvorbis");
   });
 
-  it("caps the frame rate", () => {
+  it("drops audio instead of naming an encoder the core cannot write", () => {
+    const args = buildFfmpegArgs({
+      ...base,
+      format: "mp4",
+      caps: { ...FULL, aac: false, mp3lame: false },
+    });
+    expect(args).toContain("-an");
+    expect(args).not.toContain("-c:a");
+  });
+
+  it("caps the frame rate without ever raising it", () => {
     const args = buildFfmpegArgs({ ...base, format: "mp4" });
-    expect(args[args.indexOf("-r") + 1]).toBe("30");
+    // -fpsmax is a ceiling; -r would force-resample a 24 fps source up to 30.
+    expect(args).not.toContain("-r");
+    expect(args[args.indexOf("-fpsmax") + 1]).toBe("30");
   });
 });
 
@@ -78,7 +93,7 @@ describe("capability gating", () => {
   it("only offers formats whose encoder exists", () => {
     expect(availableFormats(FULL)).toEqual(["mp4", "webm"]);
     expect(availableFormats({ ...FULL, h264: false })).toEqual(["webm"]);
-    expect(availableFormats({ h264: false, vp9: false, aac: false, opus: false })).toEqual([]);
+    expect(availableFormats(NONE)).toEqual([]);
   });
 
   it("parses the real -encoders listing", () => {
@@ -87,12 +102,15 @@ describe("capability gating", () => {
       " V..... libx264              libx264 H.264 / AVC",
       " V..... libvpx-vp9           libvpx VP9",
       " A..... aac                  AAC (Advanced Audio Coding)",
+      " A..... libvorbis            libvorbis",
     ].join("\n");
-    expect(parseEncoderCaps(log)).toEqual({ h264: true, vp9: true, aac: true, opus: false });
+    expect(parseEncoderCaps(log)).toEqual({
+      h264: true, vp9: true, aac: true, opus: false, mp3lame: false, vorbis: true,
+    });
   });
 
   it("returns no preset when nothing can be encoded", () => {
-    expect(smartPreset({ width: 1920, height: 1080, duration: 10, size: 10 }, { h264: false, vp9: false, aac: false, opus: false })).toBeNull();
+    expect(smartPreset({ width: 1920, height: 1080, duration: 10, size: 10 }, NONE)).toBeNull();
   });
 
   it("recommends 1080p mp4 and pushes harder on bloated sources", () => {
