@@ -50,7 +50,7 @@ const COPY = {
   },
   retry: { en: "Retry", es: "Reintentar", ru: "Повторить" },
   cancel: { en: "Cancel", es: "Cancelar", ru: "Отмена" },
-  select: { en: "Select", es: "Seleccionar", ru: "Выбrar" },
+  select: { en: "Select", es: "Seleccionar", ru: "Выбрать" },
   changeMedia: { en: "Change file", es: "Cambiar archivo", ru: "Заменить файл" },
   poster: { en: "Video cover", es: "Portada del vídeo", ru: "Обложка видео" },
   generateCover: { en: "Generate cover", es: "Generar portada", ru: "Создать обложку" },
