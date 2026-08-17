@@ -21,13 +21,10 @@ import ReviewsSection from "@/components/reviews/ReviewsSection";
 
 const review = (p: Partial<Review>): Review => ({
   id: p.id ?? "1",
-  source: p.source ?? "google",
-  external_review_id: p.external_review_id ?? "x",
+  dedupe_key: p.dedupe_key ?? "k",
   author_name: p.author_name ?? "Ana",
-  author_avatar_url: null,
   rating: p.rating ?? 5,
   review_text: p.review_text ?? "Short text",
-  review_language: null,
   reviewed_at: p.reviewed_at ?? "2026-01-01T00:00:00Z",
   original_url: p.original_url ?? null,
   visible: p.visible ?? true,
@@ -73,6 +70,16 @@ describe("public reviews section", () => {
     expect(container.textContent).toBe("");
   });
 
+  it("renders nothing while loading and nothing on error — never a skeleton or an error box", () => {
+    state.value.items = [review({ id: "a" })];
+    state.value.isPending = true;
+    expect(mount().container.textContent).toBe("");
+    cleanup();
+    state.value.isPending = false;
+    state.value.isError = true;
+    expect(mount().container.textContent).toBe("");
+  });
+
   it("renders nothing when the owner disabled the section", () => {
     state.value.items = [review({ id: "a" })];
     state.value.settings = settings({ section_enabled: false });
@@ -84,7 +91,6 @@ describe("public reviews section", () => {
     state.value.items = [review({ id: "a" }), review({ id: "b", author_name: "Bea" })];
     mount();
     expect(screen.getAllByTestId("review-card")).toHaveLength(2);
-    expect(screen.getAllByRole("blockquote" as never).length || 2).toBeTruthy();
   });
 
   it("hides 1–4★ by default and shows them once allowed", () => {
@@ -111,17 +117,18 @@ describe("public reviews section", () => {
     expect(names[2]).toContain("Ana");
   });
 
-  it("links a per-review permalink, else the public source profile", () => {
+  it("links the original only when the owner stored one, and never a platform profile", () => {
     state.value.items = [
-      review({ id: "a", original_url: "https://maps.google.com/review/a" }),
-      review({ id: "b", source: "google", author_name: "Bea", original_url: null }),
+      review({ id: "a", original_url: "https://maps.example/review/a" }),
+      review({ id: "b", author_name: "Bea", original_url: null }),
     ];
     state.value.settings = settings({ sort_mode: "manual" });
     mount();
     const links = screen.getAllByRole("link");
-    expect(links[0].getAttribute("href")).toBe("https://maps.google.com/review/a");
-    expect(links[1].getAttribute("href")).toContain("maps.app.goo.gl");
-    expect(links.every((l) => l.getAttribute("target") === "_blank")).toBe(true);
+    expect(links).toHaveLength(1);
+    expect(links[0].getAttribute("href")).toBe("https://maps.example/review/a");
+    expect(links[0].getAttribute("target")).toBe("_blank");
+    expect(links[0].getAttribute("rel")).toContain("noopener");
   });
 
   it("clamps long reviews behind a localized read-more toggle", () => {
@@ -143,22 +150,19 @@ describe("public reviews section", () => {
   });
 });
 
-describe("licensed sources only", () => {
-  it("renders no tripadvisor card and no tripadvisor link on the homepage", () => {
-    state.value.items = [
-      review({ id: "a", author_name: "Ana" }),
-      { ...review({ id: "t", author_name: "Tia" }), source: "tripadvisor" } as unknown as ReturnType<typeof review>,
-    ];
+describe("no platform branding and no invented data", () => {
+  it("shows no source badge for Google, TripAdvisor or anyone else", () => {
+    state.value.items = [review({ id: "a", original_url: "https://maps.example/x" })];
     mount();
-    expect(screen.getAllByTestId("review-card")).toHaveLength(1);
-    expect(document.body.textContent).not.toMatch(/tripadvisor/i);
+    expect(document.body.textContent).not.toMatch(/google|tripadvisor/i);
   });
 
-  it("shows a neutral localized name instead of inventing one", () => {
-    state.value.items = [review({ id: "a", author_name: "" })];
+  it("skips an incomplete row instead of inventing a name", () => {
+    state.value.items = [review({ id: "a", author_name: "" }), review({ id: "b", author_name: "Bea" })];
     mount();
-    const card = screen.getByTestId("review-card");
-    expect(card.textContent).toMatch(/cliente|client|клиент/i);
-    expect(card.textContent).not.toMatch(/google user/i);
+    const cards = screen.getAllByTestId("review-card");
+    expect(cards).toHaveLength(1);
+    expect(cards[0].textContent).toContain("Bea");
+    expect(document.body.textContent).not.toMatch(/google user/i);
   });
 });
