@@ -137,6 +137,8 @@ export interface ParsedImportRow {
 export interface ImportParseResult {
   rows: ParsedImportRow[];
   errors: string[];
+  /** Rows dropped because the same (source, external_review_id) appeared twice. */
+  duplicatesInFile: number;
 }
 
 const MAX_IMPORT_ROWS = 500;
@@ -241,21 +243,27 @@ const normalizeRecord = (rec: Record<string, unknown>, index: number, errors: st
 export function parseReviewImport(text: string): ImportParseResult {
   const errors: string[] = [];
   const trimmed = text.trim();
-  if (!trimmed) return { rows: [], errors: ["The file is empty."] };
+  if (!trimmed) return { rows: [], errors: ["The file is empty."], duplicatesInFile: 0 };
 
   let records: Record<string, unknown>[] = [];
   if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
     try {
       const parsed = JSON.parse(trimmed);
       const list = Array.isArray(parsed) ? parsed : (parsed as { reviews?: unknown }).reviews;
-      if (!Array.isArray(list)) return { rows: [], errors: ["Expected a JSON array of reviews."] };
+      if (!Array.isArray(list))
+        return { rows: [], errors: ["Expected a JSON array of reviews."], duplicatesInFile: 0 };
       records = list as Record<string, unknown>[];
     } catch {
-      return { rows: [], errors: ["The file is not valid JSON."] };
+      return { rows: [], errors: ["The file is not valid JSON."], duplicatesInFile: 0 };
     }
   } else {
     const table = parseCsv(trimmed);
-    if (table.length < 2) return { rows: [], errors: ["The CSV needs a header row and at least one review."] };
+    if (table.length < 2)
+      return {
+        rows: [],
+        errors: ["The CSV needs a header row and at least one review."],
+        duplicatesInFile: 0,
+      };
     const header = table[0].map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"));
     records = table.slice(1).map((cells) =>
       Object.fromEntries(header.map((h, i) => [h, cells[i] ?? ""])),
@@ -263,18 +271,55 @@ export function parseReviewImport(text: string): ImportParseResult {
   }
 
   if (records.length > MAX_IMPORT_ROWS) {
-    return { rows: [], errors: [`Too many rows (${records.length}). The limit is ${MAX_IMPORT_ROWS}.`] };
+    return {
+      rows: [],
+      errors: [`Too many rows (${records.length}). The limit is ${MAX_IMPORT_ROWS}.`],
+      duplicatesInFile: 0,
+    };
   }
 
   const rows: ParsedImportRow[] = [];
   const seen = new Set<string>();
+  let duplicatesInFile = 0;
   records.forEach((rec, i) => {
     const row = normalizeRecord(rec ?? {}, i, errors);
     if (!row) return;
-    const key = `${row.source}|${row.external_review_id}`;
-    if (seen.has(key)) return; // in-file duplicate: keep the first occurrence
+    const key = importKey(row);
+    if (seen.has(key)) {
+      duplicatesInFile++; // in-file duplicate: keep the first occurrence
+      return;
+    }
     seen.add(key);
     rows.push(row);
   });
-  return { rows, errors };
+  return { rows, errors, duplicatesInFile };
+}
+
+/* ------------------------------ deduplication ------------------------------ */
+
+/** Stable identity of a review: the same pair can only ever exist once. */
+export const importKey = (r: { source: string; external_review_id: string }) =>
+  `${r.source}|${r.external_review_id}`;
+
+export interface ImportPlan {
+  /** Rows that do not exist yet — they will be inserted. */
+  fresh: ParsedImportRow[];
+  /** Rows already stored — the text is refreshed, moderation flags are kept. */
+  updates: ParsedImportRow[];
+}
+
+/**
+ * Splits a parsed file against what is already stored, so the preview can tell
+ * the owner exactly how many reviews are new and how many are re-imports before
+ * anything is written. Pure — the caller does the upsert.
+ */
+export function planImport(
+  rows: ParsedImportRow[],
+  existing: readonly { source: string; external_review_id: string }[],
+): ImportPlan {
+  const known = new Set(existing.map(importKey));
+  const fresh: ParsedImportRow[] = [];
+  const updates: ParsedImportRow[] = [];
+  for (const r of rows) (known.has(importKey(r)) ? updates : fresh).push(r);
+  return { fresh, updates };
 }
