@@ -15,8 +15,13 @@ export type AliasMap = Map<string, string>;
 export const buildAliasMap = (rows: AliasRow[]): AliasMap =>
   new Map(rows.map((r) => [r.old_name, r.new_name]));
 
+/**
+ * Loads the alias map. Throws on any Supabase error — callers MUST NOT fall back to an
+ * empty map, because an empty map silently restores stale (deleted) media names.
+ */
 export async function fetchAliasMap(): Promise<AliasMap> {
-  const { data } = await supabase.from("media_aliases").select("old_name,new_name");
+  const { data, error } = await supabase.from("media_aliases").select("old_name,new_name");
+  if (error) throw new Error(error.message || "Failed to load media aliases");
   return buildAliasMap((data ?? []) as AliasRow[]);
 }
 
