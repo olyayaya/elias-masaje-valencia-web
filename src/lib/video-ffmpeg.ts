@@ -154,8 +154,23 @@ export async function convertVideo(
   } = {},
 ): Promise<ConversionResult> {
   const { onProgress, signal } = handlers;
+  const cancelled = () => new DOMException("Cancelled", "AbortError");
+  if (signal?.aborted) throw cancelled();
+
   onProgress?.({ ratio: 0, stage: "loading" });
-  const ff = await getFFmpeg();
+
+  // Cancelling while the ~30 MB core is still downloading must terminate the instance and
+  // never proceed to an encode.
+  let loadAborted = false;
+  const abortDuringLoad = () => { loadAborted = true; terminateFFmpeg(); };
+  signal?.addEventListener("abort", abortDuringLoad, { once: true });
+  let ff: FFmpegInstance;
+  try {
+    ff = await getFFmpeg();
+  } finally {
+    signal?.removeEventListener("abort", abortDuringLoad);
+  }
+  if (loadAborted || signal?.aborted) throw cancelled();
 
   const inputName = `in.${(file.name.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "mp4").toLowerCase()}`;
   const outputName = `out.${options.format}`;
@@ -168,26 +183,35 @@ export async function convertVideo(
   const abort = () => terminateFFmpeg();
   signal?.addEventListener("abort", abort, { once: true });
 
+  let wrote = false;
   try {
     onProgress?.({ ratio: 0, stage: "reading" });
-    ff.writeFile(inputName, new Uint8Array(await file.arrayBuffer()));
-    if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (signal?.aborted) throw cancelled();
+    // MUST be awaited: exec on a half-written virtual FS reads a truncated input.
+    await ff.writeFile(inputName, bytes);
+    wrote = true;
+    if (signal?.aborted) throw cancelled();
     await ff.exec(args);
-    if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
+    if (signal?.aborted) throw cancelled();
     onProgress?.({ ratio: 1, stage: "finishing" });
     const data = await ff.readFile(outputName);
-    const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
-    const buffer = bytes.slice().buffer as ArrayBuffer;
+    const out = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const buffer = out.slice().buffer as ArrayBuffer;
     const blob = new Blob([buffer], { type: options.format === "mp4" ? "video/mp4" : "video/webm" });
     return { blob, size: blob.size };
   } finally {
     signal?.removeEventListener("abort", abort);
     try {
       ff.off("progress", onProg);
-      await ff.deleteFile(inputName).catch(() => undefined);
-      await ff.deleteFile(outputName).catch(() => undefined);
     } catch {
       /* instance already terminated by cancel */
     }
+    if (wrote) {
+      // Both paths are attempted independently so one failure cannot leak the other file.
+      await Promise.resolve(ff.deleteFile(inputName)).catch(() => undefined);
+      await Promise.resolve(ff.deleteFile(outputName)).catch(() => undefined);
+    }
   }
 }
+
