@@ -138,27 +138,27 @@ describe("image alt dialog", () => {
   it("inserts with the typed alt text", async () => {
     const user = userEvent.setup();
     const { onConfirm } = setup();
-    await user.type(screen.getByRole("textbox"), "Back massage");
+    await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
-    expect(onConfirm).toHaveBeenCalledWith("Back massage", false);
+    expect(onConfirm).toHaveBeenCalledWith("Back massage", false, expect.objectContaining({ en: "Back massage" }));
   });
 
   it("allows an explicitly decorative image with an empty alt", async () => {
     const user = userEvent.setup();
     const { onConfirm } = setup();
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByLabelText(/decorative image/i));
     await user.click(screen.getByRole("button", { name: /insert image/i }));
-    expect(onConfirm).toHaveBeenCalledWith("", true);
+    expect(onConfirm).toHaveBeenCalledWith("", true, { es: "", en: "", ru: "" });
   });
 
   it("edits the alt of an already inserted image", async () => {
     const user = userEvent.setup();
     const { onConfirm } = setup({ mode: "edit", initialAlt: "Old alt" });
-    const input = screen.getByRole("textbox");
+    const input = screen.getByLabelText(/Alt text \(EN\)/i);
     expect(input).toHaveValue("Old alt");
     await user.clear(input);
     await user.type(input, "Neck massage");
     await user.click(screen.getByRole("button", { name: /save alt text/i }));
-    expect(onConfirm).toHaveBeenCalledWith("Neck massage", false);
+    expect(onConfirm).toHaveBeenCalledWith("Neck massage", false, expect.objectContaining({ en: "Neck massage" }));
   });
 });
