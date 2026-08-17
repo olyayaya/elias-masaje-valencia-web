@@ -7,8 +7,9 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import {
-  CSV_TEMPLATE, GOOGLE_PROFILE_URL, IMPORT_BATCH_SIZE, MAX_IMPORT_ROWS, REVIEW_SORTS, TRIPADVISOR_PROFILE_URL,
-  checkImportFileSize, chunk, dedupeKey, httpsOnly, parseReviewImport, reviewSettingsTable, reviewsTable, sortReviews,
+  CSV_TEMPLATE, GOOGLE_PROFILE_URL, IMPORT_BATCH_SIZE, MAX_IMPORT_ROWS, REVIEW_SORTS, SITE_LOCALES,
+  TRIPADVISOR_PROFILE_URL, checkImportFileSize, chunk, dedupeKey, httpsOnly, normalizeLanguage, parseReviewImport,
+  reviewSettingsTable, reviewsTable, sortReviews,
   type ImportIssue, type ImportPreview, type ParsedImportRow, type PreviewRow, type Review, type ReviewInsert,
   type ReviewSort,
 } from "@/lib/reviews";
@@ -102,9 +103,9 @@ const COPY = {
 
   importTitle: { en: "Import reviews (CSV or JSON)", es: "Importar reseñas (CSV o JSON)", ru: "Импорт отзывов (CSV или JSON)" },
   importHint: {
-    en: "CSV columns: author_name, rating, review_text, reviewed_at, original_url. JSON: either a list of reviews or a wrapper {version, reviews:[…]}. Accepted aliases: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned. Up to {rows} rows and {mb} MB per file. Nothing is saved until you pick the rows, tick the rights box and confirm.",
-    es: "Columnas CSV: author_name, rating, review_text, reviewed_at, original_url. JSON: una lista de reseñas o un envoltorio {version, reviews:[…]}. Alias aceptados: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned. Máximo {rows} filas y {mb} MB por archivo. No se guarda nada hasta que elijas las filas, marques la casilla de derechos y confirmes.",
-    ru: "Столбцы CSV: author_name, rating, review_text, reviewed_at, original_url. JSON: список отзывов или обёртка {version, reviews:[…]}. Допустимые псевдонимы: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned. Не более {rows} строк и {mb} МБ на файл. Ничего не сохраняется, пока вы не выберете строки, не отметите подтверждение прав и не подтвердите импорт.",
+    en: "CSV columns: author_name, rating, review_text, reviewed_at, original_url. JSON: either a list of reviews or a wrapper {version, reviews:[…]}. Accepted aliases: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned, language/original_language → original language, text_es/text_en/text_ru or translations:{es,en,ru} → stored translations. Up to {rows} rows and {mb} MB per file. Nothing is saved until you pick the rows, tick the rights box and confirm.",
+    es: "Columnas CSV: author_name, rating, review_text, reviewed_at, original_url. JSON: una lista de reseñas o un envoltorio {version, reviews:[…]}. Alias aceptados: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned, language/original_language → idioma original, text_es/text_en/text_ru o translations:{es,en,ru} → traducciones guardadas. Máximo {rows} filas y {mb} MB por archivo. No se guarda nada hasta que elijas las filas, marques la casilla de derechos y confirmes.",
+    ru: "Столбцы CSV: author_name, rating, review_text, reviewed_at, original_url. JSON: список отзывов или обёртка {version, reviews:[…]}. Допустимые псевдонимы: author → author_name, text → review_text, published_at/date → reviewed_at, source_url/url → original_url, featured → pinned, language/original_language → язык оригинала, text_es/text_en/text_ru или translations:{es,en,ru} → сохранённые переводы. Не более {rows} строк и {mb} МБ на файл. Ничего не сохраняется, пока вы не выберете строки, не отметите подтверждение прав и не подтвердите импорт.",
   },
   template: { en: "Download CSV template", es: "Descargar plantilla CSV", ru: "Скачать шаблон CSV" },
   choose: { en: "Choose file", es: "Elegir archivo", ru: "Выбрать файл" },
@@ -208,6 +209,31 @@ const COPY = {
     es: "{n} de las filas seleccionadas están marcadas como featured/pinned en el archivo.",
     ru: "Отмечено featured/pinned в файле: {n} из выбранных строк.",
   },
+  colLang: { en: "Original language", es: "Idioma original", ru: "Язык оригинала" },
+  colTr: { en: "ES / EN / RU", es: "ES / EN / RU", ru: "ES / EN / RU" },
+  langUnknown: { en: "not stated", es: "sin indicar", ru: "не указан" },
+  trPresent: { en: "{langs} ready", es: "{langs} listos", ru: "готово: {langs}" },
+  trNone: { en: "no translations", es: "sin traducciones", ru: "без переводов" },
+  trTitle: { en: "Translations", es: "Traducciones", ru: "Переводы" },
+  trHint: {
+    en: "The original text above is never changed. Leave a language empty to show the original on that version of the site.",
+    es: "El texto original de arriba no se modifica nunca. Deja un idioma vacío para mostrar el original en esa versión de la web.",
+    ru: "Оригинальный текст выше никогда не изменяется. Оставьте язык пустым, чтобы на этой версии сайта показывался оригинал.",
+  },
+  trEdit: { en: "Edit translations", es: "Editar traducciones", ru: "Редактировать переводы" },
+  trSave: { en: "Save translations", es: "Guardar traducciones", ru: "Сохранить переводы" },
+  trCancel: { en: "Cancel", es: "Cancelar", ru: "Отмена" },
+  trSaved: { en: "Translations saved", es: "Traducciones guardadas", ru: "Переводы сохранены" },
+  trEs: { en: "Spanish text", es: "Texto en español", ru: "Текст на испанском" },
+  trEn: { en: "English text", es: "Texto en inglés", ru: "Текст на английском" },
+  trRu: { en: "Russian text", es: "Texto en ruso", ru: "Текст на русском" },
+  trLang: { en: "Original language (es, en, ru, pt…)", es: "Idioma original (es, en, ru, pt…)", ru: "Язык оригинала (es, en, ru, pt…)" },
+  trLangInvalid: {
+    en: "Use a short language code such as es, en, ru or pt-br.",
+    es: "Usa un código de idioma corto como es, en, ru o pt-br.",
+    ru: "Используйте короткий код языка: es, en, ru или pt-br.",
+  },
+  trOriginalLabel: { en: "Original", es: "Original", ru: "Оригинал" },
   stNew: { en: "Ready", es: "Lista", ru: "Готова" },
   stDupFile: { en: "Duplicate in file", es: "Duplicada en el archivo", ru: "Дубликат в файле" },
   stDupDb: { en: "Already saved", es: "Ya guardada", ru: "Уже сохранена" },
@@ -270,6 +296,127 @@ const Stars = ({ n }: { n: number }) => (
   </span>
 );
 
+type Copy = (k: keyof typeof COPY, vars?: Record<string, string>) => string;
+
+/** Which of the three site languages already have a stored translation. */
+const translatedLocales = (r: {
+  review_text_es: string | null;
+  review_text_en: string | null;
+  review_text_ru: string | null;
+}) => SITE_LOCALES.filter((l) => !!(l === "es" ? r.review_text_es : l === "en" ? r.review_text_en : r.review_text_ru)?.trim());
+
+/**
+ * Compact per-review translation editor.
+ *
+ * The original text and the dedupe key are never touched here: this only writes
+ * the three translation columns and the original-language tag, and only when
+ * the owner presses Save. An empty field is stored as NULL, which means "show
+ * the original on that language".
+ */
+const TranslationEditor = ({
+  review,
+  c,
+  busy,
+  onSave,
+}: {
+  review: Review;
+  c: Copy;
+  busy: boolean;
+  onSave: (values: Record<string, unknown>) => Promise<void>;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState({ lang: "", es: "", en: "", ru: "" });
+  const [error, setError] = useState<string | null>(null);
+
+  const start = () => {
+    setDraft({
+      lang: review.original_language ?? "",
+      es: review.review_text_es ?? "",
+      en: review.review_text_en ?? "",
+      ru: review.review_text_ru ?? "",
+    });
+    setError(null);
+    setOpen(true);
+  };
+
+  const save = async () => {
+    const lang = draft.lang.trim();
+    if (lang && !normalizeLanguage(lang)) {
+      setError(c("trLangInvalid"));
+      return;
+    }
+    await onSave({
+      original_language: lang ? normalizeLanguage(lang) : null,
+      review_text_es: draft.es.trim() || null,
+      review_text_en: draft.en.trim() || null,
+      review_text_ru: draft.ru.trim() || null,
+    });
+    setOpen(false);
+  };
+
+  const done = translatedLocales(review);
+
+  if (!open) {
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] text-muted-foreground" data-testid={`tr-state-${review.id}`}>
+          {c("trOriginalLabel")}: {review.original_language ?? c("langUnknown")} ·{" "}
+          {done.length ? c("trPresent", { langs: done.map((l) => l.toUpperCase()).join(" / ") }) : c("trNone")}
+        </span>
+        <button
+          type="button"
+          onClick={start}
+          data-testid={`tr-edit-${review.id}`}
+          className="text-[11px] underline underline-offset-2 text-muted-foreground hover:text-foreground min-h-11 px-1"
+        >
+          {c("trEdit")}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 space-y-2 border-t border-border pt-2" data-testid={`tr-editor-${review.id}`}>
+      <p className="text-[11px] font-medium text-foreground">{c("trTitle")}</p>
+      <p className="text-[11px] text-muted-foreground">{c("trHint")}</p>
+      <label className="block text-[11px] text-muted-foreground">
+        {c("trLang")}
+        <Input
+          value={draft.lang}
+          maxLength={12}
+          onChange={(e) => setDraft((d) => ({ ...d, lang: e.target.value }))}
+          className="mt-1 max-w-[10rem]"
+        />
+      </label>
+      {(["es", "en", "ru"] as const).map((loc) => (
+        <label key={loc} className="block text-[11px] text-muted-foreground">
+          {c(loc === "es" ? "trEs" : loc === "en" ? "trEn" : "trRu")}
+          <textarea
+            value={draft[loc]}
+            maxLength={8000}
+            rows={3}
+            onChange={(e) => setDraft((d) => ({ ...d, [loc]: e.target.value }))}
+            className="mt-1 w-full px-3 py-2 text-xs border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </label>
+      ))}
+      {error && (
+        <p className="text-[11px] text-destructive" role="alert" data-testid={`tr-error-${review.id}`}>
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <Button size="sm" className="min-h-11" disabled={busy} onClick={() => void save()} data-testid={`tr-save-${review.id}`}>
+          {c("trSave")}
+        </Button>
+        <Button size="sm" variant="ghost" className="min-h-11" onClick={() => setOpen(false)} data-testid={`tr-cancel-${review.id}`}>
+          {c("trCancel")}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 interface ImportReport {
   added: number;
   skipped: number;
@@ -319,7 +466,13 @@ const DashboardReviews = () => {
       if (rating !== "all" && r.rating !== rating) return false;
       if (visibility === "visible" && !r.visible) return false;
       if (visibility === "hidden" && r.visible) return false;
-      if (q && !`${r.author_name} ${r.review_text}`.toLowerCase().includes(q)) return false;
+      if (
+        q &&
+        !`${r.author_name} ${r.review_text} ${r.review_text_es ?? ""} ${r.review_text_en ?? ""} ${r.review_text_ru ?? ""}`
+          .toLowerCase()
+          .includes(q)
+      )
+        return false;
       return true;
     });
     return sortReviews(list, sort);
@@ -791,6 +944,8 @@ const DashboardReviews = () => {
                     <th className="p-2 font-medium">{c("colRating")}</th>
                     <th className="p-2 font-medium">{c("colDate")}</th>
                     <th className="p-2 font-medium">{c("colText")}</th>
+                    <th className="p-2 font-medium">{c("colLang")}</th>
+                    <th className="p-2 font-medium">{c("colTr")}</th>
                     <th className="p-2 font-medium">{c("colLink")}</th>
                     <th className="p-2 font-medium">{c("colPin")}</th>
                     <th className="p-2 font-medium">{c("colState")}</th>
@@ -838,6 +993,14 @@ const DashboardReviews = () => {
                           {r.row?.reviewed_at ? new Date(r.row.reviewed_at).toLocaleDateString() : r.raw.reviewed_at || "—"}
                         </td>
                         <td className="p-2 text-muted-foreground max-w-md">{r.raw.review_text}</td>
+                        <td className="p-2 whitespace-nowrap text-muted-foreground" data-testid={`import-lang-${r.line}`}>
+                          {r.row?.original_language ?? (r.raw.original_language || c("langUnknown"))}
+                        </td>
+                        <td className="p-2 whitespace-nowrap text-muted-foreground" data-testid={`import-tr-${r.line}`}>
+                          {r.row && translatedLocales(r.row).length
+                            ? c("trPresent", { langs: translatedLocales(r.row).map((l) => l.toUpperCase()).join(" / ") })
+                            : c("trNone")}
+                        </td>
                         <td className="p-2 whitespace-nowrap text-muted-foreground" data-testid={`import-link-${r.line}`}>
                           {r.row?.original_url ? c("linkYes") : c("linkNo")}
                         </td>
@@ -1067,6 +1230,15 @@ const DashboardReviews = () => {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground whitespace-pre-line">{r.review_text}</p>
+                  <TranslationEditor
+                    review={r}
+                    c={c}
+                    busy={busyId === r.id}
+                    onSave={async (values) => {
+                      await patch(r.id, values);
+                      toast.success(c("trSaved"));
+                    }}
+                  />
                   {r.original_url && (
                     <a
                       href={r.original_url}

@@ -101,6 +101,7 @@ export const en: Translations = {
     next: "Next reviews",
     ratingAria: "{n} out of 5 stars",
     carouselLabel: "Client reviews",
+    translatedNote: "Translated from the original",
     openOriginal: "View original",
   },
   location: { title: "Location" },
