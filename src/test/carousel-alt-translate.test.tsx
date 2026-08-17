@@ -73,7 +73,7 @@ describe("carousel alt auto-translation", () => {
   });
 
   it("translates on save and never overwrites a manual target without confirmation", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<DashboardCarousels />);
 
     await user.click(await screen.findByText("Homepage Carousel"));
@@ -105,7 +105,7 @@ describe("carousel alt auto-translation", () => {
   });
 
   it("drops the review when the same row is edited while the request is pending", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     let release: ((v: Record<string, string>) => void) | null = null;
     vi.mocked(translateAlt).mockImplementationOnce(
       () => new Promise((res) => { release = res; }),
@@ -127,7 +127,7 @@ describe("carousel alt auto-translation", () => {
   });
 
   it("keeps row A's review when row B answers first (out-of-order)", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     let releaseA: ((v: Record<string, string>) => void) | null = null;
     vi.mocked(translateAlt)
       .mockImplementationOnce(() => new Promise((res) => { releaseA = res; }))

@@ -96,7 +96,7 @@ describe("dashboard carousel alt editing", () => {
 
   it("saves the alt of each language into its own column", async () => {
     window.history.replaceState({}, "", "/en");
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<DashboardCarousels />, { wrapper });
 
     await user.click(await screen.findByText("Homepage Carousel"));
@@ -150,7 +150,7 @@ describe("image alt dialog", () => {
   });
 
   it("translates first and only inserts on the second confirm", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup();
     await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
 
@@ -169,7 +169,7 @@ describe("image alt dialog", () => {
   });
 
   it("invalidates the translation when the source text changes again", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup();
     await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
@@ -183,7 +183,7 @@ describe("image alt dialog", () => {
   });
 
   it("still lets the source language be saved when translation fails", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(translateAlt).mockRejectedValueOnce(new Error("offline"));
     const { onConfirm } = setup();
     await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
@@ -195,7 +195,7 @@ describe("image alt dialog", () => {
   });
 
   it("ignores machine translations when auto-translate is switched off", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup({ initialOthers: { es: "Alt manual", ru: "" } });
     await user.type(screen.getByLabelText(/Alt text \(EN\)/i), "Back massage");
     await user.click(screen.getByRole("button", { name: /insert image/i }));
@@ -212,7 +212,7 @@ describe("image alt dialog", () => {
   });
 
   it("allows an explicitly decorative image with an empty alt", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup();
     await user.click(screen.getByLabelText(/decorative image/i));
     await user.click(screen.getByRole("button", { name: /insert image/i }));
@@ -220,7 +220,7 @@ describe("image alt dialog", () => {
   });
 
   it("edits the alt of an already inserted image without auto-translation", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { onConfirm } = setup({ mode: "edit", initialAlt: "Old alt" });
     const input = screen.getByLabelText(/Alt text \(EN\)/i);
     expect(input).toHaveValue("Old alt");
