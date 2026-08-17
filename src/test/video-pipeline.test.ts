@@ -24,8 +24,8 @@ const ff = {
   readFile: vi.fn(async () => new Uint8Array([1, 2, 3])),
   deleteFile: vi.fn(async (n: string) => { calls.push(`delete:${n}`); return true; }),
   terminate: vi.fn(() => { calls.push("terminate"); }),
-  on: vi.fn(),
-  off: vi.fn(() => { calls.push("off"); }),
+  on: vi.fn((_e: string, _cb: unknown) => undefined),
+  off: vi.fn((_e: string, _cb: unknown) => { calls.push("off"); }),
   load: vi.fn(async () => true),
 };
 
