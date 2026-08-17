@@ -19,15 +19,29 @@ export const ROUTE_MAP = {
 
 export type PageId = keyof typeof ROUTE_MAP;
 
-export const STATIC_PAGES: Array<{ id: PageId; changefreq: string; priority: string }> = [
+export interface StaticPage { id: PageId; changefreq: string; priority: string }
+
+/**
+ * Always-indexable pages. The Gallery is deliberately NOT here: its three URLs are
+ * only emitted once the section is genuinely ready (table reachable AND at least one
+ * published item), see `buildSitemapEntries({ includeGallery })`.
+ */
+export const STATIC_PAGES: StaticPage[] = [
   { id: "home", changefreq: "weekly", priority: "1.0" },
   { id: "services", changefreq: "weekly", priority: "0.9" },
-  { id: "gallery", changefreq: "weekly", priority: "0.8" },
   { id: "about", changefreq: "monthly", priority: "0.7" },
   { id: "contact", changefreq: "monthly", priority: "0.7" },
   { id: "blog", changefreq: "daily", priority: "0.8" },
   { id: "privacy", changefreq: "yearly", priority: "0.3" },
 ];
+
+/** Gated behind a published gallery item. */
+export const GALLERY_PAGE: StaticPage = { id: "gallery", changefreq: "weekly", priority: "0.8" };
+
+export interface SitemapOptions {
+  /** True only when the gallery table is reachable and has >= 1 published item. */
+  includeGallery?: boolean;
+}
 
 export interface BlogPostRow {
   slug: string | null;
@@ -122,10 +136,12 @@ export function buildSitemapEntries(
   posts: BlogPostRow[],
   extraUrls: ExtraUrl[] = [],
   now: Date = new Date(),
+  options: SitemapOptions = {},
 ): UrlEntry[] {
   const entries: UrlEntry[] = [];
+  const pages = options.includeGallery ? [...STATIC_PAGES, GALLERY_PAGE] : STATIC_PAGES;
 
-  for (const page of STATIC_PAGES) {
+  for (const page of pages) {
     const paths = ROUTE_MAP[page.id];
     const alternates = alternatesFor((loc) => paths[loc]);
     for (const locale of LOCALES) {
@@ -172,8 +188,9 @@ export function buildSitemapXml(
   posts: BlogPostRow[],
   extraUrls: ExtraUrl[] = [],
   now: Date = new Date(),
+  options: SitemapOptions = {},
 ): string {
-  const urls = buildSitemapEntries(posts, extraUrls, now).map(renderUrl);
+  const urls = buildSitemapEntries(posts, extraUrls, now, options).map(renderUrl);
   return [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">`,
