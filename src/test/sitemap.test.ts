@@ -238,10 +238,15 @@ describe("single sitemap mechanism", () => {
 });
 
 describe("sitemap edge function XML response path", () => {
-  const source = readFileSync(
+  const helpers = readFileSync(
+    resolve(__dirname, "../../supabase/functions/sitemap/xml-response.ts"),
+    "utf8",
+  );
+  const entry = readFileSync(
     resolve(__dirname, "../../supabase/functions/sitemap/index.ts"),
     "utf8",
   );
+  const source = `${helpers}\n${entry}`;
 
   it("declares an XML media type that survives the edge gateway", () => {
     // Case-insensitive per RFC 9110 §8.3; the exact casing must stay because the
