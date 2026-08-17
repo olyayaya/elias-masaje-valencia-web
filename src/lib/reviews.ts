@@ -492,3 +492,14 @@ export const CSV_TEMPLATE =
   "\uFEFFauthor_name,rating,review_text,reviewed_at,original_url,original_language,review_text_es,review_text_en,review_text_ru\r\n" +
   '"Ana García",5,"Muy buen masaje, repetiré.",2026-01-15,,es,,"A very good massage, I will come back.","Очень хороший массаж, приду ещё."\r\n' +
   '"John Smith",5,"Great deep tissue session.",2026-02-03,,en,"Gran sesión de masaje profundo.",,"Отличный сеанс глубокого массажа."\r\n';
+
+/* ------------------------------ presentation ------------------------------ */
+
+/**
+ * Display-only cleanup of an author name coming from a CSV/JSON export: line
+ * breaks, tabs and repeated spaces collapse into a single space. The stored
+ * value is never modified — this only stops "C\nFed\nT" from rendering as three
+ * stacked lines.
+ */
+export const normalizeAuthorName = (v: string | null | undefined): string =>
+  (v ?? "").replace(/\s+/g, " ").trim();

@@ -103,6 +103,8 @@ export const es: Translations = {
     carouselLabel: "Reseñas de clientes",
     translatedNote: "Traducido del original",
     openOriginal: "Ver original",
+    pause: "Pausar el carrusel",
+    play: "Reanudar el carrusel",
   },
   location: { title: "Ubicación" },
   faq: {

@@ -91,6 +91,8 @@ export interface Translations {
     carouselLabel: string;
     openOriginal: string;
     translatedNote: string;
+    pause: string;
+    play: string;
   };
   location: {
     title: string;

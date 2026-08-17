@@ -139,10 +139,10 @@ describe("public reviews section", () => {
     state.value.items = [review({ id: "a", review_text: "x".repeat(400) })];
     mount();
     const toggle = screen.getByRole("button", { name: /leer más|read more|читать полностью/i });
-    const paragraph = screen.getByTestId("review-card").querySelector("p")!;
+    const paragraph = screen.getByTestId("review-card").querySelector("blockquote p")!;
     expect(paragraph.className).toContain("line-clamp-4");
     fireEvent.click(toggle);
-    expect(screen.getByTestId("review-card").querySelector("p")!.className).not.toContain("line-clamp");
+    expect(screen.getByTestId("review-card").querySelector("blockquote p")!.className).not.toContain("line-clamp");
   });
 
   it("exposes an accessible star label and semantic markup", () => {
@@ -269,6 +269,90 @@ describe("localized review text on the public page", () => {
       review({ id: "c", review_text: "short", original_language: "en", review_text_es: "x".repeat(400) }),
     ];
     mount();
-    expect(screen.getByTestId("review-card").querySelector("p")!.className).toContain("line-clamp-4");
+    expect(screen.getByTestId("review-card").querySelector("blockquote p")!.className).toContain("line-clamp-4");
+  });
+});
+
+describe("review card layout and carousel controls", () => {
+  it("normalizes a messy imported author name onto a single line", () => {
+    state.value.items = [review({ id: "n", author_name: "C\nFed\tT   Jr" })];
+    mount();
+    const cite = screen.getByTestId("review-author");
+    expect(cite.textContent).toBe("C Fed T Jr");
+    expect(cite.getAttribute("title")).toBe("C Fed T Jr");
+    expect(cite.className).toContain("truncate");
+    expect(cite.className).toContain("whitespace-nowrap");
+  });
+
+  it("puts the name and date above the stars, with the date wrapping as a whole", () => {
+    state.value.items = [review({ id: "h", reviewed_at: "2026-03-04T00:00:00Z" })];
+    mount();
+    const card = screen.getByTestId("review-card");
+    const header = card.querySelector("header")!;
+    expect(header.className).toContain("flex-wrap");
+    const date = header.querySelector("span")!;
+    expect(date.className).toContain("whitespace-nowrap");
+    expect(date.className).toContain("shrink-0");
+    // header (name + date) comes before the stars, which come before the text
+    const order = Array.from(card.children).map((el) => el.tagName.toLowerCase());
+    expect(order.indexOf("header")).toBe(0);
+    expect(order.indexOf("blockquote")).toBeGreaterThan(1);
+  });
+
+  it("keeps the original link in the footer, per review, opening in a new tab", () => {
+    state.value.items = [
+      review({ id: "a", original_url: "https://maps.example/review/a" }),
+      review({ id: "b", author_name: "Bea", original_url: "https://www.tripadvisor.example/review/b" }),
+    ];
+    state.value.settings = settings({ sort_mode: "manual" });
+    mount();
+    const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
+    expect(hrefs).toEqual(["https://maps.example/review/a", "https://www.tripadvisor.example/review/b"]);
+    const link = screen.getAllByRole("link")[0];
+    expect(link.closest("footer")).toBeTruthy();
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.getAttribute("target")).toBe("_blank");
+  });
+
+  it("hides the native scrollbar without disabling manual scrolling", () => {
+    state.value.items = [review({ id: "a" }), review({ id: "b", author_name: "Bea" })];
+    mount();
+    const scroller = screen.getByTestId("reviews-scroller");
+    expect(scroller.className).toContain("no-scrollbar");
+    expect(scroller.className).toContain("overflow-x-auto");
+  });
+
+  it("toggles autoplay with a localized stop / play button", () => {
+    state.value.items = [review({ id: "a" }), review({ id: "b", author_name: "Bea" })];
+    mount();
+    const toggle = screen.getByTestId("reviews-autoplay-toggle");
+    expect(toggle.getAttribute("aria-label")).toBe("Pausar el carrusel");
+    expect(screen.getAllByTestId("review-card-clone").length).toBe(2);
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-label")).toBe("Reanudar el carrusel");
+    expect(screen.queryAllByTestId("review-card-clone").length).toBe(0);
+    // arrows keep working while stopped
+    expect(screen.getByRole("button", { name: "Reseñas siguientes" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reseñas anteriores" })).toBeTruthy();
+  });
+
+  it("localizes the carousel buttons and the original link in English and Russian", () => {
+    const two = [
+      review({ id: "a", original_url: "https://maps.example/a" }),
+      review({ id: "b", author_name: "Bea" }),
+    ];
+    window.history.pushState({}, "", "/en");
+    state.value.items = two;
+    mount();
+    expect(screen.getByTestId("reviews-autoplay-toggle").getAttribute("aria-label")).toBe("Pause the carousel");
+    expect(screen.getByRole("link").textContent).toContain("View original");
+    cleanup();
+
+    window.history.pushState({}, "", "/ru");
+    state.value.items = two;
+    mount();
+    expect(screen.getByTestId("reviews-autoplay-toggle").getAttribute("aria-label")).toBe("Остановить карусель");
+    expect(screen.getByRole("link").textContent).toContain("Смотреть оригинал");
+    window.history.pushState({}, "", "/");
   });
 });

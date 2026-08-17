@@ -102,7 +102,9 @@ export const ru: Translations = {
     ratingAria: "{n} из 5 звёзд",
     carouselLabel: "Отзывы клиентов",
     translatedNote: "Переведено с оригинала",
-    openOriginal: "Открыть оригинал",
+    openOriginal: "Смотреть оригинал",
+    pause: "Остановить карусель",
+    play: "Возобновить движение",
   },
   location: { title: "Расположение" },
   faq: {
