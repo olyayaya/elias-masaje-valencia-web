@@ -103,6 +103,27 @@ describe("DashboardMedia safe delete", () => {
     expect(storageRemove).not.toHaveBeenCalled();
   });
 
+  it("blocks deletion when the file is used in an FAQ answer", async () => {
+    checkMediaUsage.mockResolvedValue({
+      fileName: "hero.webp",
+      inUse: true,
+      historyReferences: 0,
+      usages: [{ entity: "FAQ", label: "¿Cómo reservo?", id: "faq11111", field: "answer_ru" }],
+    });
+    await openDeleteDialog();
+    expect(await screen.findByText("This file is still in use")).toBeInTheDocument();
+    expect(screen.getByText(/¿Cómo reservo\?/)).toBeInTheDocument();
+    expect(deleteMediaFile).not.toHaveBeenCalled();
+  });
+
+  it("shows a non-blocking warning when only archived history references the file", async () => {
+    checkMediaUsage.mockResolvedValue({ fileName: "hero.webp", inUse: false, usages: [], historyReferences: 3 });
+    await openDeleteDialog();
+    expect(await screen.findByText("Delete hero.webp?")).toBeInTheDocument();
+    expect(screen.getByText(/archived version/)).toBeInTheDocument();
+    expect(screen.getByText("Delete permanently")).toBeInTheDocument();
+  });
+
   it("surfaces errors from the usage check", async () => {
     checkMediaUsage.mockRejectedValue(new Error("Forbidden — admin only"));
     await openDeleteDialog();
