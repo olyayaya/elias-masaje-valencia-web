@@ -420,6 +420,7 @@ const DashboardReviews = () => {
     setAnchor(null);
     setRightsConfirmed(false);
     setPublishNow(false);
+    setKeepPinned(false);
     setProgress(null);
     setReport(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -434,6 +435,7 @@ const DashboardReviews = () => {
       setSelected(new Set());
       setRightsConfirmed(false);
       setPublishNow(false);
+      setKeepPinned(false);
       return;
     }
     const result = parseReviewImport(await file.text(), knownKeys);
@@ -445,6 +447,7 @@ const DashboardReviews = () => {
     // again from the safe "import hidden" default.
     setRightsConfirmed(false);
     setPublishNow(false);
+    setKeepPinned(false);
   };
 
   const rows = preview?.rows ?? [];
