@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, renderHook } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { setInputValue } from "./utils/typing";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const ROWS = [
@@ -104,7 +105,7 @@ describe("dashboard carousel alt editing", () => {
     // ES tab is active first — editing writes alt_text.
     const esInput = await screen.findByLabelText(/Alt text \(ES\)/i);
     await user.clear(esInput);
-    await user.type(esInput, "Masaje de cuello");
+    setInputValue(esInput, "Masaje de cuello");
     await user.tab();
     await waitFor(() => expect(updateSpy).toHaveBeenCalledWith({ alt_text: "Masaje de cuello" }));
 
@@ -116,7 +117,7 @@ describe("dashboard carousel alt editing", () => {
     await user.click(screen.getByRole("button", { name: /^RU/ }));
 
     const ruInput = await screen.findByLabelText(/Alt text \(RU\)/i);
-    await user.type(ruInput, "Массаж шеи");
+    setInputValue(ruInput, "Массаж шеи");
     await user.tab();
     await waitFor(() => expect(updateSpy).toHaveBeenCalledWith({ alt_text_ru: "Массаж шеи" }));
     expect(updateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ alt_text: expect.anything() }));
@@ -225,7 +226,7 @@ describe("image alt dialog", () => {
     const input = screen.getByLabelText(/Alt text \(EN\)/i);
     expect(input).toHaveValue("Old alt");
     await user.clear(input);
-    await user.type(input, "Neck massage");
+    setInputValue(input, "Neck massage");
     // Turning auto-translate off saves the source language straight away.
     await user.click(screen.getByLabelText(/translate/i));
     await user.click(screen.getByRole("button", { name: /save alt text/i }));
