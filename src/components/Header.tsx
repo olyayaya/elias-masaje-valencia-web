@@ -48,7 +48,7 @@ const Header = () => {
             Elias Masaje
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8" aria-label={t.a11y.mainNavigation}>
+          <nav className="hidden lg:flex items-center gap-8" aria-label={t.a11y.mainNavigation}>
             {navItems.map((item) => (
               <Link
                 key={item.path}
@@ -76,7 +76,7 @@ const Header = () => {
             </a>
           </nav>
 
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex items-center gap-3 lg:hidden">
             <LanguageSwitcher />
             <ThemeSwitcher />
             <button
@@ -92,7 +92,7 @@ const Header = () => {
 
         {open && (
           <nav
-            className="relative z-50 md:hidden bg-background border-b border-border px-5 pb-6 pt-2"
+            className="relative z-50 lg:hidden bg-background border-b border-border px-5 pb-6 pt-2"
             aria-label={t.a11y.mainNavigation}
             role="navigation"
           >
@@ -124,7 +124,7 @@ const Header = () => {
 
       {open && createPortal(
         <div
-          className="fixed inset-0 top-16 z-40 bg-black/40 backdrop-blur-md md:hidden"
+          className="fixed inset-0 top-16 z-40 bg-black/40 backdrop-blur-md lg:hidden"
           onClick={() => setOpen(false)}
           aria-hidden="true"
         />,

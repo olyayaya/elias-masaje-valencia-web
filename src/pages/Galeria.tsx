@@ -6,7 +6,7 @@ import { BASE_URL, ROUTE_MAP, getAlternates } from "@/config/routes";
 import { buildLocalBusiness } from "@/lib/local-business";
 import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 import { useGallery } from "@/hooks/use-gallery";
-import { buildGallerySchema, pickLocalized, thumbnailFor } from "@/lib/gallery";
+import { buildGallerySchema, originalFor, pickLocalized, thumbnailFor } from "@/lib/gallery";
 import GalleryLightbox from "@/components/gallery/GalleryLightbox";
 
 const GaleriaPage = () => {
@@ -55,6 +55,7 @@ const GaleriaPage = () => {
               const description = pickLocalized(item, "description", locale);
               const alt = pickLocalized(item, "alt", locale) || title || t.gallery.title;
               const thumb = thumbnailFor(item);
+              const fullSize = originalFor(item);
               const isVideo = item.media_type === "video";
               return (
                 <li key={item.id} className="group">
@@ -74,6 +75,13 @@ const GaleriaPage = () => {
                           decoding="async"
                           width={800}
                           height={600}
+                          data-full-src={fullSize}
+                          onError={(e) => {
+                            // If the storage transform ever fails, fall back to the
+                            // untouched object rather than showing a broken tile.
+                            const el = e.currentTarget;
+                            if (fullSize && el.src !== fullSize) el.src = fullSize;
+                          }}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                         />
                       ) : (

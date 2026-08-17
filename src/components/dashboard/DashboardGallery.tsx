@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Plus, Trash2, ChevronUp, ChevronDown, Loader2, Film, ImageIcon, Eye, EyeOff, AlertTriangle,
+  Plus, Trash2, ChevronUp, ChevronDown, Loader2, Film, ImageIcon, Eye, EyeOff, AlertTriangle, Wand2,
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
+import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/query-keys";
-import { galleryTable, isMissingGalleryTable, type GalleryItem } from "@/lib/gallery";
+import { galleryTable, publishIssues, type GalleryItem, type GalleryPublishIssue } from "@/lib/gallery";
 import { useGalleryAdmin } from "@/hooks/use-gallery";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
@@ -38,15 +39,37 @@ const COPY = {
     ru: "Файлы берутся из Панель → Библиотека. Сначала загрузите файлы там.",
   },
   pickerEmpty: { en: "No files of this type in the Library.", es: "No hay archivos de este tipo en la Biblioteca.", ru: "В Библиотеке нет файлов этого типа." },
+  pickerSearch: { en: "Search by file name", es: "Buscar por nombre de archivo", ru: "Поиск по имени файла" },
+  pickerNoMatch: { en: "No files match your search.", es: "Ningún archivo coincide con la búsqueda.", ru: "Нет файлов, подходящих под запрос." },
   cancel: { en: "Cancel", es: "Cancelar", ru: "Отмена" },
   select: { en: "Select", es: "Seleccionar", ru: "Выбрать" },
   changeMedia: { en: "Change file", es: "Cambiar archivo", ru: "Заменить файл" },
   poster: { en: "Video cover", es: "Portada del vídeo", ru: "Обложка видео" },
-  posterMissing: {
-    en: "No cover image — the grid will show an empty tile until you pick one.",
-    es: "Sin portada — la cuadrícula mostrará un hueco hasta que elijas una.",
-    ru: "Нет обложки — в сетке будет пустая плитка, пока вы её не выберете.",
+  generateCover: { en: "Generate cover", es: "Generar portada", ru: "Создать обложку" },
+  generating: { en: "Generating cover…", es: "Generando portada…", ru: "Создание обложки…" },
+  coverDone: { en: "Cover generated", es: "Portada generada", ru: "Обложка создана" },
+  coverFailed: {
+    en: "Could not generate a cover from this video. Pick an image instead.",
+    es: "No se pudo generar la portada de este vídeo. Elige una imagen.",
+    ru: "Не удалось создать обложку из этого видео. Выберите изображение.",
   },
+  posterCleared: {
+    en: "Cover cleared because the video file changed — generate or pick a new one.",
+    es: "Se ha borrado la portada porque cambió el vídeo — genera o elige una nueva.",
+    ru: "Обложка сброшена, так как видео изменилось — создайте или выберите новую.",
+  },
+  issueMissingMedia: { en: "No file selected.", es: "Ningún archivo seleccionado.", ru: "Файл не выбран." },
+  issueMissingPoster: {
+    en: "A video needs a cover image before it can be published.",
+    es: "Un vídeo necesita una portada antes de publicarse.",
+    ru: "Для публикации видео нужна обложка.",
+  },
+  issueNotWebPlayable: {
+    en: "This format (MOV/M4V) does not play in every browser. Convert it to MP4 or WebM in the Library first.",
+    es: "Este formato (MOV/M4V) no se reproduce en todos los navegadores. Conviértelo a MP4 o WebM en la Biblioteca.",
+    ru: "Этот формат (MOV/M4V) воспроизводится не во всех браузерах. Сначала конвертируйте его в MP4 или WebM в Библиотеке.",
+  },
+  cannotPublish: { en: "Cannot publish yet", es: "Aún no se puede publicar", ru: "Пока нельзя опубликовать" },
   titleLabel: { en: "Title ({l})", es: "Título ({l})", ru: "Заголовок ({l})" },
   descLabel: { en: "Caption ({l})", es: "Descripción ({l})", ru: "Описание ({l})" },
   altLabel: { en: "Alt text ({l}) — for SEO & screen readers", es: "Texto alternativo ({l}) — para SEO y lectores de pantalla", ru: "Alt-текст ({l}) — для SEO и скринридеров" },
@@ -76,12 +99,19 @@ const useCopy = () => {
 
 const langName: Record<Lang, string> = { es: "ES", en: "EN", ru: "RU" };
 
+const ISSUE_COPY: Record<GalleryPublishIssue, keyof typeof COPY> = {
+  missingMedia: "issueMissingMedia",
+  missingPoster: "issueMissingPoster",
+  notWebPlayable: "issueNotWebPlayable",
+};
+
 const DashboardGallery = () => {
   const c = useCopy();
   const qc = useQueryClient();
-  const { data: items = [], isPending, error } = useGalleryAdmin();
+  const { data: items = [], isPending, missingTable } = useGalleryAdmin();
   const [lang, setLang] = useState<Lang>("es");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [posterBusyId, setPosterBusyId] = useState<string | null>(null);
   const [picker, setPicker] = useState<
     | null
     | { mode: "add"; kind: "photo" | "video" }
@@ -89,6 +119,7 @@ const DashboardGallery = () => {
     | { mode: "poster"; id: string; currentUrl: string }
   >(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<GalleryItem>>>({});
+  const posterAbort = useRef<AbortController | null>(null);
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: queryKeys.galleryAdmin });
@@ -124,16 +155,41 @@ const DashboardGallery = () => {
     refresh();
   };
 
+  /**
+   * Reordering swaps two rows. Doing that as two separate requests can leave the
+   * list half-swapped if the second one fails, so it goes through a transactional
+   * RPC; the two-update path is kept only for environments where the RPC is not
+   * deployed yet.
+   */
   const move = async (item: GalleryItem, dir: -1 | 1) => {
     const idx = items.findIndex((i) => i.id === item.id);
     const other = items[idx + dir];
     if (!other) return;
     setBusyId(item.id);
-    const a = galleryTable().update({ sort_order: other.sort_order }).eq("id", item.id);
-    const b = galleryTable().update({ sort_order: item.sort_order }).eq("id", other.id);
-    const [r1, r2] = await Promise.all([a, b]);
+    const rpc = (supabase as unknown as {
+      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { code?: string; message?: string } | null }>;
+    }).rpc;
+    const { error: rpcError } = await rpc("swap_gallery_order", { _a: item.id, _b: other.id });
+    if (rpcError) {
+      const missingRpc =
+        rpcError.code === "PGRST202" || /could not find the function|does not exist/i.test(rpcError.message ?? "");
+      if (!missingRpc) {
+        setBusyId(null);
+        toast.error(c("saveFailed"));
+        return;
+      }
+      const [r1, r2] = await Promise.all([
+        galleryTable().update({ sort_order: other.sort_order }).eq("id", item.id),
+        galleryTable().update({ sort_order: item.sort_order }).eq("id", other.id),
+      ]);
+      if (r1.error || r2.error) {
+        setBusyId(null);
+        toast.error(c("saveFailed"));
+        refresh();
+        return;
+      }
+    }
     setBusyId(null);
-    if (r1.error || r2.error) toast.error(c("saveFailed"));
     refresh();
   };
 
@@ -146,6 +202,38 @@ const DashboardGallery = () => {
     else {
       toast.success(c("removed"));
       refresh();
+    }
+  };
+
+  /** Extract a cover frame in the browser and store it next to the other media. */
+  const generateCover = async (item: GalleryItem) => {
+    if (!item.media_url) return;
+    posterAbort.current?.abort();
+    const controller = new AbortController();
+    posterAbort.current = controller;
+    setPosterBusyId(item.id);
+    try {
+      // Lazy: neither the poster module nor the FFmpeg fallback is in any other bundle.
+      const { generatePoster, posterNameFor } = await import("@/lib/gallery-poster");
+      const result = await generatePoster({ videoUrl: item.media_url, signal: controller.signal });
+      const { data: existing } = await supabase.storage.from("media").list("", { limit: 1000 });
+      const taken = (existing ?? []).map((f) => f.name);
+      const name = posterNameFor(item.media_url, result.ext, taken);
+      const { error: upErr } = await supabase.storage
+        .from("media")
+        .upload(name, result.blob, { contentType: result.mimeType, upsert: false });
+      if (upErr) throw upErr;
+      const url = supabase.storage.from("media").getPublicUrl(name).data.publicUrl;
+      if (controller.signal.aborted) return;
+      if (await patch(item.id, { poster_url: url })) toast.success(c("coverDone"));
+    } catch (e) {
+      if (!controller.signal.aborted) {
+        if (import.meta.env.DEV) console.error("[gallery poster]", e);
+        toast.error(c("coverFailed"));
+      }
+    } finally {
+      if (posterAbort.current === controller) posterAbort.current = null;
+      setPosterBusyId((id) => (id === item.id ? null : id));
     }
   };
 
@@ -170,10 +258,21 @@ const DashboardGallery = () => {
     if (await patch(item.id, { [key]: draft })) toast.success(c("saved"));
   };
 
-  if (isMissingGalleryTable(error as { code?: string; message?: string } | null)) {
+  const togglePublished = async (item: GalleryItem) => {
+    if (!item.published) {
+      const issues = publishIssues(item);
+      if (issues.length > 0) {
+        toast.error(`${c("cannotPublish")}: ${issues.map((i) => c(ISSUE_COPY[i])).join(" ")}`);
+        return;
+      }
+    }
+    await patch(item.id, { published: !item.published });
+  };
+
+  if (missingTable) {
     return (
       <DashboardCard title="Gallery">
-        <p className="text-sm text-muted-foreground flex items-start gap-2">
+        <p className="text-sm text-muted-foreground flex items-start gap-2" data-testid="gallery-missing-table">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
           {c("missingTable")}
         </p>
@@ -207,7 +306,9 @@ const DashboardGallery = () => {
         <div className="space-y-4">
           {items.map((item, idx) => {
             const busy = busyId === item.id;
+            const posterBusy = posterBusyId === item.id;
             const thumb = item.media_type === "video" ? item.poster_url : item.media_url;
+            const issues = publishIssues(item);
             return (
               <DashboardCard key={item.id} title="">
                 <div className="flex flex-col md:flex-row gap-4">
@@ -235,13 +336,24 @@ const DashboardGallery = () => {
                           size="sm"
                           variant="outline"
                           className="w-full"
+                          disabled={posterBusy || !item.media_url}
+                          onClick={() => generateCover(item)}
+                        >
+                          {posterBusy ? (
+                            <Loader2 size={13} className="mr-1.5 animate-spin" />
+                          ) : (
+                            <Wand2 size={13} className="mr-1.5" />
+                          )}
+                          {posterBusy ? c("generating") : c("generateCover")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
                           onClick={() => setPicker({ mode: "poster", id: item.id, currentUrl: item.poster_url })}
                         >
                           <ImageIcon size={13} className="mr-1.5" /> {c("poster")}
                         </Button>
-                        {!item.poster_url && (
-                          <p className="text-[11px] text-muted-foreground">{c("posterMissing")}</p>
-                        )}
                       </>
                     )}
                   </div>
@@ -285,12 +397,23 @@ const DashboardGallery = () => {
                       )}
                     </div>
 
+                    {!item.published && issues.length > 0 && (
+                      <ul className="text-[11px] text-muted-foreground space-y-1" data-testid="publish-issues">
+                        {issues.map((i) => (
+                          <li key={i} className="flex items-start gap-1.5">
+                            <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                            {c(ISSUE_COPY[i])}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <Button
                         size="sm"
                         variant={item.published ? "default" : "outline"}
-                        disabled={busy}
-                        onClick={() => patch(item.id, { published: !item.published })}
+                        disabled={busy || (!item.published && issues.length > 0)}
+                        onClick={() => togglePublished(item)}
                       >
                         {item.published ? <Eye size={13} className="mr-1.5" /> : <EyeOff size={13} className="mr-1.5" />}
                         {item.published ? c("published") : c("hidden")}
@@ -337,6 +460,8 @@ const DashboardGallery = () => {
         }
         description={c("pickerHint")}
         emptyLabel={c("pickerEmpty")}
+        searchPlaceholder={c("pickerSearch")}
+        noMatchLabel={c("pickerNoMatch")}
         cancelLabel={c("cancel")}
         selectLabel={c("select")}
         currentUrl={picker && picker.mode !== "add" ? picker.currentUrl : undefined}
@@ -345,7 +470,23 @@ const DashboardGallery = () => {
           if (!picker) return;
           if (picker.mode === "add") await addItem(picker.kind, url);
           else if (picker.mode === "media") {
-            if (await patch(picker.id, { media_url: url })) toast.success(c("saved"));
+            const target = items.find((i) => i.id === picker.id);
+            // A cover belongs to one specific video file: replacing the file must
+            // never leave the previous video's frame (and a published video without
+            // a cover is not allowed, so it is unpublished in the same write).
+            const changed = !!target && target.media_url !== url;
+            const clearPoster = changed && target?.media_type === "video";
+            const values: Record<string, unknown> = { media_url: url };
+            if (clearPoster) {
+              values.poster_url = "";
+              values.published = false;
+            } else if (changed && target?.media_type === "photo") {
+              values.poster_url = url;
+            }
+            if (await patch(picker.id, values)) {
+              toast.success(c("saved"));
+              if (clearPoster) toast.warning(c("posterCleared"));
+            }
           } else if (await patch(picker.id, { poster_url: url })) toast.success(c("saved"));
           setPicker(null);
         }}

@@ -16,11 +16,40 @@ CREATE TABLE IF NOT EXISTS public.gallery_items (
   alt_en text NOT NULL DEFAULT '',
   alt_ru text NOT NULL DEFAULT '',
   sort_order integer NOT NULL DEFAULT 0,
-  published boolean NOT NULL DEFAULT true,
+  -- New items are drafts: nothing reaches the public grid without an explicit publish.
+  published boolean NOT NULL DEFAULT false,
   duration_seconds integer,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT gallery_items_media_url_not_blank CHECK (length(btrim(media_url)) > 0),
+  CONSTRAINT gallery_items_duration_non_negative CHECK (duration_seconds IS NULL OR duration_seconds >= 0),
+  -- A published video without a cover would render an empty tile and would produce an
+  -- invalid VideoObject (thumbnailUrl is required), so it is rejected at the DB level.
+  CONSTRAINT gallery_items_published_video_needs_poster CHECK (
+    media_type <> 'video' OR published = false OR length(btrim(poster_url)) > 0
+  )
 );
+
+-- Idempotent hardening for an already-created table (re-runs safely).
+ALTER TABLE public.gallery_items ALTER COLUMN published SET DEFAULT false;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'gallery_items_media_url_not_blank') THEN
+    ALTER TABLE public.gallery_items
+      ADD CONSTRAINT gallery_items_media_url_not_blank CHECK (length(btrim(media_url)) > 0);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'gallery_items_duration_non_negative') THEN
+    ALTER TABLE public.gallery_items
+      ADD CONSTRAINT gallery_items_duration_non_negative CHECK (duration_seconds IS NULL OR duration_seconds >= 0);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'gallery_items_published_video_needs_poster') THEN
+    ALTER TABLE public.gallery_items
+      ADD CONSTRAINT gallery_items_published_video_needs_poster CHECK (
+        media_type <> 'video' OR published = false OR length(btrim(poster_url)) > 0
+      );
+  END IF;
+END $$;
 
 -- Data API access (PostgREST grants nothing on public by default).
 GRANT SELECT ON public.gallery_items TO anon;
@@ -62,7 +91,53 @@ CREATE TRIGGER log_gallery_items_changes
 AFTER INSERT OR UPDATE OR DELETE ON public.gallery_items
 FOR EACH ROW EXECUTE FUNCTION public.log_content_change();
 
+-- ---------------------------------------------------------------------------
+-- Atomic reorder: two independent UPDATE round-trips can leave the list in a
+-- half-swapped state if the second one fails. This RPC swaps both rows inside a
+-- single transaction and is admin-only.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.swap_gallery_order(_a uuid, _b uuid)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  order_a integer;
+  order_b integer;
+BEGIN
+  IF NOT public.has_role(auth.uid(), 'admin'::app_role) THEN
+    RAISE EXCEPTION 'not authorized';
+  END IF;
+  IF _a IS NULL OR _b IS NULL OR _a = _b THEN
+    RAISE EXCEPTION 'invalid gallery reorder arguments';
+  END IF;
+
+  -- Deterministic lock order avoids deadlocks between concurrent reorders.
+  SELECT sort_order INTO order_a FROM public.gallery_items WHERE id = _a FOR UPDATE;
+  SELECT sort_order INTO order_b FROM public.gallery_items WHERE id = _b FOR UPDATE;
+
+  IF order_a IS NULL OR order_b IS NULL THEN
+    RAISE EXCEPTION 'gallery item not found';
+  END IF;
+
+  UPDATE public.gallery_items SET sort_order = order_b WHERE id = _a;
+  UPDATE public.gallery_items SET sort_order = order_a WHERE id = _b;
+
+  RETURN 2;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.swap_gallery_order(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.swap_gallery_order(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.swap_gallery_order(uuid, uuid) TO service_role;
+
+-- ---------------------------------------------------------------------------
 -- Media renames must follow gallery media + poster references too.
+-- Based verbatim on the latest shipped version (20260817074200), which added the
+-- localized page_images.alt_text_en / alt_text_ru handling — only the gallery
+-- block is new, nothing from the existing function is dropped.
+-- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.rewrite_media_references(
   _old text,
   _new text,
@@ -116,9 +191,13 @@ BEGIN
 
   UPDATE public.page_images SET
     image_url = replace(replace(image_url, o, _new), e, _new_enc),
-    alt_text = replace(replace(alt_text, o, _new), e, _new_enc)
+    alt_text = replace(replace(alt_text, o, _new), e, _new_enc),
+    alt_text_en = replace(replace(alt_text_en, o, _new), e, _new_enc),
+    alt_text_ru = replace(replace(alt_text_ru, o, _new), e, _new_enc)
   WHERE position(o in image_url) > 0 OR position(e in image_url) > 0
-     OR position(o in alt_text) > 0 OR position(e in alt_text) > 0;
+     OR position(o in alt_text) > 0 OR position(e in alt_text) > 0
+     OR position(o in COALESCE(alt_text_en, '')) > 0 OR position(e in COALESCE(alt_text_en, '')) > 0
+     OR position(o in COALESCE(alt_text_ru, '')) > 0 OR position(e in COALESCE(alt_text_ru, '')) > 0;
   GET DIAGNOSTICS n = ROW_COUNT; total := total + n;
 
   UPDATE public.gallery_items SET
@@ -170,6 +249,7 @@ BEGIN
      OR position(o in quote_ru) > 0 OR position(e in quote_ru) > 0;
   GET DIAGNOSTICS n = ROW_COUNT; total := total + n;
 
+  -- Alias is written in the SAME transaction as the reference rewrite.
   INSERT INTO public.media_aliases (old_name, new_name, created_by)
   VALUES (_old, _new, _actor)
   ON CONFLICT (old_name) DO UPDATE
@@ -177,8 +257,11 @@ BEGIN
         created_at = now(),
         created_by = EXCLUDED.created_by;
 
-  UPDATE public.media_aliases SET new_name = _new WHERE new_name = _old;
+  UPDATE public.media_aliases SET new_name = _new
+  WHERE new_name = _old;
+
   DELETE FROM public.media_aliases WHERE old_name = _new;
+
   DELETE FROM public.media_aliases WHERE old_name = new_name;
 
   RETURN total;

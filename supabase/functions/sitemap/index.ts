@@ -54,7 +54,21 @@ Deno.serve(async (_req) => {
       console.warn("sitemap_config parse failed, ignoring:", e);
     }
 
-    const xml = buildSitemapXml(posts ?? [], extraUrls);
+    // Gallery URLs are only advertised once the section is genuinely indexable:
+    // the table has to exist AND hold at least one published item. A missing table
+    // (migration still pending) or an empty gallery keeps the three URLs out.
+    let includeGallery = false;
+    try {
+      const { count, error: galleryError } = await supabase
+        .from("gallery_items")
+        .select("id", { count: "exact", head: true })
+        .eq("published", true);
+      if (!galleryError && (count ?? 0) > 0) includeGallery = true;
+    } catch (e) {
+      console.warn("gallery gate check failed, omitting gallery URLs:", e);
+    }
+
+    const xml = buildSitemapXml(posts ?? [], extraUrls, new Date(), { includeGallery });
 
     return new Response(xml, { status: 200, headers: xmlHeaders() });
   } catch (err) {

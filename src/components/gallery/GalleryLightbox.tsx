@@ -54,8 +54,20 @@ const GalleryLightbox = ({ items, index, onClose, onNavigate }: Props) => {
 
   useEffect(() => setMounted(true), []);
 
+  // Remember what had focus before the dialog opened and hand it back on close, so
+  // keyboard users land on the thumbnail they came from instead of the page top.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    return () => {
+      if (opener && typeof opener.focus === "function" && document.contains(opener)) {
+        opener.focus();
+      }
+    };
+  }, []);
+
   // Stop playback whenever the visible item changes, not only on close.
   useEffect(() => () => stopVideo(), [index, stopVideo]);
+
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
