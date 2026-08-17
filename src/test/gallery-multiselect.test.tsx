@@ -32,10 +32,10 @@ const labels = {
   emptyLabel: "empty",
   cancelLabel: "Cancel",
   selectLabel: "Select",
-  addManyLabel: (n: number) => `Add ${n}`,
+  selectManyLabel: "Add {n}",
   selectAllLabel: "Select all",
   clearLabel: "Clear",
-  selectedLabel: (n: number) => `${n} selected`,
+  selectedCountLabel: "{n} selected",
 };
 
 const mount = (multiple: boolean) =>
