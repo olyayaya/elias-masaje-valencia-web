@@ -35,35 +35,20 @@ let caps: EncoderCaps | null = null;
 export const isConverterSupported = (): boolean =>
   typeof WebAssembly === "object" && typeof WebAssembly.instantiate === "function";
 
-/** Loads (once) the ffmpeg glue + self-hosted single-thread core. */
-export async function getFFmpeg(onLog?: (line: string) => void): Promise<FFmpegInstance> {
-  if (instance?.loaded) {
-    if (onLog) {
-      const listener = ((e: { message: string }) => onLog(e.message)) as never;
-      instance.on("log", listener);
-      logListeners.set(onLog, listener);
-    }
-    return instance;
-  }
-  const { FFmpeg } = await import("@ffmpeg/ffmpeg");
-  const ff = new FFmpeg() as unknown as FFmpegInstance;
-  if (onLog) {
-    const listener = ((e: { message: string }) => onLog(e.message)) as never;
-    ff.on("log", listener);
-    logListeners.set(onLog, listener);
-  }
-  await ff.load({
-    coreURL: new URL(FFMPEG_CORE_URL, window.location.href).href,
-    wasmURL: new URL(FFMPEG_WASM_URL, window.location.href).href,
-  });
-  instance = ff;
-  return ff;
-}
+const cancelled = () => new DOMException("Cancelled", "AbortError");
 
 /** Tracks log callbacks so a probe never leaves a listener attached to the singleton. */
 const logListeners = new Map<(line: string) => void, never>();
 
-function detachLog(ff: FFmpegInstance, onLog: (line: string) => void) {
+function attachLog(ff: FFmpegInstance, onLog?: (line: string) => void) {
+  if (!onLog) return;
+  const listener = ((e: { message: string }) => onLog(e.message)) as never;
+  ff.on("log", listener);
+  logListeners.set(onLog, listener);
+}
+
+function detachLog(ff: FFmpegInstance, onLog?: (line: string) => void) {
+  if (!onLog) return;
   const listener = logListeners.get(onLog);
   if (!listener) return;
   logListeners.delete(onLog);
@@ -74,14 +59,67 @@ function detachLog(ff: FFmpegInstance, onLog: (line: string) => void) {
   }
 }
 
-/** Runs `-encoders` once and caches which codecs this build can actually write. */
-export async function probeEncoders(): Promise<EncoderCaps> {
+/** Throws away a core nobody is waiting for — it must never become the cached singleton. */
+function discard(ff: FFmpegInstance, onLog?: (line: string) => void) {
+  detachLog(ff, onLog);
+  try {
+    ff.terminate();
+  } catch {
+    /* already gone */
+  }
+}
+
+/**
+ * Loads (once) the ffmpeg glue + self-hosted single-thread core.
+ * With a signal, an abort at any point (before the import, during the ~30 MB core download,
+ * or just as it finishes) rejects with AbortError and leaves NO cached instance behind.
+ */
+export async function getFFmpeg(
+  onLog?: (line: string) => void,
+  signal?: AbortSignal,
+): Promise<FFmpegInstance> {
+  if (signal?.aborted) throw cancelled();
+  if (instance?.loaded) {
+    attachLog(instance, onLog);
+    return instance;
+  }
+  const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+  if (signal?.aborted) throw cancelled();
+  const ff = new FFmpeg() as unknown as FFmpegInstance;
+  attachLog(ff, onLog);
+  try {
+    await ff.load({
+      coreURL: new URL(FFMPEG_CORE_URL, window.location.href).href,
+      wasmURL: new URL(FFMPEG_WASM_URL, window.location.href).href,
+    });
+  } catch (e) {
+    discard(ff, onLog);
+    throw e;
+  }
+  // Cancelled while the core was downloading: terminate the LOCAL instance even though it
+  // was never published to `instance`, so the wasm heap is released immediately.
+  if (signal?.aborted) {
+    discard(ff, onLog);
+    throw cancelled();
+  }
+  instance = ff;
+  return ff;
+}
+
+/**
+ * Runs `-encoders` once and caches which codecs this build can actually write.
+ * An aborted probe never caches its (possibly empty) result.
+ */
+export async function probeEncoders(signal?: AbortSignal): Promise<EncoderCaps> {
   if (caps) return caps;
+  if (signal?.aborted) throw cancelled();
   let log = "";
   const collect = (line: string) => { log += `${line}\n`; };
-  const ff = await getFFmpeg(collect);
+  const ff = await getFFmpeg(collect, signal);
   try {
+    if (signal?.aborted) throw cancelled();
     await ff.exec(["-hide_banner", "-encoders"]);
+    if (signal?.aborted) throw cancelled();
   } finally {
     // Without this the collector stays attached forever and grows on every conversion.
     detachLog(ff, collect);
@@ -102,6 +140,12 @@ export function terminateFFmpeg() {
   caps = null;
   logListeners.clear();
 }
+
+/** Test/diagnostic helper: is a loaded core currently cached? */
+export const hasLoadedCore = (): boolean => Boolean(instance?.loaded);
+/** Test helper: number of log listeners still attached to the singleton. */
+export const attachedLogListeners = (): number => logListeners.size;
+
 
 
 /** Reads width/height/duration from a File using the plain <video> element (no wasm needed). */
