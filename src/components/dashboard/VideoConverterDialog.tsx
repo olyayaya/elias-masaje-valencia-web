@@ -318,7 +318,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="vc-format" className="text-xs">{L("format")}</Label>
-                <Select value={format} onValueChange={(v) => setFormat(v as VideoFormat)} disabled={busy}>
+                <Select value={format} onValueChange={(v) => changeFormat(v as VideoFormat)} disabled={busy}>
                   <SelectTrigger id="vc-format"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {formats.map((f) => (
@@ -329,7 +329,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vc-res" className="text-xs">{L("resolution")}</Label>
-                <Select value={resolution} onValueChange={(v) => setResolution(v as ResolutionChoice)} disabled={busy}>
+                <Select value={resolution} onValueChange={(v) => changeResolution(v as ResolutionChoice)} disabled={busy}>
                   <SelectTrigger id="vc-res"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {RESOLUTIONS.map((r) => (
@@ -340,7 +340,7 @@ const VideoConverterDialog = ({ file, L, onClose, onReplaced, onVerdict }: Props
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="vc-quality" className="text-xs">{L("quality")}</Label>
-                <Select value={quality} onValueChange={(v) => setQuality(v as VideoQuality)} disabled={busy}>
+                <Select value={quality} onValueChange={(v) => changeQuality(v as VideoQuality)} disabled={busy}>
                   <SelectTrigger id="vc-quality"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="high">{L("qHigh")}</SelectItem>
