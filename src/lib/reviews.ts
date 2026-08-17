@@ -489,6 +489,6 @@ export const chunk = <T>(list: readonly T[], size = IMPORT_BATCH_SIZE): T[][] =>
 
 /** The starter file the owner downloads from the dashboard. */
 export const CSV_TEMPLATE =
-  "\uFEFFauthor_name,rating,review_text,reviewed_at,original_url\r\n" +
-  '"Ana García",5,"Muy buen masaje, repetiré.",2026-01-15,\r\n' +
-  '"John Smith",5,"Great deep tissue session.",2026-02-03,\r\n';
+  "\uFEFFauthor_name,rating,review_text,reviewed_at,original_url,original_language,review_text_es,review_text_en,review_text_ru\r\n" +
+  '"Ana García",5,"Muy buen masaje, repetiré.",2026-01-15,,es,,"A very good massage, I will come back.","Очень хороший массаж, приду ещё."\r\n' +
+  '"John Smith",5,"Great deep tissue session.",2026-02-03,,en,"Gran sesión de masaje profundo.",,"Отличный сеанс глубокого массажа."\r\n';

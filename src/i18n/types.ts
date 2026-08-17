@@ -90,6 +90,7 @@ export interface Translations {
     ratingAria: string;
     carouselLabel: string;
     openOriginal: string;
+    translatedNote: string;
   };
   location: {
     title: string;
