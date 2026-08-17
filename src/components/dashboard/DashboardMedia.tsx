@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import {
-  Upload, Trash2, Loader2, Copy, Check, AlertTriangle, Sparkles, Pencil, Film, FileQuestion, Play, X,
+  Upload, Trash2, Loader2, Copy, Check, AlertTriangle, Sparkles, Pencil, Film, FileQuestion, Play, X, VolumeX,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { optimizeImage, formatFileSize } from "@/lib/image-utils";
@@ -34,6 +34,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
