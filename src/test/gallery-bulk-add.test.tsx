@@ -141,16 +141,15 @@ describe("gallery bulk add", () => {
 
   it("keeps a shift range consistent with what the search left visible", async () => {
     h.files = [
-      { name: "b1.webp", mimeType: "image/webp" },
-      { name: "b2.webp", mimeType: "image/webp" },
-      { name: "c1.webp", mimeType: "image/webp" },
+      // "r" appears in no extension, so the filter really narrows the list.
+      { name: "r1.webp", mimeType: "image/webp" },
+      { name: "r2.webp", mimeType: "image/webp" },
+      { name: "x1.webp", mimeType: "image/webp" },
     ];
     const dialog = await openPhotoPicker();
     // eslint-disable-next-line no-console
     
-    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "b" } });
-    // eslint-disable-next-line no-console
-    console.log("VAL", (within(dialog).getByRole("textbox") as HTMLInputElement).value, tilesOf(dialog).length);
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "r" } });
     await waitFor(() => expect(tilesOf(dialog)).toHaveLength(2));
     const tiles = tilesOf(dialog);
     fireEvent.click(tiles[0]);
@@ -159,6 +158,6 @@ describe("gallery bulk add", () => {
 
     await waitFor(() => expect(h.insert).toHaveBeenCalled());
     const rows = h.insert.mock.calls[0][0] as { media_url: string }[];
-    expect(rows.map((r) => r.media_url)).toEqual(["https://cdn.test/b1.webp", "https://cdn.test/b2.webp"]);
+    expect(rows.map((r) => r.media_url)).toEqual(["https://cdn.test/r1.webp", "https://cdn.test/r2.webp"]);
   });
 });
