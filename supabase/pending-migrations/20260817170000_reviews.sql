@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS public.reviews (
   original_url      text CHECK (original_url IS NULL OR original_url ~ '^https://'),
   visible           boolean NOT NULL DEFAULT true,
   pinned            boolean NOT NULL DEFAULT false,
-  manual_priority   integer NOT NULL DEFAULT 0,
+  -- Same range the dashboard's priority input allows.
+  manual_priority   integer NOT NULL DEFAULT 0 CHECK (manual_priority BETWEEN -999 AND 999),
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
   -- When this row was added by an admin (manual entry or manual import).
