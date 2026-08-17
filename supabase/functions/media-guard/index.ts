@@ -57,14 +57,10 @@ async function countHistoryReferences(
   admin: ReturnType<typeof createClient>,
   fileName: string,
 ): Promise<number> {
-  const { count, error } = await admin
-    .from("content_history")
-    .select("id", { count: "exact", head: true })
-    .ilike("snapshot::text", `%${fileName.replace(/[%_]/g, (m) => `\\${m}`)}%`);
+  const { data, error } = await admin.rpc("count_media_history_refs", { _needle: fileName });
   if (error) return 0; // never let the advisory lookup break the guard
-  return count ?? 0;
+  return typeof data === "number" ? data : 0;
 }
-
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
