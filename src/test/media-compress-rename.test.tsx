@@ -10,6 +10,7 @@ const deleteMediaFile = vi.fn();
 const toastError = vi.fn();
 const toastSuccess = vi.fn();
 const storageRemove = vi.fn();
+const toastWarning = vi.fn();
 
 vi.mock("@/lib/media-usage", () => ({
   MediaGuardError: class MediaGuardError extends Error {
@@ -32,7 +33,11 @@ vi.mock("@/lib/media-compress", () => ({
 }));
 
 vi.mock("sonner", () => ({
-  toast: { error: (...a: unknown[]) => toastError(...a), success: (...a: unknown[]) => toastSuccess(...a) },
+  toast: {
+    error: (...a: unknown[]) => toastError(...a),
+    success: (...a: unknown[]) => toastSuccess(...a),
+    warning: (...a: unknown[]) => toastWarning(...a),
+  },
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -113,10 +118,10 @@ describe("smart compression", () => {
   });
 
   it("shows a clear message for unsupported formats", async () => {
-    analyzeCompression.mockResolvedValue({ status: "unsupported", reason: "GIF animation cannot be re-encoded without losing the animation" });
+    analyzeCompression.mockResolvedValue({ status: "unsupported", reason: "gif" });
     const user = await setup();
     await clickCompress(user);
-    await waitFor(() => expect(toastError.mock.calls[0][0]).toMatch(/GIF animation/));
+    await waitFor(() => expect(toastError.mock.calls[0][0]).toMatch(/GIF animation cannot be re-encoded/));
     expect(replaceMediaFile).not.toHaveBeenCalled();
   });
 
@@ -288,6 +293,6 @@ describe("localization and server outcome reporting", () => {
     await userEvent.type(input, "new.jpg");
     await user.click(screen.getByRole("button", { name: "Rename" }));
     await waitFor(() => expect(renameMediaFile).toHaveBeenCalled());
-    expect(toastError.mock.calls.map((c) => String(c[0])).join(" | ")).toMatch(/could not be removed/);
+    expect(toastWarning.mock.calls.map((c) => String(c[0])).join(" | ")).toMatch(/could not be removed/);
   });
 });
