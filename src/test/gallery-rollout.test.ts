@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { buildSitemapEntries, STATIC_PAGES, BASE_URL } from "../../supabase/functions/sitemap/build-sitemap";
-import { CONTENT_REFS } from "../../supabase/functions/media-guard/rules";
+import { SCANS } from "../../supabase/functions/media-guard/rules";
 
 const MIGRATION = readFileSync("supabase/pending-migrations/20260817140000_gallery_items.sql", "utf8");
 
@@ -11,12 +11,12 @@ describe("sitemap rollout safety", () => {
   });
 
   it("emits nothing for the gallery when the table is missing or empty", () => {
-    const locs = buildSitemapEntries([], { includeGallery: false }).map((e) => e.loc);
+    const locs = buildSitemapEntries([], [], new Date(), { includeGallery: false }).map((e) => e.loc);
     expect(locs.filter((l) => /galeria|gallery|galereya/.test(l))).toHaveLength(0);
   });
 
   it("emits all three URLs with alternates once an item is published", () => {
-    const entries = buildSitemapEntries([], { includeGallery: true });
+    const entries = buildSitemapEntries([], [], new Date(), { includeGallery: true });
     const gallery = entries.filter((e) => /galeria|gallery|galereya/.test(e.loc));
     expect(gallery.map((e) => e.loc).sort()).toEqual(
       [`${BASE_URL}/en/gallery`, `${BASE_URL}/galeria`, `${BASE_URL}/ru/galereya`].sort(),
@@ -31,7 +31,7 @@ describe("sitemap rollout safety", () => {
 });
 
 describe("media guard covers gallery media", () => {
-  const rule = CONTENT_REFS.find((r) => r.table === "gallery_items");
+  const rule = SCANS.find((r) => r.table === "gallery_items");
 
   it("scans both the media and the poster of a gallery item", () => {
     expect(rule).toBeTruthy();
@@ -41,7 +41,7 @@ describe("media guard covers gallery media", () => {
   });
 
   it("keeps scanning localized carousel alt text", () => {
-    const images = CONTENT_REFS.find((r) => r.table === "page_images")!;
+    const images = SCANS.find((r) => r.table === "page_images")!;
     expect(images.fields).toEqual(expect.arrayContaining(["image_url", "alt_text", "alt_text_en", "alt_text_ru"]));
   });
 });
