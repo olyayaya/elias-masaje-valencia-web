@@ -312,6 +312,7 @@ Deno.serve(async (req) => {
 
       const bucket = admin.storage.from("media");
       let updated = 0;
+      let warning: string | undefined;
 
       if (!renaming) {
         // Same name: back up first, and restore the original if the promotion fails.
@@ -324,6 +325,9 @@ Deno.serve(async (req) => {
           { staged: stagedName, target: fileName, backup },
         );
         if (!result.ok) return json({ error: result.error, restored: result.restored }, 500);
+        // A successful swap that could not clean its own service objects is still a
+        // success — but the admin is told, because those objects are now visible.
+        if (result.warning) warning = result.warning;
       } else {
         const { error: copyError } = await bucket.copy(stagedName, newName);
         if (copyError) {
@@ -340,12 +344,16 @@ Deno.serve(async (req) => {
       }
 
       const historyReferences = await countHistoryReferences(admin, fileName);
-      let warning: string | undefined;
       if (renaming) {
-        await cleanup();
+        const { error: stagedError } = await bucket.remove([stagedName]);
+        if (stagedError) warning = `Temporary object could not be removed: ${stagedError.message}`;
         const { error: rmError } = await bucket.remove([fileName]);
-        if (rmError) warning = `Old object could not be removed: ${rmError.message}`;
+        if (rmError) {
+          warning = [warning, `Old object could not be removed: ${rmError.message}`]
+            .filter(Boolean).join(" · ");
+        }
       }
+
       return json({
         fileName,
         newName,
