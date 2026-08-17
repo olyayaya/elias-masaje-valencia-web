@@ -305,7 +305,7 @@ const normalizeRow = (rec: Record<string, unknown>, line: number): PreviewRow =>
     else reviewedAt = d.toISOString();
   }
 
-  const original = httpsOnly(clean(rec.original_url ?? rec.url ?? rec.link));
+  const original = httpsOnly(clean(rec.original_url ?? rec.source_url ?? rec.url ?? rec.link));
   if (original.bad) issues.push({ code: "url_invalid" });
 
   if (issues.length) return { line, status: "invalid", row: null, raw, issues };
@@ -316,6 +316,7 @@ const normalizeRow = (rec: Record<string, unknown>, line: number): PreviewRow =>
     review_text: raw.review_text,
     reviewed_at: reviewedAt,
     original_url: original.url,
+    pinned: truthy(rec.pinned ?? rec.featured),
     dedupe_key: dedupeKey({ author_name: raw.author_name, review_text: raw.review_text, reviewed_at: reviewedAt }),
   };
   return { line, status: "new", row, raw, issues: [] };
