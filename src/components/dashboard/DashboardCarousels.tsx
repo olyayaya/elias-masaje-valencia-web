@@ -139,7 +139,8 @@ const CollectionSection = ({
     const next = drafts[`${img.id}:${altLang}`] ?? "";
     if (next === ((img[col] as string | null) ?? "")) return;
     setBusy(img.id + "-alt");
-    const { error } = await supabase.from("page_images").update({ [col]: next }).eq("id", img.id);
+    const patch = { [col]: next } as { alt_text?: string; alt_text_en?: string; alt_text_ru?: string };
+    const { error } = await supabase.from("page_images").update(patch).eq("id", img.id);
     if (error) toast.error(L("saveFailed"));
     else toast.success(L("saved"));
     setBusy(null);
