@@ -163,18 +163,55 @@ const DashboardMedia = () => {
     toast.success(L("uploaded", { n: formatFileSize(optimized.originalSize - optimized.optimizedSize) }));
   };
 
-  const uploadVideo = async (file: File, contentType: string) => {
-    const name = collisionSafeName(file.name, files.map((f) => f.name));
+  const uploadVideo = async (source: File, payload: Blob, contentType: string) => {
+    const name = collisionSafeName(source.name, files.map((f) => f.name));
     const controller = new AbortController();
     uploadAbort.current = controller;
+    setUploadPhase("uploading");
     setUploadPct(0);
-    await uploadResumable(name, file, contentType, {
+    await uploadResumable(name, payload, contentType, {
       signal: controller.signal,
       onProgress: (sent, total) => setUploadPct(total ? Math.round((sent / total) * 100) : 0),
     });
-    // A freshly uploaded source has never been analyzed by the converter.
+    // A freshly uploaded source has never been analyzed by the converter — muting does
+    // not compress anything, so the verdict stays "not analyzed".
     markOpt(name, "notAnalyzed");
     toast.success(L("uploadedVideo", { n: name }));
+  };
+
+  /**
+   * Local, lossless audio removal. Returns null when the file must be SKIPPED — a failed,
+   * unsupported or cancelled mute never falls back to uploading the original with sound.
+   * The ffmpeg helper is imported here (and only here) so the wasm core stays unloaded
+   * until the option is actually used on a video.
+   */
+  const muteVideo = async (file: File, mimeType: string): Promise<Blob | null> => {
+    const controller = new AbortController();
+    uploadAbort.current = controller;
+    setUploadPhase("processing");
+    setUploadPct(0);
+    try {
+      const engine = await import("@/lib/video-ffmpeg");
+      if (!engine.isConverterSupported()) {
+        toast.error(L("audioRemovalUnsupported", { f: file.name }));
+        return null;
+      }
+      const res = await engine.stripAudio(
+        file,
+        { fileName: file.name, mimeType },
+        {
+          signal: controller.signal,
+          onProgress: (ratio) => setUploadPct(Math.round(ratio * 100)),
+        },
+      );
+      if (res.hadAudio) toast.success(L("audioRemoved", { f: file.name }));
+      else toast.info(L("noAudioTrack", { f: file.name }));
+      return res.blob;
+    } catch (err) {
+      if ((err as DOMException)?.name === "AbortError") toast.info(L("audioRemovalCancelled", { f: file.name }));
+      else toast.error(L("audioRemovalFailed", { f: file.name }));
+      return null;
+    }
   };
 
   const handleUpload = async (fileList: FileList) => {
@@ -184,19 +221,27 @@ const DashboardMedia = () => {
       const verdict = classifyUpload(file);
       setUploadLabel(file.name);
       setUploadPct(0);
+      setUploadPhase("uploading");
       try {
         if (!verdict.ok) {
           toast.error(L("skippedUnsupported", { f: file.name }));
           continue;
         }
         if (verdict.kind === "photo") {
+          // Images never go through the video preprocessing path.
           await uploadPhoto(file);
         } else {
           if (file.size > MAX_UPLOAD_VIDEO) {
             toast.error(L("tooBig", { f: file.name, m: Math.round(MAX_UPLOAD_VIDEO / (1024 * 1024)) }));
             continue;
           }
-          await uploadVideo(file, verdict.mimeType);
+          let payload: Blob = file;
+          if (removeAudio) {
+            const muted = await muteVideo(file, verdict.mimeType);
+            if (!muted) continue; // skip this file, keep going with the rest
+            payload = muted;
+          }
+          await uploadVideo(file, payload, verdict.mimeType);
         }
       } catch (err) {
         if ((err as DOMException)?.name === "AbortError") toast.info(L("uploadCancelled"));
@@ -207,8 +252,10 @@ const DashboardMedia = () => {
     }
     setUploading(false);
     setUploadLabel(null);
+    setUploadPhase("uploading");
     await fetchFiles();
   };
+
 
 
   /** Reports the server outcome honestly: warning stays a warning, never a plain success. */
