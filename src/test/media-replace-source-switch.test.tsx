@@ -6,8 +6,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
-const replaceMediaFile = vi.fn(async () => ({ newName: "hero.webp" }));
-const encodePhoto = vi.fn(async () => ({
+const replaceMediaFile = vi.fn(async (_a?: unknown) => ({ newName: "hero.webp" }));
+const encodePhoto = vi.fn(async (_a?: unknown, _b?: unknown) => ({
   blob: new Blob([new Uint8Array(1024)], { type: "image/webp" }),
   size: 1024, mime: "image/webp", format: "webp" as const, width: 1920, height: 960,
 }));
@@ -17,7 +17,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("@/lib/media-usage", () => ({
-  replaceMediaFile: (...a: unknown[]) => replaceMediaFile(...(a as [])),
+  replaceMediaFile: (a: unknown) => replaceMediaFile(a),
   commitVideoReplacement: vi.fn(async () => ({ newName: "clip.mp4" })),
 }));
 
@@ -50,7 +50,7 @@ vi.mock("@/lib/photo-encode", async (importOriginal) => {
       if (slowFor === name) await new Promise((r) => setTimeout(r, 60));
       return { naturalWidth: d.w, naturalHeight: d.h } as HTMLImageElement;
     }),
-    encodePhoto: (...a: unknown[]) => encodePhoto(...(a as [])),
+    encodePhoto: (a: unknown, b: unknown) => encodePhoto(a, b),
   };
 });
 
