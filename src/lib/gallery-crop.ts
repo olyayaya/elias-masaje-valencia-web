@@ -23,8 +23,13 @@ export const CROP_DEFAULTS: GalleryCrop = {
 export const CROP_LIMITS = {
   x: { min: 0, max: 100 },
   y: { min: 0, max: 100 },
-  zoom: { min: 1, max: 3 },
+  /** Below 1 the tile shows MORE than a plain object-cover crop (zoom out). */
+  zoom: { min: 0.5, max: 3 },
 } as const;
+
+/** Gallery tiles (public grid, dashboard preview and the crop dialog) are 4:3. */
+export const FRAME_ASPECT = 4 / 3;
+
 
 const num = (value: unknown, fallback: number, min: number, max: number) => {
   const n = typeof value === "string" ? Number(value) : (value as number);
