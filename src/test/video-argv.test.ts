@@ -41,13 +41,19 @@ describe("container selection", () => {
     expect(a.at(-1)).toBe("out.mov");
   });
 
-  it("WebM uses libvpx-vp9 with row-mt and never mov flags", () => {
+  it("WebM uses libvpx-vp9 with memory-lean settings and never mov flags", () => {
     const a = args({ format: "webm", outputName: "out.webm" });
     expect(valueAfter(a, "-c:v")).toBe("libvpx-vp9");
-    expect(valueAfter(a, "-row-mt")).toBe("1");
+    // Single-thread wasm core: these are what keep libvpx inside the 32-bit heap on iOS.
+    expect(valueAfter(a, "-row-mt")).toBe("0");
+    expect(valueAfter(a, "-threads")).toBe("1");
+    expect(valueAfter(a, "-lag-in-frames")).toBe("0");
+    expect(valueAfter(a, "-auto-alt-ref")).toBe("0");
+    expect(valueAfter(a, "-tile-columns")).toBe("0");
     expect(a).not.toContain("-movflags");
     expect(a).not.toContain("-f");
   });
+
 });
 
 describe("rate control is mutually exclusive", () => {

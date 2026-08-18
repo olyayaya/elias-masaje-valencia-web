@@ -295,6 +295,33 @@ export const COPY = {
     es: "El archivo convertido salió vacío o ilegible: inténtalo con otros ajustes",
     ru: "Итоговый файл получился пустым или нечитаемым — попробуйте другие настройки",
   },
+  errMemory: {
+    en: "This device ran out of memory for these settings. Nothing was uploaded and your original file is untouched.",
+    es: "Este dispositivo se quedó sin memoria con estos ajustes. No se subió nada y tu archivo original está intacto.",
+    ru: "Устройству не хватило памяти для этих настроек. Ничего не загружено, исходный файл не изменён.",
+  },
+  errBusy: {
+    en: "A conversion is already running — wait for it to finish or cancel it",
+    es: "Ya hay una conversión en curso: espera a que termine o cancélala",
+    ru: "Конвертация уже выполняется — дождитесь её завершения или отмените",
+  },
+  memoryFallbackOffer: {
+    en: "You can retry with lighter settings: {f} at {s}p (short side). Your other settings stay as they are.",
+    es: "Puedes reintentar con ajustes más ligeros: {f} a {s}p (lado corto). El resto de tus ajustes no cambia.",
+    ru: "Можно повторить с более лёгкими настройками: {f}, {s}p по короткой стороне. Остальные ваши настройки сохранятся.",
+  },
+  memoryFallbackApply: {
+    en: "Use lighter settings",
+    es: "Usar ajustes más ligeros",
+    ru: "Применить лёгкие настройки",
+  },
+  memoryBudgetWarn: {
+    en: "On this device {f} at {w}×{h} is close to the browser memory limit and may fail. Lower the resolution or choose MP4 if it does.",
+    es: "En este dispositivo {f} a {w}×{h} está cerca del límite de memoria del navegador y puede fallar. Baja la resolución o elige MP4 si ocurre.",
+    ru: "На этом устройстве {f} в {w}×{h} близко к пределу памяти браузера и может не завершиться. Тогда снизьте разрешение или выберите MP4.",
+  },
+
+
 
   appliedOk: { en: "Applied: {n}", es: "Aplicado: {n}", ru: "Применено: {n}" },
   restoreUnavailable: {

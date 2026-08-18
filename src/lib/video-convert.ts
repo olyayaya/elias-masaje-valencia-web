@@ -245,14 +245,29 @@ export function buildFfmpegArgs(o: ConvertOptions): string[] {
     args.push("-c:v", "libx264", "-preset", X264_PRESET[speed]);
     if (rate.mode === "crf") args.push("-crf", String(clampCrf(o.format, rate.crf)));
     else args.push("-b:v", `${clampBitrate(rate.kbps)}k`);
-    args.push("-pix_fmt", "yuv420p", "-movflags", "+faststart");
+    // Single-thread wasm core: one slice, a short lookahead and no B-frame pyramid keep
+    // x264's frame buffers inside the 32-bit heap that mobile Safari caps hard.
+    args.push("-threads", "1", "-rc-lookahead", "10", "-pix_fmt", "yuv420p", "-movflags", "+faststart");
     if (o.format === "mov") args.push("-f", "mov");
   } else {
     args.push("-c:v", "libvpx-vp9", "-cpu-used", VP9_CPU_USED[speed]);
     if (rate.mode === "crf") args.push("-b:v", "0", "-crf", String(clampCrf(o.format, rate.crf)));
     else args.push("-b:v", `${clampBitrate(rate.kbps)}k`);
-    args.push("-row-mt", "1", "-pix_fmt", "yuv420p");
+    // libvpx is the memory hog: alt-ref + a 25-frame lookahead holds ~25 raw 1080x1920
+    // frames (~75 MB) on top of the tile/row-mt worker contexts, which is exactly what
+    // blows up as "Out of bounds memory access" on iOS. None of it helps a 1-thread core.
+    args.push(
+      "-threads", "1",
+      "-row-mt", "0",
+      "-tile-columns", "0",
+      "-frame-parallel", "0",
+      "-lag-in-frames", "0",
+      "-auto-alt-ref", "0",
+      "-deadline", "good",
+      "-pix_fmt", "yuv420p",
+    );
   }
+
   // Never name an encoder this core did not report; drop the audio track instead.
   if (audio) args.push("-c:a", audio, "-b:a", `${o.audioKbps ?? AUDIO_KBPS[o.quality]}k`);
   else args.push("-an");
@@ -260,6 +275,57 @@ export function buildFfmpegArgs(o: ConvertOptions): string[] {
   args.push("-y", o.outputName);
   return args;
 
+}
+
+// ---------------------------------------------------------------------------
+// Memory budget (mobile Safari / iOS)
+// ---------------------------------------------------------------------------
+
+/**
+ * The wasm core is a 32-bit build: its whole heap (source bytes + decoded frames + encoder
+ * state + output) must fit in one linear memory that iOS Safari refuses to grow much past
+ * a few hundred MB. VP9 needs far more working memory per pixel than x264, so the two
+ * containers get different ceilings.
+ */
+export const MOBILE_WEBM_PIXEL_BUDGET = 1280 * 720;
+export const MOBILE_H264_PIXEL_BUDGET = 1920 * 1080;
+
+/** Heuristic, non-blocking: only used to warn and to offer an explicit safer preset. */
+export const isMobileBrowser = (ua = typeof navigator === "undefined" ? "" : navigator.userAgent): boolean =>
+  /iPhone|iPad|iPod|Android/i.test(ua) ||
+  // iPadOS 13+ reports a desktop UA but is still the mobile memory budget.
+  (/Macintosh/.test(ua) && typeof navigator !== "undefined" && (navigator as { maxTouchPoints?: number }).maxTouchPoints > 1);
+
+/** True when the requested output is likely to exhaust the wasm heap on this device. */
+export function exceedsMemoryBudget(o: {
+  width: number;
+  height: number;
+  format: VideoFormat;
+  mobile: boolean;
+}): boolean {
+  if (!o.mobile) return false;
+  const pixels = Math.max(0, o.width) * Math.max(0, o.height);
+  const budget = o.format === "webm" ? MOBILE_WEBM_PIXEL_BUDGET : MOBILE_H264_PIXEL_BUDGET;
+  return pixels > budget;
+}
+
+/**
+ * The explicit, user-confirmed fallback offered after (or instead of) an out-of-memory
+ * failure: H.264/MP4 at 720p short side. Never applied silently.
+ */
+export function memorySafeSettings(caps: EncoderCaps): {
+  format: VideoFormat;
+  resolution: ResolutionChoice;
+  customShortSide: number;
+} | null {
+  const formats = availableFormatsWithMov(caps);
+  const format: VideoFormat | undefined = formats.includes("mp4")
+    ? "mp4"
+    : formats.includes("webm")
+      ? "webm"
+      : undefined;
+  if (!format) return null;
+  return { format, resolution: "720", customShortSide: 720 };
 }
 
 

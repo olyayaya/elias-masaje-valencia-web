@@ -47,7 +47,7 @@ const cancelled = () => new DOMException("Cancelled", "AbortError");
  * this wrapper `(e as Error).message` is undefined and every failure collapsed into the
  * generic "Processing failed".
  */
-export type VideoErrorCode = "load" | "read" | "encode" | "output" | "cancelled";
+export type VideoErrorCode = "load" | "read" | "encode" | "output" | "memory" | "busy" | "cancelled";
 
 export class VideoEngineError extends Error {
   readonly code: VideoErrorCode;
@@ -66,15 +66,32 @@ const describe = (e: unknown): string => {
   return String((e as { message?: string } | null)?.message ?? e ?? "unknown error");
 };
 
+/**
+ * A wasm heap exhaustion, whatever shape emscripten/libvpx gives it. These are NOT user
+ * errors and must never be shown verbatim — the UI turns "memory" into a plain sentence
+ * plus an explicit safer-preset offer.
+ */
+const MEMORY_PATTERNS =
+  /out of bounds memory access|memory access out of bounds|cannot enlarge memory|out of memory|allocation failed|maximum call stack|aborted?\((oom)?\)|table index is out of bounds|rangeerror: array buffer allocation failed/i;
+
+export const isMemoryFailure = (e: unknown): boolean =>
+  (e as VideoEngineError | null)?.code === "memory" ||
+  MEMORY_PATTERNS.test(describe(e)) ||
+  (e instanceof WebAssembly.RuntimeError && MEMORY_PATTERNS.test(e.message));
+
 export const isAbort = (e: unknown): boolean => (e as DOMException | null)?.name === "AbortError";
 
 /** Categorises a raw failure and keeps the original for the console (never for the user). */
 export const engineError = (code: VideoErrorCode, e: unknown): Error => {
   if (isAbort(e)) return e as Error;
   if (e instanceof VideoEngineError) return e;
-  if (import.meta.env?.DEV) console.error(`[video-ffmpeg:${code}]`, e);
-  return new VideoEngineError(code, describe(e), e);
+  const effective: VideoErrorCode = isMemoryFailure(e) ? "memory" : code;
+  // Always logged (not just DEV): the admin needs the raw RuntimeError in the console
+  // while the dialog shows a short human sentence.
+  console.error(`[video-ffmpeg:${effective}]`, e);
+  return new VideoEngineError(effective, describe(e), e);
 };
+
 
 
 /** Tracks log callbacks so a probe never leaves a listener attached to the singleton. */
@@ -232,8 +249,16 @@ export interface ConversionResult {
 }
 
 /**
+ * The wasm core is a single shared instance with one linear memory: two concurrent runs
+ * would fight over the same heap and reliably abort with an out-of-bounds access.
+ */
+let running = false;
+export const isConverterBusy = (): boolean => running;
+
+/**
  * Transcodes locally. Always cleans the virtual FS, even on cancel/error, so repeated runs
- * cannot leak wasm heap memory.
+ * cannot leak wasm heap memory. Any failure additionally tears the core down so the next
+ * attempt starts from a fresh, unfragmented heap.
  */
 export async function convertVideo(
   file: File,
@@ -243,10 +268,34 @@ export async function convertVideo(
     signal?: AbortSignal;
   } = {},
 ): Promise<ConversionResult> {
+  if (handlers.signal?.aborted) throw cancelled();
+  if (running) throw new VideoEngineError("busy", "a conversion is already running");
+  running = true;
+  try {
+    return await runConversion(file, options, handlers);
+  } catch (e) {
+    // Whatever went wrong (OOM above all), the shared heap is now in an unknown state:
+    // drop the core so the next attempt starts clean instead of accumulating memory.
+    terminateFFmpeg();
+    throw e;
+  } finally {
+    running = false;
+  }
+}
+
+async function runConversion(
+  file: File,
+  options: Omit<ConvertOptions, "inputName" | "outputName">,
+  handlers: {
+    onProgress?: (p: ConversionProgress) => void;
+    signal?: AbortSignal;
+  },
+): Promise<ConversionResult> {
   const { onProgress, signal } = handlers;
-  if (signal?.aborted) throw cancelled();
 
   onProgress?.({ ratio: 0, stage: "loading" });
+
+
 
   // Cancelling while the ~30 MB core is still downloading must terminate the instance and
   // never proceed to an encode. getFFmpeg additionally discards a core that finishes
@@ -274,15 +323,19 @@ export async function convertVideo(
 
   try {
     onProgress?.({ ratio: 0, stage: "reading" });
-    let bytes: Uint8Array;
+    let bytes: Uint8Array | null;
     try {
       bytes = new Uint8Array(await file.arrayBuffer());
       if (signal?.aborted) throw cancelled();
       // MUST be awaited: exec on a half-written virtual FS reads a truncated input.
       await ff.writeFile(inputName, bytes);
+      // The bytes now live in the wasm FS; holding the JS copy as well doubles the peak
+      // footprint of a 30 MB clip for no reason.
+      bytes = null;
     } catch (e) {
       throw engineError("read", e);
     }
+
     if (signal?.aborted) throw cancelled();
     let code: number;
     try {

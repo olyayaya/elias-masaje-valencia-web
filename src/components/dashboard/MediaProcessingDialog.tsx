@@ -29,10 +29,12 @@ import {
 import {
   AUDIO_KBPS_CHOICES, CRF_RANGE, MAX_CONVERT_BYTES, MEMORY_WARN_BYTES, MIME_BY_FORMAT,
   availableFormatsWithMov, clampBitrate, clampCrf, defaultCrf, estimateSizeBytes,
-  evaluateVideoSaving, formatDuration, isWebFormat, outputNameFor, smartPreset, targetDimensions,
+  evaluateVideoSaving, exceedsMemoryBudget, formatDuration, isMobileBrowser, isWebFormat,
+  memorySafeSettings, outputNameFor, smartPreset, targetDimensions,
   type EncoderCaps, type FpsChoice, type RateControl, type ResolutionChoice,
   type SpeedChoice, type VideoFormat, type VideoMeta,
 } from "@/lib/video-convert";
+
 import type { LibraryT } from "./media/i18n";
 
 export interface ProcessingItem {
@@ -119,6 +121,10 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const [compare, setCompare] = useState<"original" | "result">("original");
   const [confirmed, setConfirmed] = useState(false);
   const [reuseSettings, setReuseSettings] = useState(true);
+  /** Set only after an out-of-memory failure: the explicit, opt-in lighter preset. */
+  const [memoryFallback, setMemoryFallback] = useState<
+    { format: VideoFormat; resolution: ResolutionChoice; customShortSide: number } | null
+  >(null);
 
   const [photo, setPhoto] = useState<PhotoSettings | null>(null);
   const [analyzing, setAnalyzing] = useState(true);
@@ -266,28 +272,34 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   /**
    * ffmpeg.wasm rejects with bare strings; video-ffmpeg wraps them into a VideoEngineError
    * carrying a category, so the admin gets an actionable sentence instead of "Processing failed".
+   * The raw technical text (RuntimeError, exit codes) is logged by the engine, never shown.
    */
   const describeProcessError = (e: unknown): string => {
     const err = e as { name?: string; code?: string; message?: string } | null;
-    const detail = err?.message ? ` (${err.message})` : "";
     if (err?.name === "VideoEngineError") {
       switch (err.code) {
-        case "load": return L("errEngineLoad") + detail;
-        case "read": return L("errRead") + detail;
-        case "encode": return L("errEncode") + detail;
-        case "output": return L("errOutput") + detail;
+        case "load": return L("errEngineLoad");
+        case "read": return L("errRead");
+        case "encode": return L("errEncode");
+        case "output": return L("errOutput");
+        case "memory": return L("errMemory");
+        case "busy": return L("errBusy");
       }
     }
+    if (err?.name === "VideoEngineError") return L("processFailed");
     return err?.message || L("processFailed");
   };
 
   const runProcess = async () => {
-
+    // Hard guard against a double click / second run on the shared wasm heap.
+    if (phase === "processing" || phase === "applying") return;
     setError(null);
+    setMemoryFallback(null);
     setProgress(0);
     setPhase("processing");
     const controller = new AbortController();
     abortRef.current = controller;
+
     try {
       const baseName = current.replace?.name ?? current.file.name;
       if (current.kind === "photo") {
@@ -343,7 +355,13 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
       setPhase("idle");
       if ((e as DOMException)?.name === "AbortError") return;
       setError(describeProcessError(e));
+      // Out of memory is a device limit, not a bad file: offer a lighter preset the admin
+      // can accept explicitly. Nothing is changed until they click it.
+      if ((e as { code?: string })?.code === "memory" && current.kind === "video" && caps) {
+        setMemoryFallback(memorySafeSettings(caps));
+      }
     } finally {
+
       abortRef.current = null;
     }
   };
@@ -547,9 +565,53 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </p>
           )}
 
+          {memoryFallback && video && (
+            <div className="text-xs border border-border rounded-lg p-3 space-y-2">
+              <p>
+                {L("memoryFallbackOffer", {
+                  f: memoryFallback.format.toUpperCase(),
+                  s: String(memoryFallback.customShortSide),
+                })}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  updateVideo({
+                    format: memoryFallback.format,
+                    resolution: memoryFallback.resolution,
+                    customShortSide: memoryFallback.customShortSide,
+                    rate: video.rate.mode === "crf"
+                      ? { mode: "crf", crf: defaultCrf(memoryFallback.format) }
+                      : video.rate,
+                  });
+                  setMemoryFallback(null);
+                  setError(null);
+                }}
+              >
+                {L("memoryFallbackApply")}
+              </Button>
+            </div>
+          )}
+
           {current.kind === "video" && !videoTooBig && current.file.size > MEMORY_WARN_BYTES && (
             <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">{L("memoryWarning")}</p>
           )}
+
+          {current.kind === "video" && video && meta && !videoTooBig && (() => {
+            const dims = targetDimensions(meta.width, meta.height, video.resolution, video.customShortSide);
+            if (!exceedsMemoryBudget({ ...dims, format: video.format, mobile: isMobileBrowser() })) return null;
+            return (
+              <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
+                {L("memoryBudgetWarn", {
+                  f: video.format.toUpperCase(),
+                  w: String(dims.width),
+                  h: String(dims.height),
+                })}
+              </p>
+            );
+          })()}
+
 
           {/* ---- photo controls -------------------------------------- */}
           {current.kind === "photo" && photo && (
