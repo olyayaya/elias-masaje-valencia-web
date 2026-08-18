@@ -911,7 +911,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           {result && (
             <Button size="sm" onClick={() => void applyResult()} disabled={busy || applyDisabled}>
               {phase === "applying" ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
-              {needsConfirm ? L("confirmBigger") : current.replace ? L("applyReplace") : L("apply")}
+              {current.replace ? L("applyReplace") : L("apply")}
             </Button>
           )}
         </div>
