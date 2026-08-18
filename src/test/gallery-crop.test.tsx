@@ -7,6 +7,9 @@ import ThumbnailCropDialog, { CROP_COPY } from "@/components/dashboard/Thumbnail
 import GalleryLightbox from "@/components/gallery/GalleryLightbox";
 import type { GalleryItem } from "@/lib/gallery";
 
+class RO { observe() {} unobserve() {} disconnect() {} }
+(globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver ??= RO;
+
 afterEach(cleanup);
 
 const item = (over: Partial<GalleryItem> = {}): GalleryItem => ({
@@ -131,10 +134,10 @@ describe("thumbnail crop dialog", () => {
 
 describe("lightbox", () => {
   it("shows the original with object-contain, no crop, and Montserrat text", () => {
-    const { container } = wrap(
+    wrap(
       <GalleryLightbox items={[item({ thumbnail_x: 10, thumbnail_zoom: 2 })]} index={0} onClose={() => {}} onNavigate={() => {}} />,
     );
-    const img = container.querySelector("img") as HTMLImageElement;
+    const img = document.body.querySelector("img") as HTMLImageElement;
     expect(img.className).toContain("object-contain");
     expect(img.style.transform).toBe("");
     expect(img.style.objectPosition).toBe("");
