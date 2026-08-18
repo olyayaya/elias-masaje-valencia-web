@@ -5,9 +5,14 @@
  * is unit-testable and can never diverge from what actually runs.
  */
 
-export type VideoFormat = "mp4" | "webm";
+export type VideoFormat = "mp4" | "mov" | "webm";
 export type VideoQuality = "high" | "balanced" | "small";
-export type ResolutionChoice = "original" | "1080" | "720" | "480";
+export type ResolutionChoice = "original" | "1080" | "720" | "480" | "custom";
+/** Frame-rate ceiling. A source below the choice keeps its own rate — never raised. */
+export type FpsChoice = "original" | "30" | "25" | "24";
+/** Real encoder effort: slower presets compress harder for the same quality target. */
+export type SpeedChoice = "fast" | "balanced" | "max";
+
 
 /** Hard ceiling for the local converter: bigger sources may only be uploaded as-is. */
 export const MAX_CONVERT_BYTES = 250 * 1024 * 1024;
