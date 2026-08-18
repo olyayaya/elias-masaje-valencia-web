@@ -187,8 +187,6 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
     (async () => {
       if (current.kind === "photo") {
-        setVideo(null);
-        setMeta(null);
         try {
           const { loadImageElement } = await import("@/lib/photo-encode");
           const img = await loadImageElement(current.file);
@@ -202,14 +200,15 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           setPhoto(carryPhoto.current ?? smartPhotoPreset({ ...src, mime: current.file.type }, photoCaps));
         } catch {
           if (!cancelled) setError(L("processFailed"));
+        } finally {
+          if (!cancelled && aliveRef.current) setAnalyzing(false);
         }
         return;
       }
-      setPhoto(null);
-      setPhotoSource(null);
       if (current.file.size > MAX_CONVERT_BYTES) {
         // Handing this to ffmpeg.wasm would simply crash the tab — refuse up front.
         setError(L("tooBigEngine", { m: Math.round(MAX_CONVERT_BYTES / (1024 * 1024)) }));
+        setAnalyzing(false);
         return;
       }
       try {
@@ -225,6 +224,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
         setVideo(next);
       } catch (e) {
         if (!cancelled) setError((e as Error).message || L("processFailed"));
+      } finally {
+        if (!cancelled && aliveRef.current) setAnalyzing(false);
       }
     })();
     return () => { cancelled = true; };
@@ -233,7 +234,12 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
   if (!current) return null;
 
-  const sourceSize = current.replace?.size ?? current.file.size;
+  /** The file the admin is actually editing right now — never the stored object's size. */
+  const sourceSize = current.file.size;
+  /** Stored target size: only for the replacement gate / media-guard compatibility. */
+  const storedSize = current.replace?.size ?? current.file.size;
+  const sourceLabel = current.picked ? L("selectedFile") : L("originalLabel");
+
   const videoTooBig = current.kind === "video" && current.file.size > MAX_CONVERT_BYTES;
 
   const updatePhoto = (patch: Partial<PhotoSettings>) => {
