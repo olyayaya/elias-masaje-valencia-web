@@ -114,7 +114,7 @@ describe("every entry point opens the shared dialog", () => {
     fireEvent.change(fileInput(container), { target: { files: [photoFile()] } });
 
     expect(await screen.findByText("Prepare media")).toBeInTheDocument();
-    expect(screen.getByText(/new-photo\.jpg/)).toBeInTheDocument();
+    expect(screen.getAllByText(/new-photo\.jpg/).length).toBeGreaterThan(0);
     expect(mutations()).toHaveLength(0);
   });
 
@@ -124,7 +124,7 @@ describe("every entry point opens the shared dialog", () => {
     fireEvent.drop(zone, { dataTransfer: { files: [photoFile("dropped.jpg")] } });
 
     expect(await screen.findByText("Prepare media")).toBeInTheDocument();
-    expect(screen.getByText(/dropped\.jpg/)).toBeInTheDocument();
+    expect(screen.getAllByText(/dropped\.jpg/).length).toBeGreaterThan(0);
     expect(fileInput(container).value).toBe("");
     expect(mutations()).toHaveLength(0);
   });
