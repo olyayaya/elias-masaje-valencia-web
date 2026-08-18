@@ -71,29 +71,29 @@ const GaleriaPage = () => {
                       {thumb ? (
                         // Hover zoom lives on the wrapper so the saved crop transform
                         // on the <img> is never overwritten (crop + hover coexist).
-                        <div className="w-full h-full transition-transform duration-500 group-hover:scale-[1.03]">
-                          <img
+                        <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03]">
+                          <CropThumb
                             src={thumb}
                             alt={alt}
+                            crop={item}
                             loading="lazy"
                             decoding="async"
                             width={800}
                             height={600}
-                            data-full-src={fullSize}
-                            data-testid="gallery-grid-img"
+                            fullSrc={fullSize}
+                            testId="gallery-grid-img"
                             onError={(e) => {
                               // If the storage transform ever fails, fall back to the
                               // untouched object rather than showing a broken tile.
                               const el = e.currentTarget;
                               if (fullSize && el.src !== fullSize) el.src = fullSize;
                             }}
-                            style={cropStyle(item)}
-                            className="w-full h-full"
                           />
                         </div>
                       ) : (
                         <div className="w-full h-full bg-secondary" aria-hidden="true" />
                       )}
+
                       {isVideo && (
                         <span
                           aria-hidden="true"
