@@ -41,6 +41,8 @@ export interface ProcessingItem {
   kind: "photo" | "video";
   /** Present when this run edits/replaces an existing library object. */
   replace?: { name: string; size: number; publishedInGallery?: boolean };
+  /** Internal: true once the admin picked a new local source via "Replace file". */
+  picked?: boolean;
 }
 
 interface Props {
