@@ -391,6 +391,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             contentBase64: await blobToBase64(result.blob),
             contentType: result.contentType,
             originalSize: current.replace.size,
+            mode: "manual",
+
           });
           onApplied(res.newName ?? result.name, current.replace.name);
         } else {
