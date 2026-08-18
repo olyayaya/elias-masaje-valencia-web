@@ -106,12 +106,13 @@ describe("engine failure handling", () => {
 
   it("refuses a second concurrent run instead of sharing the heap", async () => {
     const engine = await import("@/lib/video-ffmpeg");
-    let release: () => void = () => {};
-    exec.mockImplementationOnce(() => new Promise<number>((r) => { release = () => r(0); }));
+    let release: (n: number) => void = () => {};
+    const pending = new Promise<number>((r) => { release = r; });
+    exec.mockImplementationOnce(() => pending);
     const first = engine.convertVideo(file(), options);
     const err = await engine.convertVideo(file(), options).catch((e) => e);
     expect(err.code).toBe("busy");
-    release();
+    release(0);
     await first;
     expect(engine.isConverterBusy()).toBe(false);
   });

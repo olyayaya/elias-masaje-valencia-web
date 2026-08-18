@@ -72,7 +72,7 @@ const describe = (e: unknown): string => {
  * plus an explicit safer-preset offer.
  */
 const MEMORY_PATTERNS =
-  /out of bounds memory access|memory access out of bounds|cannot enlarge memory|out of memory|allocation failed|maximum call stack|abort\(oom\)|table index is out of bounds|rangeerror: array buffer allocation failed/i;
+  /out of bounds memory access|memory access out of bounds|cannot enlarge memory|out of memory|allocation failed|maximum call stack|aborted?\((oom)?\)|table index is out of bounds|rangeerror: array buffer allocation failed/i;
 
 export const isMemoryFailure = (e: unknown): boolean =>
   (e as VideoEngineError | null)?.code === "memory" ||
