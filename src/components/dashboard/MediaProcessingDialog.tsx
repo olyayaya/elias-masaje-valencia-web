@@ -121,6 +121,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const [reuseSettings, setReuseSettings] = useState(true);
 
   const [photo, setPhoto] = useState<PhotoSettings | null>(null);
+  const [analyzing, setAnalyzing] = useState(true);
+
   const [photoSource, setPhotoSource] = useState<{ width: number; height: number; hasAlpha: boolean } | null>(null);
   const [video, setVideo] = useState<VideoSettings | null>(null);
   const [meta, setMeta] = useState<VideoMeta | null>(null);
