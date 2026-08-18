@@ -43,8 +43,9 @@ export const DEFAULT_FILTERS: MediaFilters = {
 };
 
 export const isDefaultFilters = (f: MediaFilters): boolean =>
-  f.q === "" && f.exts.length === 0 && f.minMB === "" && f.maxMB === "" && f.from === "" &&
-  f.to === "" && f.usage === "all" && f.opt === "all" && f.sort === "newest";
+  f.q === "" && f.kind === "all" && f.exts.length === 0 && f.minMB === "" && f.maxMB === "" &&
+  f.from === "" && f.to === "" && f.usage === "all" && f.opt === "all" && f.sort === "newest";
+
 
 const MB = 1024 * 1024;
 

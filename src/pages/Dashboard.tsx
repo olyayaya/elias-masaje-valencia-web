@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   LayoutDashboard, FileText, Search, Image, HelpCircle, MessageSquare, Menu, X, ChevronLeft, History, PenLine, Home, Tag, Globe, ChevronDown, Sun, Moon, Sparkles, Images, Plug, TrendingUp, LogOut, Inbox, GalleryHorizontal,
 } from "lucide-react";
@@ -51,22 +51,76 @@ const secondarySections = [
   { id: "history", icon: History },
 ] as const;
 
-const allSectionIds = [...primarySections, ...secondarySections].map(s => s.id);
+const allSectionIds = [...primarySections, ...secondarySections].map(s => s.id) as string[];
+const secondaryIds = secondarySections.map(s => s.id) as string[];
+
+const SECTION_KEY = "elias.dashboard.section";
+const MORE_KEY = "elias.dashboard.more";
+
+const isSection = (v: string | null): v is string => !!v && allSectionIds.includes(v);
+
+const readStored = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const store = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* private mode — the URL still carries the section */
+  }
+};
+
+/** ?section= wins; a legacy /dashboard without it falls back to the last valid section. */
+const initialSection = (param: string | null): string => {
+  if (isSection(param)) return param;
+  const saved = readStored(SECTION_KEY);
+  return isSection(saved) ? saved : "overview";
+};
 
 const langLabels: Record<Locale, string> = { es: "ES", en: "EN", ru: "RU" };
 
 const Dashboard = () => {
   // Private admin area: never indexed, never previewed on social.
   useHead({ title: "Panel | Elias Masaje", robots: "noindex, nofollow", noSocial: true });
-  const [active, setActive] = useState("overview");
+  const [params, setParams] = useSearchParams();
+  const paramSection = params.get("section");
+  // Initial render already shows the right section — no flash of Overview after F5.
+  const [active, setActive] = useState(() => initialSection(paramSection));
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(
+    () => secondaryIds.includes(initialSection(paramSection)) || readStored(MORE_KEY) === "1",
+  );
+
+  // Keep the URL, the state and the fallback in sync (also for Back/Forward steps).
+  useEffect(() => {
+    if (isSection(paramSection)) {
+      if (paramSection !== active) setActive(paramSection);
+      store(SECTION_KEY, paramSection);
+      if (secondaryIds.includes(paramSection)) setMoreOpen(true);
+    } else {
+      // Unknown or missing value: normalise the URL without adding a history entry.
+      setParams({ section: active }, { replace: true });
+    }
+  }, [paramSection, active, setParams]);
+
+  useEffect(() => { store(MORE_KEY, moreOpen ? "1" : "0"); }, [moreOpen]);
   const { locale, setLocale } = useI18n();
   const dt = useDashboardT(locale);
   const { mode, toggleMode } = useTheme();
 
   const navigateTo = (section: string) => {
+    if (!isSection(section)) return;
     setActive(section);
+    store(SECTION_KEY, section);
+    if (secondaryIds.includes(section)) setMoreOpen(true);
+    // replace: the dashboard menu is not browser history worthy, and the stable
+    // ?section= key is what ScrollToTop uses to remember the vertical position.
+    setParams({ section }, { replace: true });
     setSidebarOpen(false);
   };
 
@@ -87,6 +141,7 @@ const Dashboard = () => {
       case "faq": return <DashboardFAQ />;
       case "testimonials": return <DashboardReviews />;
       case "history": return <DashboardHistory />;
+      // Unknown values never reach here (validated), but stay safe by design.
       default: return <DashboardOverview onNavigate={navigateTo} />;
     }
   };

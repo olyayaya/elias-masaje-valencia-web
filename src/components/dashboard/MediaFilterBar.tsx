@@ -7,13 +7,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  DEFAULT_FILTERS, isDefaultFilters, type MediaFilters, type SortKey,
+  isDefaultFilters, type MediaFilters, type SortKey,
 } from "@/lib/media-filters";
 import type { LibraryT } from "./media/i18n";
 
 interface Props {
   filters: MediaFilters;
   onChange: (next: MediaFilters) => void;
+  /** Full manual reset: clears persistence and closes the advanced panel. */
+  onReset: () => void;
   extensions: string[];
   L: LibraryT;
   open: boolean;
@@ -23,11 +25,12 @@ interface Props {
   onScanUsage: () => void;
 }
 
+
 const SORTS: SortKey[] = ["newest", "oldest", "nameAsc", "nameDesc", "sizeDesc", "sizeAsc"];
 
 /** Search + advanced filters for the Library. Purely presentational: all logic is in media-filters. */
 const MediaFilterBar = ({
-  filters, onChange, extensions, L, open, onToggle, usageLoaded, usageLoading, onScanUsage,
+  filters, onChange, onReset, extensions, L, open, onToggle, usageLoaded, usageLoading, onScanUsage,
 }: Props) => {
   const set = <K extends keyof MediaFilters>(key: K, value: MediaFilters[K]) =>
     onChange({ ...filters, [key]: value });
@@ -60,8 +63,8 @@ const MediaFilterBar = ({
             ))}
           </SelectContent>
         </Select>
-        {!isDefaultFilters(filters) && (
-          <Button variant="ghost" size="sm" onClick={() => onChange({ ...DEFAULT_FILTERS, kind: filters.kind })}>
+        {(!isDefaultFilters(filters) || open) && (
+          <Button variant="ghost" size="sm" onClick={onReset}>
             <RotateCcw size={14} className="mr-1" />
             {L("reset")}
           </Button>
