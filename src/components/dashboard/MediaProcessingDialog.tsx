@@ -355,7 +355,13 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
       setPhase("idle");
       if ((e as DOMException)?.name === "AbortError") return;
       setError(describeProcessError(e));
+      // Out of memory is a device limit, not a bad file: offer a lighter preset the admin
+      // can accept explicitly. Nothing is changed until they click it.
+      if ((e as { code?: string })?.code === "memory" && current.kind === "video" && caps) {
+        setMemoryFallback(memorySafeSettings(caps));
+      }
     } finally {
+
       abortRef.current = null;
     }
   };
