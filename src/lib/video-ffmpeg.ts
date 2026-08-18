@@ -249,8 +249,16 @@ export interface ConversionResult {
 }
 
 /**
+ * The wasm core is a single shared instance with one linear memory: two concurrent runs
+ * would fight over the same heap and reliably abort with an out-of-bounds access.
+ */
+let running = false;
+export const isConverterBusy = (): boolean => running;
+
+/**
  * Transcodes locally. Always cleans the virtual FS, even on cancel/error, so repeated runs
- * cannot leak wasm heap memory.
+ * cannot leak wasm heap memory. Any failure additionally tears the core down so the next
+ * attempt starts from a fresh, unfragmented heap.
  */
 export async function convertVideo(
   file: File,
@@ -262,8 +270,11 @@ export async function convertVideo(
 ): Promise<ConversionResult> {
   const { onProgress, signal } = handlers;
   if (signal?.aborted) throw cancelled();
+  if (running) throw new VideoEngineError("busy", "a conversion is already running");
+  running = true;
 
   onProgress?.({ ratio: 0, stage: "loading" });
+
 
   // Cancelling while the ~30 MB core is still downloading must terminate the instance and
   // never proceed to an encode. getFFmpeg additionally discards a core that finishes
