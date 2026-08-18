@@ -565,9 +565,53 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </p>
           )}
 
+          {memoryFallback && video && (
+            <div className="text-xs border border-border rounded-lg p-3 space-y-2">
+              <p>
+                {L("memoryFallbackOffer", {
+                  f: memoryFallback.format.toUpperCase(),
+                  s: String(memoryFallback.customShortSide),
+                })}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  updateVideo({
+                    format: memoryFallback.format,
+                    resolution: memoryFallback.resolution,
+                    customShortSide: memoryFallback.customShortSide,
+                    rate: video.rate.mode === "crf"
+                      ? { mode: "crf", crf: defaultCrf(memoryFallback.format) }
+                      : video.rate,
+                  });
+                  setMemoryFallback(null);
+                  setError(null);
+                }}
+              >
+                {L("memoryFallbackApply")}
+              </Button>
+            </div>
+          )}
+
           {current.kind === "video" && !videoTooBig && current.file.size > MEMORY_WARN_BYTES && (
             <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">{L("memoryWarning")}</p>
           )}
+
+          {current.kind === "video" && video && meta && !videoTooBig && (() => {
+            const dims = targetDimensions(meta.width, meta.height, video.resolution, video.customShortSide);
+            if (!exceedsMemoryBudget({ ...dims, format: video.format, mobile: isMobileBrowser() })) return null;
+            return (
+              <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
+                {L("memoryBudgetWarn", {
+                  f: video.format.toUpperCase(),
+                  w: String(dims.width),
+                  h: String(dims.height),
+                })}
+              </p>
+            );
+          })()}
+
 
           {/* ---- photo controls -------------------------------------- */}
           {current.kind === "photo" && photo && (
