@@ -57,7 +57,10 @@ describe("BookingDialog duration selector", () => {
 
     const trigger = screen.getByRole("combobox");
     fireEvent.keyDown(trigger, { key: "Enter" });
-    const option = await screen.findByRole("option", { name: /1\.5h/ });
+
+    // Dropdown options show only duration, never price.
+    const option = await screen.findByRole("option", { name: "1.5h" });
+    expect(option.textContent).not.toContain("€");
     fireEvent.click(option);
 
     await waitFor(() => {
