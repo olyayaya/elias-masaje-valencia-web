@@ -12,10 +12,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useI18n } from "@/i18n/context";
 import { whatsappUrl } from "@/config/contact";
 import { trackWhatsAppClick } from "@/lib/analytics";
 import { formatPrice } from "@/lib/format-price";
+import { parseServiceTiers } from "@/lib/service-tiers";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -57,6 +65,7 @@ const BookingDialog = ({
   const [message, setMessage] = useState("");
   const [edited, setEdited] = useState(false);
   const [done, setDone] = useState<null | "opened" | "copied">(null);
+  const [tierIndex, setTierIndex] = useState(0);
 
   /** Strict validation — runs before WhatsApp ever opens. */
   const schema = useMemo(() => z.object({
@@ -95,8 +104,17 @@ const BookingDialog = ({
     return null;
   };
 
-  const shownDuration = !hideDuration ? (duration || "").trim() : "";
-  const shownPrice = !hidePrice && price ? formatPrice(price, t, { hidePrefix: hidePriceFrom }) : "";
+  /** Durations/prices are stored as parallel "a / b / c" strings — pair by index. */
+  const tiers = useMemo(() => parseServiceTiers(duration, price), [duration, price]);
+  const selectedTier = tiers[tierIndex] ?? tiers[0];
+
+  const shownDuration = hideDuration
+    ? ""
+    : (selectedTier?.duration ?? (duration || "").trim());
+  const rawPrice = selectedTier?.price ?? price;
+  const shownPrice = !hidePrice && rawPrice
+    ? formatPrice(rawPrice, t, { hidePrefix: hidePriceFrom })
+    : "";
 
   /** The exact text sent to WhatsApp — always mirrors the preview box. */
   const generated = useMemo(() => {
@@ -136,10 +154,16 @@ const BookingDialog = ({
       setErrors({});
       setTouched({});
       setDone(null);
+      setTierIndex(0);
       setMessage(generated);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Never let a duration/price selection leak to a different service.
+  useEffect(() => {
+    setTierIndex(0);
+  }, [service, duration, price]);
 
   const copy = async () => {
     try {
@@ -291,7 +315,30 @@ const BookingDialog = ({
         </div>
 
         <div className="grid gap-3 font-body">
+          {!hideDuration && tiers.length > 1 && (
+            <div className="grid gap-1.5">
+              <Label htmlFor="booking-duration" className="text-xs">{b.durationLabel}</Label>
+              <Select
+                value={String(tierIndex)}
+                onValueChange={(v) => { setTierIndex(Number(v)); setEdited(false); }}
+              >
+                <SelectTrigger id="booking-duration" aria-label={b.durationLabel}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiers.map((tier, i) => (
+                    <SelectItem key={`${tier.duration}-${i}`} value={String(i)}>
+                      {hidePrice || !tier.price
+                        ? tier.duration
+                        : `${tier.duration} — ${formatPrice(tier.price, t, { hidePrefix: true })}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid gap-1.5">
+
             <Label htmlFor="booking-name" className="text-xs">{b.nameLabel}</Label>
             <Input
               id="booking-name"
