@@ -121,6 +121,10 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const [compare, setCompare] = useState<"original" | "result">("original");
   const [confirmed, setConfirmed] = useState(false);
   const [reuseSettings, setReuseSettings] = useState(true);
+  /** Set only after an out-of-memory failure: the explicit, opt-in lighter preset. */
+  const [memoryFallback, setMemoryFallback] = useState<
+    { format: VideoFormat; resolution: ResolutionChoice; customShortSide: number } | null
+  >(null);
 
   const [photo, setPhoto] = useState<PhotoSettings | null>(null);
   const [analyzing, setAnalyzing] = useState(true);
