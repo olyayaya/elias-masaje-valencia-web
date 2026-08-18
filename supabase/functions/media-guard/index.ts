@@ -476,8 +476,8 @@ Deno.serve(async (req) => {
     if (!source.found) return json({ error: "Source file not found" }, 404);
     const originalSize = source.size;
     const replaceMode = readMode(body);
-    const verdict = replaceMode === "manual"
-      ? { ok: true as const }
+    const verdict: ReturnType<typeof evaluateSaving> = replaceMode === "manual"
+      ? { ok: true }
       : evaluateSaving(originalSize, bytes.byteLength);
     if (!verdict.ok) {
       return json({ error: verdict.message, alreadyCompressed: verdict.alreadyCompressed, originalSize, newSize: bytes.byteLength }, 409);
