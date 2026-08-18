@@ -4,7 +4,9 @@ import { useI18n } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CROP_DEFAULTS, CROP_LIMITS, clampCrop, cropForSave, cropStyle, type GalleryCrop } from "@/lib/gallery-crop";
+import { CROP_DEFAULTS, CROP_LIMITS, clampCrop, cropForSave, type GalleryCrop } from "@/lib/gallery-crop";
+import CropThumb from "@/components/gallery/CropThumb";
+
 
 type UiLang = "en" | "es" | "ru";
 
