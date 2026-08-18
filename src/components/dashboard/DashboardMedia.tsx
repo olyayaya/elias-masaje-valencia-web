@@ -1,29 +1,24 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import {
-  Upload, Trash2, Loader2, Copy, Check, AlertTriangle, Sparkles, Pencil, Film, FileQuestion, Play, X, VolumeX,
+  Upload, Trash2, Loader2, AlertTriangle, FilePenLine, Pencil, Film, FileQuestion, Play,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { optimizeImage, formatFileSize } from "@/lib/image-utils";
+import { formatFileSize } from "@/lib/image-utils";
 import {
   checkMediaUsage,
   checkMediaUsageBatch,
   deleteMediaFile,
   renameMediaFile,
-  replaceMediaFile,
-  MediaGuardError,
   type MediaUsage,
 } from "@/lib/media-usage";
-import { analyzeCompression, blobToBase64 } from "@/lib/media-compress";
 import {
-  collisionSafeName, kindOf, countByKind, classifyUpload, UPLOAD_ACCEPT,
+  kindOf, countByKind, classifyUpload, UPLOAD_ACCEPT,
   type MediaKind,
 } from "@/lib/media-kind";
 import {
   applyFilters, availableExtensions, DEFAULT_FILTERS,
   type LibraryFile, type MediaFilters, type OptState,
 } from "@/lib/media-filters";
-import { MAX_CONVERT_BYTES } from "@/lib/video-convert";
-import { uploadResumable } from "@/lib/video-upload";
 import { useI18n } from "@/i18n/context";
 import { toast } from "sonner";
 import DashboardCard from "./DashboardCard";
@@ -32,10 +27,7 @@ import { COPY, makeL, REASONS, toLang } from "./media/i18n";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -47,11 +39,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { ConverterFile } from "./VideoConverterDialog";
+import type { ProcessingItem } from "./MediaProcessingDialog";
 
-// The ffmpeg engine lives behind this lazy boundary: opening the converter is what pulls
-// the wasm core, never a plain visit to the Library.
-const VideoConverterDialog = lazy(() => import("./VideoConverterDialog"));
+// The ffmpeg engine lives behind this lazy boundary: opening the processing dialog is what
+// pulls the wasm core, never a plain visit to the Library.
+const MediaProcessingDialog = lazy(() => import("./MediaProcessingDialog"));
 
 type DeleteTarget = {
   name: string;
@@ -69,21 +61,15 @@ const DashboardMedia = () => {
 
   const [files, setFiles] = useState<LibraryFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadLabel, setUploadLabel] = useState<string | null>(null);
-  const [uploadPct, setUploadPct] = useState(0);
-  /** Distinguishes the local mute pass from the network transfer in the progress UI. */
-  const [uploadPhase, setUploadPhase] = useState<"processing" | "uploading">("uploading");
-  const [removeAudio, setRemoveAudio] = useState(false);
-  const uploadAbort = useRef<AbortController | null>(null);
 
-  const [copied, setCopied] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [checking, setChecking] = useState<string | null>(null);
   const [target, setTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [compressing, setCompressing] = useState<string | null>(null);
+  /** Files queued for the shared processing dialog — nothing is uploaded until Apply. */
+  const [processing, setProcessing] = useState<ProcessingItem[] | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<LibraryFile | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renaming, setRenaming] = useState(false);
@@ -96,7 +82,6 @@ const DashboardMedia = () => {
   const [usageLoading, setUsageLoading] = useState(false);
   const [optimization, setOptimization] = useState<Record<string, OptState>>({});
 
-  const [converter, setConverter] = useState<ConverterFile | null>(null);
   const [previewing, setPreviewing] = useState<LibraryFile | null>(null);
 
   /** Lists the whole bucket (Storage caps a page at 1000 objects). */
