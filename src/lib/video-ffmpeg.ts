@@ -123,7 +123,12 @@ export async function getFFmpeg(
     attachLog(instance, onLog);
     return instance;
   }
-  const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+  let FFmpeg: new () => unknown;
+  try {
+    ({ FFmpeg } = (await import("@ffmpeg/ffmpeg")) as unknown as { FFmpeg: new () => unknown });
+  } catch (e) {
+    throw engineError("load", e);
+  }
   if (signal?.aborted) throw cancelled();
   const ff = new FFmpeg() as unknown as FFmpegInstance;
   attachLog(ff, onLog);
@@ -134,8 +139,9 @@ export async function getFFmpeg(
     });
   } catch (e) {
     discard(ff, onLog);
-    throw e;
+    throw engineError("load", e);
   }
+
   // Cancelled while the core was downloading: terminate the LOCAL instance even though it
   // was never published to `instance`, so the wasm heap is released immediately.
   if (signal?.aborted) {
