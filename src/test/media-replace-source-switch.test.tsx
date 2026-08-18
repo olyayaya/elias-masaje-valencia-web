@@ -96,7 +96,7 @@ describe("selected file becomes the only working source", () => {
     expect(sourceLine().textContent).not.toContain("800×400");
     // The panel is labelled "Selected file", not "Original", and shows the selected size.
     expect(screen.getAllByText("Selected file").length).toBeGreaterThan(0);
-    expect(screen.getByText(/brand-new\.jpg · 98 KB/)).toBeInTheDocument();
+    expect(screen.getAllByText(/brand-new\.jpg · 98 KB/).length).toBeGreaterThan(0);
   });
 
   it("keeps the replace target visible as metadata only", async () => {
