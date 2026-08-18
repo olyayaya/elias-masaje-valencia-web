@@ -63,6 +63,5 @@ const CurvedDivider = ({ from = "bg-background", to = "bg-secondary", flip = fal
     </div>
   );
 };
-};
 
 export default CurvedDivider;
