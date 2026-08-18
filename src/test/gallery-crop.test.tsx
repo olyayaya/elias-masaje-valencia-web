@@ -113,6 +113,40 @@ describe("thumbnail crop dialog", () => {
     await waitFor(() => expect(onCancel).toHaveBeenCalled());
   });
 
+  it("keeps a zoomed-out crop through save → reload → reopen and fills gaps with a blurred backdrop", async () => {
+    const onSave = vi.fn().mockResolvedValue(true);
+    const { unmount } = wrap(
+      <ThumbnailCropDialog
+        open
+        previewUrl="https://cdn.test/a.webp"
+        value={{ thumbnail_x: 50, thumbnail_y: 30, thumbnail_zoom: 0.65 }}
+        onCancel={() => {}}
+        onSave={onSave}
+      />,
+    );
+    expect(screen.getByTestId("crop-preview-img-backdrop")).toBeTruthy();
+    expect(screen.getByLabelText(CROP_COPY.zoom.es).getAttribute("aria-valuemin") ?? "0.5").toBeTruthy();
+    fireEvent.click(screen.getByTestId("crop-save"));
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({ thumbnail_x: 50, thumbnail_y: 30, thumbnail_zoom: 0.65 }),
+    );
+    unmount();
+
+    // Reload: the persisted row comes back and is honoured, not snapped to 1.
+    wrap(
+      <ThumbnailCropDialog
+        open
+        previewUrl="https://cdn.test/a.webp"
+        value={item({ thumbnail_zoom: 0.65, thumbnail_y: 30 })}
+        onCancel={() => {}}
+        onSave={onSave}
+      />,
+    );
+    expect(clampCrop(item({ thumbnail_zoom: 0.65 })).thumbnail_zoom).toBe(0.65);
+    expect(screen.getByTestId("crop-preview-img-backdrop")).toBeTruthy();
+  });
+
+
   it("does not close on a failed save", async () => {
     const onSave = vi.fn().mockResolvedValue(false);
     const onCancel = vi.fn();
