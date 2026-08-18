@@ -191,7 +191,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     (async () => {
       if (current.kind === "photo") {
         try {
-          const { loadImageElement } = await import("@/lib/photo-encode");
+          console.log("IMPORTING", current.id); const { loadImageElement } = await import("@/lib/photo-encode"); console.log("IMPORTED", current.id);
           const img = await loadImageElement(current.file);
           if (cancelled || !aliveRef.current) return;
           const src = {
@@ -202,7 +202,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           setPhotoSource(src);
           setPhoto(carryPhoto.current ?? smartPhotoPreset({ ...src, mime: current.file.type }, photoCaps));
         } catch {
-          if (!cancelled) setError(L("processFailed"));
+          console.log("CATCH", current.id); if (!cancelled) setError(L("processFailed"));
         } finally {
           if (!cancelled && aliveRef.current) setAnalyzing(false);
         }
