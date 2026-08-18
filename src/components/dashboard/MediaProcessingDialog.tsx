@@ -29,10 +29,12 @@ import {
 import {
   AUDIO_KBPS_CHOICES, CRF_RANGE, MAX_CONVERT_BYTES, MEMORY_WARN_BYTES, MIME_BY_FORMAT,
   availableFormatsWithMov, clampBitrate, clampCrf, defaultCrf, estimateSizeBytes,
-  evaluateVideoSaving, formatDuration, isWebFormat, outputNameFor, smartPreset, targetDimensions,
+  evaluateVideoSaving, exceedsMemoryBudget, formatDuration, isMobileBrowser, isWebFormat,
+  memorySafeSettings, outputNameFor, smartPreset, targetDimensions,
   type EncoderCaps, type FpsChoice, type RateControl, type ResolutionChoice,
   type SpeedChoice, type VideoFormat, type VideoMeta,
 } from "@/lib/video-convert";
+
 import type { LibraryT } from "./media/i18n";
 
 export interface ProcessingItem {
