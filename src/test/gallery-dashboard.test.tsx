@@ -141,7 +141,8 @@ describe("insert payload", () => {
       media_type: "photo",
       media_url: "https://cdn.test/one.webp",
       poster_url: "",
-      published: false,
+      published: true,
+
     });
   });
 });
