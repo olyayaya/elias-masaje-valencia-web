@@ -137,117 +137,56 @@ const DashboardMedia = () => {
   const markOpt = (name: string, state: OptState) =>
     setOptimization((prev) => ({ ...prev, [name]: state }));
 
-  // ---- upload ------------------------------------------------------------
-  const uploadPhoto = async (file: File) => {
-    const optimized = await optimizeImage(file);
-    const name = collisionSafeName(
-      `${file.name.replace(/\.[^.]+$/, "")}.${optimized.ext}`,
-      files.map((f) => f.name),
-    );
-    const { error } = await supabase.storage.from("media").upload(name, optimized.blob, {
-      contentType: optimized.mime,
-      cacheControl: "3600",
-      upsert: false,
-    });
-    if (error) throw new Error(error.message);
-    markOpt(name, "optimized");
-    toast.success(L("uploaded", { n: formatFileSize(optimized.originalSize - optimized.optimizedSize) }));
-  };
-
-  const uploadVideo = async (source: File, payload: Blob, contentType: string) => {
-    const name = collisionSafeName(source.name, files.map((f) => f.name));
-    const controller = new AbortController();
-    uploadAbort.current = controller;
-    setUploadPhase("uploading");
-    setUploadPct(0);
-    await uploadResumable(name, payload, contentType, {
-      signal: controller.signal,
-      onProgress: (sent, total) => setUploadPct(total ? Math.round((sent / total) * 100) : 0),
-    });
-    // A freshly uploaded source has never been analyzed by the converter — muting does
-    // not compress anything, so the verdict stays "not analyzed".
-    markOpt(name, "notAnalyzed");
-    toast.success(L("uploadedVideo", { n: name }));
-  };
-
+  // ---- upload → processing queue -----------------------------------------
   /**
-   * Local, lossless audio removal. Returns null when the file must be SKIPPED — a failed,
-   * unsupported or cancelled mute never falls back to uploading the original with sound.
-   * The ffmpeg helper is imported here (and only here) so the wasm core stays unloaded
-   * until the option is actually used on a video.
+   * Selecting or dropping files never touches storage: everything lands in the shared
+   * processing dialog first, so the operator sees the result before it is uploaded.
    */
-  const muteVideo = async (file: File, mimeType: string): Promise<Blob | null> => {
-    const controller = new AbortController();
-    uploadAbort.current = controller;
-    setUploadPhase("processing");
-    setUploadPct(0);
-    try {
-      const engine = await import("@/lib/video-ffmpeg");
-      if (!engine.isConverterSupported()) {
-        toast.error(L("audioRemovalUnsupported", { f: file.name }));
-        return null;
-      }
-      const res = await engine.stripAudio(
-        file,
-        { fileName: file.name, mimeType },
-        {
-          signal: controller.signal,
-          onProgress: (ratio) => setUploadPct(Math.round(ratio * 100)),
-        },
-      );
-      if (res.hadAudio) toast.success(L("audioRemoved", { f: file.name }));
-      else toast.info(L("noAudioTrack", { f: file.name }));
-      return res.blob;
-    } catch (err) {
-      if ((err as DOMException)?.name === "AbortError") toast.info(L("audioRemovalCancelled", { f: file.name }));
-      else toast.error(L("audioRemovalFailed", { f: file.name }));
-      return null;
-    }
-  };
-
-  const handleUpload = async (fileList: FileList) => {
-    setUploading(true);
-    for (const file of Array.from(fileList)) {
-      // Extension-driven allowlist: only JPG/PNG/WebP… and MP4/MOV/M4V/WebM get through.
+  const queueUploads = (fileList: FileList) => {
+    const items: ProcessingItem[] = [];
+    Array.from(fileList).forEach((file, i) => {
       const verdict = classifyUpload(file);
-      setUploadLabel(file.name);
-      setUploadPct(0);
-      setUploadPhase("uploading");
-      try {
-        if (!verdict.ok) {
-          toast.error(L("skippedUnsupported", { f: file.name }));
-          continue;
-        }
-        if (verdict.kind === "photo") {
-          // Images never go through the video preprocessing path.
-          await uploadPhoto(file);
-        } else {
-          if (file.size > MAX_UPLOAD_VIDEO) {
-            toast.error(L("tooBig", { f: file.name, m: Math.round(MAX_UPLOAD_VIDEO / (1024 * 1024)) }));
-            continue;
-          }
-          let payload: Blob = file;
-          if (removeAudio) {
-            const muted = await muteVideo(file, verdict.mimeType);
-            if (!muted) continue; // skip this file, keep going with the rest
-            payload = muted;
-          }
-          await uploadVideo(file, payload, verdict.mimeType);
-        }
-      } catch (err) {
-        if ((err as DOMException)?.name === "AbortError") toast.info(L("uploadCancelled"));
-        else toast.error((err as Error).message || L("uploadFailed"));
-      } finally {
-        uploadAbort.current = null;
+      if (!verdict.ok) {
+        toast.error(L("skippedUnsupported", { f: file.name }));
+        return;
       }
-    }
-    setUploading(false);
-    setUploadLabel(null);
-    setUploadPhase("uploading");
-    await fetchFiles();
+      if (verdict.kind === "video" && file.size > MAX_UPLOAD_VIDEO) {
+        toast.error(L("tooBig", { f: file.name, m: Math.round(MAX_UPLOAD_VIDEO / (1024 * 1024)) }));
+        return;
+      }
+      items.push({ id: `up-${Date.now()}-${i}-${file.name}`, file, kind: verdict.kind });
+    });
+    if (items.length) setProcessing(items);
   };
 
-
+  /** Edit/Replace an existing object: download the original, then reuse the same dialog. */
+  const openEditor = async (f: LibraryFile) => {
+    const kind = kindOf(f);
+    if (kind === "other") return;
+    setOpening(f.name);
+    try {
+      const { data, error } = await supabase.storage.from("media").download(f.name);
+      if (error || !data) throw new Error(error?.message || L("openFailed", { f: f.name }));
+      const file = new File([data], f.name, { type: data.type || f.mimeType || "" });
+      let publishedInGallery = false;
+      try {
+        const usageResult = await checkMediaUsage(f.name);
+        publishedInGallery = (usageResult.usages ?? []).some((u) => /gallery|galer/i.test(u.entity));
+      } catch {
+        // The server guard is authoritative; a failed pre-check only loses a local hint.
+      }
+      setProcessing([{
+        id: `edit-${Date.now()}-${f.name}`,
+        file,
+        kind,
+        replace: { name: f.name, size: f.size, publishedInGallery },
+      }]);
+    } catch (err) {
+      toast.error((err as Error).message || L("openFailed", { f: f.name }));
+    } finally {
+      setOpening(null);
+    }
+  };
 
   /** Reports the server outcome honestly: warning stays a warning, never a plain success. */
   const reportOutcome = (message: string, result: { updatedReferences?: number; historyReferences?: number; aliased?: boolean; warning?: string }) => {
@@ -257,50 +196,6 @@ const DashboardMedia = () => {
     const text = parts.join(" · ");
     if (result.warning) toast.warning(`${text} — ${L("leftover", { m: result.warning })}`);
     else toast.success(text);
-  };
-
-  const handleCompress = async (file: LibraryFile) => {
-    setCompressing(file.name);
-    try {
-      const outcome = await analyzeCompression(file.url, file.name);
-      if (outcome.status === "unsupported") {
-        markOpt(file.name, "unsupported");
-        toast.error(L("cannotCompress", { f: file.name, r: REASONS[outcome.reason][lang] ?? REASONS[outcome.reason].en }));
-        return;
-      }
-      if (outcome.status === "already") {
-        markOpt(file.name, "optimized");
-        toast.success(L("already"));
-        return;
-      }
-      const result = await replaceMediaFile({
-        fileName: file.name,
-        newName: outcome.newName,
-        contentBase64: await blobToBase64(outcome.blob),
-        contentType: outcome.contentType,
-        originalSize: outcome.originalSize,
-      });
-      markOpt(result.newName ?? outcome.newName, "optimized");
-      reportOutcome(
-        L("compressed", {
-          a: formatFileSize(outcome.originalSize),
-          b: formatFileSize(result.newSize ?? outcome.newSize),
-          p: outcome.savedPercent,
-        }),
-        result,
-      );
-      await fetchFiles();
-    } catch (err) {
-      // The server re-applies the threshold against the real stored size — respect its verdict.
-      if (err instanceof MediaGuardError && err.alreadyCompressed) {
-        markOpt(file.name, "optimized");
-        toast.success(L("already"));
-      } else {
-        toast.error((err as Error).message || L("compressFailed"));
-      }
-    } finally {
-      setCompressing(null);
-    }
   };
 
   const openRename = (file: LibraryFile) => {
@@ -367,12 +262,6 @@ const DashboardMedia = () => {
     } finally {
       setDeleting(false);
     }
-  };
-
-  const copyUrl = (url: string) => {
-    navigator.clipboard.writeText(url);
-    setCopied(url);
-    setTimeout(() => setCopied(null), 2000);
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
