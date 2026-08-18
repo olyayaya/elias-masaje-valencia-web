@@ -46,11 +46,26 @@ export interface EncoderCaps {
   vorbis: boolean;
 }
 
-export const EXT_BY_FORMAT: Record<VideoFormat, string> = { mp4: "mp4", webm: "webm" };
+export const EXT_BY_FORMAT: Record<VideoFormat, string> = { mp4: "mp4", mov: "mov", webm: "webm" };
 export const MIME_BY_FORMAT: Record<VideoFormat, string> = {
   mp4: "video/mp4",
+  mov: "video/quicktime",
   webm: "video/webm",
 };
+
+/** MOV is a capture/editing container: valid in the Library, poor for the public web. */
+export const WEB_FORMATS: VideoFormat[] = ["mp4", "webm"];
+export const isWebFormat = (format: VideoFormat): boolean => WEB_FORMATS.includes(format);
+
+/** Containers the public Gallery is allowed to publish (validation stays MP4/WebM only). */
+export const GALLERY_PUBLISH_EXTS = ["mp4", "webm"] as const;
+export const isGalleryPublishable = (fileName: string): boolean =>
+  (GALLERY_PUBLISH_EXTS as readonly string[]).includes(
+    (fileName.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "").toLowerCase(),
+  );
+
+/** H.264 containers share the same video/audio encoder policy. */
+const isH264Container = (format: VideoFormat) => format === "mp4" || format === "mov";
 
 /**
  * The audio encoder actually used for a container, or null when the core has none for it.
@@ -58,7 +73,7 @@ export const MIME_BY_FORMAT: Record<VideoFormat, string> = {
  * this only returns null for capability combinations the UI already refuses.
  */
 export function audioEncoderFor(format: VideoFormat, caps: EncoderCaps): string | null {
-  if (format === "mp4") {
+  if (isH264Container(format)) {
     if (caps.aac) return "aac";
     if (caps.mp3lame) return "libmp3lame";
     return null;
@@ -72,8 +87,8 @@ export function audioEncoderFor(format: VideoFormat, caps: EncoderCaps): string 
  * A format is offerable only when this core can write BOTH its video and a matching audio
  * codec. Optimizing a video must never silently drop the soundtrack, so a container we
  * could only produce muted is not an option at all:
- *   MP4  → libx264   + (aac | libmp3lame)
- *   WebM → libvpx-vp9 + (libopus | libvorbis)
+ *   MP4/MOV → libx264    + (aac | libmp3lame)
+ *   WebM    → libvpx-vp9 + (libopus | libvorbis)
  */
 export function availableFormats(caps: EncoderCaps): VideoFormat[] {
   const out: VideoFormat[] = [];
@@ -81,6 +96,18 @@ export function availableFormats(caps: EncoderCaps): VideoFormat[] {
   if (caps.vp9 && audioEncoderFor("webm", caps)) out.push("webm");
   return out;
 }
+
+/**
+ * Every container the loaded core can really write, MOV included. Used by the advanced
+ * processing dialog; `availableFormats` stays the web-only recommendation list.
+ */
+export function availableFormatsWithMov(caps: EncoderCaps): VideoFormat[] {
+  const out: VideoFormat[] = [];
+  if (caps.h264 && audioEncoderFor("mp4", caps)) out.push("mp4", "mov");
+  if (caps.vp9 && audioEncoderFor("webm", caps)) out.push("webm");
+  return out;
+}
+
 
 
 
