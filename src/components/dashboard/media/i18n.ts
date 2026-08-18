@@ -217,6 +217,7 @@ export const COPY = {
   apply: { en: "Apply", es: "Aplicar", ru: "Применить" },
   applying: { en: "Applying… {p}%", es: "Aplicando… {p}%", ru: "Применение… {p}%" },
   applyReplace: { en: "Replace original", es: "Reemplazar original", ru: "Заменить оригинал" },
+  replaceFile: { en: "Replace file", es: "Reemplazar archivo", ru: "Заменить файл" },
   keepOriginal: { en: "Keep original", es: "Mantener el original", ru: "Вернуться к оригиналу" },
   keptOriginal: {
     en: "Result discarded — the original file is untouched",
