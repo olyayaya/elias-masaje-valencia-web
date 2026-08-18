@@ -224,7 +224,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
         if (!next) throw new Error(L("engineFailed"));
         setVideo(next);
       } catch (e) {
-        if (!cancelled) setError((e as Error).message || L("processFailed"));
+        if (!cancelled) setError(describeProcessError(e));
       } finally {
         if (!cancelled && aliveRef.current) setAnalyzing(false);
       }
@@ -342,7 +342,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
       if (!aliveRef.current) return;
       setPhase("idle");
       if ((e as DOMException)?.name === "AbortError") return;
-      setError((e as Error).message || L("processFailed"));
+      setError(describeProcessError(e));
     } finally {
       abortRef.current = null;
     }
@@ -461,7 +461,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
       if (!aliveRef.current) return;
       setPhase("done");
       if ((e as DOMException)?.name === "AbortError") return;
-      setError((e as Error).message || L("processFailed"));
+      setError(describeProcessError(e));
     } finally {
       abortRef.current = null;
     }
