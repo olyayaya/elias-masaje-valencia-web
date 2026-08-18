@@ -235,7 +235,7 @@ const Dashboard = () => {
             {(Object.keys(langLabels) as Locale[]).map((l) => (
               <button
                 key={l}
-                onClick={() => setLocale(l)}
+                onClick={() => { setLocale(l); saveDashboardLocale(l); }}
                 className={`flex-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   l === locale
                     ? "bg-background text-foreground shadow-sm"
