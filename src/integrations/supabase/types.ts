@@ -255,6 +255,9 @@ export type Database = {
           poster_url: string
           published: boolean
           sort_order: number
+          thumbnail_x: number
+          thumbnail_y: number
+          thumbnail_zoom: number
           title_en: string
           title_es: string
           title_ru: string
@@ -275,6 +278,9 @@ export type Database = {
           poster_url?: string
           published?: boolean
           sort_order?: number
+          thumbnail_x?: number
+          thumbnail_y?: number
+          thumbnail_zoom?: number
           title_en?: string
           title_es?: string
           title_ru?: string
@@ -295,6 +301,9 @@ export type Database = {
           poster_url?: string
           published?: boolean
           sort_order?: number
+          thumbnail_x?: number
+          thumbnail_y?: number
+          thumbnail_zoom?: number
           title_en?: string
           title_es?: string
           title_ru?: string
