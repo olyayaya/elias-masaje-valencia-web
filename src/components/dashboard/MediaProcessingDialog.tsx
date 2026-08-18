@@ -842,14 +842,14 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </div>
           </div>
 
-          {result && !savingOk && (
+          {result && verdict && !verdict.ok && (
             <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
               {bigger
                 ? L("resultBigger", { a: formatFileSize(sourceSize), b: formatFileSize(result.size) })
                 : L("resultMarginal", { a: formatFileSize(sourceSize), b: formatFileSize(result.size) })}
-              {smartBlocked ? ` ${L("smartNoSaving")}` : ""}
             </p>
           )}
+
 
           {blockedReason && (
             <p role="alert" className="text-xs text-destructive border border-destructive/40 rounded-lg p-3">
