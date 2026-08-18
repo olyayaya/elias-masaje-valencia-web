@@ -23,8 +23,13 @@ export const CROP_DEFAULTS: GalleryCrop = {
 export const CROP_LIMITS = {
   x: { min: 0, max: 100 },
   y: { min: 0, max: 100 },
-  zoom: { min: 1, max: 3 },
+  /** Below 1 the tile shows MORE than a plain object-cover crop (zoom out). */
+  zoom: { min: 0.5, max: 3 },
 } as const;
+
+/** Gallery tiles (public grid, dashboard preview and the crop dialog) are 4:3. */
+export const FRAME_ASPECT = 4 / 3;
+
 
 const num = (value: unknown, fallback: number, min: number, max: number) => {
   const n = typeof value === "string" ? Number(value) : (value as number);
@@ -60,15 +65,47 @@ export function cropForSave(input: Partial<GalleryCrop>): GalleryCrop {
  * Single source of truth for the framing — dashboard preview and the public grid
  * render the identical style, so what the admin sees is what visitors get.
  */
-export function cropStyle(input: Partial<GalleryCrop> | null | undefined): CSSProperties {
+export function cropStyle(
+  input: Partial<GalleryCrop> | null | undefined,
+  /** naturalWidth / naturalHeight of the loaded image, when known. */
+  naturalAspect?: number | null,
+): CSSProperties {
   const { thumbnail_x: x, thumbnail_y: y, thumbnail_zoom: zoom } = clampCrop(input);
-  const style: CSSProperties = {
-    objectFit: "cover",
-    objectPosition: `${x}% ${y}%`,
-  };
-  if (zoom > 1) {
-    style.transform = `scale(${zoom})`;
-    style.transformOrigin = `${x}% ${y}%`;
+
+  const canZoomOut = typeof naturalAspect === "number" && Number.isFinite(naturalAspect) && naturalAspect > 0;
+
+  // Legacy / zoom-in path (and the fallback before the image reports its size):
+  // plain object-cover framing, byte-identical to the historic rendering.
+  if (!canZoomOut) {
+    const style: CSSProperties = { objectFit: "cover", objectPosition: `${x}% ${y}%` };
+    if (zoom > 1) {
+      style.transform = `scale(${zoom})`;
+      style.transformOrigin = `${x}% ${y}%`;
+    }
+    return style;
   }
-  return style;
+
+  // Continuous math around "cover": the image is laid out with object-fit
+  // contain and then scaled by `zoom * coverFactor`, so zoom === 1 reproduces
+  // object-cover exactly and zoom < 1 reveals more of the original.
+  const w = FRAME_ASPECT;
+  const h = 1;
+  const a = naturalAspect as number;
+  const dw = a >= w / h ? w : h * a;
+  const dh = a >= w / h ? w / a : h;
+  const cover = Math.max(w / dw, h / dh);
+  const k = zoom * cover;
+
+  const overflowX = dw * k - w;
+  const overflowY = dh * k - h;
+  const tx = (overflowX * (0.5 - x / 100)) / w * 100;
+  const ty = (overflowY * (0.5 - y / 100)) / h * 100;
+
+  return {
+    objectFit: "contain",
+    objectPosition: "50% 50%",
+    transform: `translate(${tx.toFixed(3)}%, ${ty.toFixed(3)}%) scale(${k.toFixed(4)})`,
+    transformOrigin: "50% 50%",
+  };
 }
+

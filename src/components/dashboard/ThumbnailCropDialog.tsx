@@ -4,7 +4,9 @@ import { useI18n } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CROP_DEFAULTS, CROP_LIMITS, clampCrop, cropForSave, cropStyle, type GalleryCrop } from "@/lib/gallery-crop";
+import { CROP_DEFAULTS, CROP_LIMITS, clampCrop, cropForSave, type GalleryCrop } from "@/lib/gallery-crop";
+import CropThumb from "@/components/gallery/CropThumb";
+
 
 type UiLang = "en" | "es" | "ru";
 
@@ -105,15 +107,11 @@ const ThumbnailCropDialog = ({ open, previewUrl, value, onCancel, onSave }: Prop
               className="relative w-full overflow-hidden rounded-lg bg-secondary touch-none cursor-grab active:cursor-grabbing select-none"
               style={{ aspectRatio: "4 / 3" }}
             >
-              <img
-                src={previewUrl}
-                alt=""
-                draggable={false}
-                data-testid="crop-preview-img"
-                style={cropStyle(draft)}
-                className="w-full h-full pointer-events-none"
-              />
+              <div className="absolute inset-0 pointer-events-none">
+                <CropThumb src={previewUrl} alt="" crop={draft} testId="crop-preview-img" />
+              </div>
             </div>
+
 
             <div className="space-y-3">
               <div>

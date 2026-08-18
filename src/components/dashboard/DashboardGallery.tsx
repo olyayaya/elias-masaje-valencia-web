@@ -14,7 +14,9 @@ import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
 import GalleryMediaPicker from "./GalleryMediaPicker";
 import ThumbnailCropDialog, { CROP_COPY } from "./ThumbnailCropDialog";
-import { cropStyle, type GalleryCrop } from "@/lib/gallery-crop";
+import { type GalleryCrop } from "@/lib/gallery-crop";
+import CropThumb from "@/components/gallery/CropThumb";
+
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -462,19 +464,14 @@ const DashboardGallery = () => {
               <DashboardCard key={item.id} title="">
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="md:w-48 shrink-0 space-y-2">
-                    <div className="aspect-[4/3] rounded-lg overflow-hidden bg-secondary flex items-center justify-center">
+                    <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-secondary flex items-center justify-center">
                       {thumb ? (
-                        <img
-                          src={thumb}
-                          alt=""
-                          data-testid="gallery-admin-thumb"
-                          style={cropStyle(item)}
-                          className="w-full h-full"
-                        />
+                        <CropThumb src={thumb} alt="" crop={item} testId="gallery-admin-thumb" />
                       ) : (
                         <Film size={20} className="text-muted-foreground" />
                       )}
                     </div>
+
                     <Button
                       size="sm"
                       variant="outline"
