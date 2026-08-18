@@ -375,7 +375,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
   const applyResult = async () => {
     if (!result || applyDisabled) return;
-    if (needsConfirm) { setConfirmed(true); return; }
+    
     setPhase("applying");
     setProgress(0);
     setError(null);
