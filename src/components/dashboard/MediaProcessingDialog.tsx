@@ -1,0 +1,847 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Download, Loader2, RotateCcw, Undo2, Wand2 } from "lucide-react";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { formatFileSize } from "@/lib/image-utils";
+import { supabase } from "@/integrations/supabase/client";
+import { collisionSafeName } from "@/lib/media-kind";
+import { blobToBase64 } from "@/lib/media-compress";
+import { commitVideoReplacement, replaceMediaFile } from "@/lib/media-usage";
+import { removeObject, stagedObjectName, uploadResumable } from "@/lib/video-upload";
+import {
+  DEFAULT_BACKGROUND, MAX_QUALITY, MIN_QUALITY, PHOTO_MIME,
+  availablePhotoFormats, clampQuality, evaluatePhotoSaving, isLossless, mayHaveAlpha,
+  photoOutputName, photoTargetDimensions, probePhotoCaps, smartPhotoPreset, supportsQuality,
+  willFlattenAlpha,
+  type PhotoFormat, type PhotoSettings, type SizeChoice,
+} from "@/lib/photo-encode";
+import {
+  AUDIO_KBPS_CHOICES, CRF_RANGE, MAX_CONVERT_BYTES, MEMORY_WARN_BYTES, MIME_BY_FORMAT,
+  availableFormatsWithMov, clampBitrate, clampCrf, defaultCrf, estimateSizeBytes,
+  evaluateVideoSaving, formatDuration, isGalleryPublishable, isWebFormat, outputNameFor,
+  smartPreset, targetDimensions,
+  type EncoderCaps, type FpsChoice, type RateControl, type ResolutionChoice,
+  type SpeedChoice, type VideoFormat, type VideoMeta,
+} from "@/lib/video-convert";
+import type { LibraryT } from "./media/i18n";
+
+export interface ProcessingItem {
+  id: string;
+  file: File;
+  kind: "photo" | "video";
+  /** Present when this run edits/replaces an existing library object. */
+  replace?: { name: string; size: number; publishedInGallery?: boolean };
+}
+
+interface Props {
+  items: ProcessingItem[];
+  L: LibraryT;
+  existingNames: string[];
+  onClose: () => void;
+  /** Called after every successful Apply so the library can refresh. */
+  onApplied: (name: string) => void;
+}
+
+type Mode = "smart" | "advanced";
+type Phase = "idle" | "processing" | "done" | "applying";
+
+interface VideoSettings {
+  format: VideoFormat;
+  resolution: ResolutionChoice;
+  customShortSide: number;
+  fps: FpsChoice;
+  speed: SpeedChoice;
+  rate: RateControl;
+  removeAudio: boolean;
+  audioKbps: number;
+}
+
+interface Result {
+  blob: Blob;
+  size: number;
+  url: string;
+  name: string;
+  contentType: string;
+  /** Human summary of the settings these exact bytes were produced with. */
+  summary: string;
+}
+
+const SIZES: SizeChoice[] = ["original", "1920", "1600", "1280", "custom"];
+const RESOLUTIONS: ResolutionChoice[] = ["original", "1080", "720", "480", "custom"];
+const FPS: FpsChoice[] = ["original", "30", "25", "24"];
+
+/**
+ * One processing pipeline for every way media enters the library: upload, drag & drop and
+ * Edit/Replace. Files are queued; nothing reaches public Storage until Apply succeeds, and
+ * "Keep original" simply throws the local result away.
+ */
+const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: Props) => {
+  const [queue, setQueue] = useState<ProcessingItem[]>(items);
+  const [index, setIndex] = useState(0);
+  const [mode, setMode] = useState<Mode>("smart");
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
+  const [confirmBigger, setConfirmBigger] = useState(false);
+  const [reuseSettings, setReuseSettings] = useState(true);
+
+  const [photo, setPhoto] = useState<PhotoSettings | null>(null);
+  const [photoSource, setPhotoSource] = useState<{ width: number; height: number; hasAlpha: boolean } | null>(null);
+  const [video, setVideo] = useState<VideoSettings | null>(null);
+  const [meta, setMeta] = useState<VideoMeta | null>(null);
+  const [caps, setCaps] = useState<EncoderCaps | null>(null);
+
+  const abortRef = useRef<AbortController | null>(null);
+  const aliveRef = useRef(true);
+  const resultRef = useRef<Result | null>(null);
+  const carryPhoto = useRef<PhotoSettings | null>(null);
+  const carryVideo = useRef<VideoSettings | null>(null);
+
+  const current = queue[index] ?? null;
+  const photoCaps = useMemo(() => probePhotoCaps(), []);
+
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+      abortRef.current?.abort();
+      if (resultRef.current) URL.revokeObjectURL(resultRef.current.url);
+    };
+  }, []);
+
+  /** Any settings change invalidates the produced bytes — object URL included. */
+  const dropResult = useCallback(() => {
+    setResult((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      resultRef.current = null;
+      return null;
+    });
+    setConfirmBigger(false);
+    setPhase((p) => (p === "done" ? "idle" : p));
+  }, []);
+
+  // ---- per-item initialization -------------------------------------------
+  useEffect(() => {
+    if (!current) return;
+    let cancelled = false;
+    dropResult();
+    setError(null);
+    setPhase("idle");
+    setProgress(0);
+    (async () => {
+      if (current.kind === "photo") {
+        setVideo(null);
+        setMeta(null);
+        try {
+          const { loadImageElement } = await import("@/lib/photo-encode");
+          const img = await loadImageElement(current.file);
+          if (cancelled || !aliveRef.current) return;
+          const src = {
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+            hasAlpha: mayHaveAlpha(current.file.type, current.file.name),
+          };
+          setPhotoSource(src);
+          setPhoto(
+            carryPhoto.current ??
+              smartPhotoPreset({ ...src, mime: current.file.type }, photoCaps),
+          );
+        } catch {
+          if (!cancelled) setError(L("processFailed"));
+        }
+        return;
+      }
+      setPhoto(null);
+      setPhotoSource(null);
+      try {
+        const engine = await import("@/lib/video-ffmpeg");
+        if (!engine.isConverterSupported()) throw new Error(L("notSupported"));
+        const m = await engine.probeVideoMeta(current.file);
+        const c = await engine.probeEncoders();
+        if (cancelled || !aliveRef.current) return;
+        setMeta(m);
+        setCaps(c);
+        const preset = smartPreset(m, c);
+        if (!preset) throw new Error(L("engineFailed"));
+        setVideo(
+          carryVideo.current ?? {
+            format: preset.format,
+            resolution: preset.resolution,
+            customShortSide: 720,
+            fps: "original",
+            speed: "fast",
+            rate: { mode: "crf", crf: defaultCrf(preset.format, preset.quality) },
+            removeAudio: false,
+            audioKbps: 128,
+          },
+        );
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message || L("processFailed"));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id]);
+
+  if (!current) return null;
+
+  const sourceSize = current.replace?.size ?? current.file.size;
+
+  const updatePhoto = (patch: Partial<PhotoSettings>) => {
+    dropResult();
+    setPhoto((p) => (p ? { ...p, ...patch } : p));
+  };
+  const updateVideo = (patch: Partial<VideoSettings>) => {
+    dropResult();
+    setVideo((v) => (v ? { ...v, ...patch } : v));
+  };
+
+  const resetSettings = () => {
+    dropResult();
+    if (current.kind === "photo" && photoSource) {
+      setPhoto(smartPhotoPreset({ ...photoSource, mime: current.file.type }, photoCaps));
+    } else if (meta && caps) {
+      const preset = smartPreset(meta, caps);
+      if (preset) {
+        setVideo({
+          format: preset.format,
+          resolution: preset.resolution,
+          customShortSide: 720,
+          fps: "original",
+          speed: "fast",
+          rate: { mode: "crf", crf: defaultCrf(preset.format, preset.quality) },
+          removeAudio: false,
+          audioKbps: 128,
+        });
+      }
+    }
+  };
+
+  const publish = (r: Result) => {
+    resultRef.current = r;
+    setResult(r);
+    setPhase("done");
+  };
+
+  const runProcess = async () => {
+    setError(null);
+    setProgress(0);
+    setPhase("processing");
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      if (current.kind === "photo") {
+        if (!photo) throw new Error(L("processFailed"));
+        const { encodePhoto } = await import("@/lib/photo-encode");
+        const out = await encodePhoto(current.file, photo);
+        if (!aliveRef.current) return;
+        const baseName = current.replace?.name ?? current.file.name;
+        publish({
+          blob: out.blob,
+          size: out.size,
+          url: URL.createObjectURL(out.blob),
+          name: photoOutputName(baseName, out.format),
+          contentType: out.mime,
+          summary: `${out.format.toUpperCase()} · ${out.width}×${out.height}${
+            supportsQuality(out.format) ? ` · Q${clampQuality(photo.quality)}` : ""
+          }`,
+        });
+      } else {
+        if (!video || !meta || !caps) throw new Error(L("processFailed"));
+        const engine = await import("@/lib/video-ffmpeg");
+        const out = await engine.convertVideo(
+          current.file,
+          {
+            format: video.format,
+            quality: "balanced",
+            resolution: video.resolution,
+            customShortSide: video.customShortSide,
+            fps: video.fps,
+            speed: video.speed,
+            rate: video.rate,
+            removeAudio: video.removeAudio,
+            audioKbps: video.audioKbps,
+            meta,
+            caps,
+          },
+          {
+            signal: controller.signal,
+            onProgress: (p) => aliveRef.current && setProgress(Math.round(p.ratio * 100)),
+          },
+        );
+        if (!aliveRef.current) return;
+        const dims = targetDimensions(meta.width, meta.height, video.resolution, video.customShortSide);
+        const baseName = current.replace?.name ?? current.file.name;
+        publish({
+          blob: out.blob,
+          size: out.size,
+          url: URL.createObjectURL(out.blob),
+          name: outputNameFor(baseName, video.format),
+          contentType: MIME_BY_FORMAT[video.format],
+          summary: `${video.format.toUpperCase()} · ${dims.width}×${dims.height} · ${
+            video.rate.mode === "crf" ? `CRF ${video.rate.crf}` : `${video.rate.kbps} kbps`
+          }${video.removeAudio ? " · —" : ""}`,
+        });
+      }
+    } catch (e) {
+      if (!aliveRef.current) return;
+      if ((e as DOMException)?.name === "AbortError") {
+        setPhase("idle");
+        return;
+      }
+      setPhase("idle");
+      setError((e as Error).message || L("processFailed"));
+    } finally {
+      abortRef.current = null;
+    }
+  };
+
+  const verdict = result
+    ? current.kind === "photo"
+      ? evaluatePhotoSaving(sourceSize, result.size)
+      : evaluateVideoSaving(sourceSize, result.size)
+    : null;
+
+  const isBigger = !!verdict && verdict.ok === false;
+  const smartBlocked = mode === "smart" && isBigger && !!current.replace;
+  const needsConfirm = isBigger && !confirmBigger;
+
+  const advanceQueue = () => {
+    dropResult();
+    if (index + 1 < queue.length) setIndex(index + 1);
+    else onClose();
+  };
+
+  const skipCurrent = () => {
+    // Cancelling one file must never lose the rest of the queue.
+    abortRef.current?.abort();
+    advanceQueue();
+  };
+
+  const keepOriginal = () => {
+    dropResult();
+    toast.info(L("keptOriginal"));
+  };
+
+  const applyResult = async () => {
+    if (!result || smartBlocked) return;
+    if (needsConfirm) { setConfirmBigger(true); return; }
+    // MOV may never take the place of a video published in the public Gallery.
+    if (
+      current.kind === "video" &&
+      current.replace?.publishedInGallery &&
+      !isGalleryPublishable(result.name)
+    ) {
+      setError(L("movGalleryBlocked"));
+      return;
+    }
+    setPhase("applying");
+    setProgress(0);
+    setError(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const explicitMode = mode === "advanced" ? "manual" : "smart";
+    let staged: string | null = null;
+    try {
+      if (current.replace) {
+        if (current.kind === "photo") {
+          const res = await replaceMediaFile({
+            fileName: current.replace.name,
+            newName: result.name,
+            contentBase64: await blobToBase64(result.blob),
+            contentType: result.contentType,
+            originalSize: current.replace.size,
+            mode: explicitMode,
+          });
+          onApplied(res.newName ?? result.name);
+        } else {
+          staged = await stagedObjectName(result.name.split(".").pop() ?? "mp4");
+          await uploadResumable(staged, result.blob, result.contentType, {
+            signal: controller.signal,
+            onProgress: (sent, total) => aliveRef.current && setProgress(total ? Math.round((sent / total) * 100) : 0),
+          });
+          const res = await commitVideoReplacement({
+            fileName: current.replace.name,
+            stagedName: staged,
+            newName: result.name,
+            contentType: result.contentType,
+            enforceSaving: explicitMode === "smart",
+            mode: explicitMode,
+          });
+          onApplied(res.newName ?? result.name);
+        }
+      } else {
+        const name = collisionSafeName(result.name, existingNames);
+        if (current.kind === "photo") {
+          const { error: upError } = await supabase.storage.from("media").upload(name, result.blob, {
+            contentType: result.contentType,
+            cacheControl: "3600",
+            upsert: false,
+          });
+          if (upError) throw new Error(upError.message);
+        } else {
+          await uploadResumable(name, result.blob, result.contentType, {
+            signal: controller.signal,
+            onProgress: (sent, total) => aliveRef.current && setProgress(total ? Math.round((sent / total) * 100) : 0),
+          });
+        }
+        onApplied(name);
+      }
+      if (!aliveRef.current) return;
+      // Success is only ever reported after the full server response.
+      toast.success(L("appliedOk", { n: result.name }));
+      if (reuseSettings) {
+        if (current.kind === "photo" && photo) carryPhoto.current = photo;
+        if (current.kind === "video" && video) carryVideo.current = video;
+      }
+      advanceQueue();
+    } catch (e) {
+      if (staged) await removeObject(staged);
+      if (!aliveRef.current) return;
+      setPhase("done");
+      if ((e as DOMException)?.name === "AbortError") return;
+      setError((e as Error).message || L("processFailed"));
+    } finally {
+      abortRef.current = null;
+    }
+  };
+
+  const busy = phase === "processing" || phase === "applying";
+  const photoFormats = availablePhotoFormats(photoCaps);
+  const videoFormats = caps ? availableFormatsWithMov(caps) : [];
+  const photoDims = photo && photoSource
+    ? photoTargetDimensions(photoSource.width, photoSource.height, photo.size, photo.customSize)
+    : null;
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="break-all">
+            {current.replace ? L("processReplaceTitle", { n: current.replace.name }) : L("processTitle")}
+          </DialogTitle>
+          <DialogDescription>{L("processDesc")}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground break-all">
+            {L("queuePosition", { i: index + 1, t: queue.length })} · {current.file.name} ·{" "}
+            {formatFileSize(sourceSize)}
+            {meta ? ` · ${meta.width}×${meta.height} · ${formatDuration(meta.duration)}` : ""}
+            {photoSource ? ` · ${photoSource.width}×${photoSource.height}` : ""}
+          </p>
+
+          <Tabs value={mode} onValueChange={(v) => { dropResult(); setMode(v as Mode); }}>
+            <TabsList>
+              <TabsTrigger value="smart">{L("modeSmart")}</TabsTrigger>
+              <TabsTrigger value="advanced">{L("modeAdvanced")}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {error && (
+            <p role="alert" className="flex items-start gap-2 text-xs text-destructive">
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" /> {error}
+            </p>
+          )}
+
+          {current.kind === "video" && current.file.size > MEMORY_WARN_BYTES && current.file.size <= MAX_CONVERT_BYTES && (
+            <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">{L("memoryWarning")}</p>
+          )}
+
+          {/* ---- photo controls -------------------------------------- */}
+          {current.kind === "photo" && photo && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="mp-format" className="text-xs">{L("format")}</Label>
+                  <Select
+                    value={photo.format}
+                    onValueChange={(v) => updatePhoto({ format: v as PhotoFormat })}
+                    disabled={busy || mode === "smart"}
+                  >
+                    <SelectTrigger id="mp-format"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {photoFormats.map((f) => (
+                        <SelectItem key={f} value={f}>{f.toUpperCase()}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="mp-size" className="text-xs">{L("sizeLimit")}</Label>
+                  <Select
+                    value={photo.size}
+                    onValueChange={(v) => updatePhoto({ size: v as SizeChoice })}
+                    disabled={busy || mode === "smart"}
+                  >
+                    <SelectTrigger id="mp-size"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SIZES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s === "original" ? L("original") : s === "custom" ? L("customSize") : `${s} px`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {mode === "advanced" && photo.size === "custom" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="mp-custom" className="text-xs">{L("customSize")}</Label>
+                  <Input
+                    id="mp-custom"
+                    type="number"
+                    min={64}
+                    max={8000}
+                    value={photo.customSize}
+                    onChange={(e) => updatePhoto({ customSize: Number(e.target.value) })}
+                    disabled={busy}
+                  />
+                </div>
+              )}
+
+              {mode === "advanced" && (
+                supportsQuality(photo.format) ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mp-quality" className="text-xs">{L("quality")}</Label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        id="mp-quality"
+                        aria-label={L("quality")}
+                        min={MIN_QUALITY}
+                        max={MAX_QUALITY}
+                        step={1}
+                        value={[photo.quality]}
+                        onValueChange={([v]) => updatePhoto({ quality: clampQuality(v) })}
+                        disabled={busy}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        aria-label={`${L("quality")} %`}
+                        min={MIN_QUALITY}
+                        max={MAX_QUALITY}
+                        value={photo.quality}
+                        onChange={(e) => updatePhoto({ quality: clampQuality(e.target.value) })}
+                        disabled={busy}
+                        className="w-20"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">{L("pngLossless")}</p>
+                )
+              )}
+
+              {photoSource && willFlattenAlpha(photo, { ...photoSource, mime: current.file.type }) && (
+                <div className="space-y-1.5 rounded-lg border border-border p-3">
+                  <p className="text-xs text-muted-foreground">{L("alphaWarning")}</p>
+                  <Label htmlFor="mp-bg" className="text-xs">{L("background")}</Label>
+                  <Input
+                    id="mp-bg"
+                    type="color"
+                    value={photo.background || DEFAULT_BACKGROUND}
+                    onChange={(e) => updatePhoto({ background: e.target.value })}
+                    disabled={busy}
+                    className="h-9 w-20 p-1"
+                  />
+                </div>
+              )}
+
+              {photoDims && (
+                <p className="text-xs text-muted-foreground">
+                  {L("resultLabel")}: {photoDims.width}×{photoDims.height} ·{" "}
+                  {photoOutputName(current.replace?.name ?? current.file.name, photo.format)} — {L("noUpscalePhoto")}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ---- video controls -------------------------------------- */}
+          {current.kind === "video" && video && caps && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="mv-format" className="text-xs">{L("format")}</Label>
+                  <Select
+                    value={video.format}
+                    onValueChange={(v) => updateVideo({ format: v as VideoFormat, rate: { mode: "crf", crf: defaultCrf(v as VideoFormat) } })}
+                    disabled={busy || mode === "smart"}
+                  >
+                    <SelectTrigger id="mv-format"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {videoFormats.map((f) => (
+                        <SelectItem key={f} value={f}>{f.toUpperCase()}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="mv-res" className="text-xs">{L("resolution")}</Label>
+                  <Select
+                    value={video.resolution}
+                    onValueChange={(v) => updateVideo({ resolution: v as ResolutionChoice })}
+                    disabled={busy || mode === "smart"}
+                  >
+                    <SelectTrigger id="mv-res"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {RESOLUTIONS.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {r === "original" ? L("original") : r === "custom" ? L("customSize") : `${r}p`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="mv-fps" className="text-xs">{L("fps")}</Label>
+                  <Select
+                    value={video.fps}
+                    onValueChange={(v) => updateVideo({ fps: v as FpsChoice })}
+                    disabled={busy || mode === "smart"}
+                  >
+                    <SelectTrigger id="mv-fps"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {FPS.map((f) => (
+                        <SelectItem key={f} value={f}>{f === "original" ? L("original") : f}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {!isWebFormat(video.format) && (
+                <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
+                  {L("movNotRecommended")}
+                </p>
+              )}
+
+              {mode === "advanced" && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mv-speed" className="text-xs">{L("speed")}</Label>
+                    <Select
+                      value={video.speed}
+                      onValueChange={(v) => updateVideo({ speed: v as SpeedChoice })}
+                      disabled={busy}
+                    >
+                      <SelectTrigger id="mv-speed"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fast">{L("speedFast")}</SelectItem>
+                        <SelectItem value="balanced">{L("speedBalanced")}</SelectItem>
+                        <SelectItem value="max">{L("speedMax")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mv-rate" className="text-xs">{L("rateControl")}</Label>
+                    <Select
+                      value={video.rate.mode}
+                      onValueChange={(v) =>
+                        updateVideo({
+                          rate: v === "crf"
+                            ? { mode: "crf", crf: defaultCrf(video.format) }
+                            : { mode: "bitrate", kbps: 2500 },
+                        })
+                      }
+                      disabled={busy}
+                    >
+                      <SelectTrigger id="mv-rate"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="crf">{L("rateCrf")}</SelectItem>
+                        <SelectItem value="bitrate">{L("rateBitrate")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {video.rate.mode === "crf" ? (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="mv-crf" className="text-xs">CRF</Label>
+                      <div className="flex items-center gap-3">
+                        <Slider
+                          id="mv-crf"
+                          aria-label="CRF"
+                          min={CRF_RANGE[video.format].min}
+                          max={CRF_RANGE[video.format].max}
+                          step={1}
+                          value={[video.rate.crf]}
+                          onValueChange={([v]) => updateVideo({ rate: { mode: "crf", crf: clampCrf(video.format, v) } })}
+                          disabled={busy}
+                          className="flex-1"
+                        />
+                        <Input
+                          type="number"
+                          aria-label="CRF"
+                          min={CRF_RANGE[video.format].min}
+                          max={CRF_RANGE[video.format].max}
+                          value={video.rate.crf}
+                          onChange={(e) => updateVideo({ rate: { mode: "crf", crf: clampCrf(video.format, e.target.value) } })}
+                          disabled={busy}
+                          className="w-20"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">{L("crfHint")}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="mv-kbps" className="text-xs">{L("bitrateKbps")}</Label>
+                      <Input
+                        id="mv-kbps"
+                        type="number"
+                        min={150}
+                        max={20000}
+                        value={video.rate.kbps}
+                        onChange={(e) => updateVideo({ rate: { mode: "bitrate", kbps: clampBitrate(e.target.value) } })}
+                        disabled={busy}
+                      />
+                      {meta && (
+                        <p className="text-xs text-muted-foreground">
+                          {L("estimatedSize", {
+                            s: formatFileSize(
+                              estimateSizeBytes(
+                                video.rate.kbps,
+                                video.removeAudio ? 0 : video.audioKbps,
+                                meta.duration,
+                              ),
+                            ),
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id="mv-mute"
+                      checked={video.removeAudio}
+                      onCheckedChange={(v) => updateVideo({ removeAudio: Boolean(v) })}
+                      disabled={busy}
+                    />
+                    <Label htmlFor="mv-mute" className="text-sm cursor-pointer">{L("removeAudioOpt")}</Label>
+                  </div>
+
+                  {!video.removeAudio && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="mv-abr" className="text-xs">{L("audioBitrate")}</Label>
+                      <Select
+                        value={String(video.audioKbps)}
+                        onValueChange={(v) => updateVideo({ audioKbps: Number(v) })}
+                        disabled={busy}
+                      >
+                        <SelectTrigger id="mv-abr"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {AUDIO_KBPS_CHOICES.map((k) => (
+                            <SelectItem key={k} value={String(k)}>{k} kbps</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {busy && (
+            <div className="space-y-1.5">
+              <Progress value={progress} />
+              <p className="text-xs text-muted-foreground">
+                {phase === "processing" ? L("processing", { p: progress }) : L("applying", { p: progress })}
+              </p>
+            </div>
+          )}
+
+          {/* ---- original vs result ---------------------------------- */}
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="rounded-lg border border-border p-3">
+              <p className="text-foreground mb-1">{L("originalLabel")}</p>
+              <p className="text-muted-foreground break-all">{formatFileSize(sourceSize)}</p>
+            </div>
+            <div className="rounded-lg border border-border p-3">
+              <p className="text-foreground mb-1">{L("resultLabel")}</p>
+              {result ? (
+                <p className="text-muted-foreground break-all">
+                  {formatFileSize(result.size)} · {result.summary}
+                  {verdict?.ok ? ` · −${"savedPercent" in verdict ? verdict.savedPercent : 0}%` : ""}
+                </p>
+              ) : (
+                <p className="text-muted-foreground">{L("notProcessed")}</p>
+              )}
+            </div>
+          </div>
+
+          {result && isBigger && (
+            <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
+              {smartBlocked
+                ? L("smartNoSaving")
+                : L("biggerWarning", { a: formatFileSize(sourceSize), b: formatFileSize(result.size) })}
+            </p>
+          )}
+
+          {current.replace && <p className="text-xs text-muted-foreground">{L("restoreUnavailable")}</p>}
+
+          {queue.length > 1 && (
+            <div className="flex items-center gap-3">
+              <Switch
+                id="mp-reuse"
+                checked={reuseSettings}
+                onCheckedChange={(v) => setReuseSettings(Boolean(v))}
+                disabled={busy}
+              />
+              <Label htmlFor="mp-reuse" className="text-xs cursor-pointer">{L("applyToAll")}</Label>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
+          {busy ? (
+            <Button variant="ghost" size="sm" onClick={() => abortRef.current?.abort()}>{L("cancel")}</Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={onClose}>{L("cancel")}</Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={skipCurrent} disabled={busy}>{L("skipFile")}</Button>
+          <Button variant="outline" size="sm" onClick={resetSettings} disabled={busy}>
+            <RotateCcw size={14} className="mr-1" />{L("resetSettings")}
+          </Button>
+          {result && (
+            <>
+              <Button variant="outline" size="sm" onClick={keepOriginal} disabled={busy}>
+                <Undo2 size={14} className="mr-1" />{L("keepOriginal")}
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <a href={result.url} download={result.name}>
+                  <Download size={14} className="mr-1" />{L("downloadResult")}
+                </a>
+              </Button>
+            </>
+          )}
+          <Button size="sm" onClick={() => void runProcess()} disabled={busy}>
+            {phase === "processing" ? <Loader2 size={14} className="animate-spin mr-1" /> : <Wand2 size={14} className="mr-1" />}
+            {L("process")}
+          </Button>
+          {result && (
+            <Button size="sm" onClick={() => void applyResult()} disabled={busy || smartBlocked}>
+              {phase === "applying" ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+              {needsConfirm ? L("confirmBigger") : current.replace ? L("applyReplace") : L("apply")}
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default MediaProcessingDialog;
