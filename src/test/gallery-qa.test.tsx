@@ -27,6 +27,7 @@ const base: GalleryItem = {
   description_es: "", description_en: "", description_ru: "",
   alt_es: "Sala", alt_en: "", alt_ru: "",
   sort_order: 1, published: false, duration_seconds: null,
+  thumbnail_x: 50, thumbnail_y: 50, thumbnail_zoom: 1,
   created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z",
 };
 

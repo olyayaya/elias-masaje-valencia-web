@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Plus, Trash2, ChevronUp, ChevronDown, Loader2, Film, ImageIcon, Eye, EyeOff, AlertTriangle, Wand2, X,
+  Plus, Trash2, ChevronUp, ChevronDown, Loader2, Film, ImageIcon, Eye, EyeOff, AlertTriangle, Wand2, X, Crop,
 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,8 @@ import { useGalleryAdmin } from "@/hooks/use-gallery";
 import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
 import GalleryMediaPicker from "./GalleryMediaPicker";
+import ThumbnailCropDialog, { CROP_COPY } from "./ThumbnailCropDialog";
+import { cropStyle, type GalleryCrop } from "@/lib/gallery-crop";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -29,6 +31,8 @@ const COPY = {
     es: "El almacenamiento de la galería aún no está configurado. Pide que se aplique la migración pendiente.",
     ru: "Хранилище галереи ещё не настроено. Попросите применить ожидающую миграцию.",
   },
+  adjustThumb: CROP_COPY.adjust,
+  thumbSaved: CROP_COPY.saved,
   addPhoto: { en: "Add photo", es: "Añadir foto", ru: "Добавить фото" },
   addVideo: { en: "Add video", es: "Añadir vídeo", ru: "Добавить видео" },
   empty: { en: "No gallery items yet.", es: "Aún no hay elementos.", ru: "Пока нет элементов." },
@@ -179,6 +183,7 @@ const DashboardGallery = () => {
     | { mode: "poster"; id: string; currentUrl: string }
   >(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<GalleryItem>>>({});
+  const [cropId, setCropId] = useState<string | null>(null);
   const posterAbort = useRef<AbortController | null>(null);
 
   // Leaving the section must not keep a wasm decode (or an upload) running.
@@ -389,6 +394,17 @@ const DashboardGallery = () => {
     if (await patch(item.id, { [key]: draft })) toast.success(c("saved"));
   };
 
+  /** Writes ONLY the three crop fields of one row. */
+  const saveCrop = async (id: string, crop: GalleryCrop) => {
+    const ok = await patch(id, {
+      thumbnail_x: crop.thumbnail_x,
+      thumbnail_y: crop.thumbnail_y,
+      thumbnail_zoom: crop.thumbnail_zoom,
+    });
+    if (ok) toast.success(c("thumbSaved"));
+    return ok;
+  };
+
   const togglePublished = async (item: GalleryItem) => {
     if (!item.published) {
       const issues = publishIssues(item);
@@ -448,11 +464,34 @@ const DashboardGallery = () => {
                   <div className="md:w-48 shrink-0 space-y-2">
                     <div className="aspect-[4/3] rounded-lg overflow-hidden bg-secondary flex items-center justify-center">
                       {thumb ? (
-                        <img src={thumb} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={thumb}
+                          alt=""
+                          data-testid="gallery-admin-thumb"
+                          style={cropStyle(item)}
+                          className="w-full h-full"
+                        />
                       ) : (
                         <Film size={20} className="text-muted-foreground" />
                       )}
                     </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setCropId(item.id)}
+                    >
+                      <Crop size={13} className="mr-1.5" /> {c("adjustThumb")}
+                    </Button>
+                    {cropId === item.id && (
+                      <ThumbnailCropDialog
+                        open
+                        previewUrl={thumb || ""}
+                        value={item}
+                        onCancel={() => setCropId(null)}
+                        onSave={(crop: GalleryCrop) => saveCrop(item.id, crop)}
+                      />
+                    )}
                     <Button
                       size="sm"
                       variant="outline"

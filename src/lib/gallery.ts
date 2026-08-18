@@ -22,12 +22,16 @@ export interface GalleryItem {
   sort_order: number;
   published: boolean;
   duration_seconds: number | null;
+  /** Non-destructive thumbnail framing (see @/lib/gallery-crop). */
+  thumbnail_x: number;
+  thumbnail_y: number;
+  thumbnail_zoom: number;
   created_at: string;
   updated_at: string;
 }
 
 export const GALLERY_COLUMNS =
-  "id, media_type, media_url, poster_url, title_es, title_en, title_ru, description_es, description_en, description_ru, alt_es, alt_en, alt_ru, sort_order, published, duration_seconds, created_at, updated_at";
+  "id, media_type, media_url, poster_url, title_es, title_en, title_ru, description_es, description_en, description_ru, alt_es, alt_en, alt_ru, sort_order, published, duration_seconds, thumbnail_x, thumbnail_y, thumbnail_zoom, created_at, updated_at";
 
 /**
  * The gallery table ships with the app but its migration is applied separately, so a

@@ -7,6 +7,7 @@ import { buildLocalBusiness } from "@/lib/local-business";
 import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 import { useGallery } from "@/hooks/use-gallery";
 import { buildGallerySchema, originalFor, pickLocalized, thumbnailFor } from "@/lib/gallery";
+import { cropStyle } from "@/lib/gallery-crop";
 import GalleryLightbox from "@/components/gallery/GalleryLightbox";
 
 const GaleriaPage = () => {
@@ -68,22 +69,28 @@ const GaleriaPage = () => {
                   >
                     <div className="relative w-full overflow-hidden" style={{ aspectRatio: "4 / 3" }}>
                       {thumb ? (
-                        <img
-                          src={thumb}
-                          alt={alt}
-                          loading="lazy"
-                          decoding="async"
-                          width={800}
-                          height={600}
-                          data-full-src={fullSize}
-                          onError={(e) => {
-                            // If the storage transform ever fails, fall back to the
-                            // untouched object rather than showing a broken tile.
-                            const el = e.currentTarget;
-                            if (fullSize && el.src !== fullSize) el.src = fullSize;
-                          }}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                        />
+                        // Hover zoom lives on the wrapper so the saved crop transform
+                        // on the <img> is never overwritten (crop + hover coexist).
+                        <div className="w-full h-full transition-transform duration-500 group-hover:scale-[1.03]">
+                          <img
+                            src={thumb}
+                            alt={alt}
+                            loading="lazy"
+                            decoding="async"
+                            width={800}
+                            height={600}
+                            data-full-src={fullSize}
+                            data-testid="gallery-grid-img"
+                            onError={(e) => {
+                              // If the storage transform ever fails, fall back to the
+                              // untouched object rather than showing a broken tile.
+                              const el = e.currentTarget;
+                              if (fullSize && el.src !== fullSize) el.src = fullSize;
+                            }}
+                            style={cropStyle(item)}
+                            className="w-full h-full"
+                          />
+                        </div>
                       ) : (
                         <div className="w-full h-full bg-secondary" aria-hidden="true" />
                       )}

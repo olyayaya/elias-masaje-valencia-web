@@ -123,7 +123,7 @@ const GalleryLightbox = ({ items, index, onClose, onNavigate }: Props) => {
 
   const body = (
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 backdrop-blur-sm px-3 py-6"
+      className="font-body fixed inset-0 z-[120] flex items-center justify-center bg-black/85 backdrop-blur-sm px-3 py-6"
       data-testid="gallery-lightbox"
       onClick={close}
       onTouchStart={(e) => { touchX.current = e.touches[0]?.clientX ?? null; }}
@@ -141,7 +141,7 @@ const GalleryLightbox = ({ items, index, onClose, onNavigate }: Props) => {
         role="dialog"
         aria-modal="true"
         aria-label={t.gallery.viewer}
-        className="relative w-full max-w-5xl max-h-full overflow-y-auto rounded-2xl bg-card p-3 md:p-4 shadow-xl"
+        className="font-body relative w-full max-w-5xl max-h-full overflow-y-auto rounded-2xl bg-card p-3 md:p-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-end gap-1 mb-2">
@@ -198,7 +198,7 @@ const GalleryLightbox = ({ items, index, onClose, onNavigate }: Props) => {
 
         {(title || description) && (
           <div className="pt-4 pb-1 px-1">
-            {title && <h2 className="font-display text-lg text-foreground mb-1">{title}</h2>}
+            {title && <h2 className="font-body text-lg text-foreground mb-1">{title}</h2>}
             {description && (
               <p className="text-sm text-muted-foreground font-body whitespace-pre-line">{description}</p>
             )}
