@@ -4,22 +4,21 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 
 /* Every heavy section is stubbed: this suite is about routing state, not content. */
-const stub = (label: string) => ({ default: () => <div>{label}</div> });
 vi.mock("@/components/dashboard/DashboardOverview", () => ({ default: () => <div>OVERVIEW</div> }));
-vi.mock("@/components/dashboard/DashboardMedia", () => stub("LIBRARY"));
-vi.mock("@/components/dashboard/DashboardServices", () => stub("SERVICES"));
-vi.mock("@/components/dashboard/DashboardBlog", () => stub("BLOG"));
-vi.mock("@/components/dashboard/DashboardSEO", () => stub("SEO"));
-vi.mock("@/components/dashboard/DashboardFAQ", () => stub("FAQ"));
-vi.mock("@/components/dashboard/DashboardReviews", () => stub("REVIEWS"));
-vi.mock("@/components/dashboard/DashboardHistory", () => stub("HISTORY"));
-vi.mock("@/components/dashboard/DashboardSiteContent", () => stub("CONTENT"));
-vi.mock("@/components/dashboard/DashboardPromotions", () => stub("PROMOTIONS"));
-vi.mock("@/components/dashboard/DashboardCarousels", () => stub("CAROUSELS"));
-vi.mock("@/components/dashboard/DashboardGallery", () => stub("GALLERY"));
-vi.mock("@/components/dashboard/DashboardIntegrations", () => stub("INTEGRATIONS"));
-vi.mock("@/components/dashboard/DashboardAttribution", () => stub("ATTRIBUTION"));
-vi.mock("@/components/dashboard/DashboardLeads", () => stub("LEADS"));
+vi.mock("@/components/dashboard/DashboardMedia", () => ({ default: () => <div>LIBRARY</div> }));
+vi.mock("@/components/dashboard/DashboardServices", () => ({ default: () => <div>SERVICES</div> }));
+vi.mock("@/components/dashboard/DashboardBlog", () => ({ default: () => <div>BLOG</div> }));
+vi.mock("@/components/dashboard/DashboardSEO", () => ({ default: () => <div>SEO</div> }));
+vi.mock("@/components/dashboard/DashboardFAQ", () => ({ default: () => <div>FAQ</div> }));
+vi.mock("@/components/dashboard/DashboardReviews", () => ({ default: () => <div>REVIEWS</div> }));
+vi.mock("@/components/dashboard/DashboardHistory", () => ({ default: () => <div>HISTORY</div> }));
+vi.mock("@/components/dashboard/DashboardSiteContent", () => ({ default: () => <div>CONTENT</div> }));
+vi.mock("@/components/dashboard/DashboardPromotions", () => ({ default: () => <div>PROMOTIONS</div> }));
+vi.mock("@/components/dashboard/DashboardCarousels", () => ({ default: () => <div>CAROUSELS</div> }));
+vi.mock("@/components/dashboard/DashboardGallery", () => ({ default: () => <div>GALLERY</div> }));
+vi.mock("@/components/dashboard/DashboardIntegrations", () => ({ default: () => <div>INTEGRATIONS</div> }));
+vi.mock("@/components/dashboard/DashboardAttribution", () => ({ default: () => <div>ATTRIBUTION</div> }));
+vi.mock("@/components/dashboard/DashboardLeads", () => ({ default: () => <div>LEADS</div> }));
 vi.mock("@/components/dashboard/OnboardingDialog", () => ({ default: () => null }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { auth: { signOut: vi.fn() } },
