@@ -170,6 +170,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   // ---- per-item initialization -------------------------------------------
   useEffect(() => {
     if (!current) return;
+    console.log("EFFECT", current.id, current.file.name);
     let cancelled = false;
     dropResult();
     setError(null);
