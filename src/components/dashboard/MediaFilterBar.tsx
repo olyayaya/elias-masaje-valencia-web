@@ -14,6 +14,8 @@ import type { LibraryT } from "./media/i18n";
 interface Props {
   filters: MediaFilters;
   onChange: (next: MediaFilters) => void;
+  /** Full manual reset: clears persistence and closes the advanced panel. */
+  onReset: () => void;
   extensions: string[];
   L: LibraryT;
   open: boolean;
@@ -22,6 +24,7 @@ interface Props {
   usageLoading: boolean;
   onScanUsage: () => void;
 }
+
 
 const SORTS: SortKey[] = ["newest", "oldest", "nameAsc", "nameDesc", "sizeDesc", "sizeAsc"];
 
