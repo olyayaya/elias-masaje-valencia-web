@@ -20,6 +20,13 @@ type PreserveScrollState = { preserveScroll?: boolean; scrollY?: number } | null
 const KEY_PREFIX = "scrollpos:";
 /** How long we keep trying to reach the saved offset while content loads. */
 const RESTORE_WINDOW_MS = 1500;
+/**
+ * The dashboard Library renders its whole (potentially long) list after a couple of async
+ * round-trips, so it gets a longer window than the public pages.
+ */
+const DASHBOARD_RESTORE_WINDOW_MS = 6000;
+export const restoreWindowFor = (pathname: string) =>
+  pathname.startsWith("/dashboard") ? DASHBOARD_RESTORE_WINDOW_MS : RESTORE_WINDOW_MS;
 
 export const scrollKey = (pathname: string, search: string) => `${KEY_PREFIX}${pathname}${search}`;
 
@@ -99,7 +106,8 @@ const ScrollToTop = () => {
     // Retry until the async content makes the page tall enough. Always
     // instant — a smooth technical scroll would be visible as a jump.
     let raf = 0;
-    const deadline = (typeof performance !== "undefined" ? performance.now() : Date.now()) + RESTORE_WINDOW_MS;
+    const deadline =
+      (typeof performance !== "undefined" ? performance.now() : Date.now()) + restoreWindowFor(pathname);
     const tick = () => {
       window.scrollTo(0, target);
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();
