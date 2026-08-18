@@ -406,7 +406,9 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             stagedName: staged,
             newName: result.name,
             contentType: result.contentType,
-            enforceSaving: true,
+            enforceSaving: false,
+            mode: "manual",
+
           });
           onApplied(res.newName ?? result.name, current.replace.name);
         }
