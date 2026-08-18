@@ -501,7 +501,14 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             {L("queuePosition", { i: index + 1, t: queue.length })} · {current.file.name} · {formatFileSize(sourceSize)}
             {meta ? ` · ${meta.width}×${meta.height} · ${formatDuration(meta.duration)}` : ""}
             {photoSource ? ` · ${photoSource.width}×${photoSource.height}` : ""}
+            {analyzing && !photoSource && !meta ? ` · ${L("analyzingFile")}` : ""}
           </p>
+          {current.replace && (
+            <p className="text-xs text-muted-foreground break-all">
+              {L("willReplace", { n: current.replace.name })} · {formatFileSize(storedSize)}
+            </p>
+          )}
+
 
           <Tabs value={mode} onValueChange={(v) => { dropResult(); setMode(v as Mode); }}>
             <TabsList>
