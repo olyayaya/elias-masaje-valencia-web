@@ -1,10 +1,26 @@
-# Sitemap Content-Type production hotfix
+# Аудит Queue (25 задач) — блокировка доступа
 
-## Scope
-- Change only the `sitemap` Edge Function and its source/unit test.
-- Return XML from success and error paths as UTF-8 binary data with a plain header object, preserving HTTP status, cache policy, CORS, and `nosniff`.
-- Run the focused/full verification needed for the change, create a commit, and deploy only `sitemap`.
-- Verify the public endpoint with at least three real GET requests (including cache-busting), HEAD, XML parsing and URL checks; confirm robots.txt is unchanged.
+## Фактическое состояние
 
-## Stop condition
-If the external gateway still reports a non-XML GET Content-Type after the allowed response variants, stop without claiming success and report the captured headers.
+Очередь (Queue) — это объект интерфейса Lovable, а не часть репозитория. У меня нет инструмента, который бы её читал.
+
+Проверено в проекте:
+- `.lovable/` содержит только `plan.md`, архив `plan/` (2 файла: `fix-connect-www-eliasmas-es-2026-08-16.md`, `remove-the-flash-of-stale-business-content-on-first-load-2026-08-16.md`) и `mcp/`.
+- Поиск по слову «queue» в коде даёт только несвязанные совпадения (медиа-обработка, `package-lock.json`).
+
+Значит: **ни одного из 25 элементов Queue я сейчас не вижу**. Названия по догадке восстанавливать не буду.
+
+## Что нужно от вас
+
+Вставьте в чат список из 25 задач (заголовки, а если есть — исходный текст). Достаточно простого нумерованного списка.
+
+## Что я сделаю дальше (без единого изменения в проекте)
+
+1. Зафиксирую текущий HEAD и последние коммиты (`git log`, read-only).
+2. Для каждой задачи из вашего списка:
+   - краткое описание сути;
+   - проверка по текущему коду (чтение файлов, `rg`) и по истории коммитов — сделано / частично / дубликат / актуально;
+   - классификация **KEEP / MERGE-REFINE / DELETE-AS-OBSOLETE** с конкретной ссылкой (путь к файлу + строки, либо SHA коммита) как доказательством для каждого DELETE.
+3. Отдельный раздел: зависимости между оставшимися задачами и корректный порядок выполнения.
+
+Никаких правок кода, миграций, публикаций и действий с самой очередью — только отчёт.
