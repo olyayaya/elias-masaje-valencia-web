@@ -263,7 +263,26 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     }
   };
 
+  /**
+   * ffmpeg.wasm rejects with bare strings; video-ffmpeg wraps them into a VideoEngineError
+   * carrying a category, so the admin gets an actionable sentence instead of "Processing failed".
+   */
+  const describeProcessError = (e: unknown): string => {
+    const err = e as { name?: string; code?: string; message?: string } | null;
+    const detail = err?.message ? ` (${err.message})` : "";
+    if (err?.name === "VideoEngineError") {
+      switch (err.code) {
+        case "load": return L("errEngineLoad") + detail;
+        case "read": return L("errRead") + detail;
+        case "encode": return L("errEncode") + detail;
+        case "output": return L("errOutput") + detail;
+      }
+    }
+    return err?.message || L("processFailed");
+  };
+
   const runProcess = async () => {
+
     setError(null);
     setProgress(0);
     setPhase("processing");
