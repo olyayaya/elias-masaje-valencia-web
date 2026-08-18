@@ -210,8 +210,12 @@ export const COPY = {
   modeSmart: { en: "Recommended", es: "Recomendado", ru: "Рекомендуемые" },
   modeAdvanced: { en: "Advanced", es: "Avanzado", ru: "Расширенные" },
   originalLabel: { en: "Original", es: "Original", ru: "Оригинал" },
+  selectedFile: { en: "Selected file", es: "Archivo seleccionado", ru: "Выбранный файл" },
+  willReplace: { en: "Will replace: {n}", es: "Sustituirá: {n}", ru: "Заменит файл: {n}" },
+  analyzingFile: { en: "Reading the selected file…", es: "Leyendo el archivo seleccionado…", ru: "Чтение выбранного файла…" },
   resultLabel: { en: "Result", es: "Resultado", ru: "Результат" },
   notProcessed: { en: "Not processed yet", es: "Sin procesar", ru: "Ещё не обработано" },
+
   process: { en: "Process", es: "Procesar", ru: "Обработать" },
   processing: { en: "Processing… {p}%", es: "Procesando… {p}%", ru: "Обработка… {p}%" },
   apply: { en: "Apply", es: "Aplicar", ru: "Применить" },

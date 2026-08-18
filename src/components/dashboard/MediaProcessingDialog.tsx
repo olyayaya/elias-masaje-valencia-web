@@ -21,8 +21,8 @@ import { removeObject, stagedObjectName, uploadResumable } from "@/lib/video-upl
 import { replaceGate } from "@/lib/media-backend";
 import {
   DEFAULT_BACKGROUND, MAX_QUALITY, MIN_QUALITY,
-  availablePhotoFormats, clampQuality, evaluatePhotoSaving, mayHaveAlpha,
-  photoOutputName, photoTargetDimensions, probePhotoCaps, smartPhotoPreset, supportsQuality,
+  availablePhotoFormats, clampQuality, evaluatePhotoSaving, loadImageElement, mayHaveAlpha,
+  encodePhoto, photoOutputName, photoTargetDimensions, probePhotoCaps, smartPhotoPreset, supportsQuality,
   willFlattenAlpha,
   type PhotoFormat, type PhotoSettings, type SizeChoice,
 } from "@/lib/photo-encode";
@@ -41,6 +41,8 @@ export interface ProcessingItem {
   kind: "photo" | "video";
   /** Present when this run edits/replaces an existing library object. */
   replace?: { name: string; size: number; publishedInGallery?: boolean };
+  /** Internal: true once the admin picked a new local source via "Replace file". */
+  picked?: boolean;
 }
 
 interface Props {
@@ -119,6 +121,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const [reuseSettings, setReuseSettings] = useState(true);
 
   const [photo, setPhoto] = useState<PhotoSettings | null>(null);
+  const [analyzing, setAnalyzing] = useState(true);
+
   const [photoSource, setPhotoSource] = useState<{ width: number; height: number; hasAlpha: boolean } | null>(null);
   const [video, setVideo] = useState<VideoSettings | null>(null);
   const [meta, setMeta] = useState<VideoMeta | null>(null);
@@ -171,17 +175,21 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     setError(null);
     setPhase("idle");
     setProgress(0);
+    // Stale metadata of the PREVIOUS source must never linger, not even for one frame.
+    setPhotoSource(null);
+    setPhoto(null);
+    setMeta(null);
+    setVideo(null);
+    setAnalyzing(true);
     revokeOriginal();
     const url = URL.createObjectURL(current.file);
     originalUrlRef.current = url;
     setOriginalUrl(url);
 
+
     (async () => {
       if (current.kind === "photo") {
-        setVideo(null);
-        setMeta(null);
         try {
-          const { loadImageElement } = await import("@/lib/photo-encode");
           const img = await loadImageElement(current.file);
           if (cancelled || !aliveRef.current) return;
           const src = {
@@ -193,14 +201,15 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           setPhoto(carryPhoto.current ?? smartPhotoPreset({ ...src, mime: current.file.type }, photoCaps));
         } catch {
           if (!cancelled) setError(L("processFailed"));
+        } finally {
+          if (!cancelled && aliveRef.current) setAnalyzing(false);
         }
         return;
       }
-      setPhoto(null);
-      setPhotoSource(null);
       if (current.file.size > MAX_CONVERT_BYTES) {
         // Handing this to ffmpeg.wasm would simply crash the tab — refuse up front.
         setError(L("tooBigEngine", { m: Math.round(MAX_CONVERT_BYTES / (1024 * 1024)) }));
+        setAnalyzing(false);
         return;
       }
       try {
@@ -216,6 +225,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
         setVideo(next);
       } catch (e) {
         if (!cancelled) setError((e as Error).message || L("processFailed"));
+      } finally {
+        if (!cancelled && aliveRef.current) setAnalyzing(false);
       }
     })();
     return () => { cancelled = true; };
@@ -224,7 +235,12 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
   if (!current) return null;
 
-  const sourceSize = current.replace?.size ?? current.file.size;
+  /** The file the admin is actually editing right now — never the stored object's size. */
+  const sourceSize = current.file.size;
+  /** Stored target size: only for the replacement gate / media-guard compatibility. */
+  const storedSize = current.replace?.size ?? current.file.size;
+  const sourceLabel = current.picked ? L("selectedFile") : L("originalLabel");
+
   const videoTooBig = current.kind === "video" && current.file.size > MAX_CONVERT_BYTES;
 
   const updatePhoto = (patch: Partial<PhotoSettings>) => {
@@ -257,7 +273,6 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
       const baseName = current.replace?.name ?? current.file.name;
       if (current.kind === "photo") {
         if (!photo) throw new Error(L("processFailed"));
-        const { encodePhoto } = await import("@/lib/photo-encode");
         const out = await encodePhoto(current.file, photo);
         if (!aliveRef.current) return;
         revokeResult();
@@ -314,13 +329,16 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     }
   };
 
-  const verdict = result
-    ? current.kind === "photo"
-      ? evaluatePhotoSaving(sourceSize, result.size)
-      : evaluateVideoSaving(sourceSize, result.size)
-    : null;
-  const savingOk = !!verdict?.ok;
+  const evaluate = (base: number, out: number) =>
+    current.kind === "photo" ? evaluatePhotoSaving(base, out) : evaluateVideoSaving(base, out);
+
+  // Processing verdict: an honest comparison of the SELECTED source with the Result.
+  const verdict = result ? evaluate(sourceSize, result.size) : null;
+  // Replacement verdict: measured against the STORED target, which is what media-guard checks.
+  const replaceVerdict = result ? evaluate(storedSize, result.size) : null;
+  const savingOk = !!replaceVerdict?.ok;
   const bigger = !!verdict && !verdict.ok && verdict.savedBytes <= 0;
+
 
   // Replacement is additionally gated by what the DEPLOYED media-guard really accepts.
   const gate: import("@/lib/media-backend").ReplaceGate = result && current.replace
@@ -452,7 +470,11 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     // A new id re-runs the per-item initialization: stale result/settings/progress/error
     // and the old object URLs are dropped there.
     abortRef.current?.abort();
-    setQueue((q) => q.map((it, i) => (i === index ? { ...it, id: `${it.id}#${Date.now()}`, file } : it)));
+    setQueue((q) =>
+      q.map((it, i) =>
+        i === index ? { ...it, id: `${it.id}#${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, file, picked: true } : it,
+      ),
+    );
   };
 
   const busy = phase === "processing" || phase === "applying";
@@ -481,7 +503,14 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             {L("queuePosition", { i: index + 1, t: queue.length })} · {current.file.name} · {formatFileSize(sourceSize)}
             {meta ? ` · ${meta.width}×${meta.height} · ${formatDuration(meta.duration)}` : ""}
             {photoSource ? ` · ${photoSource.width}×${photoSource.height}` : ""}
+            {analyzing && !photoSource && !meta ? ` · ${L("analyzingFile")}` : ""}
           </p>
+          {current.replace && (
+            <p className="text-xs text-muted-foreground break-all">
+              {L("willReplace", { n: current.replace.name })} · {formatFileSize(storedSize)}
+            </p>
+          )}
+
 
           <Tabs value={mode} onValueChange={(v) => { dropResult(); setMode(v as Mode); }}>
             <TabsList>
@@ -757,12 +786,12 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
           {/* ---- visual comparison BEFORE Apply ----------------------- */}
           <div className="space-y-2">
-            <div className="flex gap-2 sm:hidden">
+            <div className="flex flex-wrap gap-2 sm:hidden">
               <Button
                 type="button" size="sm" variant={compare === "original" ? "default" : "outline"}
                 onClick={() => setCompare("original")}
               >
-                {L("showOriginal")}
+                {sourceLabel}
               </Button>
               <Button
                 type="button" size="sm" variant={compare === "result" ? "default" : "outline"}
@@ -773,18 +802,20 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className={panelClass("original")}>
-                <p className="text-foreground">{L("originalLabel")}</p>
+                <p className="text-foreground">{sourceLabel}</p>
                 {originalUrl && (current.kind === "photo" ? (
-                  <img src={originalUrl} alt={L("originalLabel")} className="w-full rounded-md object-contain max-h-56 bg-secondary" />
+                  <img key={originalUrl} src={originalUrl} alt={sourceLabel} className="w-full rounded-md object-contain max-h-56 bg-secondary" />
                 ) : (
-                  <video src={originalUrl} controls playsInline className="w-full rounded-md bg-black max-h-56" />
+                  <video key={originalUrl} src={originalUrl} controls playsInline className="w-full rounded-md bg-black max-h-56" />
                 ))}
                 <p className="text-muted-foreground break-all">
-                  {formatFileSize(sourceSize)}
+                  {current.file.name} · {formatFileSize(sourceSize)}
                   {photoSource ? ` · ${photoSource.width}×${photoSource.height}` : ""}
-                  {meta ? ` · ${meta.width}×${meta.height}` : ""}
+                  {meta ? ` · ${meta.width}×${meta.height} · ${formatDuration(meta.duration)}` : ""}
+                  {analyzing && !photoSource && !meta ? ` · ${L("analyzingFile")}` : ""}
                 </p>
               </div>
+
               <div className={panelClass("result")}>
                 <p className="text-foreground">{L("resultLabel")}</p>
                 {result ? (
