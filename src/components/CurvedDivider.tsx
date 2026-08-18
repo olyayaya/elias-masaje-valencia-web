@@ -40,20 +40,25 @@ const CurvedDivider = ({ from = "bg-background", to = "bg-secondary", flip = fal
   const fromColor = resolveColor(from, isDG);
   const toColor = resolveColor(to, isDG);
 
+  // The SVG is overscanned by 1px above and below (and the paths' flat edges are
+  // pushed past the viewBox) so no hairline seam can appear where the rasterized
+  // fill meets the neighbouring section on fractional/Retina pixel boundaries.
+  const svgStyle = { top: "-1px", height: "calc(100% + 2px)" } as const;
+
   if (flip) {
     return (
-      <div className={`relative h-16 md:h-24 overflow-hidden`} style={{ backgroundColor: toColor }} aria-hidden="true">
-        <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-          <path d="M0,96 C480,0 960,0 1440,96 L1440,0 L0,0 Z" style={{ fill: fromColor }} />
+      <div className="relative h-16 md:h-24 -mt-px -mb-px" style={{ backgroundColor: toColor }} aria-hidden="true">
+        <svg viewBox="0 0 1440 98" preserveAspectRatio="none" className="absolute left-0 w-full" style={svgStyle}>
+          <path d="M0,97 C480,1 960,1 1440,97 L1440,-1 L0,-1 Z" style={{ fill: fromColor }} />
         </svg>
       </div>
     );
   }
 
   return (
-    <div className={`relative h-16 md:h-24 overflow-hidden`} style={{ backgroundColor: fromColor }} aria-hidden="true">
-      <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-        <path d="M0,0 C480,96 960,96 1440,0 L1440,96 L0,96 Z" style={{ fill: toColor }} />
+    <div className="relative h-16 md:h-24 -mt-px -mb-px" style={{ backgroundColor: fromColor }} aria-hidden="true">
+      <svg viewBox="0 0 1440 98" preserveAspectRatio="none" className="absolute left-0 w-full" style={svgStyle}>
+        <path d="M0,1 C480,97 960,97 1440,1 L1440,99 L0,99 Z" style={{ fill: toColor }} />
       </svg>
     </div>
   );
