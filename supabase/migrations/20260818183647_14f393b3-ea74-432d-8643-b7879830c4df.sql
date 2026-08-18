@@ -1,0 +1,2 @@
+ALTER TABLE public.gallery_items DROP CONSTRAINT IF EXISTS gallery_items_thumbnail_zoom_range;
+ALTER TABLE public.gallery_items ADD CONSTRAINT gallery_items_thumbnail_zoom_range CHECK (thumbnail_zoom >= 0.5 AND thumbnail_zoom <= 3);
