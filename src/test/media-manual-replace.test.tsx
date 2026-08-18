@@ -87,6 +87,8 @@ describe("manual replacement without a saving threshold", () => {
     expect(screen.queryByText(/media-guard/i)).not.toBeInTheDocument();
 
     await user.click(apply);
+    await new Promise((r) => setTimeout(r, 500));
+    console.log("ALERT:", document.querySelector('[role="alert"]')?.textContent);
     await waitFor(() => expect(replaceMediaFile).toHaveBeenCalledTimes(1));
     expect(replaceMediaFile.mock.calls[0][0]).toMatchObject({
       fileName: "hero.webp",
