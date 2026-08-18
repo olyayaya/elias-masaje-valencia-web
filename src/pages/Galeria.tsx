@@ -7,8 +7,9 @@ import { buildLocalBusiness } from "@/lib/local-business";
 import { buildBreadcrumbList } from "@/lib/breadcrumbs";
 import { useGallery } from "@/hooks/use-gallery";
 import { buildGallerySchema, originalFor, pickLocalized, thumbnailFor } from "@/lib/gallery";
-import { cropStyle } from "@/lib/gallery-crop";
+import CropThumb from "@/components/gallery/CropThumb";
 import GalleryLightbox from "@/components/gallery/GalleryLightbox";
+
 
 const GaleriaPage = () => {
   const { t, locale } = useI18n();
