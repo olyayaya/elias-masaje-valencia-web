@@ -18,9 +18,10 @@ import { collisionSafeName } from "@/lib/media-kind";
 import { blobToBase64 } from "@/lib/media-compress";
 import { commitVideoReplacement, replaceMediaFile } from "@/lib/media-usage";
 import { removeObject, stagedObjectName, uploadResumable } from "@/lib/video-upload";
+import { replaceGate } from "@/lib/media-backend";
 import {
-  DEFAULT_BACKGROUND, MAX_QUALITY, MIN_QUALITY, PHOTO_MIME,
-  availablePhotoFormats, clampQuality, evaluatePhotoSaving, isLossless, mayHaveAlpha,
+  DEFAULT_BACKGROUND, MAX_QUALITY, MIN_QUALITY,
+  availablePhotoFormats, clampQuality, evaluatePhotoSaving, mayHaveAlpha,
   photoOutputName, photoTargetDimensions, probePhotoCaps, smartPhotoPreset, supportsQuality,
   willFlattenAlpha,
   type PhotoFormat, type PhotoSettings, type SizeChoice,
@@ -28,8 +29,7 @@ import {
 import {
   AUDIO_KBPS_CHOICES, CRF_RANGE, MAX_CONVERT_BYTES, MEMORY_WARN_BYTES, MIME_BY_FORMAT,
   availableFormatsWithMov, clampBitrate, clampCrf, defaultCrf, estimateSizeBytes,
-  evaluateVideoSaving, formatDuration, isGalleryPublishable, isWebFormat, outputNameFor,
-  smartPreset, targetDimensions,
+  evaluateVideoSaving, formatDuration, isWebFormat, outputNameFor, smartPreset, targetDimensions,
   type EncoderCaps, type FpsChoice, type RateControl, type ResolutionChoice,
   type SpeedChoice, type VideoFormat, type VideoMeta,
 } from "@/lib/video-convert";
@@ -48,8 +48,8 @@ interface Props {
   L: LibraryT;
   existingNames: string[];
   onClose: () => void;
-  /** Called after every successful Apply so the library can refresh. */
-  onApplied: (name: string) => void;
+  /** Called after every successful Apply so the library can refresh in place. */
+  onApplied: (name: string, replacedName?: string) => void;
 }
 
 type Mode = "smart" | "advanced";
@@ -72,28 +72,46 @@ interface Result {
   url: string;
   name: string;
   contentType: string;
-  /** Human summary of the settings these exact bytes were produced with. */
-  summary: string;
+  format: string;
+  width: number;
+  height: number;
 }
 
 const SIZES: SizeChoice[] = ["original", "1920", "1600", "1280", "custom"];
 const RESOLUTIONS: ResolutionChoice[] = ["original", "1080", "720", "480", "custom"];
-const FPS: FpsChoice[] = ["original", "30", "25", "24"];
+const FPS_CHOICES: FpsChoice[] = ["original", "30", "25", "24"];
+
+const defaultVideoSettings = (meta: VideoMeta, caps: EncoderCaps): VideoSettings | null => {
+  const preset = smartPreset(meta, caps);
+  if (!preset) return null;
+  return {
+    format: preset.format,
+    resolution: preset.resolution,
+    customShortSide: 720,
+    fps: "original",
+    speed: "fast",
+    rate: { mode: "crf", crf: defaultCrf(preset.format, preset.quality) },
+    removeAudio: false,
+    audioKbps: 128,
+  };
+};
 
 /**
  * One processing pipeline for every way media enters the library: upload, drag & drop and
- * Edit/Replace. Files are queued; nothing reaches public Storage until Apply succeeds, and
- * "Keep original" simply throws the local result away.
+ * Edit/Replace. Files are queued locally; nothing reaches Storage until Apply succeeds, and
+ * "Keep original" only throws the local result away.
  */
 const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: Props) => {
-  const [queue, setQueue] = useState<ProcessingItem[]>(items);
+  const [queue] = useState<ProcessingItem[]>(items);
   const [index, setIndex] = useState(0);
   const [mode, setMode] = useState<Mode>("smart");
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
-  const [confirmBigger, setConfirmBigger] = useState(false);
+  const [originalUrl, setOriginalUrl] = useState<string | null>(null);
+  const [compare, setCompare] = useState<"original" | "result">("original");
+  const [confirmed, setConfirmed] = useState(false);
   const [reuseSettings, setReuseSettings] = useState(true);
 
   const [photo, setPhoto] = useState<PhotoSettings | null>(null);
@@ -104,32 +122,41 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
   const abortRef = useRef<AbortController | null>(null);
   const aliveRef = useRef(true);
-  const resultRef = useRef<Result | null>(null);
+  const resultUrlRef = useRef<string | null>(null);
+  const originalUrlRef = useRef<string | null>(null);
   const carryPhoto = useRef<PhotoSettings | null>(null);
   const carryVideo = useRef<VideoSettings | null>(null);
 
   const current = queue[index] ?? null;
   const photoCaps = useMemo(() => probePhotoCaps(), []);
 
+  /** Every object URL created here is revoked here — on file change and on unmount. */
+  const revokeResult = useCallback(() => {
+    if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
+    resultUrlRef.current = null;
+  }, []);
+  const revokeOriginal = useCallback(() => {
+    if (originalUrlRef.current) URL.revokeObjectURL(originalUrlRef.current);
+    originalUrlRef.current = null;
+  }, []);
+
   useEffect(() => {
     aliveRef.current = true;
     return () => {
       aliveRef.current = false;
       abortRef.current?.abort();
-      if (resultRef.current) URL.revokeObjectURL(resultRef.current.url);
+      revokeResult();
+      revokeOriginal();
     };
-  }, []);
+  }, [revokeResult, revokeOriginal]);
 
-  /** Any settings change invalidates the produced bytes — object URL included. */
   const dropResult = useCallback(() => {
-    setResult((prev) => {
-      if (prev) URL.revokeObjectURL(prev.url);
-      resultRef.current = null;
-      return null;
-    });
-    setConfirmBigger(false);
+    revokeResult();
+    setResult(null);
+    setConfirmed(false);
+    setCompare("original");
     setPhase((p) => (p === "done" ? "idle" : p));
-  }, []);
+  }, [revokeResult]);
 
   // ---- per-item initialization -------------------------------------------
   useEffect(() => {
@@ -139,6 +166,11 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     setError(null);
     setPhase("idle");
     setProgress(0);
+    revokeOriginal();
+    const url = URL.createObjectURL(current.file);
+    originalUrlRef.current = url;
+    setOriginalUrl(url);
+
     (async () => {
       if (current.kind === "photo") {
         setVideo(null);
@@ -153,10 +185,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             hasAlpha: mayHaveAlpha(current.file.type, current.file.name),
           };
           setPhotoSource(src);
-          setPhoto(
-            carryPhoto.current ??
-              smartPhotoPreset({ ...src, mime: current.file.type }, photoCaps),
-          );
+          setPhoto(carryPhoto.current ?? smartPhotoPreset({ ...src, mime: current.file.type }, photoCaps));
         } catch {
           if (!cancelled) setError(L("processFailed"));
         }
@@ -164,6 +193,11 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
       }
       setPhoto(null);
       setPhotoSource(null);
+      if (current.file.size > MAX_CONVERT_BYTES) {
+        // Handing this to ffmpeg.wasm would simply crash the tab — refuse up front.
+        setError(L("tooBigEngine", { m: Math.round(MAX_CONVERT_BYTES / (1024 * 1024)) }));
+        return;
+      }
       try {
         const engine = await import("@/lib/video-ffmpeg");
         if (!engine.isConverterSupported()) throw new Error(L("notSupported"));
@@ -172,20 +206,9 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
         if (cancelled || !aliveRef.current) return;
         setMeta(m);
         setCaps(c);
-        const preset = smartPreset(m, c);
-        if (!preset) throw new Error(L("engineFailed"));
-        setVideo(
-          carryVideo.current ?? {
-            format: preset.format,
-            resolution: preset.resolution,
-            customShortSide: 720,
-            fps: "original",
-            speed: "fast",
-            rate: { mode: "crf", crf: defaultCrf(preset.format, preset.quality) },
-            removeAudio: false,
-            audioKbps: 128,
-          },
-        );
+        const next = carryVideo.current ?? defaultVideoSettings(m, c);
+        if (!next) throw new Error(L("engineFailed"));
+        setVideo(next);
       } catch (e) {
         if (!cancelled) setError((e as Error).message || L("processFailed"));
       }
@@ -197,6 +220,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   if (!current) return null;
 
   const sourceSize = current.replace?.size ?? current.file.size;
+  const videoTooBig = current.kind === "video" && current.file.size > MAX_CONVERT_BYTES;
 
   const updatePhoto = (patch: Partial<PhotoSettings>) => {
     dropResult();
@@ -209,29 +233,13 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
   const resetSettings = () => {
     dropResult();
+    setError(null);
     if (current.kind === "photo" && photoSource) {
       setPhoto(smartPhotoPreset({ ...photoSource, mime: current.file.type }, photoCaps));
     } else if (meta && caps) {
-      const preset = smartPreset(meta, caps);
-      if (preset) {
-        setVideo({
-          format: preset.format,
-          resolution: preset.resolution,
-          customShortSide: 720,
-          fps: "original",
-          speed: "fast",
-          rate: { mode: "crf", crf: defaultCrf(preset.format, preset.quality) },
-          removeAudio: false,
-          audioKbps: 128,
-        });
-      }
+      const next = defaultVideoSettings(meta, caps);
+      if (next) setVideo(next);
     }
-  };
-
-  const publish = (r: Result) => {
-    resultRef.current = r;
-    setResult(r);
-    setPhase("done");
   };
 
   const runProcess = async () => {
@@ -241,21 +249,18 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     const controller = new AbortController();
     abortRef.current = controller;
     try {
+      const baseName = current.replace?.name ?? current.file.name;
       if (current.kind === "photo") {
         if (!photo) throw new Error(L("processFailed"));
         const { encodePhoto } = await import("@/lib/photo-encode");
         const out = await encodePhoto(current.file, photo);
         if (!aliveRef.current) return;
-        const baseName = current.replace?.name ?? current.file.name;
-        publish({
-          blob: out.blob,
-          size: out.size,
-          url: URL.createObjectURL(out.blob),
-          name: photoOutputName(baseName, out.format),
-          contentType: out.mime,
-          summary: `${out.format.toUpperCase()} · ${out.width}×${out.height}${
-            supportsQuality(out.format) ? ` · Q${clampQuality(photo.quality)}` : ""
-          }`,
+        revokeResult();
+        const url = URL.createObjectURL(out.blob);
+        resultUrlRef.current = url;
+        setResult({
+          blob: out.blob, size: out.size, url, name: photoOutputName(baseName, out.format),
+          contentType: out.mime, format: out.format.toUpperCase(), width: out.width, height: out.height,
         });
       } else {
         if (!video || !meta || !caps) throw new Error(L("processFailed"));
@@ -277,30 +282,27 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           },
           {
             signal: controller.signal,
-            onProgress: (p) => aliveRef.current && setProgress(Math.round(p.ratio * 100)),
+            onProgress: (p: { ratio: number }) => aliveRef.current && setProgress(Math.round(p.ratio * 100)),
           },
         );
         if (!aliveRef.current) return;
         const dims = targetDimensions(meta.width, meta.height, video.resolution, video.customShortSide);
-        const baseName = current.replace?.name ?? current.file.name;
-        publish({
-          blob: out.blob,
-          size: out.size,
-          url: URL.createObjectURL(out.blob),
-          name: outputNameFor(baseName, video.format),
-          contentType: MIME_BY_FORMAT[video.format],
-          summary: `${video.format.toUpperCase()} · ${dims.width}×${dims.height} · ${
-            video.rate.mode === "crf" ? `CRF ${video.rate.crf}` : `${video.rate.kbps} kbps`
-          }${video.removeAudio ? " · —" : ""}`,
+        revokeResult();
+        const url = URL.createObjectURL(out.blob);
+        resultUrlRef.current = url;
+        setResult({
+          blob: out.blob, size: out.blob.size, url, name: outputNameFor(baseName, video.format),
+          contentType: MIME_BY_FORMAT[video.format], format: video.format.toUpperCase(),
+          width: dims.width, height: dims.height,
         });
       }
+      setConfirmed(false);
+      setCompare("result");
+      setPhase("done");
     } catch (e) {
       if (!aliveRef.current) return;
-      if ((e as DOMException)?.name === "AbortError") {
-        setPhase("idle");
-        return;
-      }
       setPhase("idle");
+      if ((e as DOMException)?.name === "AbortError") return;
       setError((e as Error).message || L("processFailed"));
     } finally {
       abortRef.current = null;
@@ -312,10 +314,23 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
       ? evaluatePhotoSaving(sourceSize, result.size)
       : evaluateVideoSaving(sourceSize, result.size)
     : null;
+  const savingOk = !!verdict?.ok;
+  const bigger = !!verdict && !verdict.ok && verdict.savedBytes <= 0;
 
-  const isBigger = !!verdict && verdict.ok === false;
-  const smartBlocked = mode === "smart" && isBigger && !!current.replace;
-  const needsConfirm = isBigger && !confirmBigger;
+  // Replacement is additionally gated by what the DEPLOYED media-guard really accepts.
+  const gate: import("@/lib/media-backend").ReplaceGate = result && current.replace
+    ? replaceGate({
+        kind: current.kind,
+        outputName: result.name,
+        savingOk,
+        publishedInGallery: current.replace.publishedInGallery,
+      })
+    : { allowed: true };
+  const blockedReason = "reason" in gate ? gate.reason : null;
+  // Smart mode never forces a replace; Advanced needs one explicit confirmation.
+  const smartBlocked = !!current.replace && !savingOk && mode === "smart";
+  const needsConfirm = !!result && !savingOk && !confirmed;
+  const applyDisabled = !!blockedReason || smartBlocked;
 
   const advanceQueue = () => {
     dropResult();
@@ -324,34 +339,24 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   };
 
   const skipCurrent = () => {
-    // Cancelling one file must never lose the rest of the queue.
     abortRef.current?.abort();
     advanceQueue();
   };
 
   const keepOriginal = () => {
+    // Local-only discard: the stored object was never touched.
     dropResult();
     toast.info(L("keptOriginal"));
   };
 
   const applyResult = async () => {
-    if (!result || smartBlocked) return;
-    if (needsConfirm) { setConfirmBigger(true); return; }
-    // MOV may never take the place of a video published in the public Gallery.
-    if (
-      current.kind === "video" &&
-      current.replace?.publishedInGallery &&
-      !isGalleryPublishable(result.name)
-    ) {
-      setError(L("movGalleryBlocked"));
-      return;
-    }
+    if (!result || applyDisabled) return;
+    if (needsConfirm) { setConfirmed(true); return; }
     setPhase("applying");
     setProgress(0);
     setError(null);
     const controller = new AbortController();
     abortRef.current = controller;
-    const explicitMode = mode === "advanced" ? "manual" : "smart";
     let staged: string | null = null;
     try {
       if (current.replace) {
@@ -362,9 +367,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             contentBase64: await blobToBase64(result.blob),
             contentType: result.contentType,
             originalSize: current.replace.size,
-            mode: explicitMode,
           });
-          onApplied(res.newName ?? result.name);
+          onApplied(res.newName ?? result.name, current.replace.name);
         } else {
           staged = await stagedObjectName(result.name.split(".").pop() ?? "mp4");
           await uploadResumable(staged, result.blob, result.contentType, {
@@ -376,12 +380,12 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             stagedName: staged,
             newName: result.name,
             contentType: result.contentType,
-            enforceSaving: explicitMode === "smart",
-            mode: explicitMode,
+            enforceSaving: true,
           });
-          onApplied(res.newName ?? result.name);
+          onApplied(res.newName ?? result.name, current.replace.name);
         }
       } else {
+        // Brand new object: a plain, safe Storage upload — only after Apply.
         const name = collisionSafeName(result.name, existingNames);
         if (current.kind === "photo") {
           const { error: upError } = await supabase.storage.from("media").upload(name, result.blob, {
@@ -399,7 +403,6 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
         onApplied(name);
       }
       if (!aliveRef.current) return;
-      // Success is only ever reported after the full server response.
       toast.success(L("appliedOk", { n: result.name }));
       if (reuseSettings) {
         if (current.kind === "photo" && photo) carryPhoto.current = photo;
@@ -423,10 +426,14 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const photoDims = photo && photoSource
     ? photoTargetDimensions(photoSource.width, photoSource.height, photo.size, photo.customSize)
     : null;
+  const canProcess = !busy && !videoTooBig && (current.kind === "photo" ? !!photo : !!video);
+
+  const panelClass = (side: "original" | "result") =>
+    `rounded-lg border border-border p-3 space-y-2 ${compare === side ? "" : "hidden sm:block"}`;
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="break-all">
             {current.replace ? L("processReplaceTitle", { n: current.replace.name }) : L("processTitle")}
@@ -436,8 +443,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground break-all">
-            {L("queuePosition", { i: index + 1, t: queue.length })} · {current.file.name} ·{" "}
-            {formatFileSize(sourceSize)}
+            {L("queuePosition", { i: index + 1, t: queue.length })} · {current.file.name} · {formatFileSize(sourceSize)}
             {meta ? ` · ${meta.width}×${meta.height} · ${formatDuration(meta.duration)}` : ""}
             {photoSource ? ` · ${photoSource.width}×${photoSource.height}` : ""}
           </p>
@@ -455,7 +461,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </p>
           )}
 
-          {current.kind === "video" && current.file.size > MEMORY_WARN_BYTES && current.file.size <= MAX_CONVERT_BYTES && (
+          {current.kind === "video" && !videoTooBig && current.file.size > MEMORY_WARN_BYTES && (
             <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">{L("memoryWarning")}</p>
           )}
 
@@ -472,9 +478,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                   >
                     <SelectTrigger id="mp-format"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {photoFormats.map((f) => (
-                        <SelectItem key={f} value={f}>{f.toUpperCase()}</SelectItem>
-                      ))}
+                      {photoFormats.map((f) => <SelectItem key={f} value={f}>{f.toUpperCase()}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -501,13 +505,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                 <div className="space-y-1.5">
                   <Label htmlFor="mp-custom" className="text-xs">{L("customSize")}</Label>
                   <Input
-                    id="mp-custom"
-                    type="number"
-                    min={64}
-                    max={8000}
-                    value={photo.customSize}
-                    onChange={(e) => updatePhoto({ customSize: Number(e.target.value) })}
-                    disabled={busy}
+                    id="mp-custom" type="number" min={64} max={8000} value={photo.customSize}
+                    onChange={(e) => updatePhoto({ customSize: Number(e.target.value) })} disabled={busy}
                   />
                 </div>
               )}
@@ -518,25 +517,14 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                     <Label htmlFor="mp-quality" className="text-xs">{L("quality")}</Label>
                     <div className="flex items-center gap-3">
                       <Slider
-                        id="mp-quality"
-                        aria-label={L("quality")}
-                        min={MIN_QUALITY}
-                        max={MAX_QUALITY}
-                        step={1}
-                        value={[photo.quality]}
-                        onValueChange={([v]) => updatePhoto({ quality: clampQuality(v) })}
-                        disabled={busy}
-                        className="flex-1"
+                        id="mp-quality" aria-label={L("quality")} min={MIN_QUALITY} max={MAX_QUALITY} step={1}
+                        value={[photo.quality]} onValueChange={([v]) => updatePhoto({ quality: clampQuality(v) })}
+                        disabled={busy} className="flex-1"
                       />
                       <Input
-                        type="number"
-                        aria-label={`${L("quality")} %`}
-                        min={MIN_QUALITY}
-                        max={MAX_QUALITY}
-                        value={photo.quality}
-                        onChange={(e) => updatePhoto({ quality: clampQuality(e.target.value) })}
-                        disabled={busy}
-                        className="w-20"
+                        type="number" aria-label={`${L("quality")} %`} min={MIN_QUALITY} max={MAX_QUALITY}
+                        value={photo.quality} onChange={(e) => updatePhoto({ quality: clampQuality(e.target.value) })}
+                        disabled={busy} className="w-20"
                       />
                     </div>
                   </div>
@@ -550,20 +538,17 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                   <p className="text-xs text-muted-foreground">{L("alphaWarning")}</p>
                   <Label htmlFor="mp-bg" className="text-xs">{L("background")}</Label>
                   <Input
-                    id="mp-bg"
-                    type="color"
-                    value={photo.background || DEFAULT_BACKGROUND}
-                    onChange={(e) => updatePhoto({ background: e.target.value })}
-                    disabled={busy}
+                    id="mp-bg" type="color" value={photo.background || DEFAULT_BACKGROUND}
+                    onChange={(e) => updatePhoto({ background: e.target.value })} disabled={busy}
                     className="h-9 w-20 p-1"
                   />
                 </div>
               )}
 
               {photoDims && (
-                <p className="text-xs text-muted-foreground">
-                  {L("resultLabel")}: {photoDims.width}×{photoDims.height} ·{" "}
-                  {photoOutputName(current.replace?.name ?? current.file.name, photo.format)} — {L("noUpscalePhoto")}
+                <p className="text-xs text-muted-foreground break-all">
+                  {photoOutputName(current.replace?.name ?? current.file.name, photo.format)} ·{" "}
+                  {photoDims.width}×{photoDims.height} — {L("noUpscalePhoto")}
                 </p>
               )}
             </div>
@@ -582,9 +567,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                   >
                     <SelectTrigger id="mv-format"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {videoFormats.map((f) => (
-                        <SelectItem key={f} value={f}>{f.toUpperCase()}</SelectItem>
-                      ))}
+                      {videoFormats.map((f) => <SelectItem key={f} value={f}>{f.toUpperCase()}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -614,7 +597,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                   >
                     <SelectTrigger id="mv-fps"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {FPS.map((f) => (
+                      {FPS_CHOICES.map((f) => (
                         <SelectItem key={f} value={f}>{f === "original" ? L("original") : f}</SelectItem>
                       ))}
                     </SelectContent>
@@ -623,20 +606,14 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
               </div>
 
               {!isWebFormat(video.format) && (
-                <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
-                  {L("movNotRecommended")}
-                </p>
+                <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">{L("movNotRecommended")}</p>
               )}
 
               {mode === "advanced" && (
                 <>
                   <div className="space-y-1.5">
                     <Label htmlFor="mv-speed" className="text-xs">{L("speed")}</Label>
-                    <Select
-                      value={video.speed}
-                      onValueChange={(v) => updateVideo({ speed: v as SpeedChoice })}
-                      disabled={busy}
-                    >
+                    <Select value={video.speed} onValueChange={(v) => updateVideo({ speed: v as SpeedChoice })} disabled={busy}>
                       <SelectTrigger id="mv-speed"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="fast">{L("speedFast")}</SelectItem>
@@ -652,9 +629,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                       value={video.rate.mode}
                       onValueChange={(v) =>
                         updateVideo({
-                          rate: v === "crf"
-                            ? { mode: "crf", crf: defaultCrf(video.format) }
-                            : { mode: "bitrate", kbps: 2500 },
+                          rate: v === "crf" ? { mode: "crf", crf: defaultCrf(video.format) } : { mode: "bitrate", kbps: 2500 },
                         })
                       }
                       disabled={busy}
@@ -672,25 +647,18 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                       <Label htmlFor="mv-crf" className="text-xs">CRF</Label>
                       <div className="flex items-center gap-3">
                         <Slider
-                          id="mv-crf"
-                          aria-label="CRF"
-                          min={CRF_RANGE[video.format].min}
-                          max={CRF_RANGE[video.format].max}
-                          step={1}
+                          id="mv-crf" aria-label="CRF"
+                          min={CRF_RANGE[video.format].min} max={CRF_RANGE[video.format].max} step={1}
                           value={[video.rate.crf]}
                           onValueChange={([v]) => updateVideo({ rate: { mode: "crf", crf: clampCrf(video.format, v) } })}
-                          disabled={busy}
-                          className="flex-1"
+                          disabled={busy} className="flex-1"
                         />
                         <Input
-                          type="number"
-                          aria-label="CRF"
-                          min={CRF_RANGE[video.format].min}
-                          max={CRF_RANGE[video.format].max}
+                          type="number" aria-label="CRF"
+                          min={CRF_RANGE[video.format].min} max={CRF_RANGE[video.format].max}
                           value={video.rate.crf}
                           onChange={(e) => updateVideo({ rate: { mode: "crf", crf: clampCrf(video.format, e.target.value) } })}
-                          disabled={busy}
-                          className="w-20"
+                          disabled={busy} className="w-20"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">{L("crfHint")}</p>
@@ -699,11 +667,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                     <div className="space-y-1.5">
                       <Label htmlFor="mv-kbps" className="text-xs">{L("bitrateKbps")}</Label>
                       <Input
-                        id="mv-kbps"
-                        type="number"
-                        min={150}
-                        max={20000}
-                        value={video.rate.kbps}
+                        id="mv-kbps" type="number" min={150} max={20000} value={video.rate.kbps}
                         onChange={(e) => updateVideo({ rate: { mode: "bitrate", kbps: clampBitrate(e.target.value) } })}
                         disabled={busy}
                       />
@@ -711,11 +675,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                         <p className="text-xs text-muted-foreground">
                           {L("estimatedSize", {
                             s: formatFileSize(
-                              estimateSizeBytes(
-                                video.rate.kbps,
-                                video.removeAudio ? 0 : video.audioKbps,
-                                meta.duration,
-                              ),
+                              estimateSizeBytes(video.rate.kbps, video.removeAudio ? 0 : video.audioKbps, meta.duration),
                             ),
                           })}
                         </p>
@@ -725,10 +685,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
                   <div className="flex items-center gap-3">
                     <Switch
-                      id="mv-mute"
-                      checked={video.removeAudio}
-                      onCheckedChange={(v) => updateVideo({ removeAudio: Boolean(v) })}
-                      disabled={busy}
+                      id="mv-mute" checked={video.removeAudio}
+                      onCheckedChange={(v) => updateVideo({ removeAudio: Boolean(v) })} disabled={busy}
                     />
                     <Label htmlFor="mv-mute" className="text-sm cursor-pointer">{L("removeAudioOpt")}</Label>
                   </div>
@@ -743,9 +701,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                       >
                         <SelectTrigger id="mv-abr"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {AUDIO_KBPS_CHOICES.map((k) => (
-                            <SelectItem key={k} value={String(k)}>{k} kbps</SelectItem>
-                          ))}
+                          {AUDIO_KBPS_CHOICES.map((k) => <SelectItem key={k} value={String(k)}>{k} kbps</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -764,55 +720,91 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </div>
           )}
 
-          {/* ---- original vs result ---------------------------------- */}
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="rounded-lg border border-border p-3">
-              <p className="text-foreground mb-1">{L("originalLabel")}</p>
-              <p className="text-muted-foreground break-all">{formatFileSize(sourceSize)}</p>
+          {/* ---- visual comparison BEFORE Apply ----------------------- */}
+          <div className="space-y-2">
+            <div className="flex gap-2 sm:hidden">
+              <Button
+                type="button" size="sm" variant={compare === "original" ? "default" : "outline"}
+                onClick={() => setCompare("original")}
+              >
+                {L("showOriginal")}
+              </Button>
+              <Button
+                type="button" size="sm" variant={compare === "result" ? "default" : "outline"}
+                onClick={() => setCompare("result")} disabled={!result}
+              >
+                {L("showResult")}
+              </Button>
             </div>
-            <div className="rounded-lg border border-border p-3">
-              <p className="text-foreground mb-1">{L("resultLabel")}</p>
-              {result ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className={panelClass("original")}>
+                <p className="text-foreground">{L("originalLabel")}</p>
+                {originalUrl && (current.kind === "photo" ? (
+                  <img src={originalUrl} alt={L("originalLabel")} className="w-full rounded-md object-contain max-h-56 bg-secondary" />
+                ) : (
+                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                  <video src={originalUrl} controls playsInline className="w-full rounded-md bg-black max-h-56" />
+                ))}
                 <p className="text-muted-foreground break-all">
-                  {formatFileSize(result.size)} · {result.summary}
-                  {verdict?.ok ? ` · −${"savedPercent" in verdict ? verdict.savedPercent : 0}%` : ""}
+                  {formatFileSize(sourceSize)}
+                  {photoSource ? ` · ${photoSource.width}×${photoSource.height}` : ""}
+                  {meta ? ` · ${meta.width}×${meta.height}` : ""}
                 </p>
-              ) : (
-                <p className="text-muted-foreground">{L("notProcessed")}</p>
-              )}
+              </div>
+              <div className={panelClass("result")}>
+                <p className="text-foreground">{L("resultLabel")}</p>
+                {result ? (
+                  <>
+                    {current.kind === "photo" ? (
+                      <img src={result.url} alt={L("resultLabel")} className="w-full rounded-md object-contain max-h-56 bg-secondary" />
+                    ) : (
+                      // eslint-disable-next-line jsx-a11y/media-has-caption
+                      <video src={result.url} controls playsInline className="w-full rounded-md bg-black max-h-56" />
+                    )}
+                    <p className="text-muted-foreground break-all">
+                      {formatFileSize(result.size)} · {result.format} · {result.width}×{result.height}
+                      {verdict?.ok ? ` · −${verdict.savedPercent}%` : ""}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">{L("notProcessed")}</p>
+                )}
+              </div>
             </div>
           </div>
 
-          {result && isBigger && (
+          {result && !savingOk && (
             <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
-              {smartBlocked
-                ? L("smartNoSaving")
-                : L("biggerWarning", { a: formatFileSize(sourceSize), b: formatFileSize(result.size) })}
+              {bigger
+                ? L("resultBigger", { a: formatFileSize(sourceSize), b: formatFileSize(result.size) })
+                : L("resultMarginal", { a: formatFileSize(sourceSize), b: formatFileSize(result.size) })}
+              {smartBlocked ? ` ${L("smartNoSaving")}` : ""}
             </p>
           )}
 
-          {current.replace && <p className="text-xs text-muted-foreground">{L("restoreUnavailable")}</p>}
+          {blockedReason && (
+            <p role="alert" className="text-xs text-destructive border border-destructive/40 rounded-lg p-3">
+              {L(blockedReason)}
+            </p>
+          )}
+
+          {current.replace && <p className="text-xs text-muted-foreground">{L("noRollback")}</p>}
 
           {queue.length > 1 && (
             <div className="flex items-center gap-3">
-              <Switch
-                id="mp-reuse"
-                checked={reuseSettings}
-                onCheckedChange={(v) => setReuseSettings(Boolean(v))}
-                disabled={busy}
-              />
+              <Switch id="mp-reuse" checked={reuseSettings} onCheckedChange={(v) => setReuseSettings(Boolean(v))} disabled={busy} />
               <Label htmlFor="mp-reuse" className="text-xs cursor-pointer">{L("applyToAll")}</Label>
             </div>
           )}
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 pt-2">
-          {busy ? (
-            <Button variant="ghost" size="sm" onClick={() => abortRef.current?.abort()}>{L("cancel")}</Button>
-          ) : (
-            <Button variant="ghost" size="sm" onClick={onClose}>{L("cancel")}</Button>
+          <Button variant="ghost" size="sm" onClick={() => (busy ? abortRef.current?.abort() : onClose())}>
+            {L("cancel")}
+          </Button>
+          {queue.length > 1 && (
+            <Button variant="ghost" size="sm" onClick={skipCurrent} disabled={busy}>{L("skipFile")}</Button>
           )}
-          <Button variant="ghost" size="sm" onClick={skipCurrent} disabled={busy}>{L("skipFile")}</Button>
           <Button variant="outline" size="sm" onClick={resetSettings} disabled={busy}>
             <RotateCcw size={14} className="mr-1" />{L("resetSettings")}
           </Button>
@@ -828,12 +820,12 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
               </Button>
             </>
           )}
-          <Button size="sm" onClick={() => void runProcess()} disabled={busy}>
+          <Button size="sm" onClick={() => void runProcess()} disabled={!canProcess}>
             {phase === "processing" ? <Loader2 size={14} className="animate-spin mr-1" /> : <Wand2 size={14} className="mr-1" />}
             {L("process")}
           </Button>
           {result && (
-            <Button size="sm" onClick={() => void applyResult()} disabled={busy || smartBlocked}>
+            <Button size="sm" onClick={() => void applyResult()} disabled={busy || applyDisabled}>
               {phase === "applying" ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
               {needsConfirm ? L("confirmBigger") : current.replace ? L("applyReplace") : L("apply")}
             </Button>
