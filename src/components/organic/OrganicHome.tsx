@@ -393,14 +393,20 @@ const OrganicHome = () => {
         </div>
       </section>
       <div
-        className="relative h-16 md:h-24 overflow-hidden"
+        className="relative h-16 md:h-24 -mt-px -mb-px"
         style={{ backgroundColor: solidBgColor("--background") }}
         aria-hidden="true"
       >
-        <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-          <path d="M0,0 C480,96 960,96 1440,0 L1440,96 L0,96 Z" style={{ fill: bgColor("--organic-dark") }} />
+        <svg
+          viewBox="0 0 1440 98"
+          preserveAspectRatio="none"
+          className="absolute left-0 w-full"
+          style={{ top: "-1px", height: "calc(100% + 2px)" }}
+        >
+          <path d="M0,1 C480,97 960,97 1440,1 L1440,99 L0,99 Z" style={{ fill: bgColor("--organic-dark") }} />
         </svg>
       </div>
+
 
       {/* ═══════════ GIFT CARD — Dark section ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20" style={{ backgroundColor: bgColor("--organic-dark") }}>
