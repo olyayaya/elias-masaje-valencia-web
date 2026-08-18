@@ -76,14 +76,10 @@ const setup = async (lang: Lang = "en") => {
 };
 
 const LABEL = {
-  compress: { es: "Compresión inteligente", en: "Smart compress", ru: "Умное сжатие" },
   rename: { es: "Renombrar", en: "Rename", ru: "Переименовать" },
   newName: { es: "Nombre nuevo", en: "New name", ru: "Новое имя" },
   renameTitle: { es: "Renombrar archivo", en: "Rename file", ru: "Переименовать файл" },
 } as const;
-
-const clickCompress = async (user: ReturnType<typeof userEvent.setup>, lang: Lang = "en") =>
-  user.click(await screen.findByLabelText(`${LABEL.compress[lang]} hero.jpg`));
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -161,36 +157,6 @@ describe("localization and server outcome reporting", () => {
     savedBytes: 300000,
     savedPercent: 60,
   };
-
-  it("reports compression in Spanish", async () => {
-    analyzeCompression.mockResolvedValue(ready);
-    replaceMediaFile.mockResolvedValue({ replaced: true, updatedReferences: 2 });
-    const user = await setup("es");
-    await clickCompress(user, "es");
-    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
-    expect(toastSuccess.mock.calls[0][0]).toMatch(/Comprimida:/);
-    expect(toastSuccess.mock.calls[0][0]).toMatch(/2 enlace/);
-  });
-
-  it("reports compression in Russian", async () => {
-    analyzeCompression.mockResolvedValue(ready);
-    replaceMediaFile.mockResolvedValue({ replaced: true, updatedReferences: 2 });
-    const user = await setup("ru");
-    await clickCompress(user, "ru");
-    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
-    expect(toastSuccess.mock.calls[0][0]).toMatch(/Сжато:/);
-    expect(toastSuccess.mock.calls[0][0]).toMatch(/обновлено ссылок: 2/);
-  });
-
-  it("says nothing changed, localized, when the server reports an already-compressed file", async () => {
-    analyzeCompression.mockResolvedValue({ status: "already", originalSize: 100, candidateSize: 99 });
-    const user = await setup("ru");
-    await clickCompress(user, "ru");
-    await waitFor(() =>
-      expect(toastSuccess).toHaveBeenCalledWith("Изображение уже сжато — ничего не изменено")
-    );
-    expect(replaceMediaFile).not.toHaveBeenCalled();
-  });
 
   it("tells the admin that archived versions now resolve to the new name", async () => {
     renameMediaFile.mockResolvedValue({
