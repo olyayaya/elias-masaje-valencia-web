@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Download, Loader2, RotateCcw, Undo2, Wand2 } from "lucide-react";
+import { AlertTriangle, Download, Loader2, RotateCcw, Undo2, Upload, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { formatFileSize } from "@/lib/image-utils";
 import { supabase } from "@/integrations/supabase/client";
-import { collisionSafeName } from "@/lib/media-kind";
+import { classifyUpload, collisionSafeName, PHOTO_ACCEPT, VIDEO_ACCEPT } from "@/lib/media-kind";
 import { blobToBase64 } from "@/lib/media-compress";
 import { commitVideoReplacement, replaceMediaFile } from "@/lib/media-usage";
 import { removeObject, stagedObjectName, uploadResumable } from "@/lib/video-upload";
@@ -104,7 +104,9 @@ const defaultVideoSettings = (meta: VideoMeta, caps: EncoderCaps): VideoSettings
 const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: Props) => {
   /** Names uploaded during this queue, so later items cannot collide with them. */
   const appliedNames = useRef<string[]>([]);
-  const [queue] = useState<ProcessingItem[]>(items);
+  // The queue is stateful only so "Replace file" can swap the local source of the current
+  // item while keeping its replace target (name/size/publishedInGallery) intact.
+  const [queue, setQueue] = useState<ProcessingItem[]>(items);
   const [index, setIndex] = useState(0);
   const [mode, setMode] = useState<Mode>("smart");
   const [phase, setPhase] = useState<Phase>("idle");
@@ -122,6 +124,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const [meta, setMeta] = useState<VideoMeta | null>(null);
   const [caps, setCaps] = useState<EncoderCaps | null>(null);
 
+  const pickRef = useRef<HTMLInputElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const aliveRef = useRef(true);
   const resultUrlRef = useRef<string | null>(null);
@@ -422,6 +425,34 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     } finally {
       abortRef.current = null;
     }
+  };
+
+  /**
+   * Swap the local source file of an existing object. Nothing is uploaded: the new file
+   * goes through the very same preview → Process → Replace original flow.
+   */
+  const onPickReplacement = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Always clear the input so picking the same file twice fires change again.
+    e.target.value = "";
+    if (!file || !current.replace) return;
+    const verdict = classifyUpload(file);
+    if (!verdict.ok) {
+      toast.error(L("skippedUnsupported", { f: file.name }));
+      return;
+    }
+    if (verdict.kind !== current.kind) {
+      toast.error(L(current.kind === "photo" ? "kindMismatchPhoto" : "kindMismatchVideo", { f: file.name }));
+      return;
+    }
+    if (verdict.kind === "video" && file.size > MAX_CONVERT_BYTES) {
+      toast.error(L("tooBig", { f: file.name, m: Math.round(MAX_CONVERT_BYTES / (1024 * 1024)) }));
+      return;
+    }
+    // A new id re-runs the per-item initialization: stale result/settings/progress/error
+    // and the old object URLs are dropped there.
+    abortRef.current?.abort();
+    setQueue((q) => q.map((it, i) => (i === index ? { ...it, id: `${it.id}#${Date.now()}`, file } : it)));
   };
 
   const busy = phase === "processing" || phase === "applying";
@@ -801,6 +832,21 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 pt-2">
+          {current.replace && (
+            <>
+              <input
+                ref={pickRef}
+                type="file"
+                className="hidden"
+                accept={current.kind === "photo" ? PHOTO_ACCEPT : VIDEO_ACCEPT}
+                onChange={onPickReplacement}
+                data-testid="replace-file-input"
+              />
+              <Button variant="outline" size="sm" onClick={() => pickRef.current?.click()} disabled={busy}>
+                <Upload size={14} className="mr-1" />{L("replaceFile")}
+              </Button>
+            </>
+          )}
           <Button variant="ghost" size="sm" onClick={() => (busy ? abortRef.current?.abort() : onClose())}>
             {L("cancel")}
           </Button>

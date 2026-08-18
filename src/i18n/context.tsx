@@ -3,11 +3,15 @@ import { Locale, Translations } from "./types";
 import { es } from "./es";
 import { en } from "./en";
 import { ru } from "./ru";
+import { isDashboardPath, loadDashboardLocale } from "@/lib/dashboard-locale";
 
 const translationsMap: Record<Locale, Translations> = { es, en, ru };
 
 function detectInitialLocale(): Locale {
   const path = typeof window !== "undefined" ? window.location.pathname : "/";
+  // The Dashboard has no locale prefix: use its remembered choice on the very first render
+  // so the operator never sees a flash of Spanish after F5.
+  if (isDashboardPath(path)) return loadDashboardLocale();
   if (path.startsWith("/en")) return "en";
   if (path.startsWith("/ru")) return "ru";
   return "es";

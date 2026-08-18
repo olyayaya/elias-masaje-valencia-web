@@ -66,6 +66,18 @@ export const UPLOAD_ACCEPT = [
   ...VIDEO_INPUT_EXTS.map((e) => VIDEO_MIME_BY_EXT[e]),
 ].join(",");
 
+/** Accept attribute for a photo-only picker (Replace file on a photo object). */
+export const PHOTO_ACCEPT = [
+  ...PHOTO_EXTS.map((e) => `.${e}`),
+  "image/*",
+].join(",");
+
+/** Accept attribute for a video-only picker (Replace file on a video object). */
+export const VIDEO_ACCEPT = [
+  ...VIDEO_INPUT_EXTS.map((e) => `.${e}`),
+  ...VIDEO_INPUT_EXTS.map((e) => VIDEO_MIME_BY_EXT[e]),
+].join(",");
+
 /** True when a File picked in the browser should go through the video pipeline. */
 export function isVideoFile(file: { name: string; type?: string }): boolean {
   return kindOf({ name: file.name, mimeType: file.type }) === "video";
