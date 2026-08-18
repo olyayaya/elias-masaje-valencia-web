@@ -50,7 +50,6 @@ export const COPY = {
   files: { en: "{n} files", es: "{n} archivos", ru: "{n} файлов" },
   showing: { en: "Showing {n} of {t}", es: "Mostrando {n} de {t}", ru: "Показано {n} из {t}" },
   empty: { en: "No files match these filters.", es: "Ningún archivo coincide con estos filtros.", ru: "Нет файлов по этим фильтрам." },
-  loadMore: { en: "Load more", es: "Cargar más", ru: "Показать ещё" },
 
   // ---- filters ---------------------------------------------------------
   search: { en: "Search by name", es: "Buscar por nombre", ru: "Поиск по имени" },

@@ -20,6 +20,7 @@ import {
   applyFilters, availableExtensions, DEFAULT_FILTERS,
   type LibraryFile, type MediaFilters, type OptState,
 } from "@/lib/media-filters";
+import { clearFilters, loadFilters, saveFilters } from "@/lib/media-filters-storage";
 import { useI18n } from "@/i18n/context";
 import { toast } from "sonner";
 import DashboardCard from "./DashboardCard";
@@ -52,7 +53,6 @@ type DeleteTarget = {
   historyReferences: number;
 };
 
-const PAGE = 24;
 const MAX_UPLOAD_VIDEO = MAX_CONVERT_BYTES;
 
 const DashboardMedia = () => {
@@ -76,9 +76,10 @@ const DashboardMedia = () => {
   const [renaming, setRenaming] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
 
-  const [filters, setFilters] = useState<MediaFilters>(DEFAULT_FILTERS);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [visible, setVisible] = useState(PAGE);
+  // Lazy initializers: the restored filters are the very first render, so the operator
+  // never sees a flash of the unfiltered default list.
+  const [filters, setFilters] = useState<MediaFilters>(() => loadFilters().filters);
+  const [filtersOpen, setFiltersOpen] = useState(() => loadFilters().open);
   const [usage, setUsage] = useState<Record<string, number> | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [optimization, setOptimization] = useState<Record<string, OptState>>({});
@@ -119,9 +120,9 @@ const DashboardMedia = () => {
     () => applyFilters(files, filters, { usage, optimization }),
     [files, filters, usage, optimization],
   );
-  const shown = filtered.slice(0, visible);
 
-  useEffect(() => { setVisible(PAGE); }, [filters]);
+  // Persist every filter change (and the advanced panel state) until a manual Reset.
+  useEffect(() => { saveFilters(filters, filtersOpen); }, [filters, filtersOpen]);
 
   const scanUsage = async () => {
     setUsageLoading(true);
@@ -133,6 +134,27 @@ const DashboardMedia = () => {
     } finally {
       setUsageLoading(false);
     }
+  };
+
+  /**
+   * A restored used/unused filter would otherwise show a false "no files": run exactly one
+   * batch scan once the listing is in, never repeating it.
+   */
+  const autoScanned = useRef(false);
+  useEffect(() => {
+    if (loading || autoScanned.current) return;
+    if (usage !== null || usageLoading) return;
+    if (filters.usage !== "used" && filters.usage !== "unused") return;
+    if (!files.length) return;
+    autoScanned.current = true;
+    void scanUsage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, files, filters.usage]);
+
+  const resetFilters = () => {
+    clearFilters();
+    setFilters(DEFAULT_FILTERS);
+    setFiltersOpen(false);
   };
 
   const markOpt = (name: string, state: OptState) =>
@@ -313,7 +335,7 @@ const DashboardMedia = () => {
 
       <DashboardCard
         title={L("library")}
-        description={L("showing", { n: shown.length, t: filtered.length })}
+        description={L("showing", { n: filtered.length, t: files.length })}
       >
         <div className="space-y-4">
           <Tabs value={filters.kind} onValueChange={(v) => setFilters({ ...filters, kind: v as MediaFilters["kind"] })}>
@@ -331,6 +353,7 @@ const DashboardMedia = () => {
           <MediaFilterBar
             filters={filters}
             onChange={setFilters}
+            onReset={resetFilters}
             extensions={extensions}
             L={L}
             open={filtersOpen}
@@ -340,11 +363,11 @@ const DashboardMedia = () => {
             onScanUsage={() => void scanUsage()}
           />
 
-          {shown.length === 0 ? (
+          {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">{L("empty")}</p>
           ) : (
             <div className="divide-y divide-border">
-              {shown.map((f) => {
+              {filtered.map((f) => {
                 const kind = kindOf(f);
                 const refs = usage?.[f.name];
                 return (
@@ -417,14 +440,6 @@ const DashboardMedia = () => {
                   </div>
                 );
               })}
-            </div>
-          )}
-
-          {filtered.length > shown.length && (
-            <div className="flex justify-center pt-2">
-              <Button variant="outline" size="sm" onClick={() => setVisible((v) => v + PAGE)}>
-                {L("loadMore")}
-              </Button>
             </div>
           )}
         </div>
