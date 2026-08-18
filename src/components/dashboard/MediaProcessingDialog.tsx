@@ -22,7 +22,7 @@ import { replaceGate } from "@/lib/media-backend";
 import {
   DEFAULT_BACKGROUND, MAX_QUALITY, MIN_QUALITY,
   availablePhotoFormats, clampQuality, evaluatePhotoSaving, loadImageElement, mayHaveAlpha,
-  photoOutputName, photoTargetDimensions, probePhotoCaps, smartPhotoPreset, supportsQuality,
+  encodePhoto, photoOutputName, photoTargetDimensions, probePhotoCaps, smartPhotoPreset, supportsQuality,
   willFlattenAlpha,
   type PhotoFormat, type PhotoSettings, type SizeChoice,
 } from "@/lib/photo-encode";
@@ -273,7 +273,6 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
       const baseName = current.replace?.name ?? current.file.name;
       if (current.kind === "photo") {
         if (!photo) throw new Error(L("processFailed"));
-        const { encodePhoto } = await import("@/lib/photo-encode");
         const out = await encodePhoto(current.file, photo);
         if (!aliveRef.current) return;
         revokeResult();
