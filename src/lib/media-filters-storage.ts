@@ -5,7 +5,7 @@
  * degrades to DEFAULT_FILTERS instead of throwing. Private mode (no localStorage) is a
  * supported environment — every access is guarded.
  */
-import { DEFAULT_FILTERS, type MediaFilters, type SortKey } from "./media-filters";
+import { DEFAULT_FILTERS, isDefaultFilters, type MediaFilters, type SortKey } from "./media-filters";
 
 export const FILTERS_STORAGE_KEY = "elias.library.filters.v1";
 
@@ -71,14 +71,6 @@ export const loadFilters = (): PersistedLibraryState => {
   }
 };
 
-export const saveFilters = (filters: MediaFilters, open: boolean) => {
-  try {
-    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify({ v: 1, filters, open }));
-  } catch {
-    /* private mode — filters simply are not remembered */
-  }
-};
-
 export const clearFilters = () => {
   try {
     localStorage.removeItem(FILTERS_STORAGE_KEY);
@@ -86,3 +78,21 @@ export const clearFilters = () => {
     /* nothing to clear */
   }
 };
+
+/**
+ * Persist the current filter state. A fully default state (including a closed advanced
+ * panel) is stored as *absence* of the key, so a manual Reset really leaves nothing
+ * behind — and a reload starts from the defaults either way.
+ */
+export const saveFilters = (filters: MediaFilters, open: boolean) => {
+  if (isDefaultFilters(filters) && !open) {
+    clearFilters();
+    return;
+  }
+  try {
+    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify({ v: 1, filters, open }));
+  } catch {
+    /* private mode — filters simply are not remembered */
+  }
+};
+
