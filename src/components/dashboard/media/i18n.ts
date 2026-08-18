@@ -227,7 +227,6 @@ export const COPY = {
   resetSettings: { en: "Reset", es: "Restablecer", ru: "Сбросить" },
   skipFile: { en: "Skip this file", es: "Omitir este archivo", ru: "Пропустить файл" },
   applyToAll: { en: "Use these settings for the remaining files of the same type", es: "Usar estos ajustes para los demás archivos del mismo tipo", ru: "Применить эти настройки к остальным файлам того же типа" },
-  quality: { en: "Quality", es: "Calidad", ru: "Качество" },
   sizeLimit: { en: "Size (longest edge)", es: "Tamaño (lado mayor)", ru: "Размер (длинная сторона)" },
   customSize: { en: "Custom (px)", es: "Personalizado (px)", ru: "Свой размер (px)" },
   pngLossless: {
