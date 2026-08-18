@@ -315,7 +315,30 @@ const BookingDialog = ({
         </div>
 
         <div className="grid gap-3 font-body">
+          {!hideDuration && tiers.length > 1 && (
+            <div className="grid gap-1.5">
+              <Label htmlFor="booking-duration" className="text-xs">{b.durationLabel}</Label>
+              <Select
+                value={String(tierIndex)}
+                onValueChange={(v) => { setTierIndex(Number(v)); setEdited(false); }}
+              >
+                <SelectTrigger id="booking-duration" aria-label={b.durationLabel}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiers.map((tier, i) => (
+                    <SelectItem key={`${tier.duration}-${i}`} value={String(i)}>
+                      {hidePrice || !tier.price
+                        ? tier.duration
+                        : `${tier.duration} — ${formatPrice(tier.price, t, { hidePrefix: true })}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid gap-1.5">
+
             <Label htmlFor="booking-name" className="text-xs">{b.nameLabel}</Label>
             <Input
               id="booking-name"
