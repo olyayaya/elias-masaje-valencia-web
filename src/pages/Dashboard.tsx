@@ -9,6 +9,7 @@ import { Locale } from "@/i18n/types";
 import { useDashboardT } from "@/i18n/dashboard";
 import { useTheme } from "@/contexts/ThemeContext";
 import { supabase } from "@/integrations/supabase/client";
+import { saveDashboardLocale } from "@/lib/dashboard-locale";
 
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import DashboardServices from "@/components/dashboard/DashboardServices";
