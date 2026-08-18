@@ -92,7 +92,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("gallery bulk add", () => {
-  it("inserts every new file unpublished, with empty posters and continuing sort order", async () => {
+  it("inserts new photos published, with empty posters and continuing sort order", async () => {
     const dialog = await openPhotoPicker();
     const tiles = tilesOf(dialog);
     fireEvent.click(tiles[1]);
@@ -101,10 +101,26 @@ describe("gallery bulk add", () => {
 
     await waitFor(() => expect(h.insert).toHaveBeenCalled());
     expect(h.insert.mock.calls[0][0]).toEqual([
-      { media_type: "photo", media_url: "https://cdn.test/b.webp", poster_url: "", sort_order: 5, published: false },
-      { media_type: "photo", media_url: "https://cdn.test/c.webp", poster_url: "", sort_order: 6, published: false },
+      { media_type: "photo", media_url: "https://cdn.test/b.webp", poster_url: "", sort_order: 5, published: true },
+      { media_type: "photo", media_url: "https://cdn.test/c.webp", poster_url: "", sort_order: 6, published: true },
     ]);
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("inserts new videos hidden until they get a cover", async () => {
+    h.files = [{ name: "clip.mp4", mimeType: "video/mp4" }];
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: /add video|añadir vídeo|добавить видео/i }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(dialog.querySelectorAll("button[title]").length).toBeGreaterThan(0));
+    fireEvent.click(tilesOf(dialog)[0]);
+    fireEvent.click(within(dialog).getByRole("button", { name: /add 1|añadir 1|добавить 1/i }));
+
+    await waitFor(() => expect(h.insert).toHaveBeenCalled());
+    const rows = h.insert.mock.calls[0][0] as { media_type: string; published: boolean }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].media_type).toBe("video");
+    expect(rows[0].published).toBe(false);
   });
 
   it("skips files already in the gallery", async () => {

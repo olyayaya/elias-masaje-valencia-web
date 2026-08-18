@@ -106,11 +106,32 @@ const COPY = {
   saved: { en: "Saved", es: "Guardado", ru: "Сохранено" },
   saveFailed: { en: "Failed to save", es: "Error al guardar", ru: "Не удалось сохранить" },
   added: { en: "Item added", es: "Elemento añadido", ru: "Элемент добавлен" },
+  addedPhoto: {
+    en: "Photo added and published on the public Gallery.",
+    es: "Foto añadida y publicada en la Galería pública.",
+    ru: "Фото добавлено и опубликовано в публичной Галерее.",
+  },
+  addedPhotoMany: {
+    en: "Added and published {added} photos, skipped {skipped} duplicates",
+    es: "Añadidas y publicadas {added} fotos, omitidos {skipped} duplicados",
+    ru: "Добавлено и опубликовано фото: {added}, пропущено дубликатов: {skipped}",
+  },
+  addedVideo: {
+    en: "Video added as hidden — add a cover image before publishing.",
+    es: "Vídeo añadido como oculto — añade una portada antes de publicarlo.",
+    ru: "Видео добавлено скрытым — добавьте обложку перед публикацией.",
+  },
+  addedVideoMany: {
+    en: "Added {added} videos as hidden, skipped {skipped} duplicates — add covers before publishing.",
+    es: "Añadidos {added} vídeos ocultos, omitidos {skipped} duplicados — añade portadas antes de publicar.",
+    ru: "Добавлено скрытых видео: {added}, пропущено дубликатов: {skipped} — добавьте обложки перед публикацией.",
+  },
   addedMany: {
     en: "Added {added}, skipped {skipped} duplicates",
     es: "Añadidos {added}, omitidos {skipped} duplicados",
     ru: "Добавлено {added}, пропущено {skipped} дубликатов",
   },
+
   addedNone: {
     en: "Nothing added — every selected file is already in the gallery.",
     es: "No se añadió nada — todos los archivos ya están en la galería.",
@@ -181,9 +202,12 @@ const DashboardGallery = () => {
   };
 
   /**
-   * Bulk add: one INSERT for the whole selection. Every new row starts unpublished
-   * with an empty poster and a sort_order that continues the existing list, so no two
-   * rows fight over the same slot. Files already present in the gallery are skipped
+   * Bulk add: one INSERT for the whole selection. A PHOTO added here is what the
+   * owner wants visitors to see, so it is created already published as long as it
+   * carries a file. A VIDEO always starts hidden: it still needs a static cover and
+   * a web-playable container (publishIssues/canPublish stay the gate for that).
+   * Every row gets an empty poster and a sort_order that continues the existing list,
+   * so no two rows fight over the same slot. Files already present are skipped
    * (never removed or re-created) and reported back to the admin.
    */
   const addItems = async (kind: "photo" | "video", urls: string[]): Promise<boolean> => {
@@ -208,7 +232,7 @@ const DashboardGallery = () => {
       // image, so it never carries a poster — the grid derives its thumbnail itself.
       poster_url: "",
       sort_order: maxOrder + idx + 1,
-      published: false,
+      published: kind === "photo" && !!url.trim(),
     }));
     const { error: err } = await galleryTable().insert(rows);
     if (err) {
@@ -216,14 +240,20 @@ const DashboardGallery = () => {
       toast.error(c("saveFailed"));
       return false;
     }
+    const single = urls.length === 1 && skipped === 0;
     toast.success(
-      urls.length === 1 && skipped === 0
-        ? c("added")
-        : c("addedMany", { added: String(fresh.length), skipped: String(skipped) }),
+      kind === "photo"
+        ? single
+          ? c("addedPhoto")
+          : c("addedPhotoMany", { added: String(fresh.length), skipped: String(skipped) })
+        : single
+          ? c("addedVideo")
+          : c("addedVideoMany", { added: String(fresh.length), skipped: String(skipped) }),
     );
     refresh();
     return true;
   };
+
 
 
   /**
