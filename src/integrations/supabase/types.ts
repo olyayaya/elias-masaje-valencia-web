@@ -684,6 +684,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      jwt_role_claim: { Args: never; Returns: string }
       review_is_public: {
         Args: { _rating: number; _visible: boolean }
         Returns: boolean
