@@ -105,11 +105,11 @@ describe("library filters survive a remount", () => {
     const { user } = await mount("clip.mp4");
     // Restored state: only the video is listed and the panel is expanded.
     expect(screen.queryByText("photo-00.webp")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("File type")).toBeInTheDocument();
+    expect(screen.getByText("File type")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Reset" }));
     await screen.findByText("photo-00.webp");
-    expect(screen.queryByLabelText("File type")).not.toBeInTheDocument();
+    expect(screen.queryByText("File type")).not.toBeInTheDocument();
     expect(localStorage.getItem(FILTERS_STORAGE_KEY)).toBe(JSON.stringify({ v: 1, filters: DEFAULT_FILTERS, open: false }));
   });
 
