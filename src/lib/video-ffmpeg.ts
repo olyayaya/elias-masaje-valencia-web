@@ -12,6 +12,7 @@ const FFMPEG_WASM_URL = "/ffmpeg/ffmpeg-core.wasm";
 import {
   buildFfmpegArgs,
   buildStripAudioArgs,
+  MIME_BY_FORMAT,
   logHasAudioStream,
   parseEncoderCaps,
   type ConvertOptions,
@@ -242,7 +243,7 @@ export async function convertVideo(
     const data = await ff.readFile(outputName);
     const out = typeof data === "string" ? new TextEncoder().encode(data) : data;
     const buffer = out.slice().buffer as ArrayBuffer;
-    const blob = new Blob([buffer], { type: options.format === "mp4" ? "video/mp4" : "video/webm" });
+    const blob = new Blob([buffer], { type: MIME_BY_FORMAT[options.format] });
     return { blob, size: blob.size };
   } finally {
     signal?.removeEventListener("abort", abort);

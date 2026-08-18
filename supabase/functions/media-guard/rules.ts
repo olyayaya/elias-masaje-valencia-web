@@ -27,11 +27,19 @@ export const ALLOWED_OUTPUT: Record<string, string[]> = {
   "image/png": ["png"],
 };
 
-/** Containers the local converter may commit. */
+/** Containers the local converter may commit. MOV is allowed in the Library only. */
 export const ALLOWED_VIDEO_OUTPUT: Record<string, string[]> = {
   "video/mp4": ["mp4"],
+  "video/quicktime": ["mov"],
   "video/webm": ["webm"],
 };
+
+/**
+ * Containers the public Gallery may publish. MOV plays badly (or not at all) outside
+ * Apple browsers, so a MOV object may never take the place of a published gallery video.
+ */
+export const GALLERY_PUBLISH_EXTS = ["mp4", "webm"];
+export const isGalleryPublishable = (name: string) => GALLERY_PUBLISH_EXTS.includes(extOf(name));
 
 /** Video objects are committed by direct resumable upload, so this bound is generous. */
 export const MAX_VIDEO_BYTES = 250 * 1024 * 1024;
@@ -123,6 +131,12 @@ export function validateVideoOutputType(contentType: string, newName: string): s
 export function videoMagicMatches(type: string, b: Uint8Array): boolean {
   if (type === "video/mp4") {
     return b.length > 12 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70;
+  }
+  if (type === "video/quicktime") {
+    // QuickTime is ISO-BMFF-like: either an `ftyp` box or a bare top-level atom.
+    if (b.length > 12 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) return true;
+    const atom = b.length > 8 ? String.fromCharCode(b[4], b[5], b[6], b[7]) : "";
+    return ["moov", "mdat", "wide", "free", "skip", "pnot"].includes(atom);
   }
   if (type === "video/webm") {
     return b.length > 4 && b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3;

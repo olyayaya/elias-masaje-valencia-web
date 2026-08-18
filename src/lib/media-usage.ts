@@ -74,6 +74,12 @@ export const replaceMediaFile = (args: {
   contentBase64: string;
   contentType: string;
   originalSize: number;
+  /**
+   * "smart" (default) makes the server re-apply the 10% / 10 KB saving rule.
+   * "manual" is an explicitly admin-confirmed replacement that may be bigger — it never
+   * relaxes the auth, MIME/magic-byte or size checks.
+   */
+  mode?: "smart" | "manual";
 }) => invoke("replace", args);
 
 /**
@@ -111,4 +117,6 @@ export const commitVideoReplacement = (args: {
   newName: string;
   contentType: string;
   enforceSaving?: boolean;
+  /** Same explicit contract as replaceMediaFile. */
+  mode?: "smart" | "manual";
 }) => invoke("commit-video", args);

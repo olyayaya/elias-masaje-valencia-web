@@ -14,6 +14,7 @@ import {
   validateVideoOutputType,
   validateVideoSourceName,
   validateStagedName,
+  isGalleryPublishable,
   validateRenameExtension,
   backupNameFor,
   readHeadFromStream,
@@ -198,6 +199,33 @@ async function usageCounts(admin: Client, names: string[]): Promise<Record<strin
 }
 
 
+/**
+ * True when the object is the media of a PUBLISHED gallery item. Used to refuse a
+ * replacement that would put a MOV (or any non-web container) behind a public player.
+ */
+async function usedByPublishedGallery(admin: Client, fileName: string): Promise<boolean> {
+  const { data, error } = await admin
+    .from("gallery_items")
+    .select("id,media_url,published")
+    .eq("published", true);
+  if (error) {
+    if (isMissingTable(error)) return false;
+    throw new Error(`gallery_items: ${error.message}`);
+  }
+  const needles = nameVariants(fileName);
+  return (data ?? []).some((row: Record<string, unknown>) =>
+    typeof row.media_url === "string" && needles.some((v) => (row.media_url as string).includes(v)));
+}
+
+/**
+ * Explicit replace mode. "smart" must prove a real saving; "manual" is an admin-confirmed
+ * replacement that may be bigger. Manual NEVER relaxes auth, type, magic-byte or size checks
+ * — it only opts out of the saving threshold, and only when sent explicitly.
+ */
+type ReplaceMode = "smart" | "manual";
+const readMode = (body: Record<string, unknown>): ReplaceMode =>
+  body?.mode === "manual" ? "manual" : "smart";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const json = (body: unknown, status = 200) =>
@@ -252,7 +280,10 @@ Deno.serve(async (req) => {
       const stagedName = typeof body?.stagedName === "string" ? body.stagedName.trim() : "";
       const newName = typeof body?.newName === "string" && body.newName.trim() ? body.newName.trim() : fileName;
       const contentType = typeof body?.contentType === "string" ? body.contentType.toLowerCase() : "";
-      const enforceSaving = body?.enforceSaving !== false;
+      const mode = readMode(body);
+      // Legacy callers may still send enforceSaving:false; an explicit manual mode is the
+      // only supported way to skip the threshold going forward.
+      const enforceSaving = mode === "smart" && body?.enforceSaving !== false;
 
       // The staged object must carry the reserved prefix bound to THIS user, and can never
       // be an existing media name.
@@ -267,6 +298,12 @@ Deno.serve(async (req) => {
       if (typeError) {
         await admin.storage.from("media").remove([stagedName]);
         return json({ error: typeError }, 400);
+      }
+
+      // A published gallery video may only ever be replaced by a web container.
+      if (!isGalleryPublishable(newName) && (await usedByPublishedGallery(admin, fileName))) {
+        await admin.storage.from("media").remove([stagedName]);
+        return json({ error: "This video is published in the Gallery — only MP4 or WebM may replace it" }, 409);
       }
 
       const cleanup = async () => { await admin.storage.from("media").remove([stagedName]); };
@@ -438,7 +475,10 @@ Deno.serve(async (req) => {
     const source = await statObject(admin, fileName);
     if (!source.found) return json({ error: "Source file not found" }, 404);
     const originalSize = source.size;
-    const verdict = evaluateSaving(originalSize, bytes.byteLength);
+    const replaceMode = readMode(body);
+    const verdict: ReturnType<typeof evaluateSaving> = replaceMode === "manual"
+      ? { ok: true }
+      : evaluateSaving(originalSize, bytes.byteLength);
     if (!verdict.ok) {
       return json({ error: verdict.message, alreadyCompressed: verdict.alreadyCompressed, originalSize, newSize: bytes.byteLength }, 409);
     }
