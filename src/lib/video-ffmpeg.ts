@@ -274,19 +274,37 @@ export async function convertVideo(
 
   try {
     onProgress?.({ ratio: 0, stage: "reading" });
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(await file.arrayBuffer());
+      if (signal?.aborted) throw cancelled();
+      // MUST be awaited: exec on a half-written virtual FS reads a truncated input.
+      await ff.writeFile(inputName, bytes);
+    } catch (e) {
+      throw engineError("read", e);
+    }
     if (signal?.aborted) throw cancelled();
-    // MUST be awaited: exec on a half-written virtual FS reads a truncated input.
-    await ff.writeFile(inputName, bytes);
-    if (signal?.aborted) throw cancelled();
-    await ff.exec(args);
+    let code: number;
+    try {
+      code = await ff.exec(args);
+    } catch (e) {
+      throw engineError("encode", e);
+    }
+    // Checked BEFORE readFile: a failed encode can leave a stale/partial object behind.
+    if (code !== 0) throw new VideoEngineError("encode", `ffmpeg exit code ${code}`);
     if (signal?.aborted) throw cancelled();
     onProgress?.({ ratio: 1, stage: "finishing" });
-    const data = await ff.readFile(outputName);
-    const out = typeof data === "string" ? new TextEncoder().encode(data) : data;
-    const buffer = out.slice().buffer as ArrayBuffer;
-    const blob = new Blob([buffer], { type: MIME_BY_FORMAT[options.format] });
-    return { blob, size: blob.size };
+    try {
+      const data = await ff.readFile(outputName);
+      const out = typeof data === "string" ? new TextEncoder().encode(data) : data;
+      const buffer = out.slice().buffer as ArrayBuffer;
+      const blob = new Blob([buffer], { type: MIME_BY_FORMAT[options.format] });
+      if (!blob.size) throw new Error("the converter produced an empty file");
+      return { blob, size: blob.size };
+    } catch (e) {
+      throw engineError("output", e);
+    }
+
   } finally {
     signal?.removeEventListener("abort", abort);
     try {
