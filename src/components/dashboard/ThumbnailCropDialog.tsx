@@ -105,15 +105,11 @@ const ThumbnailCropDialog = ({ open, previewUrl, value, onCancel, onSave }: Prop
               className="relative w-full overflow-hidden rounded-lg bg-secondary touch-none cursor-grab active:cursor-grabbing select-none"
               style={{ aspectRatio: "4 / 3" }}
             >
-              <img
-                src={previewUrl}
-                alt=""
-                draggable={false}
-                data-testid="crop-preview-img"
-                style={cropStyle(draft)}
-                className="w-full h-full pointer-events-none"
-              />
+              <div className="absolute inset-0 pointer-events-none">
+                <CropThumb src={previewUrl} alt="" crop={draft} testId="crop-preview-img" />
+              </div>
             </div>
+
 
             <div className="space-y-3">
               <div>
