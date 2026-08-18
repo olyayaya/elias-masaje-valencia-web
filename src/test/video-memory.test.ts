@@ -36,7 +36,12 @@ vi.mock("@ffmpeg/ffmpeg", () => ({
   },
 }));
 
-const file = () => new File([new Uint8Array(64)], "clip.mp4", { type: "video/mp4" });
+// jsdom's File has no arrayBuffer(); the engine only needs the bytes.
+const file = () => {
+  const f = new File([new Uint8Array(64)], "clip.mp4", { type: "video/mp4" });
+  Object.defineProperty(f, "arrayBuffer", { value: async () => new ArrayBuffer(64) });
+  return f;
+};
 const options = {
   format: "webm" as const,
   quality: "balanced" as const,
