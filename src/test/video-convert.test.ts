@@ -154,12 +154,13 @@ describe("output naming", () => {
 });
 
 describe("server-side video rules", () => {
-  it("only allows mp4/webm outputs with matching extensions", () => {
-    expect(Object.keys(ALLOWED_VIDEO_OUTPUT).sort()).toEqual(["video/mp4", "video/webm"]);
+  it("allows mp4/webm/mov outputs with matching extensions", () => {
+    // MOV is an accepted archival output, but it is never gallery-publishable.
+    expect(Object.keys(ALLOWED_VIDEO_OUTPUT).sort()).toEqual(["video/mp4", "video/quicktime", "video/webm"]);
     expect(validateVideoOutputType("video/mp4", "a.mp4")).toBeNull();
     expect(validateVideoOutputType("video/webm", "a.webm")).toBeNull();
+    expect(validateVideoOutputType("video/quicktime", "a.mov")).toBeNull();
     expect(validateVideoOutputType("video/mp4", "a.webm")).toMatch(/does not match/);
-    expect(validateVideoOutputType("video/quicktime", "a.mov")).toMatch(/Unsupported/);
     expect(validateVideoOutputType("image/png", "a.png")).toMatch(/Unsupported/);
   });
 

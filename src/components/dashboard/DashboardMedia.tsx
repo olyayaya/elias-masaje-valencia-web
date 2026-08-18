@@ -1,29 +1,25 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import {
-  Upload, Trash2, Loader2, Copy, Check, AlertTriangle, Sparkles, Pencil, Film, FileQuestion, Play, X, VolumeX,
+  Upload, Trash2, Loader2, AlertTriangle, FilePenLine, Pencil, Film, FileQuestion, Play,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { optimizeImage, formatFileSize } from "@/lib/image-utils";
+import { formatFileSize } from "@/lib/image-utils";
+import { MAX_CONVERT_BYTES } from "@/lib/video-convert";
 import {
   checkMediaUsage,
   checkMediaUsageBatch,
   deleteMediaFile,
   renameMediaFile,
-  replaceMediaFile,
-  MediaGuardError,
   type MediaUsage,
 } from "@/lib/media-usage";
-import { analyzeCompression, blobToBase64 } from "@/lib/media-compress";
 import {
-  collisionSafeName, kindOf, countByKind, classifyUpload, UPLOAD_ACCEPT,
+  kindOf, countByKind, classifyUpload, UPLOAD_ACCEPT,
   type MediaKind,
 } from "@/lib/media-kind";
 import {
   applyFilters, availableExtensions, DEFAULT_FILTERS,
   type LibraryFile, type MediaFilters, type OptState,
 } from "@/lib/media-filters";
-import { MAX_CONVERT_BYTES } from "@/lib/video-convert";
-import { uploadResumable } from "@/lib/video-upload";
 import { useI18n } from "@/i18n/context";
 import { toast } from "sonner";
 import DashboardCard from "./DashboardCard";
@@ -32,10 +28,7 @@ import { COPY, makeL, REASONS, toLang } from "./media/i18n";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -47,11 +40,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { ConverterFile } from "./VideoConverterDialog";
+import type { ProcessingItem } from "./MediaProcessingDialog";
 
-// The ffmpeg engine lives behind this lazy boundary: opening the converter is what pulls
-// the wasm core, never a plain visit to the Library.
-const VideoConverterDialog = lazy(() => import("./VideoConverterDialog"));
+// The ffmpeg engine lives behind this lazy boundary: opening the processing dialog is what
+// pulls the wasm core, never a plain visit to the Library.
+const MediaProcessingDialog = lazy(() => import("./MediaProcessingDialog"));
 
 type DeleteTarget = {
   name: string;
@@ -69,21 +62,15 @@ const DashboardMedia = () => {
 
   const [files, setFiles] = useState<LibraryFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadLabel, setUploadLabel] = useState<string | null>(null);
-  const [uploadPct, setUploadPct] = useState(0);
-  /** Distinguishes the local mute pass from the network transfer in the progress UI. */
-  const [uploadPhase, setUploadPhase] = useState<"processing" | "uploading">("uploading");
-  const [removeAudio, setRemoveAudio] = useState(false);
-  const uploadAbort = useRef<AbortController | null>(null);
 
-  const [copied, setCopied] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [checking, setChecking] = useState<string | null>(null);
   const [target, setTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [compressing, setCompressing] = useState<string | null>(null);
+  /** Files queued for the shared processing dialog — nothing is uploaded until Apply. */
+  const [processing, setProcessing] = useState<ProcessingItem[] | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<LibraryFile | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renaming, setRenaming] = useState(false);
@@ -96,7 +83,6 @@ const DashboardMedia = () => {
   const [usageLoading, setUsageLoading] = useState(false);
   const [optimization, setOptimization] = useState<Record<string, OptState>>({});
 
-  const [converter, setConverter] = useState<ConverterFile | null>(null);
   const [previewing, setPreviewing] = useState<LibraryFile | null>(null);
 
   /** Lists the whole bucket (Storage caps a page at 1000 objects). */
@@ -152,117 +138,56 @@ const DashboardMedia = () => {
   const markOpt = (name: string, state: OptState) =>
     setOptimization((prev) => ({ ...prev, [name]: state }));
 
-  // ---- upload ------------------------------------------------------------
-  const uploadPhoto = async (file: File) => {
-    const optimized = await optimizeImage(file);
-    const name = collisionSafeName(
-      `${file.name.replace(/\.[^.]+$/, "")}.${optimized.ext}`,
-      files.map((f) => f.name),
-    );
-    const { error } = await supabase.storage.from("media").upload(name, optimized.blob, {
-      contentType: optimized.mime,
-      cacheControl: "3600",
-      upsert: false,
-    });
-    if (error) throw new Error(error.message);
-    markOpt(name, "optimized");
-    toast.success(L("uploaded", { n: formatFileSize(optimized.originalSize - optimized.optimizedSize) }));
-  };
-
-  const uploadVideo = async (source: File, payload: Blob, contentType: string) => {
-    const name = collisionSafeName(source.name, files.map((f) => f.name));
-    const controller = new AbortController();
-    uploadAbort.current = controller;
-    setUploadPhase("uploading");
-    setUploadPct(0);
-    await uploadResumable(name, payload, contentType, {
-      signal: controller.signal,
-      onProgress: (sent, total) => setUploadPct(total ? Math.round((sent / total) * 100) : 0),
-    });
-    // A freshly uploaded source has never been analyzed by the converter — muting does
-    // not compress anything, so the verdict stays "not analyzed".
-    markOpt(name, "notAnalyzed");
-    toast.success(L("uploadedVideo", { n: name }));
-  };
-
+  // ---- upload → processing queue -----------------------------------------
   /**
-   * Local, lossless audio removal. Returns null when the file must be SKIPPED — a failed,
-   * unsupported or cancelled mute never falls back to uploading the original with sound.
-   * The ffmpeg helper is imported here (and only here) so the wasm core stays unloaded
-   * until the option is actually used on a video.
+   * Selecting or dropping files never touches storage: everything lands in the shared
+   * processing dialog first, so the operator sees the result before it is uploaded.
    */
-  const muteVideo = async (file: File, mimeType: string): Promise<Blob | null> => {
-    const controller = new AbortController();
-    uploadAbort.current = controller;
-    setUploadPhase("processing");
-    setUploadPct(0);
-    try {
-      const engine = await import("@/lib/video-ffmpeg");
-      if (!engine.isConverterSupported()) {
-        toast.error(L("audioRemovalUnsupported", { f: file.name }));
-        return null;
-      }
-      const res = await engine.stripAudio(
-        file,
-        { fileName: file.name, mimeType },
-        {
-          signal: controller.signal,
-          onProgress: (ratio) => setUploadPct(Math.round(ratio * 100)),
-        },
-      );
-      if (res.hadAudio) toast.success(L("audioRemoved", { f: file.name }));
-      else toast.info(L("noAudioTrack", { f: file.name }));
-      return res.blob;
-    } catch (err) {
-      if ((err as DOMException)?.name === "AbortError") toast.info(L("audioRemovalCancelled", { f: file.name }));
-      else toast.error(L("audioRemovalFailed", { f: file.name }));
-      return null;
-    }
-  };
-
-  const handleUpload = async (fileList: FileList) => {
-    setUploading(true);
-    for (const file of Array.from(fileList)) {
-      // Extension-driven allowlist: only JPG/PNG/WebP… and MP4/MOV/M4V/WebM get through.
+  const queueUploads = (fileList: FileList) => {
+    const items: ProcessingItem[] = [];
+    Array.from(fileList).forEach((file, i) => {
       const verdict = classifyUpload(file);
-      setUploadLabel(file.name);
-      setUploadPct(0);
-      setUploadPhase("uploading");
-      try {
-        if (!verdict.ok) {
-          toast.error(L("skippedUnsupported", { f: file.name }));
-          continue;
-        }
-        if (verdict.kind === "photo") {
-          // Images never go through the video preprocessing path.
-          await uploadPhoto(file);
-        } else {
-          if (file.size > MAX_UPLOAD_VIDEO) {
-            toast.error(L("tooBig", { f: file.name, m: Math.round(MAX_UPLOAD_VIDEO / (1024 * 1024)) }));
-            continue;
-          }
-          let payload: Blob = file;
-          if (removeAudio) {
-            const muted = await muteVideo(file, verdict.mimeType);
-            if (!muted) continue; // skip this file, keep going with the rest
-            payload = muted;
-          }
-          await uploadVideo(file, payload, verdict.mimeType);
-        }
-      } catch (err) {
-        if ((err as DOMException)?.name === "AbortError") toast.info(L("uploadCancelled"));
-        else toast.error((err as Error).message || L("uploadFailed"));
-      } finally {
-        uploadAbort.current = null;
+      if (!verdict.ok) {
+        toast.error(L("skippedUnsupported", { f: file.name }));
+        return;
       }
-    }
-    setUploading(false);
-    setUploadLabel(null);
-    setUploadPhase("uploading");
-    await fetchFiles();
+      if (verdict.kind === "video" && file.size > MAX_UPLOAD_VIDEO) {
+        toast.error(L("tooBig", { f: file.name, m: Math.round(MAX_UPLOAD_VIDEO / (1024 * 1024)) }));
+        return;
+      }
+      items.push({ id: `up-${Date.now()}-${i}-${file.name}`, file, kind: verdict.kind });
+    });
+    if (items.length) setProcessing(items);
   };
 
-
+  /** Edit/Replace an existing object: download the original, then reuse the same dialog. */
+  const openEditor = async (f: LibraryFile) => {
+    const kind = kindOf(f);
+    if (kind === "other") return;
+    setOpening(f.name);
+    try {
+      const { data, error } = await supabase.storage.from("media").download(f.name);
+      if (error || !data) throw new Error(error?.message || L("openFailed", { f: f.name }));
+      const file = new File([data], f.name, { type: data.type || f.mimeType || "" });
+      let publishedInGallery = false;
+      try {
+        const usageResult = await checkMediaUsage(f.name);
+        publishedInGallery = (usageResult.usages ?? []).some((u) => /gallery|galer/i.test(u.entity));
+      } catch {
+        // The server guard is authoritative; a failed pre-check only loses a local hint.
+      }
+      setProcessing([{
+        id: `edit-${Date.now()}-${f.name}`,
+        file,
+        kind,
+        replace: { name: f.name, size: f.size, publishedInGallery },
+      }]);
+    } catch (err) {
+      toast.error((err as Error).message || L("openFailed", { f: f.name }));
+    } finally {
+      setOpening(null);
+    }
+  };
 
   /** Reports the server outcome honestly: warning stays a warning, never a plain success. */
   const reportOutcome = (message: string, result: { updatedReferences?: number; historyReferences?: number; aliased?: boolean; warning?: string }) => {
@@ -272,50 +197,6 @@ const DashboardMedia = () => {
     const text = parts.join(" · ");
     if (result.warning) toast.warning(`${text} — ${L("leftover", { m: result.warning })}`);
     else toast.success(text);
-  };
-
-  const handleCompress = async (file: LibraryFile) => {
-    setCompressing(file.name);
-    try {
-      const outcome = await analyzeCompression(file.url, file.name);
-      if (outcome.status === "unsupported") {
-        markOpt(file.name, "unsupported");
-        toast.error(L("cannotCompress", { f: file.name, r: REASONS[outcome.reason][lang] ?? REASONS[outcome.reason].en }));
-        return;
-      }
-      if (outcome.status === "already") {
-        markOpt(file.name, "optimized");
-        toast.success(L("already"));
-        return;
-      }
-      const result = await replaceMediaFile({
-        fileName: file.name,
-        newName: outcome.newName,
-        contentBase64: await blobToBase64(outcome.blob),
-        contentType: outcome.contentType,
-        originalSize: outcome.originalSize,
-      });
-      markOpt(result.newName ?? outcome.newName, "optimized");
-      reportOutcome(
-        L("compressed", {
-          a: formatFileSize(outcome.originalSize),
-          b: formatFileSize(result.newSize ?? outcome.newSize),
-          p: outcome.savedPercent,
-        }),
-        result,
-      );
-      await fetchFiles();
-    } catch (err) {
-      // The server re-applies the threshold against the real stored size — respect its verdict.
-      if (err instanceof MediaGuardError && err.alreadyCompressed) {
-        markOpt(file.name, "optimized");
-        toast.success(L("already"));
-      } else {
-        toast.error((err as Error).message || L("compressFailed"));
-      }
-    } finally {
-      setCompressing(null);
-    }
   };
 
   const openRename = (file: LibraryFile) => {
@@ -384,12 +265,6 @@ const DashboardMedia = () => {
     }
   };
 
-  const copyUrl = (url: string) => {
-    navigator.clipboard.writeText(url);
-    setCopied(url);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   const blocked = (target?.usages.length ?? 0) > 0;
@@ -413,63 +288,25 @@ const DashboardMedia = () => {
           onDrop={(e) => {
             e.preventDefault();
             setDragging(false);
-            if (e.dataTransfer.files.length) void handleUpload(e.dataTransfer.files);
+            if (e.dataTransfer.files.length) queueUploads(e.dataTransfer.files);
           }}
-          onClick={() => { if (!uploading) inputRef.current?.click(); }}
+          onClick={() => inputRef.current?.click()}
         >
-          {uploading ? (
-            <Loader2 size={24} className="mx-auto text-muted-foreground mb-3 animate-spin" />
-          ) : (
-            <Upload size={24} className="mx-auto text-muted-foreground/50 mb-3" />
-          )}
+          <Upload size={24} className="mx-auto text-muted-foreground/50 mb-3" />
           <p className="text-sm text-muted-foreground">
-            {uploading
-              ? (uploadLabel
-                  ? L(uploadPhase === "processing" ? "removingAudio" : "uploadingFile", { f: uploadLabel, p: uploadPct })
-                  : L("uploading"))
-              : <>{L("dropHere")} <span className="text-foreground underline">{L("browse")}</span></>}
+            {L("dropHere")} <span className="text-foreground underline">{L("browse")}</span>
           </p>
-          {uploading && uploadAbort.current && (
-            <div className="max-w-sm mx-auto mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-              <Progress value={uploadPct} />
-              <Button variant="ghost" size="sm" onClick={() => uploadAbort.current?.abort()}>
-                <X size={14} className="mr-1" />{L("cancel")}
-              </Button>
-            </div>
-          )}
           <p className="text-xs text-muted-foreground/70 mt-1">{L("formats")}</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">{L("processBeforeUpload")}</p>
           <input
             ref={inputRef}
             type="file"
             accept={UPLOAD_ACCEPT}
             multiple
             className="hidden"
-            onChange={(e) => { if (e.target.files) void handleUpload(e.target.files); e.target.value = ""; }}
+            onChange={(e) => { if (e.target.files) queueUploads(e.target.files); e.target.value = ""; }}
           />
         </div>
-
-        {/* Video-only preprocessing option. Clicks stay out of the drop zone. */}
-        <div className="mt-4 flex flex-wrap items-start gap-3">
-          <Switch
-            id="remove-audio"
-            checked={removeAudio}
-            onCheckedChange={(v) => setRemoveAudio(Boolean(v))}
-            disabled={uploading}
-            aria-describedby="remove-audio-hint"
-          />
-          <div className="flex-1 min-w-[12rem]">
-            <Label htmlFor="remove-audio" className="text-sm cursor-pointer">
-              <span className="inline-flex items-center gap-1.5">
-                <VolumeX size={14} aria-hidden="true" />
-                {L("removeAudio")}
-              </span>
-            </Label>
-            <p id="remove-audio-hint" className="text-xs text-muted-foreground/80 mt-1">
-              {L("removeAudioHint")}
-            </p>
-          </div>
-        </div>
-
       </DashboardCard>
 
       <DashboardCard
@@ -536,36 +373,26 @@ const DashboardMedia = () => {
                     </div>
                     {kind === "video" && <Badge variant="outline" className="shrink-0">{L("videos")}</Badge>}
                     <div className="flex items-center gap-1 ml-auto">
-                      {kind === "photo" && (
+                      {kind === "video" && (
                         <button
-                          onClick={() => void handleCompress(f)}
-                          disabled={compressing === f.name}
-                          aria-label={`${L("compress")} ${f.name}`}
-                          title={L("compress")}
+                          onClick={() => setPreviewing(f)}
+                          aria-label={`${L("preview")} ${f.name}`}
+                          title={L("preview")}
                           className={`${iconBtn} text-muted-foreground hover:text-foreground`}
                         >
-                          {compressing === f.name ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                          <Play size={14} />
                         </button>
                       )}
-                      {kind === "video" && (
-                        <>
-                          <button
-                            onClick={() => setPreviewing(f)}
-                            aria-label={`${L("preview")} ${f.name}`}
-                            title={L("preview")}
-                            className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                          >
-                            <Play size={14} />
-                          </button>
-                          <button
-                            onClick={() => setConverter({ name: f.name, url: f.url, size: f.size })}
-                            aria-label={`${L("convert")} ${f.name}`}
-                            title={L("convert")}
-                            className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                          >
-                            <Sparkles size={14} />
-                          </button>
-                        </>
+                      {kind !== "other" && (
+                        <button
+                          onClick={() => void openEditor(f)}
+                          disabled={opening === f.name}
+                          aria-label={`${L("editReplace")} ${f.name}`}
+                          title={L("editReplace")}
+                          className={`${iconBtn} text-muted-foreground hover:text-foreground`}
+                        >
+                          {opening === f.name ? <Loader2 size={14} className="animate-spin" /> : <FilePenLine size={14} />}
+                        </button>
                       )}
                       <button
                         onClick={() => openRename(f)}
@@ -574,14 +401,6 @@ const DashboardMedia = () => {
                         className={`${iconBtn} text-muted-foreground hover:text-foreground`}
                       >
                         <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => copyUrl(f.url)}
-                        aria-label={`${L("copyUrl")} ${f.name}`}
-                        title={L("copyUrl")}
-                        className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                      >
-                        {copied === f.url ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
                       </button>
                       <button
                         onClick={() => void requestDelete(f.name)}
@@ -609,17 +428,17 @@ const DashboardMedia = () => {
         </div>
       </DashboardCard>
 
-      {converter && (
+      {processing && (
         <Suspense fallback={null}>
-          <VideoConverterDialog
-            file={converter}
+          <MediaProcessingDialog
+            items={processing}
             L={L}
-            onVerdict={(name, state) => markOpt(name, state)}
-            onClose={() => setConverter(null)}
-            onReplaced={(result, newName) => {
-              setConverter(null);
+            existingNames={files.map((f) => f.name)}
+            onClose={() => setProcessing(null)}
+            onApplied={(name, replacedName) => {
+              markOpt(name, "optimized");
               setUsage(null);
-              reportOutcome(L("replaced", { n: newName }), result);
+              toast.success(replacedName ? L("replaced", { n: name }) : L("uploadedVideo", { n: name }));
               void fetchFiles();
             }}
           />

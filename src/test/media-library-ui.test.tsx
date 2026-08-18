@@ -21,14 +21,14 @@ vi.mock("sonner", () => ({
 }));
 
 /**
- * The converter module is the only place that imports ffmpeg. Mocking it here proves the
+ * The processing dialog is the only place that imports ffmpeg. Mocking it here proves the
  * Library renders (and lists videos) without ever touching the wasm engine.
  */
-const converterLoaded = vi.fn();
-vi.mock("@/components/dashboard/VideoConverterDialog", () => ({
-  default: (props: { file: { name: string }; onClose: () => void }) => {
-    converterLoaded(props.file.name);
-    return <div role="dialog">converter:{props.file.name}</div>;
+const dialogLoaded = vi.fn();
+vi.mock("@/components/dashboard/MediaProcessingDialog", () => ({
+  default: (props: { items: { file: { name: string }; replace?: { name: string } }[] }) => {
+    dialogLoaded(props.items.map((i) => i.replace?.name ?? i.file.name));
+    return <div role="dialog">processing</div>;
   },
 }));
 
@@ -43,6 +43,7 @@ vi.mock("@/integrations/supabase/client", () => ({
     storage: {
       from: () => ({
         list: async () => ({ data: OBJECTS, error: null }),
+        download: async (n: string) => ({ data: new Blob(["x"], { type: "image/webp" }), error: null, name: n }),
         getPublicUrl: (n: string) => ({ data: { publicUrl: `https://cdn.test/${n}` } }),
         remove: vi.fn(),
       }),
@@ -85,22 +86,23 @@ describe("Library categories", () => {
     expect(screen.queryByText("notes.pdf")).not.toBeInTheDocument();
   });
 
-  it("offers compression for photos and conversion for videos, never the other way round", async () => {
+  it("offers one Edit or replace action for photos and videos, and none for unknown files", async () => {
     await renderLibrary();
-    expect(screen.getByLabelText("Smart compress hero.webp")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Smart compress promo.mp4")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Convert video promo.mp4")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Convert video hero.webp")).not.toBeInTheDocument();
-    // Unknown files get neither optimizer.
-    expect(screen.queryByLabelText("Smart compress notes.pdf")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Convert video notes.pdf")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Edit or replace hero.webp")).toBeInTheDocument();
+    expect(screen.getByLabelText("Edit or replace promo.mp4")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Edit or replace notes.pdf")).not.toBeInTheDocument();
   });
 
-  it("loads the converter only when a video conversion is requested", async () => {
+  it("no longer exposes Copy URL anywhere in the list", async () => {
+    await renderLibrary();
+    expect(screen.queryByLabelText(/Copy URL/i)).not.toBeInTheDocument();
+  });
+
+  it("loads the processing dialog only when an edit is requested", async () => {
     const user = await renderLibrary();
-    expect(converterLoaded).not.toHaveBeenCalled();
-    await user.click(screen.getByLabelText("Convert video promo.mp4"));
-    await waitFor(() => expect(converterLoaded).toHaveBeenCalledWith("promo.mp4"));
+    expect(dialogLoaded).not.toHaveBeenCalled();
+    await user.click(screen.getByLabelText("Edit or replace hero.webp"));
+    await waitFor(() => expect(dialogLoaded).toHaveBeenCalledWith(["hero.webp"]));
   });
 
   it("searches by name", async () => {

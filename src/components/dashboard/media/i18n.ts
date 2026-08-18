@@ -282,7 +282,46 @@ export const COPY = {
     es: "Una vez aplicado, la versión anterior no se conserva: revisa el resultado antes de aplicar.",
     ru: "После применения предыдущая версия не сохраняется — проверьте результат до применения.",
   },
-} as const;
+  openingFile: { en: "Opening {f}…", es: "Abriendo {f}…", ru: "Открытие {f}…" },
+  processBeforeUpload: {
+    en: "Files open in the editor first — nothing is uploaded until you apply.",
+    es: "Los archivos se abren primero en el editor: nada se sube hasta que apliques.",
+    ru: "Файлы сначала открываются в редакторе — ничего не загружается до применения.",
+  },
+  openFailed: { en: "Could not open {f}", es: "No se pudo abrir {f}", ru: "Не удалось открыть {f}" },
+  tooBigEngine: {
+    en: "This video is larger than {m} MB — the in-browser encoder cannot process it. Upload a smaller file or compress it outside the browser.",
+    es: "Este vídeo supera los {m} MB: el codificador del navegador no puede procesarlo. Sube un archivo más pequeño o comprímelo fuera del navegador.",
+    ru: "Видео больше {m} МБ — браузерный кодировщик не может его обработать. Загрузите файл меньше или сожмите его вне браузера.",
+  },
+  resultBigger: {
+    en: "The result ({b}) is LARGER than the original ({a}).",
+    es: "El resultado ({b}) es MÁS GRANDE que el original ({a}).",
+    ru: "Результат ({b}) БОЛЬШЕ оригинала ({a}).",
+  },
+  resultMarginal: {
+    en: "The result ({b}) saves less than the 10% / 10 KB threshold (original {a}).",
+    es: "El resultado ({b}) ahorra menos del umbral del 10% / 10 KB (original {a}).",
+    ru: "Экономия результата ({b}) меньше порога 10% / 10 КБ (оригинал {a}).",
+  },
+  manualUnavailable: {
+    en: "Forced replacement needs the updated media-guard function, which is not deployed yet. Replacing an existing file is only possible when the result really saves space.",
+    es: "El reemplazo forzado necesita la función media-guard actualizada, que aún no está desplegada. Solo se puede reemplazar un archivo existente cuando el resultado ahorra espacio de verdad.",
+    ru: "Принудительная замена требует обновлённой функции media-guard, которая ещё не развёрнута. Заменить существующий файл можно только при реальной экономии размера.",
+  },
+  movReplaceBlocked: {
+    en: "An existing library video can only be replaced by MP4 or WebM.",
+    es: "Un vídeo existente solo puede reemplazarse por MP4 o WebM.",
+    ru: "Существующее видео можно заменить только на MP4 или WebM.",
+  },
+  showOriginal: { en: "Original", es: "Original", ru: "Оригинал" },
+  showResult: { en: "Result", es: "Resultado", ru: "Результат" },
+  noRollback: {
+    en: "After Apply the previous version is not kept — long-term rollback is not available yet, so check the comparison first.",
+    es: "Tras aplicar no se conserva la versión anterior: todavía no hay reversión a largo plazo, revisa antes la comparación.",
+    ru: "После применения предыдущая версия не сохраняется — долговременный откат пока недоступен, сначала сверьте сравнение.",
+  },
+};
 
 export const REASONS: Record<UnsupportedReason, Record<Lang, string>> = {
   gif: {
