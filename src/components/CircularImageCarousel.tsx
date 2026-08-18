@@ -250,7 +250,7 @@ const CircularImageCarousel = ({
       <div className="max-w-5xl mx-auto">
         <div
           ref={containerRef}
-          className="relative overflow-hidden md:rounded-2xl"
+          className={`relative overflow-hidden ${frame === "card" ? "rounded-2xl" : "md:rounded-2xl"}`}
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
@@ -273,7 +273,7 @@ const CircularImageCarousel = ({
                 className="shrink-0 px-0 md:px-3"
                 style={{ width: `${slidePct}%` }}
               >
-                <div className="rounded-none md:rounded-2xl overflow-hidden w-full aspect-[9/8] md:aspect-[3/2] bg-secondary">
+                <div className={`overflow-hidden w-full aspect-[9/8] md:aspect-[3/2] bg-secondary ${frame === "card" ? "rounded-2xl border border-border/50" : "rounded-none md:rounded-2xl"}`}>
                   <img
                     src={img.src}
                     alt={img.alt}
