@@ -202,9 +202,12 @@ const DashboardGallery = () => {
   };
 
   /**
-   * Bulk add: one INSERT for the whole selection. Every new row starts unpublished
-   * with an empty poster and a sort_order that continues the existing list, so no two
-   * rows fight over the same slot. Files already present in the gallery are skipped
+   * Bulk add: one INSERT for the whole selection. A PHOTO added here is what the
+   * owner wants visitors to see, so it is created already published as long as it
+   * carries a file. A VIDEO always starts hidden: it still needs a static cover and
+   * a web-playable container (publishIssues/canPublish stay the gate for that).
+   * Every row gets an empty poster and a sort_order that continues the existing list,
+   * so no two rows fight over the same slot. Files already present are skipped
    * (never removed or re-created) and reported back to the admin.
    */
   const addItems = async (kind: "photo" | "video", urls: string[]): Promise<boolean> => {
@@ -229,7 +232,7 @@ const DashboardGallery = () => {
       // image, so it never carries a poster — the grid derives its thumbnail itself.
       poster_url: "",
       sort_order: maxOrder + idx + 1,
-      published: false,
+      published: kind === "photo" && !!url.trim(),
     }));
     const { error: err } = await galleryTable().insert(rows);
     if (err) {
@@ -237,14 +240,20 @@ const DashboardGallery = () => {
       toast.error(c("saveFailed"));
       return false;
     }
+    const single = urls.length === 1 && skipped === 0;
     toast.success(
-      urls.length === 1 && skipped === 0
-        ? c("added")
-        : c("addedMany", { added: String(fresh.length), skipped: String(skipped) }),
+      kind === "photo"
+        ? single
+          ? c("addedPhoto")
+          : c("addedPhotoMany", { added: String(fresh.length), skipped: String(skipped) })
+        : single
+          ? c("addedVideo")
+          : c("addedVideoMany", { added: String(fresh.length), skipped: String(skipped) }),
     );
     refresh();
     return true;
   };
+
 
 
   /**
