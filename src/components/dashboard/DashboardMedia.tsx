@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatFileSize } from "@/lib/image-utils";
+import { MAX_CONVERT_BYTES } from "@/lib/video-convert";
 import {
   checkMediaUsage,
   checkMediaUsageBatch,

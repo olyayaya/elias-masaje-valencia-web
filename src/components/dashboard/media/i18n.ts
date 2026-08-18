@@ -283,6 +283,11 @@ export const COPY = {
     ru: "После применения предыдущая версия не сохраняется — проверьте результат до применения.",
   },
   openingFile: { en: "Opening {f}…", es: "Abriendo {f}…", ru: "Открытие {f}…" },
+  processBeforeUpload: {
+    en: "Files open in the editor first — nothing is uploaded until you apply.",
+    es: "Los archivos se abren primero en el editor: nada se sube hasta que apliques.",
+    ru: "Файлы сначала открываются в редакторе — ничего не загружается до применения.",
+  },
   openFailed: { en: "Could not open {f}", es: "No se pudo abrir {f}", ru: "Не удалось открыть {f}" },
   tooBigEngine: {
     en: "This video is larger than {m} MB — the in-browser encoder cannot process it. Upload a smaller file or compress it outside the browser.",
