@@ -287,63 +287,25 @@ const DashboardMedia = () => {
           onDrop={(e) => {
             e.preventDefault();
             setDragging(false);
-            if (e.dataTransfer.files.length) void handleUpload(e.dataTransfer.files);
+            if (e.dataTransfer.files.length) queueUploads(e.dataTransfer.files);
           }}
-          onClick={() => { if (!uploading) inputRef.current?.click(); }}
+          onClick={() => inputRef.current?.click()}
         >
-          {uploading ? (
-            <Loader2 size={24} className="mx-auto text-muted-foreground mb-3 animate-spin" />
-          ) : (
-            <Upload size={24} className="mx-auto text-muted-foreground/50 mb-3" />
-          )}
+          <Upload size={24} className="mx-auto text-muted-foreground/50 mb-3" />
           <p className="text-sm text-muted-foreground">
-            {uploading
-              ? (uploadLabel
-                  ? L(uploadPhase === "processing" ? "removingAudio" : "uploadingFile", { f: uploadLabel, p: uploadPct })
-                  : L("uploading"))
-              : <>{L("dropHere")} <span className="text-foreground underline">{L("browse")}</span></>}
+            {L("dropHere")} <span className="text-foreground underline">{L("browse")}</span>
           </p>
-          {uploading && uploadAbort.current && (
-            <div className="max-w-sm mx-auto mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-              <Progress value={uploadPct} />
-              <Button variant="ghost" size="sm" onClick={() => uploadAbort.current?.abort()}>
-                <X size={14} className="mr-1" />{L("cancel")}
-              </Button>
-            </div>
-          )}
           <p className="text-xs text-muted-foreground/70 mt-1">{L("formats")}</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">{L("processBeforeUpload")}</p>
           <input
             ref={inputRef}
             type="file"
             accept={UPLOAD_ACCEPT}
             multiple
             className="hidden"
-            onChange={(e) => { if (e.target.files) void handleUpload(e.target.files); e.target.value = ""; }}
+            onChange={(e) => { if (e.target.files) queueUploads(e.target.files); e.target.value = ""; }}
           />
         </div>
-
-        {/* Video-only preprocessing option. Clicks stay out of the drop zone. */}
-        <div className="mt-4 flex flex-wrap items-start gap-3">
-          <Switch
-            id="remove-audio"
-            checked={removeAudio}
-            onCheckedChange={(v) => setRemoveAudio(Boolean(v))}
-            disabled={uploading}
-            aria-describedby="remove-audio-hint"
-          />
-          <div className="flex-1 min-w-[12rem]">
-            <Label htmlFor="remove-audio" className="text-sm cursor-pointer">
-              <span className="inline-flex items-center gap-1.5">
-                <VolumeX size={14} aria-hidden="true" />
-                {L("removeAudio")}
-              </span>
-            </Label>
-            <p id="remove-audio-hint" className="text-xs text-muted-foreground/80 mt-1">
-              {L("removeAudioHint")}
-            </p>
-          </div>
-        </div>
-
       </DashboardCard>
 
       <DashboardCard
@@ -410,36 +372,26 @@ const DashboardMedia = () => {
                     </div>
                     {kind === "video" && <Badge variant="outline" className="shrink-0">{L("videos")}</Badge>}
                     <div className="flex items-center gap-1 ml-auto">
-                      {kind === "photo" && (
+                      {kind === "video" && (
                         <button
-                          onClick={() => void handleCompress(f)}
-                          disabled={compressing === f.name}
-                          aria-label={`${L("compress")} ${f.name}`}
-                          title={L("compress")}
+                          onClick={() => setPreviewing(f)}
+                          aria-label={`${L("preview")} ${f.name}`}
+                          title={L("preview")}
                           className={`${iconBtn} text-muted-foreground hover:text-foreground`}
                         >
-                          {compressing === f.name ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                          <Play size={14} />
                         </button>
                       )}
-                      {kind === "video" && (
-                        <>
-                          <button
-                            onClick={() => setPreviewing(f)}
-                            aria-label={`${L("preview")} ${f.name}`}
-                            title={L("preview")}
-                            className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                          >
-                            <Play size={14} />
-                          </button>
-                          <button
-                            onClick={() => setConverter({ name: f.name, url: f.url, size: f.size })}
-                            aria-label={`${L("convert")} ${f.name}`}
-                            title={L("convert")}
-                            className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                          >
-                            <Sparkles size={14} />
-                          </button>
-                        </>
+                      {kind !== "other" && (
+                        <button
+                          onClick={() => void openEditor(f)}
+                          disabled={opening === f.name}
+                          aria-label={`${L("editReplace")} ${f.name}`}
+                          title={L("editReplace")}
+                          className={`${iconBtn} text-muted-foreground hover:text-foreground`}
+                        >
+                          {opening === f.name ? <Loader2 size={14} className="animate-spin" /> : <FilePenLine size={14} />}
+                        </button>
                       )}
                       <button
                         onClick={() => openRename(f)}
@@ -448,14 +400,6 @@ const DashboardMedia = () => {
                         className={`${iconBtn} text-muted-foreground hover:text-foreground`}
                       >
                         <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => copyUrl(f.url)}
-                        aria-label={`${L("copyUrl")} ${f.name}`}
-                        title={L("copyUrl")}
-                        className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                      >
-                        {copied === f.url ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
                       </button>
                       <button
                         onClick={() => void requestDelete(f.name)}
@@ -483,17 +427,17 @@ const DashboardMedia = () => {
         </div>
       </DashboardCard>
 
-      {converter && (
+      {processing && (
         <Suspense fallback={null}>
-          <VideoConverterDialog
-            file={converter}
+          <MediaProcessingDialog
+            items={processing}
             L={L}
-            onVerdict={(name, state) => markOpt(name, state)}
-            onClose={() => setConverter(null)}
-            onReplaced={(result, newName) => {
-              setConverter(null);
+            existingNames={files.map((f) => f.name)}
+            onClose={() => setProcessing(null)}
+            onApplied={(name, replacedName) => {
+              markOpt(name, "optimized");
               setUsage(null);
-              reportOutcome(L("replaced", { n: newName }), result);
+              toast.success(replacedName ? L("replaced", { n: name }) : L("uploadedVideo", { n: name }));
               void fetchFiles();
             }}
           />
