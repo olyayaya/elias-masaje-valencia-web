@@ -334,18 +334,16 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
   // Processing verdict: an honest comparison of the SELECTED source with the Result.
   const verdict = result ? evaluate(sourceSize, result.size) : null;
-  // Replacement verdict: measured against the STORED target, which is what media-guard checks.
-  const replaceVerdict = result ? evaluate(storedSize, result.size) : null;
-  const savingOk = !!replaceVerdict?.ok;
   const bigger = !!verdict && !verdict.ok && verdict.savedBytes <= 0;
 
 
-  // Replacement is additionally gated by what the DEPLOYED media-guard really accepts.
+  // Replacement is additionally gated by what the DEPLOYED media-guard really accepts
+  // (container policy + gallery guard). The saving threshold is not a gate any more.
   const gate: import("@/lib/media-backend").ReplaceGate = result && current.replace
     ? replaceGate({
         kind: current.kind,
         outputName: result.name,
-        savingOk,
+
         publishedInGallery: current.replace.publishedInGallery,
       })
     : { allowed: true };
