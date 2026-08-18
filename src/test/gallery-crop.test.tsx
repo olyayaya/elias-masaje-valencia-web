@@ -44,7 +44,15 @@ describe("crop helper", () => {
       thumbnail_x: 0, thumbnail_y: 100, thumbnail_zoom: 3,
     });
     expect(clampCrop({ thumbnail_x: NaN, thumbnail_y: Infinity, thumbnail_zoom: -Infinity })).toEqual(CROP_DEFAULTS);
-    expect(clampCrop({ thumbnail_zoom: 0.2 }).thumbnail_zoom).toBe(1);
+    expect(clampCrop({ thumbnail_zoom: 0.2 }).thumbnail_zoom).toBe(0.5);
+  });
+
+  it("allows zooming out below 1 and keeps 1 as the default for legacy rows", () => {
+    expect(clampCrop({ thumbnail_zoom: 0.65 }).thumbnail_zoom).toBe(0.65);
+    expect(cropForSave({ thumbnail_zoom: 0.6543 }).thumbnail_zoom).toBe(0.65);
+    // Old rows that never stored a zoom keep the historic object-cover framing.
+    expect(clampCrop({ thumbnail_x: 40 }).thumbnail_zoom).toBe(1);
+    expect(cropStyle({ thumbnail_x: 40 }, 0.66).transform).toContain("scale(");
   });
 
   it("rounds values before saving", () => {
@@ -60,10 +68,29 @@ describe("crop helper", () => {
     expect(s.objectPosition).toBe("20% 80%");
   });
 
+  it("reproduces object-cover exactly at zoom 1 for a portrait image", () => {
+    // 3:4 portrait in a 4:3 frame => cover factor 16/9.
+    const s = cropStyle({ thumbnail_zoom: 1 }, 3 / 4);
+    expect(s.objectFit).toBe("contain");
+    expect(s.transform).toBe("translate(0.000%, 0.000%) scale(1.7778)");
+  });
+
+  it("zooming out below 1 shows more of the original, never an extra hidden cover zoom", () => {
+    const cover = cropStyle({ thumbnail_zoom: 1 }, 3 / 4).transform as string;
+    const out = cropStyle({ thumbnail_zoom: 0.7 }, 3 / 4).transform as string;
+    const scale = (t: string) => Number(t.match(/scale\(([\d.]+)\)/)![1]);
+    expect(scale(out)).toBeLessThan(scale(cover));
+    expect(scale(out)).toBeCloseTo(scale(cover) * 0.7, 3);
+  });
+
   it("produces one identical style for dashboard preview and public grid", () => {
     const crop = { thumbnail_x: 12, thumbnail_y: 88, thumbnail_zoom: 1.5 };
     expect(cropStyle(item(crop))).toEqual(cropStyle(crop));
+    expect(cropStyle(item(crop), 3 / 4)).toEqual(cropStyle(crop, 3 / 4));
+    const zoomedOut = { thumbnail_x: 30, thumbnail_y: 20, thumbnail_zoom: 0.65 };
+    expect(cropStyle(item(zoomedOut), 3 / 4)).toEqual(cropStyle(zoomedOut, 3 / 4));
   });
+
 });
 
 const wrap = (ui: React.ReactNode) => render(<I18nProvider>{ui}</I18nProvider>);
