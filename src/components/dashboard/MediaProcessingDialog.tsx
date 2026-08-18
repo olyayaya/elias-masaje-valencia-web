@@ -21,7 +21,7 @@ import { removeObject, stagedObjectName, uploadResumable } from "@/lib/video-upl
 import { replaceGate } from "@/lib/media-backend";
 import {
   DEFAULT_BACKGROUND, MAX_QUALITY, MIN_QUALITY,
-  availablePhotoFormats, clampQuality, evaluatePhotoSaving, mayHaveAlpha,
+  availablePhotoFormats, clampQuality, evaluatePhotoSaving, loadImageElement, mayHaveAlpha,
   photoOutputName, photoTargetDimensions, probePhotoCaps, smartPhotoPreset, supportsQuality,
   willFlattenAlpha,
   type PhotoFormat, type PhotoSettings, type SizeChoice,
@@ -170,7 +170,6 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   // ---- per-item initialization -------------------------------------------
   useEffect(() => {
     if (!current) return;
-    console.log("EFFECT", current.id, current.file.name);
     let cancelled = false;
     dropResult();
     setError(null);
@@ -191,7 +190,6 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     (async () => {
       if (current.kind === "photo") {
         try {
-          console.log("IMPORTING", current.id); const { loadImageElement } = await import("@/lib/photo-encode"); console.log("IMPORTED", current.id, String(loadImageElement).slice(0,60));
           const img = await loadImageElement(current.file);
           if (cancelled || !aliveRef.current) return;
           const src = {
@@ -202,7 +200,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           setPhotoSource(src);
           setPhoto(carryPhoto.current ?? smartPhotoPreset({ ...src, mime: current.file.type }, photoCaps));
         } catch {
-          console.log("CATCH", current.id); if (!cancelled) setError(L("processFailed"));
+          if (!cancelled) setError(L("processFailed"));
         } finally {
           if (!cancelled && aliveRef.current) setAnalyzing(false);
         }
