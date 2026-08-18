@@ -323,15 +323,19 @@ async function runConversion(
 
   try {
     onProgress?.({ ratio: 0, stage: "reading" });
-    let bytes: Uint8Array;
+    let bytes: Uint8Array | null;
     try {
       bytes = new Uint8Array(await file.arrayBuffer());
       if (signal?.aborted) throw cancelled();
       // MUST be awaited: exec on a half-written virtual FS reads a truncated input.
       await ff.writeFile(inputName, bytes);
+      // The bytes now live in the wasm FS; holding the JS copy as well doubles the peak
+      // footprint of a 30 MB clip for no reason.
+      bytes = null;
     } catch (e) {
       throw engineError("read", e);
     }
+
     if (signal?.aborted) throw cancelled();
     let code: number;
     try {
