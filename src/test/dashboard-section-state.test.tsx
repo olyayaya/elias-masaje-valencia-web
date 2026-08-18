@@ -83,6 +83,22 @@ describe("dashboard section persistence", () => {
     expect(screen.getAllByRole("button", { name: /History|Historial|История/ }).length).toBeGreaterThan(0);
   });
 
+  it("keeps More expanded while a secondary section is active and restores the choice after", async () => {
+    const user = userEvent.setup();
+    mount("/dashboard?section=integrations");
+    const more = screen.getByRole("button", { name: /More/ });
+    expect(more).toBeDisabled();
+    // Clicking cannot hide the active item.
+    await user.click(more).catch(() => {});
+    expect(screen.getAllByRole("button", { name: /History|Historial|История/ }).length).toBeGreaterThan(0);
+
+    // Back on a primary section the user's own collapsed preference applies again.
+    await user.click(screen.getAllByRole("button", { name: /Library|Biblioteca|Библиотека/ })[0]);
+    await screen.findByText("LIBRARY");
+    expect(screen.getByRole("button", { name: /More/ })).not.toBeDisabled();
+    expect(screen.queryByRole("button", { name: /History|Historial|История/ })).not.toBeInTheDocument();
+  });
+
   it("never renders an unknown section and falls back safely", async () => {
     mount("/dashboard?section=../../etc/passwd");
     expect(screen.getByText("OVERVIEW")).toBeInTheDocument();

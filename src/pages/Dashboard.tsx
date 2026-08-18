@@ -92,23 +92,24 @@ const Dashboard = () => {
   // Initial render already shows the right section — no flash of Overview after F5.
   const [active, setActive] = useState(() => initialSection(paramSection));
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(
-    () => secondaryIds.includes(initialSection(paramSection)) || readStored(MORE_KEY) === "1",
-  );
+  // The user's own open/closed choice for the "More" group. A secondary section forces the
+  // group open on top of it, without overwriting the remembered preference.
+  const [userMoreOpen, setUserMoreOpen] = useState(() => readStored(MORE_KEY) === "1");
+  const secondaryActive = secondaryIds.includes(active);
+  const moreOpen = userMoreOpen || secondaryActive;
 
   // Keep the URL, the state and the fallback in sync (also for Back/Forward steps).
   useEffect(() => {
     if (isSection(paramSection)) {
       if (paramSection !== active) setActive(paramSection);
       store(SECTION_KEY, paramSection);
-      if (secondaryIds.includes(paramSection)) setMoreOpen(true);
     } else {
       // Unknown or missing value: normalise the URL without adding a history entry.
       setParams({ section: active }, { replace: true });
     }
   }, [paramSection, active, setParams]);
 
-  useEffect(() => { store(MORE_KEY, moreOpen ? "1" : "0"); }, [moreOpen]);
+  useEffect(() => { store(MORE_KEY, userMoreOpen ? "1" : "0"); }, [userMoreOpen]);
   const { locale, setLocale } = useI18n();
   const dt = useDashboardT(locale);
   const { mode, toggleMode } = useTheme();
@@ -117,7 +118,6 @@ const Dashboard = () => {
     if (!isSection(section)) return;
     setActive(section);
     store(SECTION_KEY, section);
-    if (secondaryIds.includes(section)) setMoreOpen(true);
     // replace: the dashboard menu is not browser history worthy, and the stable
     // ?section= key is what ScrollToTop uses to remember the vertical position.
     setParams({ section }, { replace: true });
@@ -199,8 +199,12 @@ const Dashboard = () => {
           {/* Collapsible "More" group */}
           <div className="pt-2">
             <button
-              onClick={() => setMoreOpen(!moreOpen)}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider"
+              // While a secondary section is open the group cannot be collapsed —
+              // the active item must stay visible.
+              onClick={() => !secondaryActive && setUserMoreOpen(!userMoreOpen)}
+              aria-expanded={moreOpen}
+              disabled={secondaryActive}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wider disabled:cursor-default disabled:hover:text-muted-foreground"
             >
               <ChevronDown size={14} className={`transition-transform ${moreOpen ? "rotate-180" : ""}`} />
               More

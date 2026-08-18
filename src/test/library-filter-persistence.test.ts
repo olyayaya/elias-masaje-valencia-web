@@ -40,6 +40,15 @@ describe("library filter persistence", () => {
     expect(parseFilters(JSON.stringify({ v: 1, open: "yes" })).open).toBe(false);
   });
 
+  it("does not write a key for the fully default, closed state", () => {
+    saveFilters({ ...DEFAULT_FILTERS, kind: "photo" }, false);
+    saveFilters(DEFAULT_FILTERS, false);
+    expect(localStorage.getItem(FILTERS_STORAGE_KEY)).toBeNull();
+    // An open panel is still a meaningful state worth remembering.
+    saveFilters(DEFAULT_FILTERS, true);
+    expect(loadFilters()).toEqual({ filters: DEFAULT_FILTERS, open: true });
+  });
+
   it("clears the persisted key on a manual reset", () => {
     saveFilters({ ...DEFAULT_FILTERS, kind: "photo" }, true);
     clearFilters();

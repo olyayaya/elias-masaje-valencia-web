@@ -110,7 +110,21 @@ describe("library filters survive a remount", () => {
     await user.click(screen.getByRole("button", { name: "Reset" }));
     await screen.findByText("photo-00.webp");
     expect(screen.queryByText("File type")).not.toBeInTheDocument();
-    expect(localStorage.getItem(FILTERS_STORAGE_KEY)).toBe(JSON.stringify({ v: 1, filters: DEFAULT_FILTERS, open: false }));
+    // Reset must really leave nothing behind, not re-write a default payload.
+    expect(localStorage.getItem(FILTERS_STORAGE_KEY)).toBeNull();
+  });
+
+  it("still persists non-default filters and an open advanced panel", async () => {
+    const { user } = await mount();
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    await user.type(screen.getByLabelText("Search by name"), "clip");
+    await waitFor(() => {
+      const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+      expect(raw).not.toBeNull();
+      const parsed = JSON.parse(raw!);
+      expect(parsed.open).toBe(true);
+      expect(parsed.filters.q).toBe("clip");
+    });
   });
 
   it("runs exactly one batch usage scan when a used/unused filter is restored", async () => {
