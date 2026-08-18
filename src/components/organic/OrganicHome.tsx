@@ -338,9 +338,9 @@ const OrganicHome = () => {
           </div>
         </div>
 
-        {/* Bottom half-moon — overscanned 1px top/bottom to hide the raster seam with FAQ */}
-        <div className="relative z-10 h-[5vh] md:h-[6vh] max-h-16 -mt-px -mb-px">
-          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="absolute left-0 w-full" style={{ top: "-1px", height: "calc(100% + 2px)" }}>
+        {/* Bottom half-moon */}
+        <div className="relative z-10">
+          <svg viewBox="0 0 1440 180" preserveAspectRatio="none" className="w-full h-[5vh] md:h-[6vh] max-h-16 block" style={{ marginTop: "-1px" }}>
             <ellipse cx="720" cy="180" rx="900" ry="180" style={{ fill: solidBgColor("--background") }} />
           </svg>
         </div>
