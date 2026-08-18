@@ -41,6 +41,42 @@ export const isConverterSupported = (): boolean =>
 
 const cancelled = () => new DOMException("Cancelled", "AbortError");
 
+/**
+ * Failure categories the UI can turn into a friendly, actionable sentence.
+ * ffmpeg.wasm rejects with bare *strings* ("failed to import ffmpeg-core.js"), so without
+ * this wrapper `(e as Error).message` is undefined and every failure collapsed into the
+ * generic "Processing failed".
+ */
+export type VideoErrorCode = "load" | "read" | "encode" | "output" | "cancelled";
+
+export class VideoEngineError extends Error {
+  readonly code: VideoErrorCode;
+  constructor(code: VideoErrorCode, message: string, cause?: unknown) {
+    super(message);
+    this.name = "VideoEngineError";
+    this.code = code;
+    if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
+  }
+}
+
+/** Anything ffmpeg.wasm throws (string, Error, event) into a readable one-liner. */
+const describe = (e: unknown): string => {
+  if (typeof e === "string") return e;
+  if (e instanceof Error) return e.message;
+  return String((e as { message?: string } | null)?.message ?? e ?? "unknown error");
+};
+
+export const isAbort = (e: unknown): boolean => (e as DOMException | null)?.name === "AbortError";
+
+/** Categorises a raw failure and keeps the original for the console (never for the user). */
+export const engineError = (code: VideoErrorCode, e: unknown): Error => {
+  if (isAbort(e)) return e as Error;
+  if (e instanceof VideoEngineError) return e;
+  if (import.meta.env?.DEV) console.error(`[video-ffmpeg:${code}]`, e);
+  return new VideoEngineError(code, describe(e), e);
+};
+
+
 /** Tracks log callbacks so a probe never leaves a listener attached to the singleton. */
 const logListeners = new Map<(line: string) => void, never>();
 
