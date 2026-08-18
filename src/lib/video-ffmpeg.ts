@@ -47,7 +47,7 @@ const cancelled = () => new DOMException("Cancelled", "AbortError");
  * this wrapper `(e as Error).message` is undefined and every failure collapsed into the
  * generic "Processing failed".
  */
-export type VideoErrorCode = "load" | "read" | "encode" | "output" | "cancelled";
+export type VideoErrorCode = "load" | "read" | "encode" | "output" | "memory" | "busy" | "cancelled";
 
 export class VideoEngineError extends Error {
   readonly code: VideoErrorCode;
@@ -66,15 +66,32 @@ const describe = (e: unknown): string => {
   return String((e as { message?: string } | null)?.message ?? e ?? "unknown error");
 };
 
+/**
+ * A wasm heap exhaustion, whatever shape emscripten/libvpx gives it. These are NOT user
+ * errors and must never be shown verbatim — the UI turns "memory" into a plain sentence
+ * plus an explicit safer-preset offer.
+ */
+const MEMORY_PATTERNS =
+  /out of bounds memory access|memory access out of bounds|cannot enlarge memory|out of memory|allocation failed|maximum call stack|abort\(oom\)|table index is out of bounds|rangeerror: array buffer allocation failed/i;
+
+export const isMemoryFailure = (e: unknown): boolean =>
+  (e as VideoEngineError | null)?.code === "memory" ||
+  MEMORY_PATTERNS.test(describe(e)) ||
+  (e instanceof WebAssembly.RuntimeError && MEMORY_PATTERNS.test(e.message));
+
 export const isAbort = (e: unknown): boolean => (e as DOMException | null)?.name === "AbortError";
 
 /** Categorises a raw failure and keeps the original for the console (never for the user). */
 export const engineError = (code: VideoErrorCode, e: unknown): Error => {
   if (isAbort(e)) return e as Error;
   if (e instanceof VideoEngineError) return e;
-  if (import.meta.env?.DEV) console.error(`[video-ffmpeg:${code}]`, e);
-  return new VideoEngineError(code, describe(e), e);
+  const effective: VideoErrorCode = isMemoryFailure(e) ? "memory" : code;
+  // Always logged (not just DEV): the admin needs the raw RuntimeError in the console
+  // while the dialog shows a short human sentence.
+  console.error(`[video-ffmpeg:${effective}]`, e);
+  return new VideoEngineError(effective, describe(e), e);
 };
+
 
 
 /** Tracks log callbacks so a probe never leaves a listener attached to the singleton. */
