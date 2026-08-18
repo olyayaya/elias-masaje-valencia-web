@@ -14,7 +14,9 @@ import DashboardCard from "./DashboardCard";
 import LanguageTabs, { type Lang } from "./LanguageTabs";
 import GalleryMediaPicker from "./GalleryMediaPicker";
 import ThumbnailCropDialog, { CROP_COPY } from "./ThumbnailCropDialog";
-import { cropStyle, type GalleryCrop } from "@/lib/gallery-crop";
+import { type GalleryCrop } from "@/lib/gallery-crop";
+import CropThumb from "@/components/gallery/CropThumb";
+
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
