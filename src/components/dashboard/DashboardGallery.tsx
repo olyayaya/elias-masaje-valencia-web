@@ -106,11 +106,32 @@ const COPY = {
   saved: { en: "Saved", es: "Guardado", ru: "Сохранено" },
   saveFailed: { en: "Failed to save", es: "Error al guardar", ru: "Не удалось сохранить" },
   added: { en: "Item added", es: "Elemento añadido", ru: "Элемент добавлен" },
+  addedPhoto: {
+    en: "Photo added and published on the public Gallery.",
+    es: "Foto añadida y publicada en la Galería pública.",
+    ru: "Фото добавлено и опубликовано в публичной Галерее.",
+  },
+  addedPhotoMany: {
+    en: "Added and published {added} photos, skipped {skipped} duplicates",
+    es: "Añadidas y publicadas {added} fotos, omitidos {skipped} duplicados",
+    ru: "Добавлено и опубликовано фото: {added}, пропущено дубликатов: {skipped}",
+  },
+  addedVideo: {
+    en: "Video added as hidden — add a cover image before publishing.",
+    es: "Vídeo añadido como oculto — añade una portada antes de publicarlo.",
+    ru: "Видео добавлено скрытым — добавьте обложку перед публикацией.",
+  },
+  addedVideoMany: {
+    en: "Added {added} videos as hidden, skipped {skipped} duplicates — add covers before publishing.",
+    es: "Añadidos {added} vídeos ocultos, omitidos {skipped} duplicados — añade portadas antes de publicar.",
+    ru: "Добавлено скрытых видео: {added}, пропущено дубликатов: {skipped} — добавьте обложки перед публикацией.",
+  },
   addedMany: {
     en: "Added {added}, skipped {skipped} duplicates",
     es: "Añadidos {added}, omitidos {skipped} duplicados",
     ru: "Добавлено {added}, пропущено {skipped} дубликатов",
   },
+
   addedNone: {
     en: "Nothing added — every selected file is already in the gallery.",
     es: "No se añadió nada — todos los archivos ya están en la galería.",
