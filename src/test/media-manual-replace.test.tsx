@@ -7,16 +7,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-const replaceMediaFile = vi.fn(async () => ({ newName: "hero.webp" }));
-const commitVideoReplacement = vi.fn(async () => ({ newName: "clip.mp4" }));
+const replaceMediaFile = vi.fn(async (_a?: Record<string, unknown>) => ({ newName: "hero.webp" }));
+const commitVideoReplacement = vi.fn(async (_a?: Record<string, unknown>) => ({ newName: "clip.mp4" }));
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }));
 
 vi.mock("@/lib/media-usage", () => ({
-  replaceMediaFile: (...a: unknown[]) => replaceMediaFile(...(a as [])),
-  commitVideoReplacement: (...a: unknown[]) => commitVideoReplacement(...(a as [])),
+  replaceMediaFile: (a: Record<string, unknown>) => replaceMediaFile(a),
+  commitVideoReplacement: (a: Record<string, unknown>) => commitVideoReplacement(a),
 }));
 
 vi.mock("@/lib/video-upload", () => ({
