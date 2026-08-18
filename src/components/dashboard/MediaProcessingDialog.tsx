@@ -350,10 +350,11 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
       })
     : { allowed: true };
   const blockedReason = "reason" in gate ? gate.reason : null;
-  // Smart mode never forces a replace; Advanced needs one explicit confirmation.
-  const smartBlocked = !!current.replace && !savingOk && mode === "smart";
-  const needsConfirm = !!result && !savingOk && !confirmed;
-  const applyDisabled = !!blockedReason || smartBlocked;
+  // Manual replacement is deployed: the saving threshold is informational only and never
+  // blocks an admin-confirmed replace. Real safety (auth, MIME, magic bytes, size,
+  // transactional reference rewrite, gallery guard) stays server-side.
+  const applyDisabled = !!blockedReason;
+
 
   const advanceQueue = () => {
     dropResult();
