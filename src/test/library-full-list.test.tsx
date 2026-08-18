@@ -48,7 +48,7 @@ import { I18nProvider } from "@/i18n/context";
 import { FILTERS_STORAGE_KEY } from "@/lib/media-filters-storage";
 import { DEFAULT_FILTERS } from "@/lib/media-filters";
 
-const mount = async () => {
+const mount = async (expectText = "photo-00.webp") => {
   window.history.replaceState({}, "", "/en");
   const user = userEvent.setup();
   const view = render(
@@ -56,7 +56,7 @@ const mount = async () => {
       <DashboardMedia />
     </I18nProvider>,
   );
-  await screen.findByText("photo-00.webp");
+  await screen.findByText(expectText);
   return { user, view };
 };
 
@@ -102,7 +102,7 @@ describe("library filters survive a remount", () => {
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify({
       v: 1, filters: { ...DEFAULT_FILTERS, kind: "video", q: "clip" }, open: true,
     }));
-    const user = await (await mount()).user;
+    const { user } = await mount("clip.mp4");
     // Restored state: only the video is listed and the panel is expanded.
     expect(screen.queryByText("photo-00.webp")).not.toBeInTheDocument();
     expect(screen.getByLabelText("File type")).toBeInTheDocument();
@@ -118,9 +118,8 @@ describe("library filters survive a remount", () => {
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify({
       v: 1, filters: { ...DEFAULT_FILTERS, usage: "used" }, open: false,
     }));
-    await mount();
+    await mount("clip.mp4");
     await waitFor(() => expect(checkMediaUsageBatch).toHaveBeenCalledTimes(1));
-    await screen.findByText("clip.mp4");
     // No repeated polling once the answer is in.
     await new Promise((r) => setTimeout(r, 50));
     expect(checkMediaUsageBatch).toHaveBeenCalledTimes(1);

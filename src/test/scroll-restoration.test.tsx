@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, act } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useNavigate } from "react-router-dom";
-import ScrollToTop, { scrollKey } from "@/components/ScrollToTop";
+import ScrollToTop, { scrollKey, restoreWindowFor } from "@/components/ScrollToTop";
 
 /* Scroll behaviour: reload and Back/Forward restore, plain navigation goes up. */
 
@@ -83,6 +83,27 @@ describe("ScrollToTop", () => {
     });
     expect(scrollSpy).toHaveBeenCalledWith(0, 540);
     expect(scrollSpy).not.toHaveBeenCalledWith(0, 0);
+  });
+
+  it("keeps a separate saved position per dashboard section query key", () => {
+    expect(scrollKey("/dashboard", "?section=media")).not.toBe(scrollKey("/dashboard", "?section=gallery"));
+    sessionStorage.setItem(scrollKey("/dashboard", "?section=media"), "1200");
+    sessionStorage.setItem(scrollKey("/dashboard", "?section=gallery"), "300");
+    setNavigationType("reload");
+    render(
+      <MemoryRouter initialEntries={["/dashboard?section=media"]}>
+        <ScrollToTop />
+        <Routes>
+          <Route path="/dashboard" element={<Page label="dash" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(scrollSpy).toHaveBeenCalledWith(0, 1200);
+  });
+
+  it("gives the dashboard a longer retry window than the public pages", () => {
+    expect(restoreWindowFor("/dashboard?section=media")).toBeGreaterThan(restoreWindowFor("/"));
+    expect(restoreWindowFor("/galeria")).toBe(restoreWindowFor("/"));
   });
 
   it("saves the position of the page while the visitor scrolls it", () => {
