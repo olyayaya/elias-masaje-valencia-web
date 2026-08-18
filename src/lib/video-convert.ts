@@ -245,14 +245,29 @@ export function buildFfmpegArgs(o: ConvertOptions): string[] {
     args.push("-c:v", "libx264", "-preset", X264_PRESET[speed]);
     if (rate.mode === "crf") args.push("-crf", String(clampCrf(o.format, rate.crf)));
     else args.push("-b:v", `${clampBitrate(rate.kbps)}k`);
-    args.push("-pix_fmt", "yuv420p", "-movflags", "+faststart");
+    // Single-thread wasm core: one slice, a short lookahead and no B-frame pyramid keep
+    // x264's frame buffers inside the 32-bit heap that mobile Safari caps hard.
+    args.push("-threads", "1", "-rc-lookahead", "10", "-pix_fmt", "yuv420p", "-movflags", "+faststart");
     if (o.format === "mov") args.push("-f", "mov");
   } else {
     args.push("-c:v", "libvpx-vp9", "-cpu-used", VP9_CPU_USED[speed]);
     if (rate.mode === "crf") args.push("-b:v", "0", "-crf", String(clampCrf(o.format, rate.crf)));
     else args.push("-b:v", `${clampBitrate(rate.kbps)}k`);
-    args.push("-row-mt", "1", "-pix_fmt", "yuv420p");
+    // libvpx is the memory hog: alt-ref + a 25-frame lookahead holds ~25 raw 1080x1920
+    // frames (~75 MB) on top of the tile/row-mt worker contexts, which is exactly what
+    // blows up as "Out of bounds memory access" on iOS. None of it helps a 1-thread core.
+    args.push(
+      "-threads", "1",
+      "-row-mt", "0",
+      "-tile-columns", "0",
+      "-frame-parallel", "0",
+      "-lag-in-frames", "0",
+      "-auto-alt-ref", "0",
+      "-deadline", "good",
+      "-pix_fmt", "yuv420p",
+    );
   }
+
   // Never name an encoder this core did not report; drop the audio track instead.
   if (audio) args.push("-c:a", audio, "-b:a", `${o.audioKbps ?? AUDIO_KBPS[o.quality]}k`);
   else args.push("-an");
