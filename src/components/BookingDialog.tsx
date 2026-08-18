@@ -154,10 +154,16 @@ const BookingDialog = ({
       setErrors({});
       setTouched({});
       setDone(null);
+      setTierIndex(0);
       setMessage(generated);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Never let a duration/price selection leak to a different service.
+  useEffect(() => {
+    setTierIndex(0);
+  }, [service, duration, price]);
 
   const copy = async () => {
     try {
