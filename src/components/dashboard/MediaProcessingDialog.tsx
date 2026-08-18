@@ -173,10 +173,17 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     setError(null);
     setPhase("idle");
     setProgress(0);
+    // Stale metadata of the PREVIOUS source must never linger, not even for one frame.
+    setPhotoSource(null);
+    setPhoto(null);
+    setMeta(null);
+    setVideo(null);
+    setAnalyzing(true);
     revokeOriginal();
     const url = URL.createObjectURL(current.file);
     originalUrlRef.current = url;
     setOriginalUrl(url);
+
 
     (async () => {
       if (current.kind === "photo") {
