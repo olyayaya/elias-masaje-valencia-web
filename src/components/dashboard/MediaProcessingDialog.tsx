@@ -334,26 +334,25 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
   // Processing verdict: an honest comparison of the SELECTED source with the Result.
   const verdict = result ? evaluate(sourceSize, result.size) : null;
-  // Replacement verdict: measured against the STORED target, which is what media-guard checks.
-  const replaceVerdict = result ? evaluate(storedSize, result.size) : null;
-  const savingOk = !!replaceVerdict?.ok;
   const bigger = !!verdict && !verdict.ok && verdict.savedBytes <= 0;
 
 
-  // Replacement is additionally gated by what the DEPLOYED media-guard really accepts.
+  // Replacement is additionally gated by what the DEPLOYED media-guard really accepts
+  // (container policy + gallery guard). The saving threshold is not a gate any more.
   const gate: import("@/lib/media-backend").ReplaceGate = result && current.replace
     ? replaceGate({
         kind: current.kind,
         outputName: result.name,
-        savingOk,
+
         publishedInGallery: current.replace.publishedInGallery,
       })
     : { allowed: true };
   const blockedReason = "reason" in gate ? gate.reason : null;
-  // Smart mode never forces a replace; Advanced needs one explicit confirmation.
-  const smartBlocked = !!current.replace && !savingOk && mode === "smart";
-  const needsConfirm = !!result && !savingOk && !confirmed;
-  const applyDisabled = !!blockedReason || smartBlocked;
+  // Manual replacement is deployed: the saving threshold is informational only and never
+  // blocks an admin-confirmed replace. Real safety (auth, MIME, magic bytes, size,
+  // transactional reference rewrite, gallery guard) stays server-side.
+  const applyDisabled = !!blockedReason;
+
 
   const advanceQueue = () => {
     dropResult();
@@ -374,7 +373,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
   const applyResult = async () => {
     if (!result || applyDisabled) return;
-    if (needsConfirm) { setConfirmed(true); return; }
+    
     setPhase("applying");
     setProgress(0);
     setError(null);
@@ -390,6 +389,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             contentBase64: await blobToBase64(result.blob),
             contentType: result.contentType,
             originalSize: current.replace.size,
+            mode: "manual",
+
           });
           onApplied(res.newName ?? result.name, current.replace.name);
         } else {
@@ -403,7 +404,9 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             stagedName: staged,
             newName: result.name,
             contentType: result.contentType,
-            enforceSaving: true,
+            enforceSaving: false,
+            mode: "manual",
+
           });
           onApplied(res.newName ?? result.name, current.replace.name);
         }
@@ -837,14 +840,14 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </div>
           </div>
 
-          {result && !savingOk && (
+          {result && verdict && !verdict.ok && (
             <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
               {bigger
                 ? L("resultBigger", { a: formatFileSize(sourceSize), b: formatFileSize(result.size) })
                 : L("resultMarginal", { a: formatFileSize(sourceSize), b: formatFileSize(result.size) })}
-              {smartBlocked ? ` ${L("smartNoSaving")}` : ""}
             </p>
           )}
+
 
           {blockedReason && (
             <p role="alert" className="text-xs text-destructive border border-destructive/40 rounded-lg p-3">
@@ -906,7 +909,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           {result && (
             <Button size="sm" onClick={() => void applyResult()} disabled={busy || applyDisabled}>
               {phase === "applying" ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
-              {needsConfirm ? L("confirmBigger") : current.replace ? L("applyReplace") : L("apply")}
+              {current.replace ? L("applyReplace") : L("apply")}
             </Button>
           )}
         </div>

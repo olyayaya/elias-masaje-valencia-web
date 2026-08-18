@@ -250,12 +250,6 @@ export const COPY = {
     es: "El resultado no es más pequeño que el original ({a} → {b}). ¿Aplicarlo igualmente?",
     ru: "Результат не меньше оригинала ({a} → {b}). Всё равно применить?",
   },
-  confirmBigger: { en: "Apply anyway", es: "Aplicar igualmente", ru: "Всё равно применить" },
-  smartNoSaving: {
-    en: "Recommended mode only replaces a file when it really saves space. Switch to Advanced to force it.",
-    es: "El modo recomendado solo reemplaza cuando hay un ahorro real. Cambia a Avanzado para forzarlo.",
-    ru: "Рекомендуемый режим заменяет файл только при реальной экономии. Для принудительной замены используйте расширенный режим.",
-  },
   fps: { en: "Frame rate", es: "Fotogramas", ru: "Частота кадров" },
   speed: { en: "Compression effort", es: "Nivel de compresión", ru: "Уровень сжатия" },
   speedFast: { en: "Fast", es: "Rápida", ru: "Быстро" },
@@ -275,6 +269,7 @@ export const COPY = {
     ru: "MOV не рекомендуется для веба — для публикации используйте MP4 или WebM.",
   },
   movGalleryBlocked: {
+
     en: "This video is published in the Gallery — only MP4 or WebM may replace it.",
     es: "Este vídeo está publicado en la Galería: solo MP4 o WebM pueden reemplazarlo.",
     ru: "Это видео опубликовано в Галерее — заменить его можно только MP4 или WebM.",
@@ -299,19 +294,14 @@ export const COPY = {
     ru: "Видео больше {m} МБ — браузерный кодировщик не может его обработать. Загрузите файл меньше или сожмите его вне браузера.",
   },
   resultBigger: {
-    en: "The result ({b}) is LARGER than the original ({a}).",
-    es: "El resultado ({b}) es MÁS GRANDE que el original ({a}).",
-    ru: "Результат ({b}) БОЛЬШЕ оригинала ({a}).",
+    en: "The result ({b}) is LARGER than the selected file ({a}).",
+    es: "El resultado ({b}) es MÁS GRANDE que el archivo seleccionado ({a}).",
+    ru: "Результат ({b}) БОЛЬШЕ выбранного файла ({a}).",
   },
   resultMarginal: {
-    en: "The result ({b}) saves less than the 10% / 10 KB threshold (original {a}).",
-    es: "El resultado ({b}) ahorra menos del umbral del 10% / 10 KB (original {a}).",
-    ru: "Экономия результата ({b}) меньше порога 10% / 10 КБ (оригинал {a}).",
-  },
-  manualUnavailable: {
-    en: "Forced replacement needs the updated media-guard function, which is not deployed yet. Replacing an existing file is only possible when the result really saves space.",
-    es: "El reemplazo forzado necesita la función media-guard actualizada, que aún no está desplegada. Solo se puede reemplazar un archivo existente cuando el resultado ahorra espacio de verdad.",
-    ru: "Принудительная замена требует обновлённой функции media-guard, которая ещё не развёрнута. Заменить существующий файл можно только при реальной экономии размера.",
+    en: "The result ({b}) is only slightly smaller than the selected file ({a}).",
+    es: "El resultado ({b}) es solo un poco más pequeño que el archivo seleccionado ({a}).",
+    ru: "Результат ({b}) лишь немного меньше выбранного файла ({a}).",
   },
   movReplaceBlocked: {
     en: "An existing library video can only be replaced by MP4 or WebM.",
