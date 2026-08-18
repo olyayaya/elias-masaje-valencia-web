@@ -68,6 +68,10 @@ const mount = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // jsdom's Blob has no arrayBuffer() — the dialog base64-encodes the result before replacing.
+  if (!Blob.prototype.arrayBuffer) {
+    Blob.prototype.arrayBuffer = async function () { return new ArrayBuffer(this.size); };
+  }
   URL.createObjectURL = vi.fn(() => "blob:mock");
   URL.revokeObjectURL = vi.fn();
 });
@@ -87,8 +91,6 @@ describe("manual replacement without a saving threshold", () => {
     expect(screen.queryByText(/media-guard/i)).not.toBeInTheDocument();
 
     await user.click(apply);
-    await new Promise((r) => setTimeout(r, 500));
-    console.log("ALERT:", document.querySelector('[role="alert"]')?.textContent);
     await waitFor(() => expect(replaceMediaFile).toHaveBeenCalledTimes(1));
     expect(replaceMediaFile.mock.calls[0][0]).toMatchObject({
       fileName: "hero.webp",
