@@ -784,12 +784,12 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
 
           {/* ---- visual comparison BEFORE Apply ----------------------- */}
           <div className="space-y-2">
-            <div className="flex gap-2 sm:hidden">
+            <div className="flex flex-wrap gap-2 sm:hidden">
               <Button
                 type="button" size="sm" variant={compare === "original" ? "default" : "outline"}
                 onClick={() => setCompare("original")}
               >
-                {L("showOriginal")}
+                {sourceLabel}
               </Button>
               <Button
                 type="button" size="sm" variant={compare === "result" ? "default" : "outline"}
@@ -800,18 +800,20 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className={panelClass("original")}>
-                <p className="text-foreground">{L("originalLabel")}</p>
+                <p className="text-foreground">{sourceLabel}</p>
                 {originalUrl && (current.kind === "photo" ? (
-                  <img src={originalUrl} alt={L("originalLabel")} className="w-full rounded-md object-contain max-h-56 bg-secondary" />
+                  <img key={originalUrl} src={originalUrl} alt={sourceLabel} className="w-full rounded-md object-contain max-h-56 bg-secondary" />
                 ) : (
-                  <video src={originalUrl} controls playsInline className="w-full rounded-md bg-black max-h-56" />
+                  <video key={originalUrl} src={originalUrl} controls playsInline className="w-full rounded-md bg-black max-h-56" />
                 ))}
                 <p className="text-muted-foreground break-all">
-                  {formatFileSize(sourceSize)}
+                  {current.file.name} · {formatFileSize(sourceSize)}
                   {photoSource ? ` · ${photoSource.width}×${photoSource.height}` : ""}
-                  {meta ? ` · ${meta.width}×${meta.height}` : ""}
+                  {meta ? ` · ${meta.width}×${meta.height} · ${formatDuration(meta.duration)}` : ""}
+                  {analyzing && !photoSource && !meta ? ` · ${L("analyzingFile")}` : ""}
                 </p>
               </div>
+
               <div className={panelClass("result")}>
                 <p className="text-foreground">{L("resultLabel")}</p>
                 {result ? (
