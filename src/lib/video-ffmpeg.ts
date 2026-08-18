@@ -41,6 +41,42 @@ export const isConverterSupported = (): boolean =>
 
 const cancelled = () => new DOMException("Cancelled", "AbortError");
 
+/**
+ * Failure categories the UI can turn into a friendly, actionable sentence.
+ * ffmpeg.wasm rejects with bare *strings* ("failed to import ffmpeg-core.js"), so without
+ * this wrapper `(e as Error).message` is undefined and every failure collapsed into the
+ * generic "Processing failed".
+ */
+export type VideoErrorCode = "load" | "read" | "encode" | "output" | "cancelled";
+
+export class VideoEngineError extends Error {
+  readonly code: VideoErrorCode;
+  constructor(code: VideoErrorCode, message: string, cause?: unknown) {
+    super(message);
+    this.name = "VideoEngineError";
+    this.code = code;
+    if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
+  }
+}
+
+/** Anything ffmpeg.wasm throws (string, Error, event) into a readable one-liner. */
+const describe = (e: unknown): string => {
+  if (typeof e === "string") return e;
+  if (e instanceof Error) return e.message;
+  return String((e as { message?: string } | null)?.message ?? e ?? "unknown error");
+};
+
+export const isAbort = (e: unknown): boolean => (e as DOMException | null)?.name === "AbortError";
+
+/** Categorises a raw failure and keeps the original for the console (never for the user). */
+export const engineError = (code: VideoErrorCode, e: unknown): Error => {
+  if (isAbort(e)) return e as Error;
+  if (e instanceof VideoEngineError) return e;
+  if (import.meta.env?.DEV) console.error(`[video-ffmpeg:${code}]`, e);
+  return new VideoEngineError(code, describe(e), e);
+};
+
+
 /** Tracks log callbacks so a probe never leaves a listener attached to the singleton. */
 const logListeners = new Map<(line: string) => void, never>();
 
@@ -87,7 +123,12 @@ export async function getFFmpeg(
     attachLog(instance, onLog);
     return instance;
   }
-  const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+  let FFmpeg: new () => unknown;
+  try {
+    ({ FFmpeg } = (await import("@ffmpeg/ffmpeg")) as unknown as { FFmpeg: new () => unknown });
+  } catch (e) {
+    throw engineError("load", e);
+  }
   if (signal?.aborted) throw cancelled();
   const ff = new FFmpeg() as unknown as FFmpegInstance;
   attachLog(ff, onLog);
@@ -98,8 +139,9 @@ export async function getFFmpeg(
     });
   } catch (e) {
     discard(ff, onLog);
-    throw e;
+    throw engineError("load", e);
   }
+
   // Cancelled while the core was downloading: terminate the LOCAL instance even though it
   // was never published to `instance`, so the wasm heap is released immediately.
   if (signal?.aborted) {
@@ -232,19 +274,37 @@ export async function convertVideo(
 
   try {
     onProgress?.({ ratio: 0, stage: "reading" });
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(await file.arrayBuffer());
+      if (signal?.aborted) throw cancelled();
+      // MUST be awaited: exec on a half-written virtual FS reads a truncated input.
+      await ff.writeFile(inputName, bytes);
+    } catch (e) {
+      throw engineError("read", e);
+    }
     if (signal?.aborted) throw cancelled();
-    // MUST be awaited: exec on a half-written virtual FS reads a truncated input.
-    await ff.writeFile(inputName, bytes);
-    if (signal?.aborted) throw cancelled();
-    await ff.exec(args);
+    let code: number;
+    try {
+      code = await ff.exec(args);
+    } catch (e) {
+      throw engineError("encode", e);
+    }
+    // Checked BEFORE readFile: a failed encode can leave a stale/partial object behind.
+    if (code !== 0) throw new VideoEngineError("encode", `ffmpeg exit code ${code}`);
     if (signal?.aborted) throw cancelled();
     onProgress?.({ ratio: 1, stage: "finishing" });
-    const data = await ff.readFile(outputName);
-    const out = typeof data === "string" ? new TextEncoder().encode(data) : data;
-    const buffer = out.slice().buffer as ArrayBuffer;
-    const blob = new Blob([buffer], { type: MIME_BY_FORMAT[options.format] });
-    return { blob, size: blob.size };
+    try {
+      const data = await ff.readFile(outputName);
+      const out = typeof data === "string" ? new TextEncoder().encode(data) : data;
+      const buffer = out.slice().buffer as ArrayBuffer;
+      const blob = new Blob([buffer], { type: MIME_BY_FORMAT[options.format] });
+      if (!blob.size) throw new Error("the converter produced an empty file");
+      return { blob, size: blob.size };
+    } catch (e) {
+      throw engineError("output", e);
+    }
+
   } finally {
     signal?.removeEventListener("abort", abort);
     try {

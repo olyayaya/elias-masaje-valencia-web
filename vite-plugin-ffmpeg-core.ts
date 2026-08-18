@@ -6,26 +6,38 @@ import type { Plugin } from "vite";
 /**
  * Self-hosts the single-thread ffmpeg.wasm core at /ffmpeg/*.
  *
- * The core must be the UMD build (the ffmpeg worker loads it with importScripts) and it must
- * be served from our own origin — no CDN dependency and no cross-origin isolation needed.
- * @ffmpeg/core's package exports block deep imports, so instead of bundling it we copy the two
- * files: served from memory in dev, emitted next to the bundle in build. They never enter the
- * JS graph, so the main bundle stays free of the ~30 MB core.
+ * The core MUST be the ESM build: @ffmpeg/ffmpeg spawns its worker with `{ type: "module" }`,
+ * and module workers cannot call importScripts(). The worker therefore falls back to
+ * `import(coreURL)` and needs a real `export default createFFmpegCore` — importing the UMD
+ * build there yields an empty module and the load fails with a bare "failed to import
+ * ffmpeg-core.js" string. Served from our own origin: no CDN, no cross-origin isolation.
+ * The two files never enter the JS graph, so the main bundle stays free of the ~30 MB core.
  */
 const FILES = ["ffmpeg-core.js", "ffmpeg-core.wasm"] as const;
 
 /**
  * @ffmpeg/core does not export "./package.json" (or any deep path), so resolution goes through
- * the "require" condition of its main entry and we walk back up to the UMD folder.
+ * the "require" condition of its main entry (the UMD folder) and we hop to the sibling ESM one.
  */
 const coreDir = (root: string) => {
   const require = createRequire(path.join(root, "package.json"));
-  const umd = path.dirname(require.resolve("@ffmpeg/core"));
-  if (fs.existsSync(path.join(umd, "ffmpeg-core.wasm"))) return umd;
-  const fallback = path.join(root, "node_modules/@ffmpeg/core/dist/umd");
-  if (fs.existsSync(path.join(fallback, "ffmpeg-core.wasm"))) return fallback;
+  const candidates: string[] = [];
+  try {
+    const umd = path.dirname(require.resolve("@ffmpeg/core"));
+    candidates.push(path.join(path.dirname(umd), "esm"), umd);
+  } catch {
+    /* fall through to the literal node_modules paths below */
+  }
+  candidates.push(
+    path.join(root, "node_modules/@ffmpeg/core/dist/esm"),
+    path.join(root, "node_modules/@ffmpeg/core/dist/umd"),
+  );
+  for (const dir of candidates) {
+    if (FILES.every((f) => fs.existsSync(path.join(dir, f)))) return dir;
+  }
   throw new Error("ffmpeg core assets not found");
 };
+
 
 export function ffmpegCore(root: string): Plugin {
   let dir = "";
