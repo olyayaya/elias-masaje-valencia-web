@@ -124,11 +124,13 @@ export function targetDimensions(
   width: number,
   height: number,
   choice: ResolutionChoice,
+  customShortSide = 720,
 ): { width: number; height: number } {
   const w = Math.max(1, Math.round(width));
   const h = Math.max(1, Math.round(height));
   if (choice === "original") return { width: evenDown(w), height: evenDown(h) };
-  const limit = Number(choice);
+  const raw = choice === "custom" ? Number(customShortSide) : Number(choice);
+  const limit = Number.isFinite(raw) ? Math.min(4320, Math.max(120, Math.round(raw))) : 720;
   const short = Math.min(w, h);
   if (short <= limit) return { width: evenDown(w), height: evenDown(h) };
   const scale = limit / short;
@@ -137,10 +139,67 @@ export function targetDimensions(
 
 const CRF: Record<VideoFormat, Record<VideoQuality, number>> = {
   mp4: { high: 20, balanced: 24, small: 28 },
+  mov: { high: 20, balanced: 24, small: 28 },
   webm: { high: 30, balanced: 34, small: 38 },
 };
 
 const AUDIO_KBPS: Record<VideoQuality, number> = { high: 160, balanced: 128, small: 96 };
+
+/** Format-aware CRF bounds. Lower = better quality and a bigger file. */
+export const CRF_RANGE: Record<VideoFormat, { min: number; max: number }> = {
+  mp4: { min: 14, max: 40 },
+  mov: { min: 14, max: 40 },
+  webm: { min: 20, max: 50 },
+};
+
+export const defaultCrf = (format: VideoFormat, quality: VideoQuality = "balanced"): number =>
+  CRF[format][quality];
+
+export function clampCrf(format: VideoFormat, value: unknown): number {
+  const { min, max } = CRF_RANGE[format];
+  const n = Number(value);
+  if (!Number.isFinite(n)) return defaultCrf(format);
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
+
+export const MIN_VIDEO_KBPS = 150;
+export const MAX_VIDEO_KBPS = 20000;
+
+export function clampBitrate(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 2500;
+  return Math.min(MAX_VIDEO_KBPS, Math.max(MIN_VIDEO_KBPS, Math.round(n)));
+}
+
+export const AUDIO_KBPS_CHOICES = [64, 96, 128, 160, 192] as const;
+
+/** Rate control is EXCLUSIVE: CRF or target bitrate, never both in the same argv. */
+export type RateControl =
+  | { mode: "crf"; crf: number }
+  | { mode: "bitrate"; kbps: number };
+
+/** Estimated output bytes for a target bitrate, used by the size preview. */
+export function estimateSizeBytes(videoKbps: number, audioKbps: number, durationSeconds: number): number {
+  const d = Math.max(0, Number(durationSeconds) || 0);
+  const total = Math.max(0, Number(videoKbps) || 0) + Math.max(0, Number(audioKbps) || 0);
+  return Math.round((total * 1000 * d) / 8);
+}
+
+/** Effective frame-rate ceiling: the choice never raises the source rate. */
+export function effectiveFps(choice: FpsChoice, sourceFps?: number): number | null {
+  if (choice === "original") return sourceFps && sourceFps > 0 ? null : null;
+  const wanted = Number(choice);
+  if (sourceFps && sourceFps > 0 && sourceFps <= wanted) return null; // already lower — leave it
+  return wanted;
+}
+
+const X264_PRESET: Record<SpeedChoice, string> = {
+  fast: "veryfast",
+  balanced: "medium",
+  max: "slow",
+};
+/** libvpx-vp9 -cpu-used: lower = slower and better compressed. */
+const VP9_CPU_USED: Record<SpeedChoice, string> = { fast: "5", balanced: "2", max: "1" };
 
 export interface ConvertOptions {
   inputName: string;
@@ -148,36 +207,59 @@ export interface ConvertOptions {
   format: VideoFormat;
   quality: VideoQuality;
   resolution: ResolutionChoice;
-  meta: Pick<VideoMeta, "width" | "height">;
+  meta: Pick<VideoMeta, "width" | "height"> & { fps?: number };
   caps: EncoderCaps;
   fpsCap?: number;
+  /** Advanced overrides — omitted entirely by the Smart preset. */
+  customShortSide?: number;
+  fps?: FpsChoice;
+  speed?: SpeedChoice;
+  rate?: RateControl;
+  removeAudio?: boolean;
+  audioKbps?: number;
 }
 
 /**
  * Builds the exact ffmpeg argv. Single-thread core, so no -threads juggling.
- * MP4 always gets +faststart (metadata first → starts playing while downloading).
+ * MP4/MOV always get +faststart (metadata first → starts playing while downloading).
+ *
+ * Rate control is mutually exclusive: in CRF mode no target `-b:v` is emitted, in bitrate
+ * mode no `-crf` is emitted. (VP9's `-b:v 0` in CRF mode is the documented constant-quality
+ * switch, not a target bitrate.)
  */
 export function buildFfmpegArgs(o: ConvertOptions): string[] {
-  const { width, height } = targetDimensions(o.meta.width, o.meta.height, o.resolution);
-  const fps = o.fpsCap ?? FPS_CAP;
+  const { width, height } = targetDimensions(o.meta.width, o.meta.height, o.resolution, o.customShortSide);
+  const fpsChoice: FpsChoice | undefined = o.fps;
+  const cap = fpsChoice
+    ? effectiveFps(fpsChoice, o.meta.fps)
+    : (o.fpsCap ?? FPS_CAP);
   // -fpsmax is a *ceiling*: a 24 fps source stays 24 fps instead of being interpolated up
   // to 30 (which -r would do, making the file bigger for no visual gain).
-  const args = ["-i", o.inputName, "-vf", `scale=${width}:${height}`, "-fpsmax", String(fps)];
-  const audio = audioEncoderFor(o.format, o.caps);
+  const args = ["-i", o.inputName, "-vf", `scale=${width}:${height}`];
+  if (cap !== null) args.push("-fpsmax", String(cap));
+  const audio = o.removeAudio ? null : audioEncoderFor(o.format, o.caps);
+  const rate: RateControl = o.rate ?? { mode: "crf", crf: CRF[o.format][o.quality] };
+  const speed: SpeedChoice = o.speed ?? "fast";
 
-  if (o.format === "mp4") {
-    args.push("-c:v", "libx264", "-preset", "veryfast", "-crf", String(CRF.mp4[o.quality]));
+  if (o.format === "mp4" || o.format === "mov") {
+    args.push("-c:v", "libx264", "-preset", X264_PRESET[speed]);
+    if (rate.mode === "crf") args.push("-crf", String(clampCrf(o.format, rate.crf)));
+    else args.push("-b:v", `${clampBitrate(rate.kbps)}k`);
     args.push("-pix_fmt", "yuv420p", "-movflags", "+faststart");
+    if (o.format === "mov") args.push("-f", "mov");
   } else {
-    args.push("-c:v", "libvpx-vp9", "-b:v", "0", "-crf", String(CRF.webm[o.quality]));
+    args.push("-c:v", "libvpx-vp9", "-cpu-used", VP9_CPU_USED[speed]);
+    if (rate.mode === "crf") args.push("-b:v", "0", "-crf", String(clampCrf(o.format, rate.crf)));
+    else args.push("-b:v", `${clampBitrate(rate.kbps)}k`);
     args.push("-row-mt", "1", "-pix_fmt", "yuv420p");
   }
   // Never name an encoder this core did not report; drop the audio track instead.
-  if (audio) args.push("-c:a", audio, "-b:a", `${AUDIO_KBPS[o.quality]}k`);
+  if (audio) args.push("-c:a", audio, "-b:a", `${o.audioKbps ?? AUDIO_KBPS[o.quality]}k`);
   else args.push("-an");
 
   args.push("-y", o.outputName);
   return args;
+
 }
 
 
