@@ -328,9 +328,7 @@ const BookingDialog = ({
                 <SelectContent>
                   {tiers.map((tier, i) => (
                     <SelectItem key={`${tier.duration}-${i}`} value={String(i)}>
-                      {hidePrice || !tier.price
-                        ? tier.duration
-                        : `${tier.duration} — ${formatPrice(tier.price, t, { hidePrefix: true })}`}
+                      {tier.duration}
                     </SelectItem>
                   ))}
                 </SelectContent>
