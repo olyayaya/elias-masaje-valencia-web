@@ -268,12 +268,33 @@ export async function convertVideo(
     signal?: AbortSignal;
   } = {},
 ): Promise<ConversionResult> {
-  const { onProgress, signal } = handlers;
-  if (signal?.aborted) throw cancelled();
+  if (handlers.signal?.aborted) throw cancelled();
   if (running) throw new VideoEngineError("busy", "a conversion is already running");
   running = true;
+  try {
+    return await runConversion(file, options, handlers);
+  } catch (e) {
+    // Whatever went wrong (OOM above all), the shared heap is now in an unknown state:
+    // drop the core so the next attempt starts clean instead of accumulating memory.
+    terminateFFmpeg();
+    throw e;
+  } finally {
+    running = false;
+  }
+}
+
+async function runConversion(
+  file: File,
+  options: Omit<ConvertOptions, "inputName" | "outputName">,
+  handlers: {
+    onProgress?: (p: ConversionProgress) => void;
+    signal?: AbortSignal;
+  },
+): Promise<ConversionResult> {
+  const { onProgress, signal } = handlers;
 
   onProgress?.({ ratio: 0, stage: "loading" });
+
 
 
   // Cancelling while the ~30 MB core is still downloading must terminate the instance and
