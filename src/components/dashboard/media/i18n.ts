@@ -275,6 +275,27 @@ export const COPY = {
     ru: "Это видео опубликовано в Галерее — заменить его можно только MP4 или WebM.",
   },
   processFailed: { en: "Processing failed", es: "Error al procesar", ru: "Ошибка обработки" },
+  errEngineLoad: {
+    en: "The video converter could not start in this browser — reload the page and try again",
+    es: "No se pudo iniciar el conversor de vídeo en este navegador: recarga la página e inténtalo de nuevo",
+    ru: "Не удалось запустить видеоконвертер в этом браузере — перезагрузите страницу и попробуйте снова",
+  },
+  errRead: {
+    en: "The file could not be read — try selecting it again",
+    es: "No se pudo leer el archivo: vuelve a seleccionarlo",
+    ru: "Не удалось прочитать файл — выберите его заново",
+  },
+  errEncode: {
+    en: "The converter could not encode this video — try another format or a lower resolution",
+    es: "El conversor no pudo codificar este vídeo: prueba otro formato o una resolución menor",
+    ru: "Конвертер не смог обработать это видео — попробуйте другой формат или меньшее разрешение",
+  },
+  errOutput: {
+    en: "The converted file came out empty or unreadable — try again with other settings",
+    es: "El archivo convertido salió vacío o ilegible: inténtalo con otros ajustes",
+    ru: "Итоговый файл получился пустым или нечитаемым — попробуйте другие настройки",
+  },
+
   appliedOk: { en: "Applied: {n}", es: "Aplicado: {n}", ru: "Применено: {n}" },
   restoreUnavailable: {
     en: "Once applied, the previous version is not kept — check the result before applying.",
