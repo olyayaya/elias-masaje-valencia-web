@@ -191,7 +191,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     (async () => {
       if (current.kind === "photo") {
         try {
-          console.log("IMPORTING", current.id); const { loadImageElement } = await import("@/lib/photo-encode"); console.log("IMPORTED", current.id);
+          console.log("IMPORTING", current.id); const { loadImageElement } = await import("@/lib/photo-encode"); console.log("IMPORTED", current.id, String(loadImageElement).slice(0,60));
           const img = await loadImageElement(current.file);
           if (cancelled || !aliveRef.current) return;
           const src = {
