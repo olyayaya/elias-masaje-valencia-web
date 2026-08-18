@@ -331,13 +331,16 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     }
   };
 
-  const verdict = result
-    ? current.kind === "photo"
-      ? evaluatePhotoSaving(sourceSize, result.size)
-      : evaluateVideoSaving(sourceSize, result.size)
-    : null;
-  const savingOk = !!verdict?.ok;
+  const evaluate = (base: number, out: number) =>
+    current.kind === "photo" ? evaluatePhotoSaving(base, out) : evaluateVideoSaving(base, out);
+
+  // Processing verdict: an honest comparison of the SELECTED source with the Result.
+  const verdict = result ? evaluate(sourceSize, result.size) : null;
+  // Replacement verdict: measured against the STORED target, which is what media-guard checks.
+  const replaceVerdict = result ? evaluate(storedSize, result.size) : null;
+  const savingOk = !!replaceVerdict?.ok;
   const bigger = !!verdict && !verdict.ok && verdict.savedBytes <= 0;
+
 
   // Replacement is additionally gated by what the DEPLOYED media-guard really accepts.
   const gate: import("@/lib/media-backend").ReplaceGate = result && current.replace
