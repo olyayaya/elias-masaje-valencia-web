@@ -472,7 +472,11 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
     // A new id re-runs the per-item initialization: stale result/settings/progress/error
     // and the old object URLs are dropped there.
     abortRef.current?.abort();
-    setQueue((q) => q.map((it, i) => (i === index ? { ...it, id: `${it.id}#${Date.now()}`, file } : it)));
+    setQueue((q) =>
+      q.map((it, i) =>
+        i === index ? { ...it, id: `${it.id}#${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, file, picked: true } : it,
+      ),
+    );
   };
 
   const busy = phase === "processing" || phase === "applying";
