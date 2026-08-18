@@ -102,6 +102,8 @@ const defaultVideoSettings = (meta: VideoMeta, caps: EncoderCaps): VideoSettings
  * "Keep original" only throws the local result away.
  */
 const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: Props) => {
+  /** Names uploaded during this queue, so later items cannot collide with them. */
+  const appliedNames = useRef<string[]>([]);
   const [queue] = useState<ProcessingItem[]>(items);
   const [index, setIndex] = useState(0);
   const [mode, setMode] = useState<Mode>("smart");
@@ -386,7 +388,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
         }
       } else {
         // Brand new object: a plain, safe Storage upload — only after Apply.
-        const name = collisionSafeName(result.name, existingNames);
+        // Names applied earlier in THIS queue are not in `existingNames` yet.
+        const name = collisionSafeName(result.name, [...existingNames, ...appliedNames.current]);
         if (current.kind === "photo") {
           const { error: upError } = await supabase.storage.from("media").upload(name, result.blob, {
             contentType: result.contentType,
@@ -400,10 +403,11 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             onProgress: (sent, total) => aliveRef.current && setProgress(total ? Math.round((sent / total) * 100) : 0),
           });
         }
+        appliedNames.current.push(name);
         onApplied(name);
       }
       if (!aliveRef.current) return;
-      toast.success(L("appliedOk", { n: result.name }));
+      // The library owns the success toast (onApplied) — no duplicate here.
       if (reuseSettings) {
         if (current.kind === "photo" && photo) carryPhoto.current = photo;
         if (current.kind === "video" && video) carryVideo.current = video;
@@ -742,7 +746,6 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                 {originalUrl && (current.kind === "photo" ? (
                   <img src={originalUrl} alt={L("originalLabel")} className="w-full rounded-md object-contain max-h-56 bg-secondary" />
                 ) : (
-                  // eslint-disable-next-line jsx-a11y/media-has-caption
                   <video src={originalUrl} controls playsInline className="w-full rounded-md bg-black max-h-56" />
                 ))}
                 <p className="text-muted-foreground break-all">
@@ -758,7 +761,6 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                     {current.kind === "photo" ? (
                       <img src={result.url} alt={L("resultLabel")} className="w-full rounded-md object-contain max-h-56 bg-secondary" />
                     ) : (
-                      // eslint-disable-next-line jsx-a11y/media-has-caption
                       <video src={result.url} controls playsInline className="w-full rounded-md bg-black max-h-56" />
                     )}
                     <p className="text-muted-foreground break-all">

@@ -24,7 +24,7 @@ import { useI18n } from "@/i18n/context";
 import { toast } from "sonner";
 import DashboardCard from "./DashboardCard";
 import MediaFilterBar from "./MediaFilterBar";
-import { COPY, makeL, REASONS, toLang } from "./media/i18n";
+import { makeL, toLang } from "./media/i18n";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -169,6 +169,8 @@ const DashboardMedia = () => {
       const { data, error } = await supabase.storage.from("media").download(f.name);
       if (error || !data) throw new Error(error?.message || L("openFailed", { f: f.name }));
       const file = new File([data], f.name, { type: data.type || f.mimeType || "" });
+      // Storage metadata can be stale or zero — the bytes we just downloaded are the truth.
+      const actualSize = file.size || f.size;
       let publishedInGallery = false;
       try {
         const usageResult = await checkMediaUsage(f.name);
@@ -180,7 +182,7 @@ const DashboardMedia = () => {
         id: `edit-${Date.now()}-${f.name}`,
         file,
         kind,
-        replace: { name: f.name, size: f.size, publishedInGallery },
+        replace: { name: f.name, size: actualSize, publishedInGallery },
       }]);
     } catch (err) {
       toast.error((err as Error).message || L("openFailed", { f: f.name }));
@@ -438,7 +440,8 @@ const DashboardMedia = () => {
             onApplied={(name, replacedName) => {
               markOpt(name, "optimized");
               setUsage(null);
-              toast.success(replacedName ? L("replaced", { n: name }) : L("uploadedVideo", { n: name }));
+              // The dialog stays silent on success: this is the single notification.
+              toast.success(replacedName ? L("replaced", { n: name }) : L("appliedOk", { n: name }));
               void fetchFiles();
             }}
           />
@@ -452,7 +455,6 @@ const DashboardMedia = () => {
             <DialogDescription>{formatFileSize(previewing?.size ?? 0)}</DialogDescription>
           </DialogHeader>
           {previewing && (
-            // eslint-disable-next-line jsx-a11y/media-has-caption
             <video src={previewing.url} controls playsInline className="w-full rounded-lg bg-black" />
           )}
         </DialogContent>
@@ -542,5 +544,4 @@ const DashboardMedia = () => {
 };
 
 export type { LibraryFile };
-export { COPY };
 export default DashboardMedia;
