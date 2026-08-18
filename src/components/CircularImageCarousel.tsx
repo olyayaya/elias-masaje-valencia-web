@@ -9,6 +9,8 @@ interface CircularImageCarouselProps {
   showControls?: boolean;
   /** Autoplay interval in ms. Defaults to 4500. */
   autoplayMs?: number;
+  /** Visual frame style. "card" matches the review-card rounded rectangle treatment. */
+  frame?: "default" | "card";
 }
 
 const TRANSITION_MS = 700;
@@ -18,6 +20,7 @@ const CircularImageCarousel = ({
   className = "",
   showControls = true,
   autoplayMs = 4500,
+  frame = "default",
 }: CircularImageCarouselProps) => {
   const anim = useFadeIn(0.1);
   const [visibleCols, setVisibleCols] = useState(1);
