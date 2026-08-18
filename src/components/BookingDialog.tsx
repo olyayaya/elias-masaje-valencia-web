@@ -103,8 +103,17 @@ const BookingDialog = ({
     return null;
   };
 
-  const shownDuration = !hideDuration ? (duration || "").trim() : "";
-  const shownPrice = !hidePrice && price ? formatPrice(price, t, { hidePrefix: hidePriceFrom }) : "";
+  /** Durations/prices are stored as parallel "a / b / c" strings — pair by index. */
+  const tiers = useMemo(() => parseServiceTiers(duration, price), [duration, price]);
+  const selectedTier = tiers[tierIndex] ?? tiers[0];
+
+  const shownDuration = hideDuration
+    ? ""
+    : (selectedTier?.duration ?? (duration || "").trim());
+  const rawPrice = selectedTier?.price ?? price;
+  const shownPrice = !hidePrice && rawPrice
+    ? formatPrice(rawPrice, t, { hidePrefix: hidePriceFrom })
+    : "";
 
   /** The exact text sent to WhatsApp — always mirrors the preview box. */
   const generated = useMemo(() => {
