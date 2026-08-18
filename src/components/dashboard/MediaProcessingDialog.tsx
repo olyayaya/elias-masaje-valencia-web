@@ -268,28 +268,34 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   /**
    * ffmpeg.wasm rejects with bare strings; video-ffmpeg wraps them into a VideoEngineError
    * carrying a category, so the admin gets an actionable sentence instead of "Processing failed".
+   * The raw technical text (RuntimeError, exit codes) is logged by the engine, never shown.
    */
   const describeProcessError = (e: unknown): string => {
     const err = e as { name?: string; code?: string; message?: string } | null;
-    const detail = err?.message ? ` (${err.message})` : "";
     if (err?.name === "VideoEngineError") {
       switch (err.code) {
-        case "load": return L("errEngineLoad") + detail;
-        case "read": return L("errRead") + detail;
-        case "encode": return L("errEncode") + detail;
-        case "output": return L("errOutput") + detail;
+        case "load": return L("errEngineLoad");
+        case "read": return L("errRead");
+        case "encode": return L("errEncode");
+        case "output": return L("errOutput");
+        case "memory": return L("errMemory");
+        case "busy": return L("errBusy");
       }
     }
+    if (err?.name === "VideoEngineError") return L("processFailed");
     return err?.message || L("processFailed");
   };
 
   const runProcess = async () => {
-
+    // Hard guard against a double click / second run on the shared wasm heap.
+    if (phase === "processing" || phase === "applying") return;
     setError(null);
+    setMemoryFallback(null);
     setProgress(0);
     setPhase("processing");
     const controller = new AbortController();
     abortRef.current = controller;
+
     try {
       const baseName = current.replace?.name ?? current.file.name;
       if (current.kind === "photo") {
