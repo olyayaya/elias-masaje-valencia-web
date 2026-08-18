@@ -66,7 +66,11 @@ const renderLibrary = async () => {
   return user;
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // The Library now persists its filters — each case must start from a clean slate.
+  localStorage.clear();
+});
 
 describe("Library categories", () => {
   it("renames the section to Library and counts photos, videos and other files", async () => {
