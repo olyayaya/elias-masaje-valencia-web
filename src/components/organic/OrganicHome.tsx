@@ -245,24 +245,13 @@ const OrganicHome = () => {
             </Link>
           </div>
 
-          {/* Circular image cluster — full bleed on mobile, padded on desktop */}
-          <div className="-mx-6 md:mx-0">
-            <CircularImageCarousel images={homeCarouselImages} />
-          </div>
-        </div>
-
-        {/* Mobile: curved divider overlays bottom of gallery image */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none md:hidden">
-          <svg viewBox="0 0 1440 96" preserveAspectRatio="none" className="w-full h-16 block">
-            <path d="M0,96 L1440,96 L1440,0 C960,96 480,96 0,0 Z" style={{ fill: bgColor("--organic-dark") }} />
-          </svg>
+          {/* Circular image cluster — rounded rectangle frame matching review cards */}
+          <CircularImageCarousel frame="card" images={homeCarouselImages} />
         </div>
       </section>
 
-      {/* Desktop: standard curved divider */}
-      <div className="hidden md:block">
-        <CurvedDivider from="bg-secondary" to="bg-organic-dark" flip />
-      </div>
+      {/* Standard curved divider */}
+      <CurvedDivider from="bg-secondary" to="bg-organic-dark" flip />
 
       {/* ═══════════ STORY — Dark editorial section ═══════════ */}
       <section className="px-6 md:px-12 lg:px-20 py-20 md:py-28" style={{ backgroundColor: bgColor("--organic-dark") }}>
