@@ -65,6 +65,7 @@ const BookingDialog = ({
   const [message, setMessage] = useState("");
   const [edited, setEdited] = useState(false);
   const [done, setDone] = useState<null | "opened" | "copied">(null);
+  const [tierIndex, setTierIndex] = useState(0);
 
   /** Strict validation — runs before WhatsApp ever opens. */
   const schema = useMemo(() => z.object({
