@@ -188,7 +188,7 @@ const OrganicHome = () => {
       <CurvedDivider from="bg-organic-dark" to="bg-secondary" />
 
       {/* ═══════════ SERVICES — Circular images + editorial list ═══════════ */}
-      <section className={`${isDG ? '' : 'bg-secondary'} px-6 md:px-12 lg:px-20 py-20 md:py-28 overflow-hidden relative pb-0 md:pb-28`}>
+      <section className={`${isDG ? '' : 'bg-secondary'} px-6 md:px-12 lg:px-20 py-20 md:py-28 overflow-hidden relative pb-12 md:pb-28`}>
         <OrganicShape shape="blob" size="w-40 h-40" position="top-4 right-4" animation="float" color="hsl(var(--primary) / 0.04)" delay={500} />
         <OrganicShape shape="arc" size="w-24 h-12" position="bottom-32 left-4" animation="drift" borderColor="hsl(var(--primary) / 0.1)" delay={2000} />
         <div className="max-w-6xl mx-auto">
