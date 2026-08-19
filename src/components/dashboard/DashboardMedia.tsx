@@ -307,7 +307,6 @@ const DashboardMedia = () => {
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   const blocked = (target?.usages.length ?? 0) > 0;
-  const iconBtn = "p-2 rounded-lg hover:bg-secondary disabled:opacity-50 shrink-0";
   const tabs: { id: "all" | MediaKind; label: string; count: number }[] = [
     { id: "all", label: L("all"), count: files.length },
     { id: "photo", label: L("photos"), count: counts.photo },
