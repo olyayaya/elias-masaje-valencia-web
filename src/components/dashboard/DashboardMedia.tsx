@@ -251,6 +251,8 @@ const DashboardMedia = () => {
     if (!base) return setRenameError(L("errEmpty"));
     if (/[\\/]|\.\./.test(base)) return setRenameError(L("errPaths"));
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(next)) return setRenameError(L("errChars"));
+    // A trailing ".xyz" left in the base would smuggle a second extension in.
+    if (/\.[A-Za-z0-9]{2,5}$/.test(base)) return setRenameError(L("errExt", { e: renameExt }));
     if (next === renameTarget.name) return setRenameError(L("errSame"));
     if (files.some((f) => f.name === next)) return setRenameError(L("errExists"));
 
