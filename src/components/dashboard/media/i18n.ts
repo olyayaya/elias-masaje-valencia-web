@@ -80,6 +80,16 @@ export const COPY = {
   sizeDesc: { en: "Largest first", es: "Más grandes", ru: "Сначала большие" },
   sizeAsc: { en: "Smallest first", es: "Más pequeños", ru: "Сначала маленькие" },
 
+  // ---- view switcher (list / tiles) -----------------------------------
+  viewLabel: { en: "View", es: "Vista", ru: "Вид" },
+  viewList: { en: "List", es: "Lista", ru: "Список" },
+  viewGrid: { en: "Tiles", es: "Mosaico", ru: "Плитки" },
+  sizeSmall: { en: "Small", es: "Pequeñas", ru: "Маленькие" },
+  sizeMedium: { en: "Medium", es: "Medianas", ru: "Средние" },
+  sizeLarge: { en: "Large", es: "Grandes", ru: "Большие" },
+  tileSize: { en: "Tile size", es: "Tamaño de mosaico", ru: "Размер плиток" },
+  extLocked: { en: "Extension cannot be changed", es: "La extensión no se puede cambiar", ru: "Расширение изменить нельзя" },
+
   // ---- row actions -----------------------------------------------------
   compress: { en: "Smart compress", es: "Compresión inteligente", ru: "Умное сжатие" },
   convert: { en: "Convert video", es: "Convertir vídeo", ru: "Конвертировать видео" },

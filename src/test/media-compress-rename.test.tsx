@@ -113,10 +113,13 @@ describe("safe rename", () => {
     expect(renameMediaFile).not.toHaveBeenCalled();
   });
 
-  it("rejects path traversal and empty names", async () => {
+  it("strips path traversal from the input and rejects empty names", async () => {
     const user = await openRename();
-    await type(user, "../evil.jpg");
-    expect(await screen.findByText("Name cannot contain paths")).toBeInTheDocument();
+    const pathInput = screen.getByLabelText(LABEL.newName.en);
+    await user.clear(pathInput);
+    await user.type(pathInput, "../evil");
+    // Slashes and dot-dot never survive in the field: no path can reach the transaction.
+    expect((pathInput as HTMLInputElement).value).toBe("evil");
     const emptyInput = screen.getByLabelText(LABEL.newName.en);
     await user.clear(emptyInput);
     await user.click(screen.getByRole("button", { name: LABEL.rename.en }));

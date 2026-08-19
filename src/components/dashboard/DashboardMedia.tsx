@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import {
-  Upload, Trash2, Loader2, AlertTriangle, FilePenLine, Pencil, Film, FileQuestion, Play,
+  Upload, Trash2, Loader2, AlertTriangle, List, LayoutGrid,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatFileSize } from "@/lib/image-utils";
@@ -13,7 +13,7 @@ import {
   type MediaUsage,
 } from "@/lib/media-usage";
 import {
-  kindOf, countByKind, classifyUpload, UPLOAD_ACCEPT,
+  countByKind, classifyUpload, UPLOAD_ACCEPT, kindOf,
   type MediaKind,
 } from "@/lib/media-kind";
 import {
@@ -21,10 +21,15 @@ import {
   type LibraryFile, type MediaFilters, type OptState,
 } from "@/lib/media-filters";
 import { clearFilters, loadFilters, saveFilters } from "@/lib/media-filters-storage";
+import { DEFAULT_VIEW, loadView, saveView, type GridSize, type LibraryView } from "@/lib/media-view-storage";
+import { buildRenameName, sanitizeBaseInput, splitFileName } from "@/lib/rename-name";
 import { useI18n } from "@/i18n/context";
 import { toast } from "sonner";
 import DashboardCard from "./DashboardCard";
 import MediaFilterBar from "./MediaFilterBar";
+import MediaThumb from "./media/MediaThumb";
+import MediaActions from "./media/MediaActions";
+import MediaGrid from "./media/MediaGrid";
 import { makeL, toLang } from "./media/i18n";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -72,7 +77,9 @@ const DashboardMedia = () => {
   const [processing, setProcessing] = useState<ProcessingItem[] | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<LibraryFile | null>(null);
-  const [renameValue, setRenameValue] = useState("");
+  /** Only the basename is editable — the extension is a fixed, read-only suffix. */
+  const [renameBase, setRenameBase] = useState("");
+  const [renameExt, setRenameExt] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
 
@@ -85,6 +92,11 @@ const DashboardMedia = () => {
   const [optimization, setOptimization] = useState<Record<string, OptState>>({});
 
   const [previewing, setPreviewing] = useState<LibraryFile | null>(null);
+
+  // View preference (list vs. tiles + tile size), restored on first render.
+  const [view, setView] = useState<LibraryView>(() => loadView().view);
+  const [gridSize, setGridSize] = useState<GridSize>(() => loadView().size);
+  useEffect(() => { saveView({ view, size: gridSize }); }, [view, gridSize]);
 
   /** Lists the whole bucket (Storage caps a page at 1000 objects). */
   const fetchFiles = async () => {
@@ -224,25 +236,30 @@ const DashboardMedia = () => {
   };
 
   const openRename = (file: LibraryFile) => {
+    const { base, ext } = splitFileName(file.name);
     setRenameTarget(file);
-    setRenameValue(file.name);
+    setRenameBase(base);
+    setRenameExt(ext);
     setRenameError(null);
   };
 
   const submitRename = async () => {
     if (!renameTarget) return;
-    const next = renameValue.trim();
-    const currentExt = renameTarget.name.match(/\.[^.]+$/)?.[0] ?? "";
-    if (!next) return setRenameError(L("errEmpty"));
-    if (/[\\/]|\.\./.test(next)) return setRenameError(L("errPaths"));
+    // The extension always comes from the original object, never from the input.
+    const base = sanitizeBaseInput(renameBase, renameExt).trim();
+    const next = buildRenameName(base, renameExt);
+    if (!base) return setRenameError(L("errEmpty"));
+    if (/[\\/]|\.\./.test(base)) return setRenameError(L("errPaths"));
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(next)) return setRenameError(L("errChars"));
-    if (!next.toLowerCase().endsWith(currentExt.toLowerCase())) return setRenameError(L("errExt", { e: currentExt }));
+    // A trailing ".xyz" left in the base would smuggle a second extension in.
+    if (/\.[A-Za-z0-9]{2,5}$/.test(base)) return setRenameError(L("errExt", { e: renameExt }));
     if (next === renameTarget.name) return setRenameError(L("errSame"));
     if (files.some((f) => f.name === next)) return setRenameError(L("errExists"));
 
     setRenaming(true);
     setRenameError(null);
     try {
+      // media-guard re-validates the extension server-side (validateRenameExtension).
       const result = await renameMediaFile(renameTarget.name, next);
       reportOutcome(L("renamedTo", { n: next }), result);
       setRenameTarget(null);
@@ -292,13 +309,21 @@ const DashboardMedia = () => {
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>;
 
   const blocked = (target?.usages.length ?? 0) > 0;
-  const iconBtn = "p-2 rounded-lg hover:bg-secondary disabled:opacity-50 shrink-0";
   const tabs: { id: "all" | MediaKind; label: string; count: number }[] = [
     { id: "all", label: L("all"), count: files.length },
     { id: "photo", label: L("photos"), count: counts.photo },
     { id: "video", label: L("videos"), count: counts.video },
     { id: "other", label: L("other"), count: counts.other },
   ];
+
+  const actions = {
+    onPreview: (f: LibraryFile) => setPreviewing(f),
+    onEdit: (f: LibraryFile) => { void openEditor(f); },
+    onRename: openRename,
+    onDelete: (f: LibraryFile) => { void requestDelete(f.name); },
+    opening,
+    checking,
+  };
 
   return (
     <div className="space-y-6">
@@ -363,30 +388,39 @@ const DashboardMedia = () => {
             onScanUsage={() => void scanUsage()}
           />
 
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs value={view} onValueChange={(v) => setView(v as LibraryView)}>
+              <TabsList aria-label={L("viewLabel")}>
+                <TabsTrigger value="list" aria-label={L("viewList")} title={L("viewList")}>
+                  <List size={14} className="mr-1" />{L("viewList")}
+                </TabsTrigger>
+                <TabsTrigger value="grid" aria-label={L("viewGrid")} title={L("viewGrid")}>
+                  <LayoutGrid size={14} className="mr-1" />{L("viewGrid")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {view === "grid" && (
+              <Tabs value={gridSize} onValueChange={(v) => setGridSize(v as GridSize)}>
+                <TabsList aria-label={L("tileSize")}>
+                  <TabsTrigger value="s" aria-label={L("sizeSmall")} title={L("sizeSmall")}>S</TabsTrigger>
+                  <TabsTrigger value="m" aria-label={L("sizeMedium")} title={L("sizeMedium")}>M</TabsTrigger>
+                  <TabsTrigger value="l" aria-label={L("sizeLarge")} title={L("sizeLarge")}>L</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+          </div>
+
           {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">{L("empty")}</p>
+          ) : view === "grid" ? (
+            <MediaGrid files={filtered} size={gridSize} usage={usage} L={L} {...actions} />
           ) : (
             <div className="divide-y divide-border">
               {filtered.map((f) => {
-                const kind = kindOf(f);
                 const refs = usage?.[f.name];
                 return (
                   <div key={f.name} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
-                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center overflow-hidden shrink-0">
-                      {kind === "photo" ? (
-                        <img
-                          src={f.url}
-                          alt={f.name}
-                          loading="lazy"
-                          className="w-10 h-10 rounded-lg object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                        />
-                      ) : kind === "video" ? (
-                        <Film size={16} className="text-muted-foreground" aria-hidden="true" />
-                      ) : (
-                        <FileQuestion size={16} className="text-muted-foreground" aria-hidden="true" />
-                      )}
-                    </div>
+                    <MediaThumb file={f} />
                     <div className="flex-1 min-w-[8rem]">
                       <p className="text-sm text-foreground truncate">{f.name}</p>
                       <span className="text-xs text-muted-foreground">
@@ -396,47 +430,8 @@ const DashboardMedia = () => {
                         )}
                       </span>
                     </div>
-                    {kind === "video" && <Badge variant="outline" className="shrink-0">{L("videos")}</Badge>}
-                    <div className="flex items-center gap-1 ml-auto">
-                      {kind === "video" && (
-                        <button
-                          onClick={() => setPreviewing(f)}
-                          aria-label={`${L("preview")} ${f.name}`}
-                          title={L("preview")}
-                          className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                        >
-                          <Play size={14} />
-                        </button>
-                      )}
-                      {kind !== "other" && (
-                        <button
-                          onClick={() => void openEditor(f)}
-                          disabled={opening === f.name}
-                          aria-label={`${L("editReplace")} ${f.name}`}
-                          title={L("editReplace")}
-                          className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                        >
-                          {opening === f.name ? <Loader2 size={14} className="animate-spin" /> : <FilePenLine size={14} />}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => openRename(f)}
-                        aria-label={`${L("rename")} ${f.name}`}
-                        title={L("rename")}
-                        className={`${iconBtn} text-muted-foreground hover:text-foreground`}
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => void requestDelete(f.name)}
-                        disabled={checking === f.name}
-                        aria-label={`${L("del")} ${f.name}`}
-                        title={L("del")}
-                        className={`${iconBtn} text-muted-foreground hover:text-destructive`}
-                      >
-                        {checking === f.name ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                      </button>
-                    </div>
+                    {kindOf(f) === "video" && <Badge variant="outline" className="shrink-0">{L("videos")}</Badge>}
+                    <MediaActions file={f} L={L} {...actions} />
                   </div>
                 );
               })}
@@ -488,12 +483,24 @@ const DashboardMedia = () => {
             </div>
             <div>
               <label htmlFor="media-rename" className="text-xs text-muted-foreground mb-1 block">{L("newName")}</label>
-              <Input
-                id="media-rename"
-                value={renameValue}
-                onChange={(e) => { setRenameValue(e.target.value); setRenameError(null); }}
-                disabled={renaming}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  id="media-rename"
+                  value={renameBase}
+                  aria-describedby="media-rename-ext"
+                  onChange={(e) => { setRenameBase(sanitizeBaseInput(e.target.value, renameExt)); setRenameError(null); }}
+                  disabled={renaming}
+                />
+                <span
+                  id="media-rename-ext"
+                  data-testid="rename-ext"
+                  aria-label={L("extLocked")}
+                  title={L("extLocked")}
+                  className="select-none text-sm text-muted-foreground bg-secondary border border-border rounded-md px-2 py-2 shrink-0"
+                >
+                  {renameExt}
+                </span>
+              </div>
             </div>
             {renameError && <p className="text-xs text-destructive">{renameError}</p>}
           </div>
