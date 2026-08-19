@@ -90,23 +90,23 @@ describe("ffmpeg argument building", () => {
 });
 
 describe("capability gating", () => {
-  it("only offers formats whose encoder exists", () => {
-    expect(availableFormats(FULL)).toEqual(["mp4", "webm"]);
-    expect(availableFormats({ ...FULL, h264: false })).toEqual(["webm"]);
+  it("only offers MP4 — VP9 crashes the wasm core, so WebM is never a target", () => {
+    expect(availableFormats(FULL)).toEqual(["mp4"]);
+    expect(availableFormats({ ...FULL, h264: false })).toEqual([]);
     expect(availableFormats(NONE)).toEqual([]);
   });
 
   it("never offers a container it cannot write audio for", () => {
     // The admin asked to shrink videos, not to silence them: a format whose only audio
     // encoders are missing is withheld instead of falling back to -an.
-    expect(availableFormats({ ...FULL, aac: false, mp3lame: false })).toEqual(["webm"]);
+    expect(availableFormats({ ...FULL, aac: false, mp3lame: false })).toEqual([]);
     expect(availableFormats({ ...FULL, opus: false, vorbis: false })).toEqual(["mp4"]);
     expect(availableFormats({ h264: true, vp9: true, aac: false, mp3lame: false, opus: false, vorbis: false })).toEqual([]);
   });
 
-  it("keeps both containers on a core with the real production encoder set", () => {
+  it("keeps MP4 on a core with the real production encoder set", () => {
     expect(availableFormats({ h264: true, vp9: true, aac: true, opus: true, mp3lame: false, vorbis: false }))
-      .toEqual(["mp4", "webm"]);
+      .toEqual(["mp4"]);
   });
 
   it("parses the real -encoders listing", () => {

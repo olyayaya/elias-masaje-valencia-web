@@ -71,9 +71,8 @@ describe("memory policy (pure)", () => {
 
   it("offers MP4 720p as the explicit lighter preset", () => {
     expect(memorySafeSettings(CAPS)).toEqual({ format: "mp4", resolution: "720", customShortSide: 720 });
-    expect(memorySafeSettings({ ...CAPS, h264: false })).toEqual({
-      format: "webm", resolution: "720", customShortSide: 720,
-    });
+    // No H.264 → no safe fallback at all: WebM/VP9 is not a publishable target.
+    expect(memorySafeSettings({ ...CAPS, h264: false })).toBeNull();
   });
 
   it("never emits libvpx options that allocate per-thread or lookahead buffers", () => {

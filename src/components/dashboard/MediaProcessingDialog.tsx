@@ -28,9 +28,9 @@ import {
 } from "@/lib/photo-encode";
 import {
   AUDIO_KBPS_CHOICES, CRF_RANGE, MAX_CONVERT_BYTES, MEMORY_WARN_BYTES, MIME_BY_FORMAT,
-  availableFormatsWithMov, clampBitrate, clampCrf, defaultCrf, estimateSizeBytes,
+  availableFormatsWithMov, canRemuxWithoutReencode, clampBitrate, clampCrf, defaultCrf, estimateSizeBytes,
   evaluateVideoSaving, exceedsMemoryBudget, formatDuration, isMobileBrowser, isWebFormat,
-  memorySafeSettings, outputNameFor, smartPreset, targetDimensions,
+  memorySafeSettings, originalContentType, outputNameFor, smartPreset, targetDimensions,
   type EncoderCaps, type FpsChoice, type RateControl, type ResolutionChoice,
   type SpeedChoice, type VideoFormat, type VideoMeta,
 } from "@/lib/video-convert";
@@ -56,7 +56,7 @@ interface Props {
   onApplied: (name: string, replacedName?: string) => void;
 }
 
-type Mode = "smart" | "advanced";
+type Mode = "smart" | "advanced" | "original";
 type Phase = "idle" | "processing" | "done" | "applying";
 
 interface VideoSettings {
@@ -79,7 +79,12 @@ interface Result {
   format: string;
   width: number;
   height: number;
+  /** "original" = untouched bytes, "muted" = lossless remux, undefined = re-encoded. */
+  passthrough?: "original" | "muted";
+  /** Only for a muted remux: whether the source really had an audio track. */
+  hadAudio?: boolean;
 }
+
 
 const SIZES: SizeChoice[] = ["original", "1920", "1600", "1280", "custom"];
 const RESOLUTIONS: ResolutionChoice[] = ["original", "1080", "720", "480", "custom"];
@@ -121,6 +126,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const [compare, setCompare] = useState<"original" | "result">("original");
   const [confirmed, setConfirmed] = useState(false);
   const [reuseSettings, setReuseSettings] = useState(true);
+  /** "Original file" mode: no re-encode. Optionally drop the audio via a stream-copy remux. */
+  const [stripAudioOnly, setStripAudioOnly] = useState(false);
   /** Set only after an out-of-memory failure: the explicit, opt-in lighter preset. */
   const [memoryFallback, setMemoryFallback] = useState<
     { format: VideoFormat; resolution: ResolutionChoice; customShortSide: number } | null
@@ -286,8 +293,11 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
         case "busy": return L("errBusy");
       }
     }
-    if (err?.name === "VideoEngineError") return L("processFailed");
-    return err?.message || L("processFailed");
+    if (err?.name === "UploadClientError") return L("errUploadClient");
+    // Anything else is an internal/minified failure: the technical text belongs in the
+    // console, the admin gets a localized sentence.
+    console.error("[media] processing failed", e);
+    return L("processFailed");
   };
 
   const runProcess = async () => {
@@ -313,7 +323,41 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           blob: out.blob, size: out.size, url, name: photoOutputName(baseName, out.format),
           contentType: out.mime, format: out.format.toUpperCase(), width: out.width, height: out.height,
         });
+      } else if (mode === "original") {
+        // No conversion at all. Either the untouched File, or a stream-copy remux that
+        // only drops the audio/subtitle/data streams — the video bitstream is copied.
+        const name = current.replace?.name ?? current.file.name;
+        const contentType = originalContentType(current.file.name, current.file.type);
+        let blob: Blob = current.file;
+        let hadAudio: boolean | undefined;
+        if (stripAudioOnly) {
+          if (!canRemuxWithoutReencode(current.file.name)) throw new Error(L("errRemuxUnsupported"));
+          const engine = await import("@/lib/video-ffmpeg");
+          if (!engine.isConverterSupported()) throw new Error(L("notSupported"));
+          const out = await engine.stripAudio(
+            current.file,
+            { fileName: current.file.name, mimeType: contentType },
+            {
+              signal: controller.signal,
+              onProgress: (r) => aliveRef.current && setProgress(Math.round(r * 100)),
+            },
+          );
+          blob = out.blob;
+          hadAudio = out.hadAudio;
+        }
+        if (!aliveRef.current) return;
+        revokeResult();
+        const url = URL.createObjectURL(blob);
+        resultUrlRef.current = url;
+        setResult({
+          blob, size: blob.size, url, name, contentType,
+          format: (current.file.name.split(".").pop() ?? "").toUpperCase(),
+          width: meta?.width ?? 0, height: meta?.height ?? 0,
+          passthrough: stripAudioOnly ? "muted" : "original",
+          hadAudio,
+        });
       } else {
+
         if (!video || !meta || !caps) throw new Error(L("processFailed"));
         const engine = await import("@/lib/video-ffmpeg");
         const out = await engine.convertVideo(
@@ -523,7 +567,10 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const photoDims = photo && photoSource
     ? photoTargetDimensions(photoSource.width, photoSource.height, photo.size, photo.customSize)
     : null;
-  const canProcess = !busy && !videoTooBig && (current.kind === "photo" ? !!photo : !!video);
+  const canProcess = !busy && (mode === "original"
+    ? current.kind === "video"
+    : !videoTooBig && (current.kind === "photo" ? !!photo : !!video));
+
 
   const panelClass = (side: "original" | "result") =>
     `rounded-lg border border-border p-3 space-y-2 ${compare === side ? "" : "hidden sm:block"}`;
@@ -556,10 +603,35 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             <TabsList>
               <TabsTrigger value="smart">{L("modeSmart")}</TabsTrigger>
               <TabsTrigger value="advanced">{L("modeAdvanced")}</TabsTrigger>
+              {current.kind === "video" && (
+                <TabsTrigger value="original">{L("modeOriginal")}</TabsTrigger>
+              )}
             </TabsList>
           </Tabs>
 
+          {mode === "original" && current.kind === "video" && (
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div>
+                <p className="text-sm font-medium">{L("originalModeTitle")}</p>
+                <p className="text-xs text-muted-foreground">{L("originalModeDesc")}</p>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <Label htmlFor="strip-audio-only" className="text-xs leading-snug">
+                  {L("removeAudioOpt")}
+                  <span className="block text-muted-foreground font-normal">{L("stripAudioHint")}</span>
+                </Label>
+                <Switch
+                  id="strip-audio-only"
+                  checked={stripAudioOnly}
+                  disabled={busy}
+                  onCheckedChange={(v) => { dropResult(); setStripAudioOnly(v); }}
+                />
+              </div>
+            </div>
+          )}
+
           {error && (
+
             <p role="alert" className="flex items-start gap-2 text-xs text-destructive">
               <AlertTriangle size={13} className="mt-0.5 shrink-0" /> {error}
             </p>
@@ -594,11 +666,11 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </div>
           )}
 
-          {current.kind === "video" && !videoTooBig && current.file.size > MEMORY_WARN_BYTES && (
+          {mode !== "original" && current.kind === "video" && !videoTooBig && current.file.size > MEMORY_WARN_BYTES && (
             <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">{L("memoryWarning")}</p>
           )}
 
-          {current.kind === "video" && video && meta && !videoTooBig && (() => {
+          {mode !== "original" && current.kind === "video" && video && meta && !videoTooBig && (() => {
             const dims = targetDimensions(meta.width, meta.height, video.resolution, video.customShortSide);
             if (!exceedsMemoryBudget({ ...dims, format: video.format, mobile: isMobileBrowser() })) return null;
             return (
@@ -703,7 +775,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           )}
 
           {/* ---- video controls -------------------------------------- */}
-          {current.kind === "video" && video && caps && (
+          {mode !== "original" && current.kind === "video" && video && caps && (
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
@@ -910,9 +982,20 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                       <video src={result.url} controls playsInline className="w-full rounded-md bg-black max-h-56" />
                     )}
                     <p className="text-muted-foreground break-all">
-                      {formatFileSize(result.size)} · {result.format} · {result.width}×{result.height}
-                      {verdict?.ok ? ` · −${verdict.savedPercent}%` : ""}
+                      {formatFileSize(result.size)} · {result.format}
+                      {result.width && result.height ? ` · ${result.width}×${result.height}` : ""}
+                      {verdict?.ok && !result.passthrough ? ` · −${verdict.savedPercent}%` : ""}
                     </p>
+                    {result.passthrough === "original" && (
+                      <p className="text-muted-foreground">
+                        {L("passthroughResult", { n: result.name, s: formatFileSize(result.size) })}
+                      </p>
+                    )}
+                    {result.passthrough === "muted" && (
+                      <p className="text-muted-foreground">
+                        {result.hadAudio ? L("stripAudioResult") : L("stripAudioNoAudio")}
+                      </p>
+                    )}
                   </>
                 ) : (
                   <p className="text-muted-foreground">{L("notProcessed")}</p>
@@ -921,7 +1004,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </div>
           </div>
 
-          {result && verdict && !verdict.ok && (
+          {result && !result.passthrough && verdict && !verdict.ok && (
             <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
               {bigger
                 ? L("resultBigger", { a: formatFileSize(sourceSize), b: formatFileSize(result.size) })

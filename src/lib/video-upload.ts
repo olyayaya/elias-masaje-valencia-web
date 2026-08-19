@@ -52,13 +52,48 @@ export async function stagedObjectName(ext: string): Promise<string> {
   return `staged-${userId}-${crypto.randomUUID()}.${ext.toLowerCase()}`;
 }
 
+/**
+ * Raised when the tus client module cannot be loaded/instantiated. Carries a name the UI
+ * can map to a localized sentence — the raw (minified) technical text stays in console.
+ */
+export class UploadClientError extends Error {
+  constructor(message: string, readonly cause?: unknown) {
+    super(message);
+    this.name = "UploadClientError";
+  }
+}
+
+/**
+ * The Upload constructor, resolved from the module's NAMED export.
+ *
+ * Do NOT reintroduce `import("tus-js-client").then((m) => ({ tus: m }))`: Rollup rewrote
+ * that shape into a preload wrapper whose inner arrow re-destructured the chunk, so the
+ * object reaching `new tus.Upload()` was `{ tus: undefined }` and production failed with
+ * the minified "i.Upload is not a constructor".
+ */
+async function loadUploadClass(): Promise<typeof import("tus-js-client").Upload> {
+  let mod: typeof import("tus-js-client");
+  try {
+    mod = await import("tus-js-client");
+  } catch (e) {
+    console.error("[video-upload] tus-js-client failed to load", e);
+    throw new UploadClientError("tus-js-client could not be imported", e);
+  }
+  const Upload = mod?.Upload ?? (mod as { default?: { Upload?: unknown } })?.default?.Upload;
+  if (typeof Upload !== "function") {
+    console.error("[video-upload] unexpected tus-js-client module shape", Object.keys(mod ?? {}));
+    throw new UploadClientError("tus-js-client exposes no Upload constructor");
+  }
+  return Upload as typeof import("tus-js-client").Upload;
+}
+
 export async function uploadResumable(
   objectName: string,
   file: Blob,
   contentType: string,
   handlers: UploadHandlers = {},
 ): Promise<void> {
-  const { tus } = await import("tus-js-client").then((m) => ({ tus: m }));
+  const Upload = await loadUploadClass();
   const token = await accessToken();
   const signal = handlers.signal;
   let abortListener: (() => void) | null = null;
@@ -69,7 +104,8 @@ export async function uploadResumable(
     let settled = false;
     let aborted = false;
 
-    const upload = new tus.Upload(file, {
+    const upload = new Upload(file, {
+
       endpoint: endpoint(),
       retryDelays: [0, 1000, 3000, 5000],
       headers: { authorization: `Bearer ${token}`, "x-upsert": "false" },

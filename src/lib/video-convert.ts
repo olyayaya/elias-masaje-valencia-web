@@ -84,29 +84,27 @@ export function audioEncoderFor(format: VideoFormat, caps: EncoderCaps): string 
 }
 
 /**
- * A format is offerable only when this core can write BOTH its video and a matching audio
- * codec. Optimizing a video must never silently drop the soundtrack, so a container we
- * could only produce muted is not an option at all:
- *   MP4/MOV → libx264    + (aac | libmp3lame)
- *   WebM    → libvpx-vp9 + (libopus | libvorbis)
+ * Output policy: MP4 / H.264 + AAC is the ONLY container we produce.
+ * libvpx-vp9 crashes the browser renderer in this wasm core even on a minimal argv and a
+ * one-second clip, so WebM is never offered as a conversion target. Existing WebM files
+ * stay untouched and WebM sources can still be read as input.
  */
 export function availableFormats(caps: EncoderCaps): VideoFormat[] {
   const out: VideoFormat[] = [];
   if (caps.h264 && audioEncoderFor("mp4", caps)) out.push("mp4");
-  if (caps.vp9 && audioEncoderFor("webm", caps)) out.push("webm");
   return out;
 }
 
 /**
- * Every container the loaded core can really write, MOV included. Used by the advanced
- * processing dialog; `availableFormats` stays the web-only recommendation list.
+ * Every container the advanced dialog may write: MP4 plus MOV (same H.264 core).
+ * WebM is deliberately absent — see availableFormats.
  */
 export function availableFormatsWithMov(caps: EncoderCaps): VideoFormat[] {
   const out: VideoFormat[] = [];
   if (caps.h264 && audioEncoderFor("mp4", caps)) out.push("mp4", "mov");
-  if (caps.vp9 && audioEncoderFor("webm", caps)) out.push("webm");
   return out;
 }
+
 
 
 
@@ -319,27 +317,24 @@ export function memorySafeSettings(caps: EncoderCaps): {
   customShortSide: number;
 } | null {
   const formats = availableFormatsWithMov(caps);
-  const format: VideoFormat | undefined = formats.includes("mp4")
-    ? "mp4"
-    : formats.includes("webm")
-      ? "webm"
-      : undefined;
+  const format: VideoFormat | undefined = formats.includes("mp4") ? "mp4" : undefined;
   if (!format) return null;
   return { format, resolution: "720", customShortSide: 720 };
 }
 
 
 /**
- * Smart preset: compatible container, max 1080p, capped fps, sensible quality by source size.
- * Falls back to whatever the core can actually encode.
+ * Smart preset: always MP4 / H.264 + AAC, max 1080p, capped fps, quality by source bitrate.
+ * Returns null when the core cannot encode H.264 at all.
  */
 export function smartPreset(
   meta: VideoMeta,
   caps: EncoderCaps,
 ): { format: VideoFormat; resolution: ResolutionChoice; quality: VideoQuality } | null {
   const formats = availableFormats(caps);
-  if (!formats.length) return null;
-  const format: VideoFormat = formats.includes("mp4") ? "mp4" : "webm";
+  if (!formats.includes("mp4")) return null;
+  const format: VideoFormat = "mp4";
+
   const short = Math.min(meta.width, meta.height);
   const resolution: ResolutionChoice = short > 1080 ? "1080" : "original";
   const perSecond = meta.duration > 0 ? meta.size / meta.duration : 0;
@@ -402,6 +397,35 @@ export function buildStripAudioArgs(o: { inputName: string; outputName: string }
   args.push("-y", o.outputName);
   return args;
 }
+
+// ---------------------------------------------------------------------------
+// Upload the original, unconverted file
+// ---------------------------------------------------------------------------
+
+/** Lowercase extension of a file name, or "" when it has none. */
+export const extOf = (fileName: string): string =>
+  (fileName.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "").toLowerCase();
+
+/** Containers whose audio track can be dropped by a safe stream-copy remux. */
+export const REMUXABLE_VIDEO_EXTS = Object.keys(MUXER_BY_EXT);
+export const canRemuxWithoutReencode = (fileName: string): boolean =>
+  REMUXABLE_VIDEO_EXTS.includes(extOf(fileName));
+
+const MIME_BY_EXT: Record<string, string> = {
+  mp4: "video/mp4",
+  m4v: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+};
+
+/**
+ * MIME of an untouched original: the browser-reported type wins, the extension is only a
+ * fallback for files a browser hands over with an empty type.
+ */
+export const originalContentType = (fileName: string, fileType?: string): string =>
+  fileType || MIME_BY_EXT[extOf(fileName)] || "application/octet-stream";
+
+
 
 
 /**
