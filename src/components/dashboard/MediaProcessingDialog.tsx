@@ -323,7 +323,41 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           blob: out.blob, size: out.size, url, name: photoOutputName(baseName, out.format),
           contentType: out.mime, format: out.format.toUpperCase(), width: out.width, height: out.height,
         });
+      } else if (mode === "original") {
+        // No conversion at all. Either the untouched File, or a stream-copy remux that
+        // only drops the audio/subtitle/data streams — the video bitstream is copied.
+        const name = current.replace?.name ?? current.file.name;
+        const contentType = originalContentType(current.file.name, current.file.type);
+        let blob: Blob = current.file;
+        let hadAudio: boolean | undefined;
+        if (stripAudioOnly) {
+          if (!canRemuxWithoutReencode(current.file.name)) throw new Error(L("errRemuxUnsupported"));
+          const engine = await import("@/lib/video-ffmpeg");
+          if (!engine.isConverterSupported()) throw new Error(L("notSupported"));
+          const out = await engine.stripAudio(
+            current.file,
+            { fileName: current.file.name, mimeType: contentType },
+            {
+              signal: controller.signal,
+              onProgress: (r) => aliveRef.current && setProgress(Math.round(r * 100)),
+            },
+          );
+          blob = out.blob;
+          hadAudio = out.hadAudio;
+        }
+        if (!aliveRef.current) return;
+        revokeResult();
+        const url = URL.createObjectURL(blob);
+        resultUrlRef.current = url;
+        setResult({
+          blob, size: blob.size, url, name, contentType,
+          format: (current.file.name.split(".").pop() ?? "").toUpperCase(),
+          width: meta?.width ?? 0, height: meta?.height ?? 0,
+          passthrough: stripAudioOnly ? "muted" : "original",
+          hadAudio,
+        });
       } else {
+
         if (!video || !meta || !caps) throw new Error(L("processFailed"));
         const engine = await import("@/lib/video-ffmpeg");
         const out = await engine.convertVideo(
