@@ -5,7 +5,18 @@
  * namespace reaching `new tus.Upload()` was not the namespace at all, so the only useful
  * test is one that exercises the real export shape through uploadResumable.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+// Only auth/storage are stubbed; tus-js-client stays REAL — that is the point of the test.
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    auth: {
+      getSession: async () => ({ data: { session: { access_token: "t" } } }),
+      getUser: async () => ({ data: { user: { id: "u" } } }),
+    },
+    storage: { from: () => ({ remove: async () => ({ error: null }) }) },
+  },
+}));
 
 describe("tus-js-client module shape", () => {
   it("exposes Upload as a real constructor on the named export", async () => {
