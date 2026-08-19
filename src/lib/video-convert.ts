@@ -84,29 +84,27 @@ export function audioEncoderFor(format: VideoFormat, caps: EncoderCaps): string 
 }
 
 /**
- * A format is offerable only when this core can write BOTH its video and a matching audio
- * codec. Optimizing a video must never silently drop the soundtrack, so a container we
- * could only produce muted is not an option at all:
- *   MP4/MOV → libx264    + (aac | libmp3lame)
- *   WebM    → libvpx-vp9 + (libopus | libvorbis)
+ * Output policy: MP4 / H.264 + AAC is the ONLY container we produce.
+ * libvpx-vp9 crashes the browser renderer in this wasm core even on a minimal argv and a
+ * one-second clip, so WebM is never offered as a conversion target. Existing WebM files
+ * stay untouched and WebM sources can still be read as input.
  */
 export function availableFormats(caps: EncoderCaps): VideoFormat[] {
   const out: VideoFormat[] = [];
   if (caps.h264 && audioEncoderFor("mp4", caps)) out.push("mp4");
-  if (caps.vp9 && audioEncoderFor("webm", caps)) out.push("webm");
   return out;
 }
 
 /**
- * Every container the loaded core can really write, MOV included. Used by the advanced
- * processing dialog; `availableFormats` stays the web-only recommendation list.
+ * Every container the advanced dialog may write: MP4 plus MOV (same H.264 core).
+ * WebM is deliberately absent — see availableFormats.
  */
 export function availableFormatsWithMov(caps: EncoderCaps): VideoFormat[] {
   const out: VideoFormat[] = [];
   if (caps.h264 && audioEncoderFor("mp4", caps)) out.push("mp4", "mov");
-  if (caps.vp9 && audioEncoderFor("webm", caps)) out.push("webm");
   return out;
 }
+
 
 
 
