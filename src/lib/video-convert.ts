@@ -398,6 +398,35 @@ export function buildStripAudioArgs(o: { inputName: string; outputName: string }
   return args;
 }
 
+// ---------------------------------------------------------------------------
+// Upload the original, unconverted file
+// ---------------------------------------------------------------------------
+
+/** Lowercase extension of a file name, or "" when it has none. */
+export const extOf = (fileName: string): string =>
+  (fileName.match(/\.([A-Za-z0-9]{2,5})$/)?.[1] ?? "").toLowerCase();
+
+/** Containers whose audio track can be dropped by a safe stream-copy remux. */
+export const REMUXABLE_VIDEO_EXTS = Object.keys(MUXER_BY_EXT);
+export const canRemuxWithoutReencode = (fileName: string): boolean =>
+  REMUXABLE_VIDEO_EXTS.includes(extOf(fileName));
+
+const MIME_BY_EXT: Record<string, string> = {
+  mp4: "video/mp4",
+  m4v: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+};
+
+/**
+ * MIME of an untouched original: the browser-reported type wins, the extension is only a
+ * fallback for files a browser hands over with an empty type.
+ */
+export const originalContentType = (fileName: string, fileType?: string): string =>
+  fileType || MIME_BY_EXT[extOf(fileName)] || "application/octet-stream";
+
+
+
 
 /**
  * True when the ffmpeg log for the source shows at least one audio stream.
