@@ -567,7 +567,10 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const photoDims = photo && photoSource
     ? photoTargetDimensions(photoSource.width, photoSource.height, photo.size, photo.customSize)
     : null;
-  const canProcess = !busy && !videoTooBig && (current.kind === "photo" ? !!photo : !!video);
+  const canProcess = !busy && (mode === "original"
+    ? current.kind === "video"
+    : !videoTooBig && (current.kind === "photo" ? !!photo : !!video));
+
 
   const panelClass = (side: "original" | "result") =>
     `rounded-lg border border-border p-3 space-y-2 ${compare === side ? "" : "hidden sm:block"}`;
