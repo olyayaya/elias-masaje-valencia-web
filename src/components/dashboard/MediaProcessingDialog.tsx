@@ -38,8 +38,7 @@ import {
 import type { LibraryT } from "./media/i18n";
 import VideoViewer from "@/components/media/VideoViewer";
 import { saveLibraryPoster } from "@/lib/library-poster";
-import { useI18n } from "@/i18n/context";
-import { toLang } from "./media/i18n";
+import type { ViewerLang } from "@/components/media/video-viewer-i18n";
 
 export interface ProcessingItem {
   id: string;
@@ -119,7 +118,12 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const appliedNames = useRef<string[]>([]);
   // The queue is stateful only so "Replace file" can swap the local source of the current
   // item while keeping its replace target (name/size/publishedInGallery) intact.
-  const viewerLang = toLang(useI18n().locale);
+  // Read the language off the document instead of the i18n context: this dialog is
+  // rendered by tests (and by the dashboard) outside of an I18nProvider.
+  const docLang = typeof document !== "undefined" ? document.documentElement.lang : "es";
+  const viewerLang: ViewerLang = (["en", "es", "ru"] as const).includes(docLang as ViewerLang)
+    ? (docLang as ViewerLang)
+    : "es";
   const [queue, setQueue] = useState<ProcessingItem[]>(items);
   const [index, setIndex] = useState(0);
   const [mode, setMode] = useState<Mode>("smart");
