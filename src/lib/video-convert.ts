@@ -317,27 +317,24 @@ export function memorySafeSettings(caps: EncoderCaps): {
   customShortSide: number;
 } | null {
   const formats = availableFormatsWithMov(caps);
-  const format: VideoFormat | undefined = formats.includes("mp4")
-    ? "mp4"
-    : formats.includes("webm")
-      ? "webm"
-      : undefined;
+  const format: VideoFormat | undefined = formats.includes("mp4") ? "mp4" : undefined;
   if (!format) return null;
   return { format, resolution: "720", customShortSide: 720 };
 }
 
 
 /**
- * Smart preset: compatible container, max 1080p, capped fps, sensible quality by source size.
- * Falls back to whatever the core can actually encode.
+ * Smart preset: always MP4 / H.264 + AAC, max 1080p, capped fps, quality by source bitrate.
+ * Returns null when the core cannot encode H.264 at all.
  */
 export function smartPreset(
   meta: VideoMeta,
   caps: EncoderCaps,
 ): { format: VideoFormat; resolution: ResolutionChoice; quality: VideoQuality } | null {
   const formats = availableFormats(caps);
-  if (!formats.length) return null;
-  const format: VideoFormat = formats.includes("mp4") ? "mp4" : "webm";
+  if (!formats.includes("mp4")) return null;
+  const format: VideoFormat = "mp4";
+
   const short = Math.min(meta.width, meta.height);
   const resolution: ResolutionChoice = short > 1080 ? "1080" : "original";
   const perSecond = meta.duration > 0 ? meta.size / meta.duration : 0;
