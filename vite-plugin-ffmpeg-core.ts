@@ -39,8 +39,44 @@ const coreDir = (root: string) => {
 };
 
 
+/**
+ * The worker @ffmpeg/ffmpeg spawns. Its own `new Worker(new URL("./worker.js", import.meta.url))`
+ * is rewritten by Vite's dep optimizer to /node_modules/.vite/deps/worker.js, which does NOT
+ * exist (404) — the worker dies before answering the LOAD message and `load()` hangs forever.
+ * We therefore bundle the ESM worker ourselves and hand it to `load({ classWorkerURL })`.
+ */
+const WORKER_FILE = "ffmpeg-worker.js";
+
+const workerEntry = (root: string) => {
+  const require = createRequire(path.join(root, "package.json"));
+  const candidates: string[] = [];
+  try {
+    candidates.push(path.join(path.dirname(require.resolve("@ffmpeg/ffmpeg")), "../esm/worker.js"));
+  } catch {
+    /* ignore */
+  }
+  candidates.push(path.join(root, "node_modules/@ffmpeg/ffmpeg/dist/esm/worker.js"));
+  return candidates.find((f) => fs.existsSync(f)) ?? "";
+};
+
+async function bundleWorker(root: string): Promise<string> {
+  const entry = workerEntry(root);
+  if (!entry) return "";
+  const { build } = await import("esbuild");
+  const out = await build({
+    entryPoints: [entry],
+    bundle: true,
+    format: "esm",
+    platform: "browser",
+    write: false,
+    minify: true,
+  });
+  return out.outputFiles[0]?.text ?? "";
+}
+
 export function ffmpegCore(root: string): Plugin {
   let dir = "";
+  let workerCode = "";
   return {
     name: "ffmpeg-core-assets",
     apply: () => true,
@@ -52,21 +88,31 @@ export function ffmpegCore(root: string): Plugin {
       }
     },
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url?.startsWith(`/ffmpeg/${WORKER_FILE}`)) {
+          if (!workerCode) workerCode = await bundleWorker(root).catch(() => "");
+          if (!workerCode) return next();
+          res.setHeader("Content-Type", "text/javascript");
+          res.end(workerCode);
+          return;
+        }
         const file = FILES.find((f) => req.url?.startsWith(`/ffmpeg/${f}`));
         if (!file || !dir) return next();
         res.setHeader("Content-Type", file.endsWith(".wasm") ? "application/wasm" : "text/javascript");
         fs.createReadStream(path.join(dir, file)).pipe(res);
       });
     },
-    writeBundle(options) {
+    async writeBundle(options) {
       if (!dir) return;
       const out = path.join(options.dir ?? path.join(root, "dist"), "ffmpeg");
       fs.mkdirSync(out, { recursive: true });
       for (const file of FILES) fs.copyFileSync(path.join(dir, file), path.join(out, file));
+      if (!workerCode) workerCode = await bundleWorker(root).catch(() => "");
+      if (workerCode) fs.writeFileSync(path.join(out, WORKER_FILE), workerCode);
     },
   };
 }
 
 export const FFMPEG_CORE_URL = "/ffmpeg/ffmpeg-core.js";
 export const FFMPEG_WASM_URL = "/ffmpeg/ffmpeg-core.wasm";
+export const FFMPEG_WORKER_URL = `/ffmpeg/${WORKER_FILE}`;
