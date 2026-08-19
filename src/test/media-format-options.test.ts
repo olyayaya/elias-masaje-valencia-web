@@ -37,3 +37,14 @@ describe("format options", () => {
     expect(VIDEO_INPUT_EXTS).toContain("mov");
   });
 });
+
+describe("upload the original without conversion", () => {
+  it("keeps the source MIME/extension and only allows a safe stream-copy remux", async () => {
+    const { canRemuxWithoutReencode, originalContentType } = await import("@/lib/video-convert");
+    expect(originalContentType("clip.mov", "")).toBe("video/quicktime");
+    expect(originalContentType("clip.mp4", "video/mp4")).toBe("video/mp4");
+    expect(canRemuxWithoutReencode("clip.mov")).toBe(true);
+    expect(canRemuxWithoutReencode("clip.webm")).toBe(true);
+    expect(canRemuxWithoutReencode("clip.avi")).toBe(false);
+  });
+});
