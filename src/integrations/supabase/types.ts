@@ -30,6 +30,9 @@ export type Database = {
           seo_keywords_en: string[]
           seo_keywords_ru: string[]
           slug: string | null
+          slug_en: string | null
+          slug_es: string | null
+          slug_ru: string | null
           status: string
           title: string
           title_en: string
@@ -51,6 +54,9 @@ export type Database = {
           seo_keywords_en?: string[]
           seo_keywords_ru?: string[]
           slug?: string | null
+          slug_en?: string | null
+          slug_es?: string | null
+          slug_ru?: string | null
           status?: string
           title?: string
           title_en?: string
@@ -72,6 +78,9 @@ export type Database = {
           seo_keywords_en?: string[]
           seo_keywords_ru?: string[]
           slug?: string | null
+          slug_en?: string | null
+          slug_es?: string | null
+          slug_ru?: string | null
           status?: string
           title?: string
           title_en?: string
@@ -80,10 +89,62 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_leads: {
+        Row: {
+          created_at: string
+          duration: string | null
+          id: string
+          locale: string | null
+          location: string | null
+          message: string
+          name: string
+          page_path: string | null
+          phone: string
+          preferred_time: string
+          price: string | null
+          service: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration?: string | null
+          id?: string
+          locale?: string | null
+          location?: string | null
+          message: string
+          name: string
+          page_path?: string | null
+          phone: string
+          preferred_time: string
+          price?: string | null
+          service: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration?: string | null
+          id?: string
+          locale?: string | null
+          location?: string | null
+          message?: string
+          name?: string
+          page_path?: string | null
+          phone?: string
+          preferred_time?: string
+          price?: string | null
+          service?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       content_history: {
         Row: {
           action: string
           changed_at: string
+          changed_by: string | null
           id: string
           record_id: string
           snapshot: Json
@@ -92,6 +153,7 @@ export type Database = {
         Insert: {
           action?: string
           changed_at?: string
+          changed_by?: string | null
           id?: string
           record_id: string
           snapshot: Json
@@ -100,6 +162,7 @@ export type Database = {
         Update: {
           action?: string
           changed_at?: string
+          changed_by?: string | null
           id?: string
           record_id?: string
           snapshot?: Json
@@ -176,9 +239,107 @@ export type Database = {
         }
         Relationships: []
       }
+      gallery_items: {
+        Row: {
+          alt_en: string
+          alt_es: string
+          alt_ru: string
+          created_at: string
+          description_en: string
+          description_es: string
+          description_ru: string
+          duration_seconds: number | null
+          id: string
+          media_type: string
+          media_url: string
+          poster_url: string
+          published: boolean
+          sort_order: number
+          thumbnail_x: number
+          thumbnail_y: number
+          thumbnail_zoom: number
+          title_en: string
+          title_es: string
+          title_ru: string
+          updated_at: string
+        }
+        Insert: {
+          alt_en?: string
+          alt_es?: string
+          alt_ru?: string
+          created_at?: string
+          description_en?: string
+          description_es?: string
+          description_ru?: string
+          duration_seconds?: number | null
+          id?: string
+          media_type?: string
+          media_url: string
+          poster_url?: string
+          published?: boolean
+          sort_order?: number
+          thumbnail_x?: number
+          thumbnail_y?: number
+          thumbnail_zoom?: number
+          title_en?: string
+          title_es?: string
+          title_ru?: string
+          updated_at?: string
+        }
+        Update: {
+          alt_en?: string
+          alt_es?: string
+          alt_ru?: string
+          created_at?: string
+          description_en?: string
+          description_es?: string
+          description_ru?: string
+          duration_seconds?: number | null
+          id?: string
+          media_type?: string
+          media_url?: string
+          poster_url?: string
+          published?: boolean
+          sort_order?: number
+          thumbnail_x?: number
+          thumbnail_y?: number
+          thumbnail_zoom?: number
+          title_en?: string
+          title_es?: string
+          title_ru?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      media_aliases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          new_name: string
+          old_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_name: string
+          old_name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_name?: string
+          old_name?: string
+        }
+        Relationships: []
+      }
       page_images: {
         Row: {
           alt_text: string
+          alt_text_en: string | null
+          alt_text_ru: string | null
           collection_key: string
           created_at: string
           id: string
@@ -188,6 +349,8 @@ export type Database = {
         }
         Insert: {
           alt_text?: string
+          alt_text_en?: string | null
+          alt_text_ru?: string | null
           collection_key: string
           created_at?: string
           id?: string
@@ -197,6 +360,8 @@ export type Database = {
         }
         Update: {
           alt_text?: string
+          alt_text_en?: string | null
+          alt_text_ru?: string | null
           collection_key?: string
           created_at?: string
           id?: string
@@ -252,6 +417,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      review_display_settings: {
+        Row: {
+          allowed_ratings: number[]
+          id: string
+          section_enabled: boolean
+          singleton: boolean
+          sort_mode: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_ratings?: number[]
+          id?: string
+          section_enabled?: boolean
+          singleton?: boolean
+          sort_mode?: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_ratings?: number[]
+          id?: string
+          section_enabled?: boolean
+          singleton?: boolean
+          sort_mode?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          author_name: string
+          created_at: string
+          dedupe_key: string
+          id: string
+          imported_at: string | null
+          manual_priority: number
+          original_language: string | null
+          original_url: string | null
+          pinned: boolean
+          rating: number
+          review_text: string
+          review_text_en: string | null
+          review_text_es: string | null
+          review_text_ru: string | null
+          reviewed_at: string | null
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          author_name: string
+          created_at?: string
+          dedupe_key: string
+          id?: string
+          imported_at?: string | null
+          manual_priority?: number
+          original_language?: string | null
+          original_url?: string | null
+          pinned?: boolean
+          rating: number
+          review_text: string
+          review_text_en?: string | null
+          review_text_es?: string | null
+          review_text_ru?: string | null
+          reviewed_at?: string | null
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          author_name?: string
+          created_at?: string
+          dedupe_key?: string
+          id?: string
+          imported_at?: string | null
+          manual_priority?: number
+          original_language?: string | null
+          original_url?: string | null
+          pinned?: boolean
+          rating?: number
+          review_text?: string
+          review_text_en?: string | null
+          review_text_es?: string | null
+          review_text_ru?: string | null
+          reviewed_at?: string | null
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: []
       }
       services: {
         Row: {
@@ -423,6 +675,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      count_media_history_refs: { Args: { _needle: string }; Returns: number }
+      current_actor: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -430,6 +684,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      jwt_role_claim: { Args: never; Returns: string }
+      review_is_public: {
+        Args: { _rating: number; _visible: boolean }
+        Returns: boolean
+      }
+      rewrite_media_references: {
+        Args: {
+          _actor: string
+          _new: string
+          _new_enc: string
+          _old: string
+          _old_enc: string
+        }
+        Returns: number
+      }
+      swap_gallery_order: { Args: { _a: string; _b: string }; Returns: number }
     }
     Enums: {
       app_role: "admin"
