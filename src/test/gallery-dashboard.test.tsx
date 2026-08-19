@@ -167,21 +167,73 @@ describe("replace payload", () => {
 });
 
 describe("reorder", () => {
-  it("only ever swaps through the transactional RPC", async () => {
+  const missingRpc = { error: { code: "PGRST202", message: "Could not find the function" } };
+
+  it("moves an item down through the atomic RPC, with the new order", async () => {
     wrap();
-    const downs = screen.getAllByRole("button").filter((b) => b.querySelector(".lucide-chevron-down"));
-    fireEvent.click(downs[0]);
-    await waitFor(() => expect(h.rpc).toHaveBeenCalledWith("swap_gallery_order", { _a: "photo-1", _b: "video-1" }));
+    fireEvent.click(screen.getAllByTestId("gallery-move-down")[0]);
+    await waitFor(() =>
+      expect(h.rpc).toHaveBeenCalledWith("reorder_gallery_items", { _ids: ["video-1", "photo-1"] }),
+    );
+  });
+
+  it("moves an item up through the same helper", async () => {
+    wrap();
+    fireEvent.click(screen.getAllByTestId("gallery-move-up")[1]);
+    await waitFor(() =>
+      expect(h.rpc).toHaveBeenCalledWith("reorder_gallery_items", { _ids: ["video-1", "photo-1"] }),
+    );
+  });
+
+  it("disables the arrows at the first and last row", () => {
+    wrap();
+    expect(screen.getAllByTestId("gallery-move-up")[0]).toBeDisabled();
+    expect(screen.getAllByTestId("gallery-move-down")[1]).toBeDisabled();
+  });
+
+  it("shows a 1-based position for every row", () => {
+    wrap();
+    const inputs = screen.getAllByTestId("gallery-position-input") as HTMLInputElement[];
+    expect(inputs.map((i) => i.value)).toEqual(["1", "2"]);
+    expect(inputs[0].max).toBe("2");
+  });
+
+  it("moves an item to a typed position and shifts the rest", async () => {
+    wrap();
+    const input = screen.getAllByTestId("gallery-position-input")[0];
+    fireEvent.change(input, { target: { value: "2" } });
+    fireEvent.blur(input);
+    await waitFor(() =>
+      expect(h.rpc).toHaveBeenCalledWith("reorder_gallery_items", { _ids: ["video-1", "photo-1"] }),
+    );
+  });
+
+  it("writes nothing when the typed position is the current one", async () => {
+    wrap();
+    const input = screen.getAllByTestId("gallery-position-input")[0];
+    fireEvent.change(input, { target: { value: "1" } });
+    fireEvent.blur(input);
+    await waitFor(() => expect(h.rpc).not.toHaveBeenCalled());
     expect(h.update).not.toHaveBeenCalled();
   });
 
-  it("writes nothing when the RPC is missing or fails", async () => {
-    h.rpc.mockImplementation(async () => ({ error: { code: "PGRST202", message: "Could not find the function" } }));
+  it("falls back to per-row updates when the RPC does not exist", async () => {
+    h.rpc.mockImplementation(async () => missingRpc);
     wrap();
-    const downs = screen.getAllByRole("button").filter((b) => b.querySelector(".lucide-chevron-down"));
-    fireEvent.click(downs[0]);
-    await waitFor(() => expect(h.rpc).toHaveBeenCalled());
-    expect(h.update).not.toHaveBeenCalled();
+    fireEvent.click(screen.getAllByTestId("gallery-move-down")[0]);
+    await waitFor(() => expect(h.update).toHaveBeenCalledTimes(2));
+    expect(h.update).toHaveBeenCalledWith({ sort_order: 1 });
+    expect(h.update).toHaveBeenCalledWith({ sort_order: 2 });
+    expect(h.toast.error).not.toHaveBeenCalled();
+  });
+
+  it("rolls back and warns when the write fails", async () => {
+    h.rpc.mockImplementation(async () => ({ error: { message: "boom" } }));
+    wrap();
+    fireEvent.click(screen.getAllByTestId("gallery-move-down")[0]);
+    await waitFor(() => expect(h.toast.error).toHaveBeenCalled());
+    // The optimistic order is dropped, so the list falls back to the server order.
+    expect((screen.getAllByTestId("gallery-position-input")[0] as HTMLInputElement).value).toBe("1");
   });
 });
 

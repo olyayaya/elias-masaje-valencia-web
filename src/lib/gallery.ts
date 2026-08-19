@@ -28,7 +28,13 @@ export interface GalleryItem {
   thumbnail_zoom: number;
   created_at: string;
   updated_at: string;
+  /** Engagement counters. Optional: the columns ship with a pending migration. */
+  view_count?: number;
+  like_count?: number;
 }
+
+/** Counter columns live in a migration that is applied separately from the app. */
+export const GALLERY_COUNTER_COLUMNS = "view_count, like_count";
 
 export const GALLERY_COLUMNS =
   "id, media_type, media_url, poster_url, title_es, title_en, title_ru, description_es, description_en, description_ru, alt_es, alt_en, alt_ru, sort_order, published, duration_seconds, thumbnail_x, thumbnail_y, thumbnail_zoom, created_at, updated_at";
@@ -37,6 +43,10 @@ export const GALLERY_COLUMNS =
  * The gallery table ships with the app but its migration is applied separately, so a
  * missing table must degrade to "no items" instead of surfacing a load error.
  */
+/** PostgREST "column does not exist" — the engagement migration is not applied yet. */
+export const isMissingGalleryColumn = (error: { code?: string; message?: string } | null) =>
+  !!error && (error.code === "42703" || /column .* does not exist/i.test(error.message ?? ""));
+
 export const isMissingGalleryTable = (error: { code?: string; message?: string } | null) =>
   !!error &&
   (error.code === "42P01" ||

@@ -17,10 +17,12 @@ interface Props extends MediaActionHandlers {
   files: LibraryFile[];
   size: GridSize;
   usage: Record<string, number> | null;
+  /** video name → saved sidecar poster URL. */
+  posters?: Record<string, string>;
   L: LibraryT;
 }
 
-const MediaGrid = ({ files, size, usage, L, ...handlers }: Props) => (
+const MediaGrid = ({ files, size, usage, posters, L, ...handlers }: Props) => (
   <div className={`grid gap-3 ${COLS[size]}`} data-testid="media-grid" data-size={size}>
     {files.map((f) => {
       const refs = usage?.[f.name];
@@ -31,7 +33,7 @@ const MediaGrid = ({ files, size, usage, L, ...handlers }: Props) => (
           className="group relative rounded-xl border border-border bg-card overflow-hidden focus-within:ring-2 focus-within:ring-ring"
         >
           <div className="relative">
-            <MediaThumb file={f} className="w-full aspect-square rounded-none" iconSize={22} />
+            <MediaThumb file={f} posterUrl={posters?.[f.name]} className="w-full aspect-square rounded-none" iconSize={22} />
             {/* Hover on pointer devices, focus-within for keyboard, always visible on touch. */}
             <div className="absolute inset-x-0 bottom-0 bg-background/85 backdrop-blur-sm border-t border-border p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
               <MediaActions file={f} L={L} variant="bar" {...handlers} />

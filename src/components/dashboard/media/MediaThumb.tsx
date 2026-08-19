@@ -20,14 +20,18 @@ export const videoPreviewSrc = (url: string) => `${url.split("#")[0]}${POSTER_FR
 
 interface Props {
   file: LibraryFile;
+  /** Saved sidecar poster for a video — preferred over the live frame fallback. */
+  posterUrl?: string | null;
   /** Tailwind sizing classes for the frame (square in the list, aspect box in the grid). */
   className?: string;
   iconSize?: number;
 }
 
-const MediaThumb = ({ file, className = "w-10 h-10 rounded-lg", iconSize = 16 }: Props) => {
+const MediaThumb = ({ file, posterUrl, className = "w-10 h-10 rounded-lg", iconSize = 16 }: Props) => {
   const kind = kindOf(file);
   const [failed, setFailed] = useState(false);
+  /** A broken poster must fall through to the live frame, not straight to the icon. */
+  const [posterFailed, setPosterFailed] = useState(false);
 
   const frame = `bg-secondary flex items-center justify-center overflow-hidden shrink-0 ${className}`;
 
@@ -43,6 +47,26 @@ const MediaThumb = ({ file, className = "w-10 h-10 rounded-lg", iconSize = 16 }:
           onError={() => {
             console.warn(`[library] photo thumbnail failed: ${file.name}`);
             setFailed(true);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Preference order for a video: saved poster → live frame at #t=0.3 → icon.
+  if (kind === "video" && posterUrl && !posterFailed && !failed) {
+    return (
+      <div className={frame}>
+        <img
+          src={posterUrl}
+          alt={file.name}
+          loading="lazy"
+          decoding="async"
+          data-testid="video-poster-thumb"
+          className="w-full h-full object-cover"
+          onError={() => {
+            console.warn(`[library] poster thumbnail failed: ${file.name}`);
+            setPosterFailed(true);
           }}
         />
       </div>
