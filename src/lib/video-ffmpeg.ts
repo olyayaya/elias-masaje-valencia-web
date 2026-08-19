@@ -8,6 +8,14 @@
 // Kept in sync with vite-plugin-ffmpeg-core.ts (which emits these two files).
 const FFMPEG_CORE_URL = "/ffmpeg/ffmpeg-core.js";
 const FFMPEG_WASM_URL = "/ffmpeg/ffmpeg-core.wasm";
+/**
+ * Self-hosted copy of @ffmpeg/ffmpeg's own module worker. Without it the library resolves
+ * its worker through `new URL("./worker.js", import.meta.url)`, which Vite's dep optimizer
+ * rewrites to a path that 404s — the worker never boots and load() never settles.
+ */
+const FFMPEG_WORKER_URL = "/ffmpeg/ffmpeg-worker.js";
+/** A core that has not answered by then is never going to: fail loudly instead of hanging. */
+const LOAD_TIMEOUT_MS = 120_000;
 
 import {
   buildFfmpegArgs,
@@ -23,7 +31,7 @@ import {
 
 type FFmpegInstance = {
   loaded: boolean;
-  load: (opts: { coreURL: string; wasmURL: string }) => Promise<boolean>;
+  load: (opts: { coreURL: string; wasmURL: string; classWorkerURL?: string }) => Promise<boolean>;
   exec: (args: string[]) => Promise<number>;
   writeFile: (name: string, data: Uint8Array) => Promise<boolean>;
   readFile: (name: string) => Promise<Uint8Array | string>;
@@ -150,10 +158,18 @@ export async function getFFmpeg(
   const ff = new FFmpeg() as unknown as FFmpegInstance;
   attachLog(ff, onLog);
   try {
-    await ff.load({
-      coreURL: new URL(FFMPEG_CORE_URL, window.location.href).href,
-      wasmURL: new URL(FFMPEG_WASM_URL, window.location.href).href,
-    });
+    const abs = (u: string) => new URL(u, window.location.href).href;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      ff.load({
+        coreURL: abs(FFMPEG_CORE_URL),
+        wasmURL: abs(FFMPEG_WASM_URL),
+        classWorkerURL: abs(FFMPEG_WORKER_URL),
+      }),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("ffmpeg core did not load in time")), LOAD_TIMEOUT_MS);
+      }),
+    ]).finally(() => clearTimeout(timer));
   } catch (e) {
     discard(ff, onLog);
     throw engineError("load", e);
