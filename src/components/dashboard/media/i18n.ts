@@ -209,6 +209,48 @@ export const COPY = {
   queuePosition: { en: "File {i} of {t}", es: "Archivo {i} de {t}", ru: "Файл {i} из {t}" },
   modeSmart: { en: "Recommended", es: "Recomendado", ru: "Рекомендуемые" },
   modeAdvanced: { en: "Advanced", es: "Avanzado", ru: "Расширенные" },
+  modeOriginal: { en: "Original file", es: "Archivo original", ru: "Оригинал" },
+  originalModeTitle: {
+    en: "Upload the original file without conversion",
+    es: "Subir el archivo original sin conversión",
+    ru: "Загрузить оригинальный файл без конвертации",
+  },
+  originalModeDesc: {
+    en: "The video is not re-encoded. The original bytes, name, extension and format are kept exactly as they are.",
+    es: "El vídeo no se recodifica. Se conservan exactamente los bytes, el nombre, la extensión y el formato originales.",
+    ru: "Видео не перекодируется. Сохраняются исходные байты, имя, расширение и формат.",
+  },
+  stripAudioHint: {
+    en: "Only the audio track is removed (lossless remux, video stream copied). Nothing else changes.",
+    es: "Solo se elimina la pista de audio (remux sin pérdidas, el vídeo se copia). Nada más cambia.",
+    ru: "Удаляется только аудиодорожка (remux без потерь, видеопоток копируется). Больше ничего не меняется.",
+  },
+  passthroughResult: {
+    en: "The original file will be uploaded unchanged: {n} · {s}",
+    es: "Se subirá el archivo original sin cambios: {n} · {s}",
+    ru: "Оригинальный файл будет загружен без изменений: {n} · {s}",
+  },
+  stripAudioResult: {
+    en: "Audio removed without re-encoding — the video stream is identical to the original.",
+    es: "Audio eliminado sin recodificar: el flujo de vídeo es idéntico al original.",
+    ru: "Звук удалён без перекодирования — видеопоток идентичен оригиналу.",
+  },
+  stripAudioNoAudio: {
+    en: "This video had no audio track — only the container was rewritten.",
+    es: "Este vídeo no tenía pista de audio: solo se reescribió el contenedor.",
+    ru: "В этом видео не было аудиодорожки — переписан только контейнер.",
+  },
+  errRemuxUnsupported: {
+    en: "This container cannot be remuxed safely in the browser. Upload the original as it is, or convert it to MP4.",
+    es: "Este contenedor no se puede remuxar de forma segura en el navegador. Sube el original tal cual o conviértelo a MP4.",
+    ru: "Этот контейнер нельзя безопасно перепаковать в браузере. Загрузите оригинал как есть или конвертируйте в MP4.",
+  },
+  errUploadClient: {
+    en: "The uploader could not start in this browser — reload the page and try again",
+    es: "No se pudo iniciar el gestor de subidas en este navegador: recarga la página e inténtalo de nuevo",
+    ru: "Не удалось запустить загрузчик в этом браузере — перезагрузите страницу и попробуйте снова",
+  },
+
   originalLabel: { en: "Original", es: "Original", ru: "Оригинал" },
   selectedFile: { en: "Selected file", es: "Archivo seleccionado", ru: "Выбранный файл" },
   willReplace: { en: "Will replace: {n}", es: "Sustituirá: {n}", ru: "Заменит файл: {n}" },
