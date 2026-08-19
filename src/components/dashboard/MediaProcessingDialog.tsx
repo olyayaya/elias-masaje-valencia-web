@@ -666,11 +666,11 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </div>
           )}
 
-          {current.kind === "video" && !videoTooBig && current.file.size > MEMORY_WARN_BYTES && (
+          {mode !== "original" && current.kind === "video" && !videoTooBig && current.file.size > MEMORY_WARN_BYTES && (
             <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">{L("memoryWarning")}</p>
           )}
 
-          {current.kind === "video" && video && meta && !videoTooBig && (() => {
+          {mode !== "original" && current.kind === "video" && video && meta && !videoTooBig && (() => {
             const dims = targetDimensions(meta.width, meta.height, video.resolution, video.customShortSide);
             if (!exceedsMemoryBudget({ ...dims, format: video.format, mobile: isMobileBrowser() })) return null;
             return (
@@ -775,7 +775,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
           )}
 
           {/* ---- video controls -------------------------------------- */}
-          {current.kind === "video" && video && caps && (
+          {mode !== "original" && current.kind === "video" && video && caps && (
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
