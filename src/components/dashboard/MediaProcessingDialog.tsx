@@ -603,10 +603,35 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             <TabsList>
               <TabsTrigger value="smart">{L("modeSmart")}</TabsTrigger>
               <TabsTrigger value="advanced">{L("modeAdvanced")}</TabsTrigger>
+              {current.kind === "video" && (
+                <TabsTrigger value="original">{L("modeOriginal")}</TabsTrigger>
+              )}
             </TabsList>
           </Tabs>
 
+          {mode === "original" && current.kind === "video" && (
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div>
+                <p className="text-sm font-medium">{L("originalModeTitle")}</p>
+                <p className="text-xs text-muted-foreground">{L("originalModeDesc")}</p>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <Label htmlFor="strip-audio-only" className="text-xs leading-snug">
+                  {L("removeAudioOpt")}
+                  <span className="block text-muted-foreground font-normal">{L("stripAudioHint")}</span>
+                </Label>
+                <Switch
+                  id="strip-audio-only"
+                  checked={stripAudioOnly}
+                  disabled={busy}
+                  onCheckedChange={(v) => { dropResult(); setStripAudioOnly(v); }}
+                />
+              </div>
+            </div>
+          )}
+
           {error && (
+
             <p role="alert" className="flex items-start gap-2 text-xs text-destructive">
               <AlertTriangle size={13} className="mt-0.5 shrink-0" /> {error}
             </p>
