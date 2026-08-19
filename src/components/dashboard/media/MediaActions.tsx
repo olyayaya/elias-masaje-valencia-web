@@ -1,6 +1,7 @@
 import { Trash2, Loader2, FilePenLine, Pencil, Play } from "lucide-react";
 import { kindOf } from "@/lib/media-kind";
 import type { LibraryFile } from "@/lib/media-filters";
+import type { LibraryT } from "./i18n";
 
 /**
  * The single source of truth for per-file actions. Both the list rows and the grid
@@ -21,7 +22,7 @@ export interface MediaActionHandlers {
 
 interface Props extends MediaActionHandlers {
   file: LibraryFile;
-  L: (k: string, vars?: Record<string, string | number>) => string;
+  L: LibraryT;
   /** Grid cards use a compact, high-contrast bar over the thumbnail. */
   variant?: "row" | "bar";
 }

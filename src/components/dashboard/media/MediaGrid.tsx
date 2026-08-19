@@ -4,6 +4,7 @@ import type { LibraryFile } from "@/lib/media-filters";
 import type { GridSize } from "@/lib/media-view-storage";
 import MediaThumb from "./MediaThumb";
 import MediaActions, { type MediaActionHandlers } from "./MediaActions";
+import type { LibraryT } from "./i18n";
 
 /** Column counts per tile size — responsive on mobile / tablet / desktop. */
 const COLS: Record<GridSize, string> = {
@@ -16,7 +17,7 @@ interface Props extends MediaActionHandlers {
   files: LibraryFile[];
   size: GridSize;
   usage: Record<string, number> | null;
-  L: (k: string, vars?: Record<string, string | number>) => string;
+  L: LibraryT;
 }
 
 const MediaGrid = ({ files, size, usage, L, ...handlers }: Props) => (
