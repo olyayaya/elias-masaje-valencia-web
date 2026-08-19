@@ -982,9 +982,20 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
                       <video src={result.url} controls playsInline className="w-full rounded-md bg-black max-h-56" />
                     )}
                     <p className="text-muted-foreground break-all">
-                      {formatFileSize(result.size)} · {result.format} · {result.width}×{result.height}
-                      {verdict?.ok ? ` · −${verdict.savedPercent}%` : ""}
+                      {formatFileSize(result.size)} · {result.format}
+                      {result.width && result.height ? ` · ${result.width}×${result.height}` : ""}
+                      {verdict?.ok && !result.passthrough ? ` · −${verdict.savedPercent}%` : ""}
                     </p>
+                    {result.passthrough === "original" && (
+                      <p className="text-muted-foreground">
+                        {L("passthroughResult", { n: result.name, s: formatFileSize(result.size) })}
+                      </p>
+                    )}
+                    {result.passthrough === "muted" && (
+                      <p className="text-muted-foreground">
+                        {result.hadAudio ? L("stripAudioResult") : L("stripAudioNoAudio")}
+                      </p>
+                    )}
                   </>
                 ) : (
                   <p className="text-muted-foreground">{L("notProcessed")}</p>
@@ -993,7 +1004,7 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
             </div>
           </div>
 
-          {result && verdict && !verdict.ok && (
+          {result && !result.passthrough && verdict && !verdict.ok && (
             <p className="text-xs text-muted-foreground border border-border rounded-lg p-3">
               {bigger
                 ? L("resultBigger", { a: formatFileSize(sourceSize), b: formatFileSize(result.size) })
