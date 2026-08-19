@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { build as esbuild } from "esbuild";
 import type { Plugin } from "vite";
 
 /**
@@ -63,7 +62,8 @@ const workerEntry = (root: string) => {
 async function bundleWorker(root: string): Promise<string> {
   const entry = workerEntry(root);
   if (!entry) return "";
-  const out = await esbuild({
+  const { build } = await import("esbuild");
+  const out = await build({
     entryPoints: [entry],
     bundle: true,
     format: "esm",
