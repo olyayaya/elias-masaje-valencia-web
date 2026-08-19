@@ -47,6 +47,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { ProcessingItem } from "./MediaProcessingDialog";
+import VideoViewer from "@/components/media/VideoViewer";
+import {
+  deleteLibraryPoster, posterMap, publicMediaUrl, renameLibraryPoster, saveLibraryPoster,
+} from "@/lib/library-poster";
 
 // The ffmpeg engine lives behind this lazy boundary: opening the processing dialog is what
 // pulls the wasm core, never a plain visit to the Library.
@@ -128,6 +132,13 @@ const DashboardMedia = () => {
 
   const counts = useMemo(() => countByKind(files), [files]);
   const extensions = useMemo(() => availableExtensions(files), [files]);
+  /** Sidecar covers resolved from the listing itself (`clip.mp4` → `clip-cover.webp`). */
+  const posters = useMemo(() => {
+    const map = posterMap(files);
+    const urls: Record<string, string> = {};
+    for (const [video, poster] of Object.entries(map)) urls[video] = publicMediaUrl(poster);
+    return urls;
+  }, [files]);
   const filtered = useMemo(
     () => applyFilters(files, filters, { usage, optimization }),
     [files, filters, usage, optimization],
@@ -261,6 +272,13 @@ const DashboardMedia = () => {
     try {
       // media-guard re-validates the extension server-side (validateRenameExtension).
       const result = await renameMediaFile(renameTarget.name, next);
+      // The cover sidecar follows its video, so no orphan `*-cover.webp` is left behind.
+      try {
+        await renameLibraryPoster(renameTarget.name, next, files.map((f) => f.name));
+      } catch (posterErr) {
+        console.warn("[library] poster rename failed", posterErr);
+        toast.warning(L("posterOrphan"));
+      }
       reportOutcome(L("renamedTo", { n: next }), result);
       setRenameTarget(null);
       setUsage(null);
@@ -290,6 +308,12 @@ const DashboardMedia = () => {
     try {
       const result = await deleteMediaFile(target.name);
       if (result.deleted) {
+        try {
+          await deleteLibraryPoster(target.name, files.map((f) => f.name));
+        } catch (posterErr) {
+          console.warn("[library] poster delete failed", posterErr);
+          toast.warning(L("posterOrphan"));
+        }
         toast.success(L("deleted", { n: target.name }));
         setTarget(null);
         setUsage(null);
@@ -413,14 +437,14 @@ const DashboardMedia = () => {
           {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">{L("empty")}</p>
           ) : view === "grid" ? (
-            <MediaGrid files={filtered} size={gridSize} usage={usage} L={L} {...actions} />
+            <MediaGrid files={filtered} size={gridSize} usage={usage} posters={posters} L={L} {...actions} />
           ) : (
             <div className="divide-y divide-border">
               {filtered.map((f) => {
                 const refs = usage?.[f.name];
                 return (
                   <div key={f.name} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
-                    <MediaThumb file={f} />
+                    <MediaThumb file={f} posterUrl={posters[f.name]} />
                     <div className="flex-1 min-w-[8rem]">
                       <p className="text-sm text-foreground truncate">{f.name}</p>
                       <span className="text-xs text-muted-foreground">
@@ -459,13 +483,29 @@ const DashboardMedia = () => {
       )}
 
       <Dialog open={!!previewing} onOpenChange={(open) => { if (!open) setPreviewing(null); }}>
-        <DialogContent className="max-w-2xl">
+        {/* The dialog may fill the screen; the clip inside never exceeds its own size. */}
+        <DialogContent className="max-w-[min(95vw,64rem)] max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="break-all">{previewing?.name}</DialogTitle>
             <DialogDescription>{formatFileSize(previewing?.size ?? 0)}</DialogDescription>
           </DialogHeader>
           {previewing && (
-            <video src={previewing.url} controls playsInline className="w-full rounded-lg bg-black" />
+            <VideoViewer
+              src={previewing.url}
+              poster={posters[previewing.name]}
+              lang={lang}
+              onSavePoster={async (frame) => {
+                try {
+                  await saveLibraryPoster(previewing.name, frame.blob, frame.ext, frame.mimeType);
+                  toast.success(L("posterSaved"));
+                  await fetchFiles();
+                  return true;
+                } catch (err) {
+                  console.warn("[library] poster save failed", err);
+                  return false;
+                }
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>

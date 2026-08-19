@@ -41,6 +41,15 @@ export const COPY = {
   },
 
 
+  // ---- video cover (sidecar poster) -----------------------------------
+  posterSaved: { en: "Thumbnail saved", es: "Miniatura guardada", ru: "Миниатюра сохранена" },
+  posterOrphan: {
+    en: "The video cover could not be updated — check the Library for a leftover “-cover” file.",
+    es: "No se pudo actualizar la portada del vídeo: revisa si queda un archivo «-cover» en la Biblioteca.",
+    ru: "Не удалось обновить обложку видео — проверьте, не остался ли файл «-cover» в Библиотеке.",
+  },
+  pickFrameTitle: { en: "Video thumbnail", es: "Miniatura del vídeo", ru: "Миниатюра видео" },
+
   // ---- library / tabs --------------------------------------------------
   library: { en: "Library", es: "Biblioteca", ru: "Библиотека" },
   all: { en: "All", es: "Todo", ru: "Все" },

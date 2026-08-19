@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { GALLERY_COLUMNS, galleryTable, isMissingGalleryTable, type GalleryItem } from "@/lib/gallery";
+import {
+  GALLERY_COLUMNS, GALLERY_COUNTER_COLUMNS, galleryTable, isMissingGalleryColumn,
+  isMissingGalleryTable, type GalleryItem,
+} from "@/lib/gallery";
 
 /**
  * The gallery table ships ahead of its migration, so "table not there yet" is an
@@ -15,17 +18,24 @@ export interface GalleryQueryResult {
 
 const EMPTY: GalleryItem[] = [];
 
-async function loadGallery(publishedOnly: boolean): Promise<GalleryQueryResult> {
-  let query = galleryTable().select(GALLERY_COLUMNS);
+async function runQuery(columns: string, publishedOnly: boolean) {
+  let query = galleryTable().select(columns);
   if (publishedOnly) query = query.eq("published", true);
-  const { data, error } = await query
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
+  return query.order("sort_order", { ascending: true }).order("created_at", { ascending: true });
+}
+
+async function loadGallery(publishedOnly: boolean): Promise<GalleryQueryResult> {
+  // The engagement counters ship with a migration applied separately, so a database
+  // without them must still render the gallery — it just sorts without view counts.
+  let { data, error } = await runQuery(`${GALLERY_COLUMNS}, ${GALLERY_COUNTER_COLUMNS}`, publishedOnly);
+  if (error && isMissingGalleryColumn(error)) {
+    ({ data, error } = await runQuery(GALLERY_COLUMNS, publishedOnly));
+  }
   if (error) {
     if (isMissingGalleryTable(error)) return { items: EMPTY, missingTable: true };
     throw error;
   }
-  return { items: (data ?? []) as GalleryItem[], missingTable: false };
+  return { items: (data ?? []) as unknown as GalleryItem[], missingTable: false };
 }
 
 /** Published gallery items in display order (public site). */

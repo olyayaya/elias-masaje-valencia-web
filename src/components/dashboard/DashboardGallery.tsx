@@ -15,6 +15,7 @@ import LanguageTabs, { type Lang } from "./LanguageTabs";
 import GalleryMediaPicker from "./GalleryMediaPicker";
 import ThumbnailCropDialog, { CROP_COPY } from "./ThumbnailCropDialog";
 import { type GalleryCrop } from "@/lib/gallery-crop";
+import { clampPosition, orderUpdates, reorderBy, reorderTo } from "@/lib/gallery-reorder";
 import CropThumb from "@/components/gallery/CropThumb";
 
 import { Input } from "@/components/ui/input";
@@ -81,10 +82,15 @@ const COPY = {
     es: "Se ha borrado la portada porque cambió el vídeo — genera o elige una nueva.",
     ru: "Обложка сброшена, так как видео изменилось — создайте или выберите новую.",
   },
+  positionLabel: { en: "Position", es: "Posición", ru: "Позиция" },
+  positionHint: { en: "Position of {n} — press Enter to move", es: "Posición de {n} — pulsa Intro para mover", ru: "Позиция из {n} — нажмите Enter, чтобы переместить" },
+  moveUp: { en: "Move up", es: "Subir", ru: "Переместить вверх" },
+  moveDown: { en: "Move down", es: "Bajar", ru: "Переместить вниз" },
+  reordered: { en: "Order updated", es: "Orden actualizado", ru: "Порядок обновлён" },
   reorderFailed: {
-    en: "Could not reorder — the atomic reorder function is unavailable. Nothing was changed.",
-    es: "No se pudo reordenar: la función de reordenación atómica no está disponible. No se cambió nada.",
-    ru: "Не удалось изменить порядок: атомарная функция недоступна. Ничего не изменено.",
+    en: "Could not reorder — the previous order was restored.",
+    es: "No se pudo reordenar: se restauró el orden anterior.",
+    ru: "Не удалось изменить порядок — прежний порядок восстановлен.",
   },
 
   issueMissingMedia: { en: "No file selected.", es: "Ningún archivo seleccionado.", ru: "Файл не выбран." },
@@ -186,6 +192,11 @@ const DashboardGallery = () => {
   >(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<GalleryItem>>>({});
   const [cropId, setCropId] = useState<string | null>(null);
+  /** Optimistic order (ids) shown while the reorder write is in flight. */
+  const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
+  const [reordering, setReordering] = useState(false);
+  /** Value of the position input while it is being edited. */
+  const [posDraft, setPosDraft] = useState<Record<string, string>>({});
   const posterAbort = useRef<AbortController | null>(null);
 
   // Leaving the section must not keep a wasm decode (or an upload) running.
@@ -195,6 +206,24 @@ const DashboardGallery = () => {
     void qc.invalidateQueries({ queryKey: queryKeys.galleryAdmin });
     void qc.invalidateQueries({ queryKey: queryKeys.gallery });
   };
+
+  /**
+   * The list actually rendered: the optimistic order while a move is in flight, the
+   * server order as soon as it matches (or the write failed).
+   */
+  const ordered = (() => {
+    if (!pendingOrder) return items;
+    const byId = new Map(items.map((i) => [i.id, i] as const));
+    const picked = pendingOrder.map((id) => byId.get(id)).filter(Boolean) as GalleryItem[];
+    if (picked.length !== items.length) return items;
+    return picked;
+  })();
+
+  useEffect(() => {
+    if (!pendingOrder || reordering) return;
+    const same = items.length === pendingOrder.length && items.every((i, n) => i.id === pendingOrder[n]);
+    if (same) setPendingOrder(null);
+  }, [items, pendingOrder, reordering]);
 
   const patch = async (id: string, values: Record<string, unknown>) => {
     setBusyId(id);
@@ -264,27 +293,56 @@ const DashboardGallery = () => {
 
 
   /**
-   * Reordering swaps two rows. Two independent UPDATEs can leave the list
-   * half-swapped, so the swap ONLY ever happens inside the transactional RPC — if the
-   * RPC is missing or fails, nothing is written at all and the admin sees why.
+   * Single reorder path for both the arrows and the numeric position input.
+   *
+   * The previous implementation destructured `supabase.rpc`, which loses the client
+   * binding (`this`) and threw before any write could happen — the arrows appeared to
+   * do nothing at all. The order is now recomputed locally into a dense 1..N sequence,
+   * shown optimistically, and persisted with the atomic RPC when it exists, falling
+   * back to per-row updates (allowed for admins by RLS). Any failure rolls the UI back.
    */
-  const move = async (item: GalleryItem, dir: -1 | 1) => {
-    const idx = items.findIndex((i) => i.id === item.id);
-    const other = items[idx + dir];
-    if (!other) return;
-    setBusyId(item.id);
-    const rpc = (supabase as unknown as {
-      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { code?: string; message?: string } | null }>;
-    }).rpc;
-    const { error: rpcError } = await rpc("swap_gallery_order", { _a: item.id, _b: other.id });
-    setBusyId(null);
-    if (rpcError) {
+  const applyOrder = async (next: GalleryItem[]) => {
+    const updates = orderUpdates(next);
+    if (updates.length === 0) return;
+    const ids = next.map((i) => i.id);
+    setPendingOrder(ids);
+    setReordering(true);
+    try {
+      const { error: rpcError } = await supabase.rpc("reorder_gallery_items" as never, { _ids: ids } as never);
       const missingRpc =
-        rpcError.code === "PGRST202" || /could not find the function|does not exist/i.test(rpcError.message ?? "");
-      toast.error(missingRpc ? c("reorderFailed") : c("saveFailed"));
-      return;
+        !!rpcError &&
+        ((rpcError as { code?: string }).code === "PGRST202" ||
+          /could not find the function|does not exist/i.test(rpcError.message ?? ""));
+      if (rpcError && !missingRpc) throw rpcError;
+
+      if (missingRpc) {
+        for (const u of updates) {
+          const { error: err } = await galleryTable().update({ sort_order: u.sort_order }).eq("id", u.id);
+          if (err) throw err;
+        }
+      }
+      toast.success(c("reordered"));
+      refresh();
+    } catch (e) {
+      if (import.meta.env.DEV) console.error("[gallery reorder]", e);
+      setPendingOrder(null);
+      toast.error(c("reorderFailed"));
+      refresh();
+    } finally {
+      setReordering(false);
     }
-    refresh();
+  };
+
+  const move = (item: GalleryItem, dir: -1 | 1) => applyOrder(reorderBy(ordered, item.id, dir));
+
+  const moveTo = (item: GalleryItem, position: number) => {
+    setPosDraft((d) => {
+      const { [item.id]: _drop, ...rest } = d;
+      return rest;
+    });
+    const target = clampPosition(position, ordered.length);
+    if (ordered.findIndex((i) => i.id === item.id) + 1 === target) return;
+    void applyOrder(reorderTo(ordered, item.id, target));
   };
 
   const remove = async (item: GalleryItem) => {
@@ -449,11 +507,11 @@ const DashboardGallery = () => {
         <div className="flex justify-center py-12">
           <Loader2 className="animate-spin text-muted-foreground" size={20} />
         </div>
-      ) : items.length === 0 ? (
+      ) : ordered.length === 0 ? (
         <p className="text-sm text-muted-foreground py-8">{c("empty")}</p>
       ) : (
         <div className="space-y-4">
-          {items.map((item, idx) => {
+          {ordered.map((item, idx) => {
             const busy = busyId === item.id;
             const posterBusy = poster?.id === item.id;
             const posterProgress = poster?.id === item.id ? poster.progress : 0;
@@ -616,17 +674,61 @@ const DashboardGallery = () => {
                         {item.published ? <Eye size={13} className="mr-1.5" /> : <EyeOff size={13} className="mr-1.5" />}
                         {item.published ? c("published") : c("hidden")}
                       </Button>
-                      <Button size="sm" variant="ghost" disabled={busy || idx === 0} onClick={() => move(item, -1)}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={c("moveUp")}
+                        title={c("moveUp")}
+                        data-testid="gallery-move-up"
+                        disabled={busy || reordering || idx === 0}
+                        onClick={() => void move(item, -1)}
+                      >
                         <ChevronUp size={14} />
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        disabled={busy || idx === items.length - 1}
-                        onClick={() => move(item, 1)}
+                        aria-label={c("moveDown")}
+                        title={c("moveDown")}
+                        data-testid="gallery-move-down"
+                        disabled={busy || reordering || idx === ordered.length - 1}
+                        onClick={() => void move(item, 1)}
                       >
                         <ChevronDown size={14} />
                       </Button>
+                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        {c("positionLabel")}
+                        <Input
+                          type="number"
+                          min={1}
+                          max={ordered.length}
+                          inputMode="numeric"
+                          className="w-16 h-8"
+                          data-testid="gallery-position-input"
+                          aria-label={`${c("positionLabel")} — ${c("positionHint", { n: String(ordered.length) })}`}
+                          title={c("positionHint", { n: String(ordered.length) })}
+                          disabled={busy || reordering}
+                          value={posDraft[item.id] ?? String(idx + 1)}
+                          onChange={(e) => setPosDraft((d) => ({ ...d, [item.id]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              (e.currentTarget as HTMLInputElement).blur();
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const raw = Number(e.currentTarget.value);
+                            if (!Number.isFinite(raw)) {
+                              setPosDraft((d) => {
+                                const { [item.id]: _drop, ...rest } = d;
+                                return rest;
+                              });
+                              return;
+                            }
+                            moveTo(item, raw);
+                          }}
+                        />
+                      </label>
                       <Button
                         size="sm"
                         variant="ghost"

@@ -140,6 +140,20 @@ export interface Translations {
     prev: string;
     next: string;
     viewer: string;
+    filterLabel: string;
+    filterAll: string;
+    filterPhotos: string;
+    filterVideos: string;
+    sortLabel: string;
+    sortManual: string;
+    sortNewest: string;
+    sortOldest: string;
+    sortPopular: string;
+    emptyFiltered: string;
+    like: string;
+    unlike: string;
+    likeCount: string;
+    viewCount: string;
   };
   a11y: {
     skipToContent: string;
