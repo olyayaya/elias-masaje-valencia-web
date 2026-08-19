@@ -28,9 +28,9 @@ import {
 } from "@/lib/photo-encode";
 import {
   AUDIO_KBPS_CHOICES, CRF_RANGE, MAX_CONVERT_BYTES, MEMORY_WARN_BYTES, MIME_BY_FORMAT,
-  availableFormatsWithMov, clampBitrate, clampCrf, defaultCrf, estimateSizeBytes,
+  availableFormatsWithMov, canRemuxWithoutReencode, clampBitrate, clampCrf, defaultCrf, estimateSizeBytes,
   evaluateVideoSaving, exceedsMemoryBudget, formatDuration, isMobileBrowser, isWebFormat,
-  memorySafeSettings, outputNameFor, smartPreset, targetDimensions,
+  memorySafeSettings, originalContentType, outputNameFor, smartPreset, targetDimensions,
   type EncoderCaps, type FpsChoice, type RateControl, type ResolutionChoice,
   type SpeedChoice, type VideoFormat, type VideoMeta,
 } from "@/lib/video-convert";
@@ -126,6 +126,8 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
   const [compare, setCompare] = useState<"original" | "result">("original");
   const [confirmed, setConfirmed] = useState(false);
   const [reuseSettings, setReuseSettings] = useState(true);
+  /** "Original file" mode: no re-encode. Optionally drop the audio via a stream-copy remux. */
+  const [stripAudioOnly, setStripAudioOnly] = useState(false);
   /** Set only after an out-of-memory failure: the explicit, opt-in lighter preset. */
   const [memoryFallback, setMemoryFallback] = useState<
     { format: VideoFormat; resolution: ResolutionChoice; customShortSide: number } | null
@@ -291,8 +293,11 @@ const MediaProcessingDialog = ({ items, L, existingNames, onClose, onApplied }: 
         case "busy": return L("errBusy");
       }
     }
-    if (err?.name === "VideoEngineError") return L("processFailed");
-    return err?.message || L("processFailed");
+    if (err?.name === "UploadClientError") return L("errUploadClient");
+    // Anything else is an internal/minified failure: the technical text belongs in the
+    // console, the admin gets a localized sentence.
+    console.error("[media] processing failed", e);
+    return L("processFailed");
   };
 
   const runProcess = async () => {
