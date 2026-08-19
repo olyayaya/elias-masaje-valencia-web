@@ -56,7 +56,7 @@ interface Props {
   onApplied: (name: string, replacedName?: string) => void;
 }
 
-type Mode = "smart" | "advanced";
+type Mode = "smart" | "advanced" | "original";
 type Phase = "idle" | "processing" | "done" | "applying";
 
 interface VideoSettings {
@@ -79,7 +79,12 @@ interface Result {
   format: string;
   width: number;
   height: number;
+  /** "original" = untouched bytes, "muted" = lossless remux, undefined = re-encoded. */
+  passthrough?: "original" | "muted";
+  /** Only for a muted remux: whether the source really had an audio track. */
+  hadAudio?: boolean;
 }
+
 
 const SIZES: SizeChoice[] = ["original", "1920", "1600", "1280", "custom"];
 const RESOLUTIONS: ResolutionChoice[] = ["original", "1080", "720", "480", "custom"];
